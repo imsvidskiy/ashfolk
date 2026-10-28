@@ -9,8 +9,8 @@ interface GameViewProps {
 }
 
 export function GameView({ launch, worldId }: GameViewProps) {
-  const containerReference = useRef<HTMLDivElement>(null);
   const setStatus = useEngineStore((state) => state.setStatus);
+  const containerReference = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const container = containerReference.current;

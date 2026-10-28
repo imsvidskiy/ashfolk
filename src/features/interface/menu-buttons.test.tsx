@@ -61,7 +61,7 @@ describe("menu buttons", () => {
   });
 
   it("opens the world settings", async () => {
-    useInterfaceStore.setState({ settingsTab: "graphics" });
+    useInterfaceStore.setState({ settingsTab: "island" });
 
     const screen = await render(<MenuButtons />);
 

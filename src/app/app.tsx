@@ -7,7 +7,7 @@ import { useLaunchStore } from "./launch-store.ts";
 import { LoadingScreen } from "./loading-screen.tsx";
 import { StartScreen } from "./start-screen.tsx";
 
-const ReadyHud = lazy(() => loadHud().then((module) => ({ default: module.ReadyHud })));
+const Hud = lazy(() => loadHud().then((module) => ({ default: module.Hud })));
 
 function GameScreen() {
   const launch = useLaunchStore((state) => state.launch);
@@ -24,7 +24,7 @@ function GameScreen() {
 
       {isReady ? (
         <Suspense fallback={null}>
-          <ReadyHud />
+          <Hud />
         </Suspense>
       ) : null}
 

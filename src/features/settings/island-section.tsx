@@ -16,21 +16,20 @@ const QUALITY_LABELS: Readonly<Record<QualityLevel, string>> = { high: "High", l
 
 const QUALITY_OPTIONS = QUALITY_LEVELS.map((level) => ({ label: QUALITY_LABELS[level], value: level }));
 
-function useCreateWorld() {
+function useCreateWorld(): (choice: WorldChoice) => void {
   const createWorld = useLaunchStore((state) => state.createWorld);
   const leaveWorld = useLeaveWorld();
 
-  return (choice: WorldChoice) => leaveWorld(() => createWorld(choice));
+  return (choice) => leaveWorld(() => createWorld(choice));
 }
 
 function useQualityChoice() {
   const active = useLaunchStore((state) => state.launch.quality);
   const relaunch = useLaunchStore((state) => state.relaunch);
   const leaveWorld = useLeaveWorld();
-
   const [quality, setQuality] = useState(active);
 
-  function changeQuality(value: string): void {
+  function handleQualityChange(value: string): void {
     if (!isQualityLevel(value)) {
       return;
     }
@@ -39,20 +38,20 @@ function useQualityChoice() {
     storeQuality(value);
   }
 
-  function applyQuality(): void {
+  function handleApply(): void {
     leaveWorld(() => relaunch({ quality }));
   }
 
-  return { applyQuality, changeQuality, hasChanged: quality !== active, quality };
+  return { handleApply, handleQualityChange, hasChanged: quality !== active, quality };
 }
 
 function QualityChoice() {
-  const { applyQuality, changeQuality, hasChanged, quality } = useQualityChoice();
+  const { handleApply, handleQualityChange, hasChanged, quality } = useQualityChoice();
 
   return (
     <SettingsGroup
       action={
-        <TextButton className="h-8 px-3.5" disabled={!hasChanged} onClick={applyQuality} tone="accent">
+        <TextButton className="h-8 px-3.5" disabled={!hasChanged} onClick={handleApply} tone="accent">
           Apply
         </TextButton>
       }
@@ -62,7 +61,7 @@ function QualityChoice() {
       <ChoiceField
         description="Light suits phones and older laptops; High adds sharper shadows and more detail far away."
         label="Quality"
-        onChange={changeQuality}
+        onChange={handleQualityChange}
         options={QUALITY_OPTIONS}
         value={quality}
       />
@@ -83,25 +82,25 @@ function MapLabelsChoice() {
 
 function NewWorld() {
   const launch = useLaunchStore((state) => state.launch);
-
-  const draft = useWorldDraft(launch, useCreateWorld());
+  const createWorld = useCreateWorld();
+  const draft = useWorldDraft(launch, createWorld);
 
   return (
-    <form aria-label="New world" className={GROUP_CLASS} onSubmit={draft.create}>
+    <form aria-label="New world" className={GROUP_CLASS} onSubmit={draft.handleSubmit}>
       <GroupHeading
         description="Every seed grows a different island. The current one stays in your worlds."
         title="New world"
       />
 
-      <NameField onChange={draft.changeName} onRoll={draft.rollName} value={draft.nameText} />
+      <NameField onChange={draft.handleNameChange} onRoll={draft.handleNameRoll} value={draft.nameText} />
 
-      <ShapeChoice onChange={draft.changeShape} value={draft.shape} />
+      <ShapeChoice onChange={draft.handleShapeChange} value={draft.shape} />
 
       <div className="flex items-center gap-2">
         <SeedField
           className="min-w-0 flex-1"
-          onChange={draft.changeSeed}
-          onRoll={draft.rollSeed}
+          onChange={draft.handleSeedChange}
+          onRoll={draft.handleSeedRoll}
           value={draft.seedText}
         />
 
@@ -113,7 +112,7 @@ function NewWorld() {
   );
 }
 
-export function GraphicsSection() {
+export function IslandSection() {
   return (
     <>
       <SavesGroup />

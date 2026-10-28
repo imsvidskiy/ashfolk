@@ -14,7 +14,7 @@ function useDraftOf(props?: ConfirmedProps) {
   return useHeldDraft(props.confirmed);
 }
 
-describe("useHeldDraft", () => {
+describe("held draft", () => {
   beforeEach(() => {
     vi.useFakeTimers();
   });

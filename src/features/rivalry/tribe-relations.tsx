@@ -6,15 +6,13 @@ import { useWorldStore } from "../world/world-store.ts";
 import { RelationNote, StanceBadge } from "./rivalry-parts.tsx";
 import { byStance, isRelationOf, otherTribeOf, RAID_PHASE_LABELS, raidOf } from "./stance-looks.ts";
 
-function Neighbour({
-  relation,
-  tribeId,
-  tribes,
-}: {
+interface NeighbourProps {
   readonly relation: RelationView;
   readonly tribeId: number;
   readonly tribes: readonly TribeSummary[];
-}) {
+}
+
+function Neighbour({ relation, tribeId, tribes }: NeighbourProps) {
   const other = tribes.find((tribe) => tribe.id === otherTribeOf(relation, tribeId));
 
   if (other === undefined) {

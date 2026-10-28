@@ -25,22 +25,22 @@ function useJournalSheet() {
 
   usePanelFocus({ isOpeningManaged: false, panelReference, view });
 
-  function changeOpen(open: boolean): void {
-    if (!open) {
+  const label = contents.inspection === null ? "Journal" : titleOf(contents.inspection);
+
+  function handleOpenChange(isNowOpen: boolean): void {
+    if (!isNowOpen) {
       close();
     }
   }
 
-  const label = contents.inspection === null ? "Journal" : titleOf(contents.inspection);
-
-  return { back, changeOpen, close, contents, isOpen, label, panelReference };
+  return { back, close, contents, handleOpenChange, isOpen, label, panelReference };
 }
 
 export function JournalSheet() {
-  const { back, changeOpen, close, contents, isOpen, label, panelReference } = useJournalSheet();
+  const { back, close, contents, handleOpenChange, isOpen, label, panelReference } = useJournalSheet();
 
   return (
-    <Drawer.Root disablePointerDismissal={true} modal={false} onOpenChange={changeOpen} open={isOpen}>
+    <Drawer.Root disablePointerDismissal={true} modal={false} onOpenChange={handleOpenChange} open={isOpen}>
       <Drawer.Portal>
         <Drawer.Viewport className="pointer-events-none fixed inset-0 z-30 flex items-end">
           <Drawer.Popup

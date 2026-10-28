@@ -57,6 +57,10 @@ function subtitleOf(inspection: Inspection): string {
   }
 }
 
+function isFollowable(inspection: Inspection): boolean {
+  return inspection.kind === "person" || inspection.kind === "animal";
+}
+
 function InspectionDetails({ inspection }: { readonly inspection: Inspection }) {
   switch (inspection.kind) {
     case "animal":
@@ -72,10 +76,6 @@ function InspectionDetails({ inspection }: { readonly inspection: Inspection }) 
     default:
       return inspection satisfies never;
   }
-}
-
-function isFollowable(inspection: Inspection): boolean {
-  return inspection.kind === "person" || inspection.kind === "animal";
 }
 
 function useFollowing() {
@@ -99,7 +99,7 @@ function useFollowing() {
 
   const isFollowing = useSyncExternalStore(subscribe, isFollowingNow);
 
-  function toggleFollowing(): void {
+  function handleFollow(): void {
     if (engine === null) {
       return;
     }
@@ -111,11 +111,11 @@ function useFollowing() {
     }
   }
 
-  return { isFollowing, toggleFollowing };
+  return { handleFollow, isFollowing };
 }
 
 function FollowButton({ inspection }: { readonly inspection: Inspection }) {
-  const { isFollowing, toggleFollowing } = useFollowing();
+  const { handleFollow, isFollowing } = useFollowing();
 
   if (!isFollowable(inspection)) {
     return null;
@@ -126,7 +126,7 @@ function FollowButton({ inspection }: { readonly inspection: Inspection }) {
       icon={<Crosshair aria-hidden="true" size={17} />}
       isPressed={isFollowing}
       label="Follow with the camera"
-      onClick={toggleFollowing}
+      onClick={handleFollow}
     />
   );
 }

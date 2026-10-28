@@ -71,7 +71,7 @@ function CompactHud() {
   );
 }
 
-function Hud() {
+function HudLayout() {
   const isCompact = useIsCompact();
 
   return (
@@ -85,8 +85,8 @@ function Hud() {
   );
 }
 
-export function ReadyHud() {
+export function Hud() {
   useEngineBridges();
 
-  return <Hud />;
+  return <HudLayout />;
 }

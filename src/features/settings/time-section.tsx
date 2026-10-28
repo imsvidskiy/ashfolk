@@ -19,31 +19,38 @@ const SEASON_OPTIONS = SEASONS.map((season, index) => ({ label: season, value: S
 function useTimeSettings() {
   const send = useSendCommand();
 
-  function changeHours(hours: number): void {
+  function handleHoursChange(hours: number): void {
     send({ hours, type: "setHours" });
   }
 
-  function changeSeason(value: string): void {
+  function handleSeasonChange(value: string): void {
     send({ season: Number(value), type: "setSeason" });
   }
 
-  function changeDayLength(seconds: number): void {
+  function handleDayLengthChange(seconds: number): void {
     send({ seconds, type: "setDaySeconds" });
   }
 
-  function changeSeasonLength(days: number): void {
+  function handleSeasonLengthChange(days: number): void {
     send({ days, type: "setDaysPerSeason" });
   }
 
-  function changeFrozen(isFrozen: boolean): void {
+  function handleFrozenChange(isFrozen: boolean): void {
     send({ isFrozen, type: "setTimeFrozen" });
   }
 
-  return { changeDayLength, changeFrozen, changeHours, changeSeason, changeSeasonLength };
+  return {
+    handleDayLengthChange,
+    handleFrozenChange,
+    handleHoursChange,
+    handleSeasonChange,
+    handleSeasonLengthChange,
+  };
 }
 
-function TimeControls({ calendar }: { readonly calendar: CalendarView }) {
-  const { changeDayLength, changeFrozen, changeHours, changeSeason, changeSeasonLength } = useTimeSettings();
+function TimeSettings({ calendar }: { readonly calendar: CalendarView }) {
+  const { handleDayLengthChange, handleFrozenChange, handleHoursChange, handleSeasonChange, handleSeasonLengthChange } =
+    useTimeSettings();
 
   return (
     <>
@@ -52,7 +59,7 @@ function TimeControls({ calendar }: { readonly calendar: CalendarView }) {
           label="Time of day"
           maximum={23.9}
           minimum={0}
-          onChange={changeHours}
+          onChange={handleHoursChange}
           step={0.1}
           value={calendar.hours}
           valueText={formatClock(calendar.hours)}
@@ -60,7 +67,7 @@ function TimeControls({ calendar }: { readonly calendar: CalendarView }) {
 
         <ChoiceField
           label="Season"
-          onChange={changeSeason}
+          onChange={handleSeasonChange}
           options={SEASON_OPTIONS}
           value={String(Math.floor(calendar.season) % SEASONS.length)}
         />
@@ -69,7 +76,7 @@ function TimeControls({ calendar }: { readonly calendar: CalendarView }) {
           description="Keep the sun where it is while life goes on."
           isChecked={calendar.isTimeFrozen}
           label="Stop the clock"
-          onChange={changeFrozen}
+          onChange={handleFrozenChange}
         />
       </SettingsGroup>
 
@@ -80,7 +87,7 @@ function TimeControls({ calendar }: { readonly calendar: CalendarView }) {
             label="Day length"
             maximum={MAXIMUM_DAY_SECONDS}
             minimum={MINIMUM_DAY_SECONDS}
-            onChange={changeDayLength}
+            onChange={handleDayLengthChange}
             step={30}
             value={calendar.daySeconds}
             valueText={formatParameterValue(calendar.daySeconds, "seconds")}
@@ -90,7 +97,7 @@ function TimeControls({ calendar }: { readonly calendar: CalendarView }) {
             label="Season length"
             maximum={MAXIMUM_DAYS_PER_SEASON}
             minimum={MINIMUM_DAYS_PER_SEASON}
-            onChange={changeSeasonLength}
+            onChange={handleSeasonLengthChange}
             step={1}
             value={calendar.daysPerSeason}
             valueText={formatParameterValue(calendar.daysPerSeason, "days")}
@@ -108,5 +115,5 @@ export function TimeSection() {
     return null;
   }
 
-  return <TimeControls calendar={calendar} />;
+  return <TimeSettings calendar={calendar} />;
 }

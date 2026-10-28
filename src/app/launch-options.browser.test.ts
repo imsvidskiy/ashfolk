@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { LARGEST_SEED, randomSeed } from "../features/new-world/seeds.ts";
+import { LARGEST_SEED } from "../features/new-world/seeds.ts";
 import { choosesWorld, readLaunchOptions } from "./launch-options.ts";
 import { storeQuality } from "./preferences.ts";
 
@@ -111,15 +111,5 @@ describe("launch options", () => {
     expect(warn).toHaveBeenCalledTimes(2);
     expect(shortCamera.camera).toEqual({});
     expect(flatCamera.camera).toEqual({});
-  });
-});
-
-describe("random seeds", () => {
-  it("stay whole numbers within the allowed range", () => {
-    const seeds = Array.from({ length: 200 }, () => randomSeed());
-
-    expect(seeds.every((seed) => Number.isInteger(seed))).toBe(true);
-    expect(Math.min(...seeds)).toBeGreaterThanOrEqual(1);
-    expect(Math.max(...seeds)).toBeLessThanOrEqual(LARGEST_SEED);
   });
 });

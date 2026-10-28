@@ -17,15 +17,13 @@ function GitHubMark() {
   );
 }
 
-function ExternalLink({
-  children,
-  href,
-  label,
-}: {
+interface ExternalLinkProps {
   readonly children: ReactNode;
   readonly href: string;
   readonly label: string;
-}) {
+}
+
+function ExternalLink({ children, href, label }: ExternalLinkProps) {
   return (
     <a aria-label={label} className={LINK_CLASS} href={href} rel="noopener" target="_blank">
       {children}

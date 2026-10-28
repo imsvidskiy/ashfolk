@@ -11,32 +11,31 @@ export function useWorldDraft(initial: WorldChoice, onCreate: (choice: WorldChoi
 
   const name = readWorldName(nameText);
   const seed = readSeed(seedText);
+  const choice: WorldChoice | null = name === null || seed === null ? null : { name, seed, shape };
 
-  function changeName(event: ChangeEvent<HTMLInputElement>): void {
+  function handleNameChange(event: ChangeEvent<HTMLInputElement>): void {
     setNameText(event.target.value);
   }
 
-  function rollName(): void {
+  function handleNameRoll(): void {
     setNameText(worldNameFor(randomSeed()));
   }
 
-  function changeSeed(event: ChangeEvent<HTMLInputElement>): void {
+  function handleSeedChange(event: ChangeEvent<HTMLInputElement>): void {
     setSeedText(event.target.value);
   }
 
-  function rollSeed(): void {
+  function handleSeedRoll(): void {
     setSeedText(String(randomSeed()));
   }
 
-  function changeShape(value: string): void {
+  function handleShapeChange(value: string): void {
     if (isIslandShapeKind(value)) {
       setShape(value);
     }
   }
 
-  const choice: WorldChoice | null = name === null || seed === null ? null : { name, seed, shape };
-
-  function create(event: FormEvent<HTMLFormElement>): void {
+  function handleSubmit(event: FormEvent<HTMLFormElement>): void {
     event.preventDefault();
 
     if (choice !== null) {
@@ -44,5 +43,16 @@ export function useWorldDraft(initial: WorldChoice, onCreate: (choice: WorldChoi
     }
   }
 
-  return { changeName, changeSeed, changeShape, choice, create, nameText, rollName, rollSeed, seedText, shape };
+  return {
+    choice,
+    handleNameChange,
+    handleNameRoll,
+    handleSeedChange,
+    handleSeedRoll,
+    handleShapeChange,
+    handleSubmit,
+    nameText,
+    seedText,
+    shape,
+  };
 }

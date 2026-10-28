@@ -70,10 +70,10 @@ function MinimapCanvas({ engine }: { readonly engine: EngineHandle }) {
 }
 
 export function MinimapIsland({ className }: { readonly className?: string | undefined }) {
-  const isOpen = useInterfaceStore((state) => state.isMapOpen);
   const engine = useEngine();
+  const isMapOpen = useInterfaceStore((state) => state.isMapOpen);
 
-  if (!isOpen || engine === null) {
+  if (!isMapOpen || engine === null) {
     return null;
   }
 

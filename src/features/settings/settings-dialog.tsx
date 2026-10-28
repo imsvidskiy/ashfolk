@@ -10,7 +10,7 @@ import { Island } from "../../design/island.tsx";
 import { SEGMENT, SEGMENT_TRACK } from "../../design/styles.ts";
 import { type SettingsTab, useInterfaceStore } from "../interface/interface-store.ts";
 import { ProjectLinks } from "../project/project-links.tsx";
-import { GraphicsSection } from "./graphics-section.tsx";
+import { IslandSection } from "./island-section.tsx";
 import { TimeSection } from "./time-section.tsx";
 import { WeatherSection } from "./weather-section.tsx";
 import { WorldRulesSection } from "./world-rules-section.tsx";
@@ -25,7 +25,7 @@ const SECTIONS: readonly SettingsSection[] = [
   { Content: WorldRulesSection, label: "World", value: "world" },
   { Content: WeatherSection, label: "Weather", value: "weather" },
   { Content: TimeSection, label: "Time", value: "time" },
-  { Content: GraphicsSection, label: "Island", value: "graphics" },
+  { Content: IslandSection, label: "Island", value: "island" },
 ];
 
 function isSettingsTab(value: unknown): value is SettingsTab {
@@ -51,33 +51,33 @@ function SectionPanel({ section }: { readonly section: SettingsSection }) {
 }
 
 function useSettingsDialog() {
-  const isOpen = useInterfaceStore((state) => state.isSettingsOpen);
-  const setOpen = useInterfaceStore((state) => state.setSettingsOpen);
-  const tab = useInterfaceStore((state) => state.settingsTab);
-  const setTab = useInterfaceStore((state) => state.setSettingsTab);
+  const isSettingsOpen = useInterfaceStore((state) => state.isSettingsOpen);
+  const setSettingsOpen = useInterfaceStore((state) => state.setSettingsOpen);
+  const settingsTab = useInterfaceStore((state) => state.settingsTab);
+  const setSettingsTab = useInterfaceStore((state) => state.setSettingsTab);
   const worldName = useLaunchStore((state) => state.launch.name);
 
-  function changeTab(value: unknown): void {
+  function handleTabChange(value: unknown): void {
     if (isSettingsTab(value)) {
-      setTab(value);
+      setSettingsTab(value);
     }
   }
 
-  return { changeTab, isOpen, setOpen, tab, worldName };
+  return { handleTabChange, isSettingsOpen, setSettingsOpen, settingsTab, worldName };
 }
 
 export function SettingsDialog() {
-  const { changeTab, isOpen, setOpen, tab, worldName } = useSettingsDialog();
+  const { handleTabChange, isSettingsOpen, setSettingsOpen, settingsTab, worldName } = useSettingsDialog();
 
   return (
-    <Dialog.Root onOpenChange={setOpen} open={isOpen}>
+    <Dialog.Root onOpenChange={setSettingsOpen} open={isSettingsOpen}>
       <Dialog.Portal>
         <Dialog.Backdrop className="bg-ink/12 fixed inset-0 z-40 transition-opacity duration-200 data-ending-style:opacity-0 data-starting-style:opacity-0" />
 
         <Dialog.Viewport className="fixed inset-0 z-50 flex items-center justify-center px-3 pt-(--dialog-inset-top) pb-(--dialog-inset-bottom)">
           <Dialog.Popup className="w-dialog ease-glide transition-[scale,opacity] duration-200 outline-none data-ending-style:scale-97 data-ending-style:opacity-0 data-starting-style:scale-97 data-starting-style:opacity-0">
             <Island className="max-h-dialog flex flex-col">
-              <Tabs.Root className="flex min-h-0 flex-col" onValueChange={changeTab} value={tab}>
+              <Tabs.Root className="flex min-h-0 flex-col" onValueChange={handleTabChange} value={settingsTab}>
                 <div className="flex items-start justify-between gap-4 px-5 pt-5 pb-4 sm:px-6">
                   <div className="flex min-w-0 flex-col gap-0.5">
                     <Dialog.Title className="text-ink text-lg leading-tight font-semibold">Settings</Dialog.Title>

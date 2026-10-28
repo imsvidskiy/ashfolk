@@ -4,14 +4,14 @@ import { render } from "vitest-browser-react";
 import { ToggleField } from "./toggle-field.tsx";
 
 function FrozenClockField() {
-  const [isFrozen, setFrozen] = useState(false);
+  const [isFrozen, setIsFrozen] = useState(false);
 
   return (
     <ToggleField
       description="Keep the sun where it is."
       isChecked={isFrozen}
       label="Stop the clock"
-      onChange={setFrozen}
+      onChange={setIsFrozen}
     />
   );
 }

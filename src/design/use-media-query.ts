@@ -17,11 +17,11 @@ function subscriberFor(query: string): Subscribe {
   }
 
   function subscribe(onChange: () => void): () => void {
-    const list = window.matchMedia(query);
+    const mediaList = window.matchMedia(query);
 
-    list.addEventListener("change", onChange);
+    mediaList.addEventListener("change", onChange);
 
-    return () => list.removeEventListener("change", onChange);
+    return () => mediaList.removeEventListener("change", onChange);
   }
 
   subscribers.set(query, subscribe);

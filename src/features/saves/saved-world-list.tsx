@@ -11,11 +11,6 @@ import { useNow } from "./use-now.ts";
 
 const CLOCK_MILLISECONDS = 30_000;
 
-interface SavedWorldRowProps {
-  readonly now: number;
-  readonly world: SavedWorldListing;
-}
-
 function worldDetails(world: SavedWorldListing): string {
   if (!world.isLoadable || world.summary === null) {
     return "Saved by another version of Dawnfolk";
@@ -25,31 +20,36 @@ function worldDetails(world: SavedWorldListing): string {
 }
 
 function useSavedWorldRow(world: SavedWorldListing) {
-  const [isConfirming, setConfirming] = useState(false);
   const continueWorld = useLaunchStore((state) => state.continueWorld);
   const remove = useSavesStore((state) => state.remove);
+  const [isConfirming, setIsConfirming] = useState(false);
 
-  function askToDelete(): void {
-    setConfirming(true);
+  function handleDelete(): void {
+    setIsConfirming(true);
   }
 
-  function keep(): void {
-    setConfirming(false);
+  function handleKeep(): void {
+    setIsConfirming(false);
   }
 
-  function confirmDelete(): void {
+  function handleConfirmDelete(): void {
     remove(world.id).catch(() => undefined);
   }
 
-  function open(): void {
+  function handleOpen(): void {
     continueWorld(world.id, world);
   }
 
-  return { askToDelete, confirmDelete, isConfirming, keep, open };
+  return { handleConfirmDelete, handleDelete, handleKeep, handleOpen, isConfirming };
+}
+
+interface SavedWorldRowProps {
+  readonly now: number;
+  readonly world: SavedWorldListing;
 }
 
 function SavedWorldRow({ now, world }: SavedWorldRowProps) {
-  const { askToDelete, confirmDelete, isConfirming, keep, open } = useSavedWorldRow(world);
+  const { handleConfirmDelete, handleDelete, handleKeep, handleOpen, isConfirming } = useSavedWorldRow(world);
 
   if (isConfirming) {
     return (
@@ -57,11 +57,11 @@ function SavedWorldRow({ now, world }: SavedWorldRowProps) {
         <p className="text-ink min-w-0 truncate text-sm">Delete {world.name}?</p>
 
         <div className="flex shrink-0 items-center gap-1">
-          <TextButton className="h-8 px-3" onClick={keep} tone="quiet">
+          <TextButton className="h-8 px-3" onClick={handleKeep} tone="quiet">
             Keep
           </TextButton>
 
-          <TextButton className="h-8 px-3" onClick={confirmDelete} tone="danger">
+          <TextButton className="h-8 px-3" onClick={handleConfirmDelete} tone="danger">
             Delete
           </TextButton>
         </div>
@@ -78,7 +78,7 @@ function SavedWorldRow({ now, world }: SavedWorldRowProps) {
           "enabled:hover:bg-paper-hover disabled:cursor-not-allowed disabled:opacity-60"
         )}
         disabled={!world.isLoadable}
-        onClick={open}
+        onClick={handleOpen}
         type="button"
       >
         <span className="flex min-w-0 flex-1 flex-col gap-0.5">
@@ -98,13 +98,13 @@ function SavedWorldRow({ now, world }: SavedWorldRowProps) {
         className="size-9"
         icon={<Trash2 aria-hidden="true" size={16} />}
         label={`Delete ${world.name}`}
-        onClick={askToDelete}
+        onClick={handleDelete}
       />
     </div>
   );
 }
 
-export function SavedWorldRows() {
+export function SavedWorldList() {
   const worlds = useSavesStore((state) => state.worlds);
   const now = useNow(CLOCK_MILLISECONDS);
 

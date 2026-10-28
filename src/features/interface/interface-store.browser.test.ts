@@ -81,13 +81,13 @@ describe("interface store", () => {
     const { openSettings, setSettingsOpen, setSettingsTab } = useInterfaceStore.getState();
 
     openSettings();
-    setSettingsTab("graphics");
+    setSettingsTab("island");
     setSettingsOpen(false);
 
     const state = useInterfaceStore.getState();
 
     expect(state.isSettingsOpen).toBe(false);
-    expect(state.settingsTab).toBe("graphics");
+    expect(state.settingsTab).toBe("island");
   });
 
   it("switches settings sections", () => {

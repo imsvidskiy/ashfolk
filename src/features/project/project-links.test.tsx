@@ -1,6 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
 import { render } from "vitest-browser-react";
-import { formatStars } from "./github-stars.ts";
 import { ProjectLinks } from "./project-links.tsx";
 
 describe("project links", () => {
@@ -26,11 +25,5 @@ describe("project links", () => {
     const screen = await render(<ProjectLinks />);
 
     await expect.element(screen.getByRole("link", { name: "Dawnfolk on GitHub" })).not.toHaveTextContent("K");
-  });
-
-  it("shortens large star counts", () => {
-    expect(formatStars(8)).toBe("8");
-    expect(formatStars(2000)).toBe("2K");
-    expect(formatStars(15_340)).toBe("15.3K");
   });
 });

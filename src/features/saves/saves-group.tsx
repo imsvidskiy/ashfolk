@@ -55,30 +55,30 @@ function useSavesGroup() {
     refresh().catch(() => undefined);
   }, [refresh]);
 
-  function save(): void {
+  function handleSave(): void {
     saveNow().catch(() => undefined);
   }
 
-  function showAllWorlds(): void {
+  function handleAllWorlds(): void {
     leaveWorld(chooseWorld);
   }
 
-  return { isSaving, save, showAllWorlds };
+  return { handleAllWorlds, handleSave, isSaving };
 }
 
 export function SavesGroup() {
   const description = useSaveDescription();
-  const { isSaving, save, showAllWorlds } = useSavesGroup();
+  const { handleAllWorlds, handleSave, isSaving } = useSavesGroup();
 
   return (
     <SettingsGroup description={description} title="Saves">
       <div className="grid grid-cols-2 gap-2">
-        <TextButton onClick={showAllWorlds} tone="outline">
+        <TextButton onClick={handleAllWorlds} tone="outline">
           <LayoutGrid aria-hidden="true" size={16} />
           All worlds
         </TextButton>
 
-        <TextButton disabled={isSaving} onClick={save} tone="accent">
+        <TextButton disabled={isSaving} onClick={handleSave} tone="accent">
           Save now
         </TextButton>
       </div>

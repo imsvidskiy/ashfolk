@@ -16,6 +16,11 @@ const WEATHER_ICONS: Readonly<Record<WeatherKind, GameIconName>> = {
   storm: "storm",
 };
 
+const CHIP_CLASS = "flex h-8 items-center gap-1.5 whitespace-nowrap rounded-full bg-ink/5 pr-3 pl-1.5 text-ink text-sm";
+
+const RING_RADIUS = 21;
+const RING_LENGTH = 2 * Math.PI * RING_RADIUS;
+
 function daylightIcon(hours: number): GameIconName {
   if (hours >= 5 && hours < 8) {
     return "sunrise";
@@ -31,11 +36,6 @@ function daylightIcon(hours: number): GameIconName {
 
   return "moon";
 }
-
-const CHIP_CLASS = "flex h-8 items-center gap-1.5 whitespace-nowrap rounded-full bg-ink/5 pr-3 pl-1.5 text-ink text-sm";
-
-const RING_RADIUS = 21;
-const RING_LENGTH = 2 * Math.PI * RING_RADIUS;
 
 function DayRing({ hours }: { readonly hours: number }) {
   const elapsed = (RING_LENGTH * hours) / 24;
@@ -83,21 +83,21 @@ function PopulationReading() {
   const population = useWorldStore((state) =>
     state.snapshot?.tribes.reduce((total, tribe) => total + tribe.population, 0)
   );
-  const tribes = useWorldStore((state) => state.snapshot?.tribes.length);
+  const tribeCount = useWorldStore((state) => state.snapshot?.tribes.length);
 
-  if (population === undefined || tribes === undefined) {
+  if (population === undefined || tribeCount === undefined) {
     return null;
   }
 
-  const tribeCount = tribes === 1 ? "1 tribe" : `${tribes} tribes`;
+  const tribesLabel = tribeCount === 1 ? "1 tribe" : `${tribeCount} tribes`;
 
   return (
-    <span className={CHIP_CLASS} title={`${population} people in ${tribeCount}`}>
+    <span className={CHIP_CLASS} title={`${population} people in ${tribesLabel}`}>
       <GameIcon name="population" size={22} />
 
       <span className="tabular-nums">{population}</span>
 
-      <span className="text-ink-muted text-xs">{tribeCount}</span>
+      <span className="text-ink-muted text-xs">{tribesLabel}</span>
     </span>
   );
 }

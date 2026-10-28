@@ -15,6 +15,11 @@ import type { WeatherView } from "../../simulation/frame.ts";
 import { useWorldStore } from "../world/world-store.ts";
 import { FIELD_GRID, SettingsGroup } from "./settings-group.tsx";
 
+interface WindSetting {
+  readonly direction: number;
+  readonly speed: number;
+}
+
 const AUTOMATIC = "automatic";
 
 const WEATHER_OPTIONS = [
@@ -26,7 +31,6 @@ const COMPASS = ["N", "NE", "E", "SE", "S", "SW", "W", "NW"] as const;
 
 function compassName(degrees: number): string {
   const index = Math.round((((degrees % 360) + 360) % 360) / 45) % COMPASS.length;
-
   const name = COMPASS[index];
 
   if (name === undefined) {
@@ -40,20 +44,14 @@ function isWeatherChoice(value: string): value is WeatherKind | typeof AUTOMATIC
   return value === AUTOMATIC || WEATHER_KINDS.some((kind) => kind === value);
 }
 
-interface WindSetting {
-  readonly direction: number;
-  readonly speed: number;
-}
-
-function useWeatherControls(weather: WeatherView) {
+function useWeatherSettings(weather: WeatherView) {
   const send = useSendCommand();
-
   const [wind, holdWind] = useHeldDraft<WindSetting>({
     direction: weather.windDirection,
     speed: weather.windBaseSpeed,
   });
 
-  function changeWeather(value: string): void {
+  function handleWeatherChange(value: string): void {
     if (isWeatherChoice(value)) {
       send({ type: "setWeather", weather: value });
     }
@@ -64,23 +62,24 @@ function useWeatherControls(weather: WeatherView) {
     send({ ...next, type: "setWind" });
   }
 
-  function changeDirection(direction: number): void {
+  function handleDirectionChange(direction: number): void {
     changeWind({ ...wind, direction });
   }
 
-  function changeSpeed(speed: number): void {
+  function handleSpeedChange(speed: number): void {
     changeWind({ ...wind, speed });
   }
 
-  function changeTemperature(offset: number): void {
+  function handleTemperatureChange(offset: number): void {
     send({ offset, type: "setTemperatureOffset" });
   }
 
-  return { changeDirection, changeSpeed, changeTemperature, changeWeather, wind };
+  return { handleDirectionChange, handleSpeedChange, handleTemperatureChange, handleWeatherChange, wind };
 }
 
-function WeatherControls({ weather }: { readonly weather: WeatherView }) {
-  const { changeDirection, changeSpeed, changeTemperature, changeWeather, wind } = useWeatherControls(weather);
+function WeatherSettings({ weather }: { readonly weather: WeatherView }) {
+  const { handleDirectionChange, handleSpeedChange, handleTemperatureChange, handleWeatherChange, wind } =
+    useWeatherSettings(weather);
 
   const choice = weather.isAutomatic ? AUTOMATIC : weather.kind;
 
@@ -90,7 +89,7 @@ function WeatherControls({ weather }: { readonly weather: WeatherView }) {
         <ChoiceField
           description="Pick the weather or let the seasons decide."
           label="Weather"
-          onChange={changeWeather}
+          onChange={handleWeatherChange}
           options={WEATHER_OPTIONS}
           value={choice}
         />
@@ -100,7 +99,7 @@ function WeatherControls({ weather }: { readonly weather: WeatherView }) {
           label="Temperature"
           maximum={MAXIMUM_TEMPERATURE_OFFSET}
           minimum={MINIMUM_TEMPERATURE_OFFSET}
-          onChange={changeTemperature}
+          onChange={handleTemperatureChange}
           step={1}
           value={Math.round(weather.userTemperatureOffset)}
           valueText={formatParameterValue(Math.round(weather.userTemperatureOffset), "celsius")}
@@ -114,7 +113,7 @@ function WeatherControls({ weather }: { readonly weather: WeatherView }) {
             label="Wind from"
             maximum={359}
             minimum={0}
-            onChange={changeDirection}
+            onChange={handleDirectionChange}
             step={1}
             value={Math.round(wind.direction)}
             valueText={`${compassName(wind.direction)} · ${Math.round(wind.direction)}°`}
@@ -125,7 +124,7 @@ function WeatherControls({ weather }: { readonly weather: WeatherView }) {
             label="Wind speed"
             maximum={MAXIMUM_WIND_SPEED}
             minimum={0}
-            onChange={changeSpeed}
+            onChange={handleSpeedChange}
             step={1}
             value={Math.round(wind.speed)}
             valueText={formatParameterValue(wind.speed, "kilometersPerHour")}
@@ -143,5 +142,5 @@ export function WeatherSection() {
     return null;
   }
 
-  return <WeatherControls weather={weather} />;
+  return <WeatherSettings weather={weather} />;
 }

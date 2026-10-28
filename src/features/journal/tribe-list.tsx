@@ -16,19 +16,6 @@ interface StockHighlight {
   readonly name: string;
 }
 
-function MigrationMark({ tribe }: { readonly tribe: TribeSummary }) {
-  if (!tribe.isMigrating) {
-    return null;
-  }
-
-  return (
-    <span className="text-ink-muted flex items-center gap-1 text-xs">
-      <GameIcon name="migration" size={18} />
-      On the move
-    </span>
-  );
-}
-
 function highlights(tribe: TribeSummary): StockHighlight[] {
   const { stock } = tribe;
 
@@ -46,6 +33,19 @@ function highlights(tribe: TribeSummary): StockHighlight[] {
   }
 
   return shown;
+}
+
+function MigrationMark({ tribe }: { readonly tribe: TribeSummary }) {
+  if (!tribe.isMigrating) {
+    return null;
+  }
+
+  return (
+    <span className="text-ink-muted flex items-center gap-1 text-xs">
+      <GameIcon name="migration" size={18} />
+      On the move
+    </span>
+  );
 }
 
 function StockLine({ tribe }: { readonly tribe: TribeSummary }) {

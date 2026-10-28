@@ -4,7 +4,7 @@ import { COMPACT_QUERY } from "../../design/use-media-query.ts";
 
 export type JournalTab = "chronicle" | "relations" | "tribes";
 
-export type SettingsTab = "graphics" | "time" | "weather" | "world";
+export type SettingsTab = "island" | "time" | "weather" | "world";
 
 interface InterfaceStore {
   readonly areLabelsShown: boolean;

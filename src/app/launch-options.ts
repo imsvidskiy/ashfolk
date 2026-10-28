@@ -17,6 +17,14 @@ export interface LaunchOptions {
   readonly shape: IslandShapeKind;
 }
 
+type LaunchParameters = z.output<typeof launchSchema>;
+
+interface ParameterIssue {
+  readonly path: readonly PropertyKey[];
+}
+
+const WORLD_PARAMETER = "world";
+
 const cameraSchema = z
   .string()
   .transform((text) => text.split(",").map(Number))
@@ -33,6 +41,8 @@ const launchSchema = z.object({
   shape: z.enum(ISLAND_SHAPES).optional(),
 });
 
+const worldIdSchema = z.string().regex(/^[\w-]{1,64}$/u);
+
 function defaultQuality(): QualityLevel {
   const stored = storedQuality();
 
@@ -43,12 +53,6 @@ function defaultQuality(): QualityLevel {
   const isTouchDevice = window.matchMedia(TOUCH_QUERY).matches;
 
   return isTouchDevice ? "low" : "medium";
-}
-
-type LaunchParameters = z.output<typeof launchSchema>;
-
-interface ParameterIssue {
-  readonly path: readonly PropertyKey[];
 }
 
 function toLaunchOptions(parameters: LaunchParameters): LaunchOptions {
@@ -71,10 +75,6 @@ function withoutInvalid(parameters: Record<string, string>, issues: readonly Par
 
   return Object.fromEntries(Object.entries(parameters).filter(([name]) => !invalidNames.has(name)));
 }
-
-const WORLD_PARAMETER = "world";
-
-const worldIdSchema = z.string().regex(/^[\w-]{1,64}$/u);
 
 export function createWorldId(): string {
   return crypto.randomUUID();
@@ -102,7 +102,6 @@ export function choosesWorld(search: string): boolean {
 
 export function readLaunchOptions(search: string): LaunchOptions {
   const parameters = Object.fromEntries(new URLSearchParams(search));
-
   const result = launchSchema.safeParse(parameters);
 
   if (result.success) {

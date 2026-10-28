@@ -4,7 +4,7 @@ import { render } from "vitest-browser-react";
 import { useInterfaceStore } from "../features/interface/interface-store.ts";
 import { usePowerStore } from "../features/powers/power-store.ts";
 import { createTribe, showWorld } from "../features/testing/world-fixtures.ts";
-import { ReadyHud } from "./hud.tsx";
+import { Hud } from "./hud.tsx";
 
 const CLAN_NAMES = ["Bear", "Wolf", "Lynx", "Heron", "Otter", "Fox", "Elk", "Crane"];
 
@@ -73,7 +73,7 @@ async function openJournalWithMeteor(width: number, height: number) {
   useInterfaceStore.getState().openJournal("tribes");
   usePowerStore.getState().selectPower("meteor");
 
-  return render(<ReadyHud />);
+  return render(<Hud />);
 }
 
 describe("wide hud", () => {
@@ -112,7 +112,7 @@ describe("short hud", () => {
     showWorld();
     usePowerStore.getState().selectPower("meteor");
 
-    const screen = await render(<ReadyHud />);
+    const screen = await render(<Hud />);
 
     await expect.element(screen.getByRole("button", { exact: true, name: "Menu" })).toBeVisible();
     await expect.element(screen.getByRole("navigation", { name: "Panels" })).not.toBeInTheDocument();

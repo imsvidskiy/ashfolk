@@ -14,6 +14,8 @@ import { TribeDot } from "../tribes/tribe-dot.tsx";
 import { useWorldStore, type WorldSnapshot } from "../world/world-store.ts";
 import { useLabelLayout } from "./use-label-layout.ts";
 
+type TribeMood = "calm" | "feuding" | "raiding";
+
 const TRIBE_LIFT = 18;
 const LABEL_FRAME =
   "invisible absolute top-0 left-0 opacity-0 transition-[opacity,visibility] duration-200 will-change-transform data-shown:visible data-shown:opacity-100";
@@ -26,6 +28,18 @@ function selectedTribeIdOf(state: { readonly snapshot: WorldSnapshot | null }): 
   }
 
   return inspection.summary.id;
+}
+
+function moodOf(rivalry: RivalryView | undefined, tribeId: number): TribeMood {
+  if (rivalry === undefined) {
+    return "calm";
+  }
+
+  if (raidOf(rivalry, tribeId) !== null) {
+    return "raiding";
+  }
+
+  return isFeuding(rivalry, tribeId) ? "feuding" : "calm";
 }
 
 function LandmarkDetail({ detail }: { readonly detail: string | null }) {
@@ -54,26 +68,6 @@ function LandmarkLabel({ landmark }: { readonly landmark: Landmark }) {
   );
 }
 
-type TribeMood = "calm" | "feuding" | "raiding";
-
-interface TribeLabelProps {
-  readonly isSelected: boolean;
-  readonly mood: TribeMood;
-  readonly tribe: TribeSummary;
-}
-
-function moodOf(rivalry: RivalryView | undefined, tribeId: number): TribeMood {
-  if (rivalry === undefined) {
-    return "calm";
-  }
-
-  if (raidOf(rivalry, tribeId) !== null) {
-    return "raiding";
-  }
-
-  return isFeuding(rivalry, tribeId) ? "feuding" : "calm";
-}
-
 function FeudMark({ mood }: { readonly mood: TribeMood }) {
   if (mood === "calm") {
     return null;
@@ -86,6 +80,12 @@ function FeudMark({ mood }: { readonly mood: TribeMood }) {
       <GameIcon label={label} name="raid" size={18} />
     </span>
   );
+}
+
+interface TribeLabelProps {
+  readonly isSelected: boolean;
+  readonly mood: TribeMood;
+  readonly tribe: TribeSummary;
 }
 
 function TribeLabel({ isSelected, mood, tribe }: TribeLabelProps) {
@@ -163,8 +163,8 @@ function useLandmarks(engine: EngineHandle): readonly Landmark[] {
 }
 
 function LabelLayer({ engine }: { readonly engine: EngineHandle }) {
-  const layerReference = useRef<HTMLDivElement>(null);
   const landmarks = useLandmarks(engine);
+  const layerReference = useRef<HTMLDivElement>(null);
 
   useLabelLayout(layerReference, engine);
 

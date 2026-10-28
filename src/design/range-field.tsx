@@ -16,12 +16,12 @@ interface RangeFieldProps {
 function useHeldRange(value: number, onChange: (value: number) => void) {
   const [shown, hold] = useHeldDraft(value);
 
-  function change(next: number): void {
+  function handleChange(next: number): void {
     hold(next);
     onChange(next);
   }
 
-  return { change, shown };
+  return { handleChange, shown };
 }
 
 export function RangeField({
@@ -35,8 +35,7 @@ export function RangeField({
   valueText,
 }: RangeFieldProps) {
   const labelId = useId();
-
-  const { change, shown } = useHeldRange(value, onChange);
+  const { handleChange, shown } = useHeldRange(value, onChange);
 
   return (
     <div className="flex flex-col gap-1" title={description}>
@@ -52,7 +51,7 @@ export function RangeField({
         aria-labelledby={labelId}
         max={maximum}
         min={minimum}
-        onValueChange={change}
+        onValueChange={handleChange}
         step={step}
         value={shown}
       >

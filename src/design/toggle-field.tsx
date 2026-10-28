@@ -1,5 +1,7 @@
 import { Switch } from "@base-ui/react/switch";
 import { useId } from "react";
+import { cn } from "./cn.ts";
+import { FOCUS_RING_OFFSET } from "./styles.ts";
 
 interface ToggleFieldProps {
   readonly description?: string | undefined;
@@ -20,7 +22,10 @@ export function ToggleField({ description, isChecked, label, onChange }: ToggleF
       <Switch.Root
         aria-labelledby={labelId}
         checked={isChecked}
-        className="bg-ink/14 focus-visible:ring-dawn data-checked:bg-dawn flex h-5.5 w-9 shrink-0 rounded-full p-0.5 transition-colors duration-150 outline-none focus-visible:ring-2 focus-visible:ring-offset-1"
+        className={cn(
+          FOCUS_RING_OFFSET,
+          "bg-ink/14 data-checked:bg-dawn flex h-5.5 w-9 shrink-0 rounded-full p-0.5 transition-colors duration-150"
+        )}
         onCheckedChange={onChange}
       >
         <Switch.Thumb className="shadow-thumb ease-glide size-4.5 rounded-full bg-white transition-transform duration-150 data-checked:translate-x-3.5" />

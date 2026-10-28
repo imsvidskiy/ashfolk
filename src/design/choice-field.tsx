@@ -4,7 +4,9 @@ import { ToggleGroup } from "@base-ui/react/toggle-group";
 import { Check, ChevronsUpDown } from "lucide-react";
 import type { ReactNode } from "react";
 import { cn } from "./cn.ts";
-import { FIELD_SURFACE, PAPER_SURFACE, SEGMENT, SEGMENT_TRACK } from "./styles.ts";
+import { FIELD_SURFACE, FOCUS_RING, PAPER_SURFACE, POPUP_MOTION, SEGMENT, SEGMENT_TRACK } from "./styles.ts";
+
+const SEGMENTED_LIMIT = 3;
 
 export interface ChoiceOption {
   readonly icon?: ReactNode;
@@ -19,8 +21,6 @@ interface ChoiceFieldProps {
   readonly options: readonly ChoiceOption[];
   readonly value: string;
 }
-
-const SEGMENTED_LIMIT = 3;
 
 function SegmentOption({ option }: { readonly option: ChoiceOption }) {
   return (
@@ -86,7 +86,8 @@ function ListChoice({ label, onChange, options, value }: ChoiceFieldProps) {
         aria-label={label}
         className={cn(
           FIELD_SURFACE,
-          "text-ink focus-visible:ring-dawn flex h-9 w-full items-center justify-between gap-3 transition-colors outline-none hover:bg-white/80 focus-visible:ring-2 pointer-coarse:h-10"
+          FOCUS_RING,
+          "text-ink flex h-9 w-full items-center justify-between gap-3 transition-colors hover:bg-white/80 pointer-coarse:h-10"
         )}
       >
         <Select.Value />
@@ -99,10 +100,7 @@ function ListChoice({ label, onChange, options, value }: ChoiceFieldProps) {
       <Select.Portal>
         <Select.Positioner alignItemWithTrigger={false} className="z-50 outline-none select-none" sideOffset={6}>
           <Select.Popup
-            className={cn(
-              PAPER_SURFACE,
-              "w-(--anchor-width) origin-(--transform-origin) rounded-2xl p-1 transition-[scale,opacity] duration-100 outline-none data-ending-style:scale-95 data-ending-style:opacity-0 data-starting-style:scale-95 data-starting-style:opacity-0"
-            )}
+            className={cn(PAPER_SURFACE, POPUP_MOTION, "w-(--anchor-width) rounded-2xl p-1 duration-100 outline-none")}
           >
             <Select.List className="max-h-[min(var(--available-height),24rem)] overflow-y-auto">
               {options.map((option) => (

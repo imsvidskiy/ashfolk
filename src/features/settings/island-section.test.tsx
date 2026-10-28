@@ -4,7 +4,7 @@ import type { LaunchOptions } from "../../app/launch-options.ts";
 import { useLaunchStore } from "../../app/launch-store.ts";
 import { useInterfaceStore } from "../interface/interface-store.ts";
 import { LARGEST_SEED } from "../new-world/seeds.ts";
-import { GraphicsSection } from "./graphics-section.tsx";
+import { IslandSection } from "./island-section.tsx";
 
 const QUALITY_KEY = "dawnfolk.quality";
 const LABELS_KEY = "dawnfolk.labels";
@@ -16,18 +16,18 @@ function launchWith(changes: Partial<LaunchOptions>): void {
   useLaunchStore.setState({ launch: { ...initialLaunch.launch, ...changes } });
 }
 
-describe("graphics section", () => {
+describe("island section", () => {
   it("starts at the quality the island was launched with", async () => {
     launchWith({ quality: "low" });
 
-    const screen = await render(<GraphicsSection />);
+    const screen = await render(<IslandSection />);
 
     await expect.element(screen.getByRole("button", { name: "Light", pressed: true })).toBeVisible();
     await expect.element(screen.getByRole("button", { name: "Apply" })).toBeDisabled();
   });
 
   it("remembers a new quality and offers to apply it", async () => {
-    const screen = await render(<GraphicsSection />);
+    const screen = await render(<IslandSection />);
 
     await screen.getByRole("button", { name: "High" }).click();
 
@@ -37,7 +37,7 @@ describe("graphics section", () => {
   });
 
   it("turns the map labels off and on", async () => {
-    const screen = await render(<GraphicsSection />);
+    const screen = await render(<IslandSection />);
 
     const labels = screen.getByRole("switch", { name: "Map labels" });
 
@@ -58,7 +58,7 @@ describe("graphics section", () => {
   it("starts the seed field at the seed of the current world", async () => {
     launchWith({ seed: 7 });
 
-    const screen = await render(<GraphicsSection />);
+    const screen = await render(<IslandSection />);
 
     await expect.element(screen.getByRole("textbox", { name: "Seed" })).toHaveValue("7");
     await expect.element(screen.getByRole("button", { name: "Create" })).toBeEnabled();
@@ -67,7 +67,7 @@ describe("graphics section", () => {
   it("only creates worlds from seeds in the allowed range", async () => {
     launchWith({ seed: 7 });
 
-    const screen = await render(<GraphicsSection />);
+    const screen = await render(<IslandSection />);
 
     const seed = screen.getByRole("textbox", { name: "Seed" });
     const create = screen.getByRole("button", { name: "Create" });
@@ -90,7 +90,7 @@ describe("graphics section", () => {
   });
 
   it("rolls a random seed that can grow a world", async () => {
-    const screen = await render(<GraphicsSection />);
+    const screen = await render(<IslandSection />);
 
     const seed = screen.getByRole("textbox", { name: "Seed" });
     const create = screen.getByRole("button", { name: "Create" });
@@ -108,7 +108,7 @@ describe("graphics section", () => {
   it("rebuilds the island with the chosen quality and closes the settings", async () => {
     useInterfaceStore.setState({ isSettingsOpen: true });
 
-    const screen = await render(<GraphicsSection />);
+    const screen = await render(<IslandSection />);
 
     await screen.getByRole("button", { name: "High" }).click();
     await screen.getByRole("button", { name: "Apply" }).click();
@@ -120,7 +120,7 @@ describe("graphics section", () => {
   it("grows a new world with a new name and shape", async () => {
     launchWith({ seed: 7 });
 
-    const screen = await render(<GraphicsSection />);
+    const screen = await render(<IslandSection />);
 
     await screen.getByRole("textbox", { name: "Name" }).fill("Old Ford");
     await screen.getByRole("button", { name: "Square" }).click();
@@ -132,7 +132,7 @@ describe("graphics section", () => {
   it("grows a new world from the chosen seed", async () => {
     launchWith({ seed: 7 });
 
-    const screen = await render(<GraphicsSection />);
+    const screen = await render(<IslandSection />);
 
     await screen.getByRole("textbox", { name: "Seed" }).fill("42");
     await screen.getByRole("button", { name: "Create" }).click();

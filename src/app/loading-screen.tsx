@@ -22,6 +22,10 @@ function stageLabel(progress: GenerationProgress | null): string {
   return STAGE_LABELS[progress.stage];
 }
 
+function startAgain(): void {
+  useLaunchStore.getState().relaunch({});
+}
+
 interface LoadingMessageProps {
   readonly name: string;
   readonly progress: GenerationProgress | null;
@@ -52,10 +56,6 @@ function FailureMessage({ message, title }: FailureMessageProps) {
       <p className="text-ink-soft text-sm">{message}</p>
     </div>
   );
-}
-
-function startAgain(): void {
-  useLaunchStore.getState().relaunch({});
 }
 
 function StoppedMessage({ message }: { readonly message: string }) {

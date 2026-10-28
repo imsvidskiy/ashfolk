@@ -6,7 +6,7 @@ import { Logo } from "../design/logo.tsx";
 import { useWorldDraft } from "../features/new-world/use-world-draft.ts";
 import { NameField, SeedField, ShapeChoice } from "../features/new-world/world-fields.tsx";
 import { ProjectLinks } from "../features/project/project-links.tsx";
-import { SavedWorldRows } from "../features/saves/saved-world-list.tsx";
+import { SavedWorldList } from "../features/saves/saved-world-list.tsx";
 import { useSavesStore } from "../features/saves/saves-store.ts";
 import { loadGameEngine, loadHud } from "./engine-launcher.ts";
 import { useLaunchStore } from "./launch-store.ts";
@@ -46,16 +46,15 @@ function Subview({ children, onBack, title }: SubviewProps) {
 function NewWorldForm() {
   const launch = useLaunchStore((state) => state.launch);
   const createWorld = useLaunchStore((state) => state.createWorld);
-
   const draft = useWorldDraft(launch, createWorld);
 
   return (
-    <form aria-label="New world" className="flex flex-col gap-5" onSubmit={draft.create}>
-      <NameField onChange={draft.changeName} onRoll={draft.rollName} value={draft.nameText} />
+    <form aria-label="New world" className="flex flex-col gap-5" onSubmit={draft.handleSubmit}>
+      <NameField onChange={draft.handleNameChange} onRoll={draft.handleNameRoll} value={draft.nameText} />
 
-      <ShapeChoice onChange={draft.changeShape} value={draft.shape} />
+      <ShapeChoice onChange={draft.handleShapeChange} value={draft.shape} />
 
-      <SeedField onChange={draft.changeSeed} onRoll={draft.rollSeed} value={draft.seedText} />
+      <SeedField onChange={draft.handleSeedChange} onRoll={draft.handleSeedRoll} value={draft.seedText} />
 
       <TextButton className={BIG_BUTTON_CLASS} disabled={draft.choice === null} tone="accent" type="submit">
         Grow the island
@@ -72,33 +71,41 @@ function useTitleCard() {
 
   const latest = worlds.find((world) => world.isLoadable);
 
-  function goHome(): void {
+  function handleBack(): void {
     setView("home");
   }
 
-  function showNewWorld(): void {
+  function handleNewWorld(): void {
     setView("new");
   }
 
-  function showWorlds(): void {
+  function handleAllWorlds(): void {
     setView("worlds");
   }
 
-  function continueLatest(): void {
+  function handleContinue(): void {
     if (latest !== undefined) {
       continueWorld(latest.id, latest);
     }
   }
 
-  return { continueLatest, goHome, hasWorlds: worlds.length > 0, latest, showNewWorld, showWorlds, view };
+  return {
+    handleAllWorlds,
+    handleBack,
+    handleContinue,
+    handleNewWorld,
+    hasWorlds: worlds.length > 0,
+    latest,
+    view,
+  };
 }
 
 function TitleCard() {
-  const { continueLatest, goHome, hasWorlds, latest, showNewWorld, showWorlds, view } = useTitleCard();
+  const { handleAllWorlds, handleBack, handleContinue, handleNewWorld, hasWorlds, latest, view } = useTitleCard();
 
   if (!hasWorlds || view === "new") {
     return (
-      <Subview onBack={hasWorlds ? goHome : null} title="New world">
+      <Subview onBack={hasWorlds ? handleBack : null} title="New world">
         <NewWorldForm />
       </Subview>
     );
@@ -106,8 +113,8 @@ function TitleCard() {
 
   if (view === "worlds") {
     return (
-      <Subview onBack={goHome} title="Your worlds">
-        <SavedWorldRows />
+      <Subview onBack={handleBack} title="Your worlds">
+        <SavedWorldList />
       </Subview>
     );
   }
@@ -115,18 +122,18 @@ function TitleCard() {
   return (
     <div className="flex flex-col gap-3">
       {latest === undefined ? null : (
-        <TextButton className={BIG_BUTTON_CLASS} onClick={continueLatest} tone="accent">
+        <TextButton className={BIG_BUTTON_CLASS} onClick={handleContinue} tone="accent">
           Continue {latest.name}
           <ArrowRight aria-hidden="true" size={18} />
         </TextButton>
       )}
 
       <div className="grid grid-cols-2 gap-3">
-        <TextButton className={BIG_BUTTON_CLASS} onClick={showNewWorld} tone="outline">
+        <TextButton className={BIG_BUTTON_CLASS} onClick={handleNewWorld} tone="outline">
           New world
         </TextButton>
 
-        <TextButton className={BIG_BUTTON_CLASS} onClick={showWorlds} tone="outline">
+        <TextButton className={BIG_BUTTON_CLASS} onClick={handleAllWorlds} tone="outline">
           All worlds
         </TextButton>
       </div>

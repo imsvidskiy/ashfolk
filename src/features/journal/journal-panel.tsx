@@ -44,20 +44,20 @@ function useJournalTab() {
   const journalTab = useInterfaceStore((state) => state.journalTab);
   const setJournalTab = useInterfaceStore((state) => state.setJournalTab);
 
-  function changeTab(value: unknown): void {
+  function handleTabChange(value: unknown): void {
     if (isJournalTab(value)) {
       setJournalTab(value);
     }
   }
 
-  return { changeTab, journalTab };
+  return { handleTabChange, journalTab };
 }
 
 export function JournalPanel() {
-  const { changeTab, journalTab } = useJournalTab();
+  const { handleTabChange, journalTab } = useJournalTab();
 
   return (
-    <Tabs.Root className="flex min-h-0 flex-1 flex-col gap-2" onValueChange={changeTab} value={journalTab}>
+    <Tabs.Root className="flex min-h-0 flex-1 flex-col gap-2" onValueChange={handleTabChange} value={journalTab}>
       <Tabs.List aria-label="Journal" className="bg-ink/8 flex gap-1 rounded-full p-1">
         {TABS.map((tab) => (
           <JournalTabButton key={tab.value} label={tab.label} value={tab.value} />

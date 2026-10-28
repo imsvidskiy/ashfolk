@@ -25,9 +25,8 @@ function ruleValue(rules: RuleValues, groupKey: string, fieldKey: string): Param
 }
 
 function useWorldRules() {
-  const confirmedRules = useWorldStore((state) => state.snapshot?.rules);
   const send = useSendCommand();
-
+  const confirmedRules = useWorldStore((state) => state.snapshot?.rules);
   const [rules, holdRules] = useHeldDraft(confirmedRules);
 
   function applyRules(next: WorldRules): void {
@@ -35,7 +34,7 @@ function useWorldRules() {
     send({ rules: next, type: "setWorldRules" });
   }
 
-  function changeRule(groupKey: string, fieldKey: string, value: ParameterValue): void {
+  function handleRuleChange(groupKey: string, fieldKey: string, value: ParameterValue): void {
     if (rules === undefined) {
       return;
     }
@@ -45,42 +44,37 @@ function useWorldRules() {
     applyRules(readWorldRules({ ...groups, [groupKey]: { ...groups[groupKey], [fieldKey]: value } }));
   }
 
-  function resetRules(): void {
+  function handleReset(): void {
     applyRules(DEFAULT_WORLD_RULES);
   }
 
-  return { changeRule, resetRules, rules };
+  return { handleReset, handleRuleChange, rules };
 }
 
 function useRuleChange(groupKey: string, onChange: RuleChange) {
   return (key: string, value: ParameterValue) => onChange(groupKey, key, value);
 }
 
-function RuleControl({
-  field,
-  group,
-  onChange,
-  rules,
-}: {
+interface RuleControlProps {
   readonly field: ParameterField;
   readonly group: ParameterGroupField;
   readonly onChange: RuleChange;
   readonly rules: WorldRules;
-}) {
+}
+
+function RuleControl({ field, group, onChange, rules }: RuleControlProps) {
   const handleChange = useRuleChange(group.key, onChange);
 
   return <ParameterControl field={field} onChange={handleChange} value={ruleValue(rules, group.key, field.key)} />;
 }
 
-function RuleGroup({
-  group,
-  onChange,
-  rules,
-}: {
+interface RuleGroupProps {
   readonly group: ParameterGroupField;
   readonly onChange: RuleChange;
   readonly rules: WorldRules;
-}) {
+}
+
+function RuleGroup({ group, onChange, rules }: RuleGroupProps) {
   return (
     <fieldset className={GROUP_CLASS}>
       <legend className="sr-only">{group.metadata.label}</legend>
@@ -97,7 +91,7 @@ function RuleGroup({
 }
 
 export function WorldRulesSection() {
-  const { changeRule, resetRules, rules } = useWorldRules();
+  const { handleReset, handleRuleChange, rules } = useWorldRules();
 
   if (rules === undefined) {
     return null;
@@ -108,13 +102,13 @@ export function WorldRulesSection() {
       <div className="flex items-center justify-between gap-3 pb-4">
         <p className="text-ink-soft text-sm">Tune how nature and people behave on this island.</p>
 
-        <TextButton className="-mr-3 h-8 px-3" onClick={resetRules} tone="quiet">
+        <TextButton className="-mr-3 h-8 px-3" onClick={handleReset} tone="quiet">
           Reset all
         </TextButton>
       </div>
 
       {RULE_GROUPS.map((group) => (
-        <RuleGroup group={group} key={group.key} onChange={changeRule} rules={rules} />
+        <RuleGroup group={group} key={group.key} onChange={handleRuleChange} rules={rules} />
       ))}
     </>
   );

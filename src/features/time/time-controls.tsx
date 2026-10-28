@@ -21,15 +21,15 @@ function SpeedOption({ speed }: { readonly speed: number }) {
 }
 
 function useTimeControls() {
+  const send = useSendCommand();
   const isPaused = useWorldStore((state) => state.snapshot?.isPaused === true);
   const speed = useWorldStore((state) => state.snapshot?.speed);
-  const send = useSendCommand();
 
-  function togglePause(): void {
+  function handlePauseToggle(): void {
     send({ isPaused: !isPaused, type: "setPaused" });
   }
 
-  function changeSpeed(values: string[]): void {
+  function handleSpeedChange(values: string[]): void {
     const [selected] = values;
 
     if (selected === undefined) {
@@ -43,11 +43,11 @@ function useTimeControls() {
     }
   }
 
-  return { changeSpeed, isPaused, speed, togglePause };
+  return { handlePauseToggle, handleSpeedChange, isPaused, speed };
 }
 
 export function TimeControls() {
-  const { changeSpeed, isPaused, speed, togglePause } = useTimeControls();
+  const { handlePauseToggle, handleSpeedChange, isPaused, speed } = useTimeControls();
 
   const pressedSpeeds = isPaused || speed === undefined ? [] : [String(speed)];
 
@@ -56,7 +56,7 @@ export function TimeControls() {
       <Button
         aria-label={isPaused ? "Resume" : "Pause"}
         className={cn(SEGMENT, "w-8 px-0", { "text-ink shadow-segment bg-white": isPaused })}
-        onClick={togglePause}
+        onClick={handlePauseToggle}
       >
         <Pause aria-hidden="true" fill="currentColor" size={14} />
       </Button>
@@ -66,7 +66,7 @@ export function TimeControls() {
       <ToggleGroup
         aria-label="Game speed"
         className="flex flex-1 justify-between gap-0.5"
-        onValueChange={changeSpeed}
+        onValueChange={handleSpeedChange}
         value={pressedSpeeds}
       >
         {SIMULATION_SPEEDS.map((option) => (

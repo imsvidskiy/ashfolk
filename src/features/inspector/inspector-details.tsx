@@ -21,6 +21,19 @@ import { BuildingList } from "../tribes/building-list.tsx";
 import { GoalNeed } from "../tribes/goal-need.tsx";
 import { StockList } from "../tribes/stock-list.tsx";
 
+function landFacts(summary: TribeInspection["summary"]) {
+  const { farmland } = summary;
+
+  const crops = farmland.crops.map((crop) => `${crop.name} ${crop.count}`).join(" · ");
+  const facts = [
+    { label: "Fields", value: crops.length > 0 ? `${farmland.fields} (${crops})` : String(farmland.fields) },
+    { label: "Orchard trees", value: farmland.orchardTrees },
+    { label: "Woodlot trees", value: farmland.woodlotTrees },
+  ];
+
+  return facts.filter((fact) => fact.value !== 0 && fact.value !== "0");
+}
+
 export function PersonDetails({ person }: { readonly person: PersonInspection }) {
   return (
     <div className="flex flex-col gap-3">
@@ -178,20 +191,6 @@ function EraSteps({ era }: { readonly era: EraView }) {
   );
 }
 
-function landFacts(summary: TribeInspection["summary"]) {
-  const { farmland } = summary;
-
-  const crops = farmland.crops.map((crop) => `${crop.name} ${crop.count}`).join(" · ");
-
-  const facts = [
-    { label: "Fields", value: crops.length > 0 ? `${farmland.fields} (${crops})` : String(farmland.fields) },
-    { label: "Orchard trees", value: farmland.orchardTrees },
-    { label: "Woodlot trees", value: farmland.woodlotTrees },
-  ];
-
-  return facts.filter((fact) => fact.value !== 0 && fact.value !== "0");
-}
-
 function Section({ children, title }: { readonly children: ReactNode; readonly title: string }) {
   return (
     <section aria-label={title} className="flex flex-col gap-1.5">
@@ -211,7 +210,6 @@ export function TribeDetails({ tribe }: { readonly tribe: TribeInspection }) {
     { label: "Births · deaths", value: `${summary.births} · ${summary.deaths}` },
     { label: "Tools", value: TOOL_MATERIAL_DEFINITIONS[summary.tools].name },
   ];
-
   const land = landFacts(summary);
 
   return (

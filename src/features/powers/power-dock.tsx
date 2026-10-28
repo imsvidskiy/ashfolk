@@ -6,17 +6,28 @@ import { cn } from "../../design/cn.ts";
 import { GameIcon } from "../../design/game-icon.tsx";
 import type { GameIconName } from "../../design/game-icon-sources.ts";
 import { Island } from "../../design/island.tsx";
-import { SEGMENT, SEGMENT_TRACK } from "../../design/styles.ts";
+import { FOCUS_RING, SEGMENT, SEGMENT_TRACK } from "../../design/styles.ts";
 import { WithTooltip } from "../../design/tooltip.tsx";
 import { POWER_ICONS } from "./power-icons.tsx";
 import { usePowerStore } from "./power-store.ts";
 
 const SELECT_HINT = "Tap people, animals, buildings or land to see their details.";
 
-const TILE_CLASS =
-  "grid size-10.5 shrink-0 snap-start place-items-center rounded-xl outline-none transition-[background-color,box-shadow,scale] duration-150 hover:bg-paper-hover focus-visible:ring-2 focus-visible:ring-dawn active:scale-95 pointer-coarse:size-12";
+const TILE_CLASS = `grid size-10.5 shrink-0 snap-start place-items-center rounded-xl transition-[background-color,box-shadow,scale] duration-150 hover:bg-paper-hover active:scale-95 pointer-coarse:size-12 ${FOCUS_RING}`;
 
 const CHOSEN_TILE_CLASS = "bg-white shadow-segment hover:bg-white";
+
+const KIND_ICONS: Readonly<Record<PowerCategory, GameIconName>> = {
+  elements: POWER_ICONS.fire,
+  land: POWER_ICONS.raise,
+  life: POWER_ICONS.tribe,
+};
+
+function initialKind(): PowerCategory {
+  const { selectedPowerId } = usePowerStore.getState();
+
+  return selectedPowerId === null ? "elements" : POWERS[selectedPowerId].category;
+}
 
 function TileHint({ description, name }: { readonly description: string; readonly name: string }) {
   return (
@@ -32,15 +43,15 @@ function usePowerSelection(powerId: PowerId) {
   const isSelected = usePowerStore((state) => state.selectedPowerId === powerId);
   const selectPower = usePowerStore((state) => state.selectPower);
 
-  function toggle(): void {
+  function handleToggle(): void {
     selectPower(isSelected ? null : powerId);
   }
 
-  return { isSelected, toggle };
+  return { handleToggle, isSelected };
 }
 
 function PowerTile({ powerId }: { readonly powerId: PowerId }) {
-  const { isSelected, toggle } = usePowerSelection(powerId);
+  const { handleToggle, isSelected } = usePowerSelection(powerId);
 
   const power = POWERS[powerId];
 
@@ -50,7 +61,7 @@ function PowerTile({ powerId }: { readonly powerId: PowerId }) {
         aria-label={power.name}
         aria-pressed={isSelected}
         className={cn(TILE_CLASS, { [`${CHOSEN_TILE_CLASS} ring-dawn ring-2`]: isSelected })}
-        onClick={toggle}
+        onClick={handleToggle}
       >
         <GameIcon name={POWER_ICONS[powerId]} size={34} />
       </Toolbar.Button>
@@ -62,15 +73,15 @@ function useClearPower() {
   const isSelecting = usePowerStore((state) => state.selectedPowerId === null);
   const selectPower = usePowerStore((state) => state.selectPower);
 
-  function clearPower(): void {
+  function handleClear(): void {
     selectPower(null);
   }
 
-  return { clearPower, isSelecting };
+  return { handleClear, isSelecting };
 }
 
 function SelectTile() {
-  const { clearPower, isSelecting } = useClearPower();
+  const { handleClear, isSelecting } = useClearPower();
 
   return (
     <WithTooltip content={<TileHint description={SELECT_HINT} name="Select" />}>
@@ -78,24 +89,12 @@ function SelectTile() {
         aria-label="Select"
         aria-pressed={isSelecting}
         className={cn(TILE_CLASS, "text-ink-soft hover:text-ink", { [`${CHOSEN_TILE_CLASS} text-ink`]: isSelecting })}
-        onClick={clearPower}
+        onClick={handleClear}
       >
         <MousePointer2 aria-hidden="true" size={22} strokeWidth={1.9} />
       </Toolbar.Button>
     </WithTooltip>
   );
-}
-
-const KIND_ICONS: Readonly<Record<PowerCategory, GameIconName>> = {
-  elements: POWER_ICONS.fire,
-  land: POWER_ICONS.raise,
-  life: POWER_ICONS.tribe,
-};
-
-function initialKind(): PowerCategory {
-  const { selectedPowerId } = usePowerStore.getState();
-
-  return selectedPowerId === null ? "elements" : POWERS[selectedPowerId].category;
 }
 
 interface KindChoice {
@@ -104,20 +103,20 @@ interface KindChoice {
 }
 
 function useKindTab({ chosenKind, kind, onKindChange }: KindChoice & { readonly kind: PowerCategory }) {
-  function choose(): void {
+  function handleChoose(): void {
     onKindChange(kind);
   }
 
-  return { choose, isChosen: kind === chosenKind };
+  return { handleChoose, isChosen: kind === chosenKind };
 }
 
-function KindTab({
-  chosenKind,
-  kind,
-  name,
-  onKindChange,
-}: KindChoice & { readonly kind: PowerCategory; readonly name: string }) {
-  const { choose, isChosen } = useKindTab({ chosenKind, kind, onKindChange });
+interface KindTabProps extends KindChoice {
+  readonly kind: PowerCategory;
+  readonly name: string;
+}
+
+function KindTab({ chosenKind, kind, name, onKindChange }: KindTabProps) {
+  const { handleChoose, isChosen } = useKindTab({ chosenKind, kind, onKindChange });
 
   return (
     <Toolbar.Button
@@ -125,7 +124,7 @@ function KindTab({
       className={cn(SEGMENT, "text-sm max-lg:aspect-square max-lg:px-0 lg:px-2.5 pointer-coarse:h-10", {
         "text-ink shadow-segment bg-white": isChosen,
       })}
-      onClick={choose}
+      onClick={handleChoose}
     >
       <GameIcon name={KIND_ICONS[kind]} size={22} />
 
@@ -174,8 +173,8 @@ function useWheelScrollsSideways(rowReference: RefObject<HTMLDivElement | null>)
 }
 
 export function PowerDock({ className }: { readonly className?: string | undefined }) {
-  const rowReference = useRef<HTMLDivElement>(null);
   const [kind, setKind] = useState(initialKind);
+  const rowReference = useRef<HTMLDivElement>(null);
 
   useWheelScrollsSideways(rowReference);
 

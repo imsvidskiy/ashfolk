@@ -24,35 +24,33 @@ function usePowerParameters(powerId: PowerId) {
 
   const values = parametersOf(parameters, powerId);
 
-  function changeParameter(key: string, value: ParameterValue): void {
+  function handleParameterChange(key: string, value: ParameterValue): void {
     setParameter(powerId, key, value);
   }
 
-  function reset(): void {
+  function handleReset(): void {
     resetParameters(powerId);
   }
 
-  return { changeParameter, reset, values };
+  return { handleParameterChange, handleReset, values };
 }
 
 function useFieldDisclosure() {
   const isCompact = useIsCompact();
+  const [isExpanded, setIsExpanded] = useState(false);
 
-  const [isExpanded, setExpanded] = useState(false);
-
-  function toggleFields(): void {
-    setExpanded((wasExpanded) => !wasExpanded);
+  function handleFieldsToggle(): void {
+    setIsExpanded((wasExpanded) => !wasExpanded);
   }
 
-  return { areFieldsShown: !isCompact || isExpanded, isCompact, toggleFields };
+  return { areFieldsShown: !isCompact || isExpanded, handleFieldsToggle, isCompact };
 }
 
 function PowerSettingsContent({ powerId }: { readonly powerId: PowerId }) {
-  const { changeParameter, reset, values } = usePowerParameters(powerId);
-  const { areFieldsShown, isCompact, toggleFields } = useFieldDisclosure();
+  const { handleParameterChange, handleReset, values } = usePowerParameters(powerId);
+  const { areFieldsShown, handleFieldsToggle, isCompact } = useFieldDisclosure();
 
   const power = POWERS[powerId];
-
   const fields = describeParameters(power.parameters);
 
   return (
@@ -75,18 +73,23 @@ function PowerSettingsContent({ powerId }: { readonly powerId: PowerId }) {
             aria-expanded={areFieldsShown}
             icon={<SlidersHorizontal aria-hidden="true" size={16} />}
             label="Adjust settings"
-            onClick={toggleFields}
+            onClick={handleFieldsToggle}
           />
         ) : null}
 
-        <IconButton icon={<RotateCcw aria-hidden="true" size={16} />} label="Reset to defaults" onClick={reset} />
+        <IconButton icon={<RotateCcw aria-hidden="true" size={16} />} label="Reset to defaults" onClick={handleReset} />
       </header>
 
       {areFieldsShown ? (
         <ScrollPanel className="-mx-1 px-1">
           <div className={cn("grid gap-3", { "@sm:grid-cols-2": fields.length > 1 })}>
             {fields.map((field) => (
-              <ParameterControl field={field} key={field.key} onChange={changeParameter} value={values[field.key]} />
+              <ParameterControl
+                field={field}
+                key={field.key}
+                onChange={handleParameterChange}
+                value={values[field.key]}
+              />
             ))}
           </div>
         </ScrollPanel>
