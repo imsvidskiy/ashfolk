@@ -1,12 +1,14 @@
 import { describe, expect, it } from "vitest";
 import { NO_WATER } from "../../world/water.ts";
 import { WorldGrid } from "../../world/world-grid.ts";
-import { BANK_SINK } from "./shore-field.ts";
+import { BANK_SINK, BANK_STEP } from "./shore-field.ts";
 import { sampleWaterSurface, waterVertexLevel } from "./water-surface.ts";
 
 const grid = new WorldGrid({ cellSize: 10, cellsPerSide: 8 });
 const RIVER_ROW = 3;
 const LEVEL = 100;
+const STEP_UP = 6;
+const SMALL_STEP = 1;
 
 function createTerrain(bankHeight: number) {
   const height = new Float32Array(grid.cellCount).fill(bankHeight);
@@ -33,6 +35,42 @@ describe("waterVertexLevel", () => {
     const terrain = createTerrain(LEVEL + 3);
 
     expect(waterVertexLevel(terrain, grid, 2, RIVER_ROW - 1)).toBe(LEVEL);
+  });
+
+  it("lifts a bank between two steps of a river no more than a small step above the lower one", () => {
+    const terrain = createTerrain(LEVEL + 12);
+    const upstream = grid.index(1, RIVER_ROW - 1);
+
+    terrain.height[upstream] = LEVEL + STEP_UP - 1;
+    terrain.waterSurface[upstream] = LEVEL + STEP_UP;
+
+    expect(waterVertexLevel(terrain, grid, 2, RIVER_ROW - 1)).toBe(LEVEL + BANK_STEP);
+    expect(sampleWaterSurface(terrain, grid, grid.centerX(2), grid.centerZ(RIVER_ROW) - 5)).toBeLessThan(
+      LEVEL + BANK_STEP
+    );
+  });
+
+  it("lifts a bank touched only at its corners by two steps of a river no more than a small step", () => {
+    const terrain = createTerrain(LEVEL + 12);
+    const upper = grid.index(1, RIVER_ROW + 1);
+    const lower = grid.index(3, RIVER_ROW + 3);
+
+    terrain.height[upper] = LEVEL + STEP_UP - 1;
+    terrain.waterSurface[upper] = LEVEL + STEP_UP;
+    terrain.height[lower] = LEVEL - 1;
+    terrain.waterSurface[lower] = LEVEL;
+
+    expect(waterVertexLevel(terrain, grid, 2, RIVER_ROW + 2)).toBe(LEVEL + BANK_STEP);
+  });
+
+  it("keeps a bank between two close levels of a river at the higher one, so the edge stays smooth", () => {
+    const terrain = createTerrain(LEVEL + 12);
+    const upstream = grid.index(1, RIVER_ROW - 1);
+
+    terrain.height[upstream] = LEVEL;
+    terrain.waterSurface[upstream] = LEVEL + SMALL_STEP;
+
+    expect(waterVertexLevel(terrain, grid, 2, RIVER_ROW - 1)).toBe(LEVEL + SMALL_STEP);
   });
 });
 

@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { lerp, saturate } from "../shared/math.ts";
 import { landEverywhere, shapeTerrain } from "../world/testing/terrain-fixtures.ts";
 import { hasWater, type River, type RiverPoint } from "../world/water.ts";
 import { NEIGHBOR_OFFSETS, WorldGrid } from "../world/world-grid.ts";
@@ -33,6 +34,18 @@ const SHELF_BASIN_OFFSET = 40;
 const SHELF_BASIN_DEPTH = 15;
 const SHELF_BASIN_SPREAD = 2 * 16 * 16;
 const SIDEHILL_REACH = 250;
+const SURE_WET_REACH = 7.5;
+const WIDEST_SIDE_CUT = 40;
+const MINIMUM_BANK_WIDTH = 6;
+const STREAM_WALLS = 0.6;
+const STREAM_GULLY_DEPTH = 12;
+const STREAM_GULLY_SPREAD = 2 * 30 * 30;
+const DEEPENING_TOLERANCE = 1;
+
+interface RiverSpot {
+  readonly distance: number;
+  readonly point: RiverPoint;
+}
 
 interface CarvedWater {
   readonly carved: Float32Array;
@@ -88,6 +101,38 @@ function riverEnd(river: River): RiverPoint {
   }
 
   return end;
+}
+
+function nearestOnRiver(river: River, x: number, z: number): RiverSpot {
+  let nearest: RiverSpot = { distance: Number.POSITIVE_INFINITY, point: river.points[0] };
+
+  for (let index = 1; index < river.points.length; index += 1) {
+    const start = river.points[index - 1];
+    const end = river.points[index];
+    const alongX = end.x - start.x;
+    const alongZ = end.z - start.z;
+    const lengthSquared = alongX * alongX + alongZ * alongZ;
+    const share = lengthSquared === 0 ? 0 : saturate(((x - start.x) * alongX + (z - start.z) * alongZ) / lengthSquared);
+    const point = {
+      depth: lerp(start.depth, end.depth, share),
+      flow: start.flow,
+      surface: lerp(start.surface, end.surface, share),
+      width: lerp(start.width, end.width, share),
+      x: start.x + alongX * share,
+      z: start.z + alongZ * share,
+    };
+    const distance = Math.hypot(point.x - x, point.z - z);
+
+    if (distance < nearest.distance) {
+      nearest = { distance, point };
+    }
+  }
+
+  return nearest;
+}
+
+function channelReachOf(point: RiverPoint): number {
+  return Math.max(point.width / 2 + Math.max(MINIMUM_BANK_WIDTH, point.width), SURE_WET_REACH);
 }
 
 function riverLevelBeside(grid: WorldGrid, cell: number, water: CarvedWater): number {
@@ -245,6 +290,90 @@ describe("river carving", () => {
         expect(levels[index]).toBeLessThanOrEqual(levels[index - 1] + 1e-3);
       }
     }
+  });
+});
+
+describe("river confluences", () => {
+  function joinSteepStream() {
+    const grid = new WorldGrid({ cellSize: 10, cellsPerSide: 96 });
+
+    const carved = shapeTerrain(grid, (x, z) => {
+      const gully = x > 0 ? STREAM_GULLY_DEPTH * Math.exp(-(z * z) / STREAM_GULLY_SPREAD) * saturate((x - 20) / 40) : 0;
+
+      return 100 + 0.05 * (z + grid.halfSize) + STREAM_WALLS * Math.abs(x) - gully;
+    });
+
+    const result = computeHydrology(carved, grid, new Float32Array(grid.cellCount), landEverywhere(grid.cellCount), {
+      ...DEFAULT_HYDROLOGY,
+      riverCatchmentArea: 20_000,
+    });
+
+    return { carved, grid, result };
+  }
+
+  function wetCells(grid: WorldGrid, carved: Float32Array, waterSurface: Float32Array): number[] {
+    return Array.from({ length: grid.cellCount }, (_, cell) => {
+      return cell;
+    }).filter((cell) => {
+      return hasWater(waterSurface[cell], carved[cell]);
+    });
+  }
+
+  it("keeps the water where a stream runs into a river at the lower of the two surfaces", () => {
+    const { carved, grid, result } = joinSteepStream();
+    const { rivers } = result.features;
+
+    let sharedCells = 0;
+
+    for (const cell of wetCells(grid, carved, result.waterSurface)) {
+      const spots = rivers
+        .map((river) => {
+          return nearestOnRiver(river, grid.cellCenterX(cell), grid.cellCenterZ(cell));
+        })
+        .filter((spot) => {
+          return spot.distance <= SURE_WET_REACH;
+        });
+
+      sharedCells += spots.length > 1 ? 1 : 0;
+
+      for (const spot of spots) {
+        expect(result.waterSurface[cell]).toBeLessThanOrEqual(spot.point.surface + STEP_TOLERANCE);
+      }
+    }
+
+    expect(rivers.length).toBeGreaterThan(1);
+    expect(sharedCells).toBeGreaterThan(0);
+  });
+
+  it("leaves the bed of a stream in the side cut of the river it joins as the stream carved it", () => {
+    const { carved, grid, result } = joinSteepStream();
+    const [river, stream] = result.features.rivers;
+
+    expect(river?.reachesEdge).toBe(true);
+    expect(stream?.reachesEdge).toBe(false);
+
+    if (river === undefined || stream === undefined) {
+      return;
+    }
+
+    let besideRiver = 0;
+
+    for (const cell of wetCells(grid, carved, result.waterSurface)) {
+      const x = grid.cellCenterX(cell);
+      const z = grid.cellCenterZ(cell);
+      const own = nearestOnRiver(stream, x, z);
+      const other = nearestOnRiver(river, x, z);
+
+      if (own.distance > SURE_WET_REACH || other.distance <= channelReachOf(other.point)) {
+        continue;
+      }
+
+      besideRiver += other.distance <= other.point.width / 2 + WIDEST_SIDE_CUT ? 1 : 0;
+
+      expect(result.waterSurface[cell] - carved[cell]).toBeLessThan(own.point.depth + DEEPENING_TOLERANCE);
+    }
+
+    expect(besideRiver).toBeGreaterThan(0);
   });
 });
 

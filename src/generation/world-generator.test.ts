@@ -10,6 +10,7 @@ import type { TerrainData } from "../world/terrain-data.ts";
 import { sampleHeight } from "../world/terrain-sampling.ts";
 import {
   hasWater,
+  type Lake,
   NO_WATER,
   pondEdgeReach,
   pondOutlineExtent,
@@ -68,6 +69,11 @@ const BIOME_GROUPS = {
 } as const;
 const OUTLINE_SAMPLES = 64;
 const LEAST_MEAN_OUTLINE_SPREAD = 1.5;
+const LAKE_SHORE_REACH = 100;
+const HIGHEST_LAKE_SHORE = 30;
+const OUTLET_REACH_PER_CELL = 12;
+const OUTLET_LEVEL_SLACK = 1.5;
+const RIVER_COUNT_SLACK = 1;
 const LEAST_MEDIAN_POND_ACROSS = 52;
 const LEAST_UPPER_QUARTILE_POND_ACROSS = 65;
 const SMALL_LAKE_ACROSS = 90;
@@ -93,6 +99,7 @@ interface SwampSurvey {
 interface IslandSurvey {
   readonly flatShare: number;
   readonly highGroundAngle: number;
+  readonly lakeShoreRise: number;
   readonly lakes: number;
   readonly rivers: number;
   readonly shares: Readonly<Record<keyof typeof BIOME_GROUPS, number>>;
@@ -1197,6 +1204,41 @@ function countOf(counts: ReadonlyMap<number, number>, biome: number): number {
   return count === undefined ? 0 : count;
 }
 
+function highestLakeShore(generated: GeneratedWorld): number {
+  const { terrain } = generated;
+
+  const grid = new WorldGrid(generated.dimensions);
+  const levels = new Set(
+    generated.water.lakes.map((lake) => {
+      return lake.level;
+    })
+  );
+  const nearestLevels = new Float32Array(grid.cellCount).fill(Number.NEGATIVE_INFINITY);
+
+  for (let cell = 0; cell < grid.cellCount; cell += 1) {
+    if (!(isLakeWater(terrain, cell) && levels.has(terrain.waterSurface[cell]))) {
+      continue;
+    }
+
+    for (const near of grid.cellsInRadius(grid.cellCenterX(cell), grid.cellCenterZ(cell), LAKE_SHORE_REACH)) {
+      nearestLevels[near] = Math.max(nearestLevels[near], terrain.waterSurface[cell]);
+    }
+  }
+
+  let highest = Number.NEGATIVE_INFINITY;
+
+  for (let cell = 0; cell < grid.cellCount; cell += 1) {
+    const isDryLand =
+      isOnIsland(terrain.coastDistance, cell) && !hasWater(terrain.waterSurface[cell], terrain.height[cell]);
+
+    if (isDryLand && nearestLevels[cell] > Number.NEGATIVE_INFINITY) {
+      highest = Math.max(highest, terrain.height[cell] - nearestLevels[cell]);
+    }
+  }
+
+  return highest;
+}
+
 function surveyIsland(generated: GeneratedWorld): IslandSurvey {
   const { terrain } = generated;
 
@@ -1248,6 +1290,7 @@ function surveyIsland(generated: GeneratedWorld): IslandSurvey {
   return {
     flatShare: flatCells / landCells,
     highGroundAngle: Math.atan2(towardZ, towardX),
+    lakeShoreRise: highestLakeShore(generated),
     lakes: generated.water.lakes.length,
     rivers: generated.water.rivers.length,
     shares: {
@@ -2071,6 +2114,12 @@ describe("islands across seeds", () => {
     }
   });
 
+  it("rises gently from the shore of every lake, with no mountain standing in the water", () => {
+    for (const survey of surveys) {
+      expect(survey.lakeShoreRise).toBeLessThan(HIGHEST_LAKE_SHORE);
+    }
+  });
+
   it("bares rock well below the tree line only on cliffs", () => {
     for (const rock of rocks) {
       expect(rock.gentleLowRock).toBe(0);
@@ -2108,6 +2157,47 @@ describe("islands across seeds", () => {
       expect(survey.flatShare).toBeGreaterThan(0.06);
       expect(survey.rivers).toBeGreaterThanOrEqual(15);
       expect(survey.lakes).toBeGreaterThanOrEqual(1);
+    }
+  });
+});
+
+describe("full-size lake outlets", () => {
+  const riversOnMain = new Map([
+    [7, 23],
+    [10, 29],
+  ]);
+  let worlds: [GeneratedWorld, number][];
+
+  beforeAll(() => {
+    worlds = [...riversOnMain].map(([seed, count]) => {
+      return [generateWorld(seed), count];
+    });
+  }, 120_000);
+
+  function leavesLake(lake: Lake, point: RiverPoint): boolean {
+    const reach = Math.sqrt(lake.cellCount) * OUTLET_REACH_PER_CELL;
+
+    return (
+      Math.hypot(point.x - lake.centerX, point.z - lake.centerZ) < reach &&
+      Math.abs(point.surface - lake.level) < OUTLET_LEVEL_SLACK
+    );
+  }
+
+  it("keeps about as many rivers as before the shores were eased on seeds 7 and 10", () => {
+    for (const [generated, count] of worlds) {
+      expect(Math.abs(generated.water.rivers.length - count)).toBeLessThanOrEqual(RIVER_COUNT_SLACK);
+    }
+  });
+
+  it("sends a river out of every lake on seeds 7 and 10", () => {
+    for (const [generated] of worlds) {
+      const closed = generated.water.lakes.filter((lake) => {
+        return !generated.water.rivers.some((river) => {
+          return leavesLake(lake, river.points[0]);
+        });
+      });
+
+      expect(closed).toEqual([]);
     }
   });
 });

@@ -30,7 +30,7 @@ import {
 } from "./generation-options.ts";
 import { computeHydrology } from "./hydrology.ts";
 import { type Basin, basinShapeAt, type IslandLayout, planIslandLayout } from "./island-layout.ts";
-import { digRiverLakes, fillSinks } from "./lake-basins.ts";
+import { digRiverLakes, easeLakeShores, fillSinks } from "./lake-basins.ts";
 import { planMonuments } from "./monuments.ts";
 import { createRelief, islandPointAt, type Relief } from "./relief.ts";
 import { measureRockStrength } from "./rock-strength.ts";
@@ -215,7 +215,7 @@ export function generateWorld(
   relaxSlopes(heights, size, grid.cellSize, talusSlopes(heights, dryness, rockStrength), FINAL_RELAXATION_ITERATIONS);
   limitSlopes(heights, size, grid.cellSize, STEEPEST_SLOPE);
   smoothHeights(heights, size);
-  fillSinks(heights, grid, dryness, coastDistance);
+  easeLakeShores(heights, grid, coastDistance, fillSinks(heights, grid, dryness, coastDistance));
   onProgress({ island: sketch, stage: "water" });
 
   const hydrology = computeHydrology(heights, grid, dryness, coastDistance);
