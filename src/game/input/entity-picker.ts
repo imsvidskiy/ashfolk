@@ -24,6 +24,7 @@ const TALLEST_PLANT = 40;
 const WIDEST_CROWN = 16;
 const SEARCH_SPACING = 80;
 const SEARCH_STEP = SEARCH_SPACING / 2;
+const CLEARANCE_STEP = 4;
 const AGENT_PRIORITY_METERS = 1;
 const AGENT_FIRST_PIXELS = 12;
 
@@ -84,7 +85,7 @@ function searchAlong(ray: Ray, end: Vector3, heightAt: HeightField): RaySearch {
 
     const clearance = point.y - heightAt(point.x, point.z);
 
-    if (clearance <= TALLEST_PLANT) {
+    if (lowestClearance(ray, reach, length / Math.max(across, 1), heightAt) <= TALLEST_PLANT + WIDEST_CROWN) {
       spots.push({ x: point.x, z: point.z });
       farthest = reach;
     }
@@ -95,6 +96,19 @@ function searchAlong(ray: Ray, end: Vector3, heightAt: HeightField): RaySearch {
   }
 
   return { farthest, spots };
+}
+
+function lowestClearance(ray: Ray, reach: number, reachPerMeter: number, heightAt: HeightField): number {
+  const point = new Vector3();
+
+  let lowest = Number.POSITIVE_INFINITY;
+
+  for (let offset = -SEARCH_STEP / 2; offset <= SEARCH_STEP / 2; offset += CLEARANCE_STEP) {
+    ray.at(Math.max(0, reach + offset * reachPerMeter), point);
+    lowest = Math.min(lowest, point.y - heightAt(point.x, point.z));
+  }
+
+  return lowest;
 }
 
 export class EntityPicker {

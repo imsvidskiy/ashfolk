@@ -147,6 +147,10 @@ function crestHeight(x: number, z: number): number {
   return Math.abs(x) < 500 && Math.abs(z + 500) < 20 ? 80 : 0;
 }
 
+function peakHeight(x: number, z: number): number {
+  return Math.max(0, 100 - 1.25 * Math.hypot(x, z));
+}
+
 function wallHeight(_x: number, z: number): number {
   return Math.abs(z) < 2 ? 10 : 0;
 }
@@ -288,6 +292,19 @@ describe("entity picker", () => {
     vegetation.height[0] = 20;
 
     expect(grabOver(crestHeight, camera, vegetation, screenOf(camera, 0, 95, -500))).toEqual({
+      id: 0,
+      kind: "plant",
+    });
+  });
+
+  it("reaches a crown against the sky on a peak whose flanks fall away beside the trunk", () => {
+    const camera = cameraAt(2, 130, 300, { x: 2, y: 120, z: 0 });
+    const vegetation = plantAt(PlantSpecies.Spruce, 0, 0);
+    const scene = { frame: frameWithPeople(), plantsNear: plantsNearSpots(vegetation), vegetation };
+
+    vegetation.height[0] = 30;
+
+    expect(new EntityPicker(camera, peakHeight).pickGrabbable(scene, CENTER, VIEWPORT, null)).toEqual({
       id: 0,
       kind: "plant",
     });
