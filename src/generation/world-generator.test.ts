@@ -548,10 +548,6 @@ function pondAcross(generated: GeneratedWorld, grid: WorldGrid, pond: Spring): n
   return 2 * Math.sqrt((pondWaterCells(generated, grid, pond).length * grid.cellSize * grid.cellSize) / Math.PI);
 }
 
-function isRiverWaterCell(terrain: TerrainData, cell: number): boolean {
-  return terrain.riverStrength[cell] > 0 && hasWater(terrain.waterSurface[cell], terrain.height[cell]);
-}
-
 function pondBankFaults(generated: GeneratedWorld, grid: WorldGrid, pond: Spring): string[] {
   const { terrain } = generated;
 
@@ -571,7 +567,7 @@ function pondBankFaults(generated: GeneratedWorld, grid: WorldGrid, pond: Spring
         continue;
       }
 
-      hasOutlet ||= isRiverWaterCell(terrain, neighbor);
+      hasOutlet ||= isRiverWater(terrain, neighbor);
 
       const isLowBank =
         offset.distance === 1 &&

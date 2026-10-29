@@ -11,6 +11,7 @@ const POND_STRETCH_SKEW = 1.6;
 const POND_AXIS_SWING = Math.PI;
 const POND_WAIST = { deepest: 0.34, narrowest: 0.5, shift: 0.8, widest: 0.9 } as const;
 const POND_LOBES = 2;
+const POND_SPIT_FEATURE = POND_LOBES + 1;
 const POND_SHAPE_FEATURE = POND_LOBES + 2;
 const POND_LOBE = { least: -0.1, most: 0.32, narrowest: 0.25, widest: 0.6 } as const;
 const POND_SPIT = { chance: 0.5, deepest: 0.42, least: 0.22, narrowest: 0.16, widest: 0.28 } as const;
@@ -143,13 +144,13 @@ function lobeOf(spring: Spring, lobe: number): PondFeature {
   };
 }
 
-function spitOf(spring: Spring, feature: number): PondFeature {
-  const hasSpit = featureDraw(spring, feature, 0) < POND_SPIT.chance;
+function spitOf(spring: Spring): PondFeature {
+  const hasSpit = featureDraw(spring, POND_SPIT_FEATURE, 0) < POND_SPIT.chance;
 
   return {
-    angle: featureDraw(spring, feature, 1) * FULL_TURN,
-    swell: hasSpit ? -lerp(POND_SPIT.least, POND_SPIT.deepest, featureDraw(spring, feature, 2)) : 0,
-    width: lerp(POND_SPIT.narrowest, POND_SPIT.widest, featureDraw(spring, feature, 3)),
+    angle: featureDraw(spring, POND_SPIT_FEATURE, 1) * FULL_TURN,
+    swell: hasSpit ? -lerp(POND_SPIT.least, POND_SPIT.deepest, featureDraw(spring, POND_SPIT_FEATURE, 2)) : 0,
+    width: lerp(POND_SPIT.narrowest, POND_SPIT.widest, featureDraw(spring, POND_SPIT_FEATURE, 3)),
   };
 }
 
@@ -158,7 +159,7 @@ function featuresOf(spring: Spring, axis: number): PondFeature[] {
     return lobeOf(spring, lobe + 1);
   });
 
-  return [waistOf(spring, axis), ...lobes, spitOf(spring, POND_LOBES + 1)];
+  return [waistOf(spring, axis), ...lobes, spitOf(spring)];
 }
 
 function ripplesOf(spring: Spring): PondRipple[] {
@@ -171,27 +172,27 @@ function ripplesOf(spring: Spring): PondRipple[] {
   });
 }
 
-function ellipseRadius(shape: PondOutline, angle: number): number {
-  const along = Math.cos(angle - shape.axis);
-  const across = Math.sin(angle - shape.axis);
+function ellipseRadius(outline: PondOutline, angle: number): number {
+  const along = Math.cos(angle - outline.axis);
+  const across = Math.sin(angle - outline.axis);
 
-  return 1 / Math.sqrt((along * along) / shape.stretch + across * across * shape.stretch);
+  return 1 / Math.sqrt((along * along) / outline.stretch + across * across * outline.stretch);
 }
 
-function shoreSwell(shape: PondOutline, angle: number): number {
+function shoreSwell(outline: PondOutline, angle: number): number {
   let swell = 0;
 
-  for (const { angle: center, swell: strength, width } of shape.features) {
+  for (const { angle: center, swell: strength, width } of outline.features) {
     const offset = wrapAngle(angle - center) / width;
 
     swell += strength * Math.exp(-offset * offset);
   }
 
-  for (const { order, swell: strength, turn } of shape.ripples) {
+  for (const { order, swell: strength, turn } of outline.ripples) {
     swell += strength * Math.cos(order * angle + turn);
   }
 
-  const calm = smoothstep(POND_CALM_OUTLET.from, POND_CALM_OUTLET.to, Math.abs(wrapAngle(angle - shape.outlet)));
+  const calm = smoothstep(POND_CALM_OUTLET.from, POND_CALM_OUTLET.to, Math.abs(wrapAngle(angle - outline.outlet)));
 
   return Math.max(POND_NARROWEST_SWELL, 1 + calm * swell);
 }

@@ -26,7 +26,7 @@ const GENTLE_SLOPE = 0.1;
 const FLAT_GROUND_GAIN = 1.1;
 const SIZE_SEEDS = 12;
 
-function point(x: number, z: number, flow = 1): RiverPoint {
+function point(x: number, z: number, flow: number): RiverPoint {
   return { depth: 1, flow, surface: 0, width: 4, x, z };
 }
 
