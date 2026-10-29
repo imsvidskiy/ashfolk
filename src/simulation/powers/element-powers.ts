@@ -226,6 +226,10 @@ export function volcanoPower(
     return refused("A volcano needs dry land");
   }
 
+  if (services.volcanoes.isCrowding(target.x, target.z, parameters.radius)) {
+    return refused("Another volcano is too close");
+  }
+
   services.volcanoes.rumble(
     { radius: parameters.radius, strength: percent(parameters.strength), x: target.x, z: target.z },
     services
