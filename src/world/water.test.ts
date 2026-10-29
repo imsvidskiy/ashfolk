@@ -2,9 +2,37 @@ import { describe, expect, it } from "vitest";
 import { pondEdgeReach, pondOutlineExtent, pondOutlineRadius, type Spring } from "./water.ts";
 
 const SAMPLES = 128;
+const SHAPE_SEEDS = 64;
 
 function pondWithSeed(seed: number): Spring {
   return { cells: [], directionX: 1, directionZ: 0, kind: "pond", level: 0, radius: 20, river: 0, seed, x: 5, z: -3 };
+}
+
+function lengthToWidth(pond: Spring): number {
+  let length = 0;
+  let lengthAngle = 0;
+
+  for (let sample = 0; sample < SAMPLES / 2; sample += 1) {
+    const angle = (sample / SAMPLES) * Math.PI * 2;
+    const span = pondOutlineRadius(pond, angle) + pondOutlineRadius(pond, angle + Math.PI);
+
+    if (span > length) {
+      length = span;
+      lengthAngle = angle;
+    }
+  }
+
+  const across = lengthAngle + Math.PI / 2;
+
+  return length / (pondOutlineRadius(pond, across) + pondOutlineRadius(pond, across + Math.PI));
+}
+
+function quantileOf(values: readonly number[], share: number): number {
+  const sorted = values.toSorted((first, second) => {
+    return first - second;
+  });
+
+  return sorted[Math.floor(share * (sorted.length - 1))];
 }
 
 function outlineOf(pond: Spring): number[] {
@@ -38,5 +66,15 @@ describe("pond outline", () => {
     const z = pond.z + Math.sin(Math.PI / 3) * (radius - 2);
 
     expect(pondEdgeReach(pond, x, z)).toBeCloseTo(2, 5);
+  });
+
+  it("draws ponds from nearly round to long and narrow", () => {
+    const ratios = Array.from({ length: SHAPE_SEEDS }, (_, index) => {
+      return lengthToWidth(pondWithSeed((index + 0.5) / SHAPE_SEEDS));
+    });
+
+    expect(quantileOf(ratios, 0.1)).toBeLessThan(1.3);
+    expect(quantileOf(ratios, 0.5)).toBeGreaterThan(1.4);
+    expect(quantileOf(ratios, 0.9)).toBeGreaterThan(2.1);
   });
 });
