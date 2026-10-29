@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { pondEdgeReach, type River, type RiverPoint, type Spring } from "../world/water.ts";
 import { WorldGrid } from "../world/world-grid.ts";
 import { NO_CELL } from "./hydrology.ts";
+import { SOURCE_REACH } from "./river-spacing.ts";
 import { placeSprings } from "./springs.ts";
 
 const GRID = new WorldGrid({ cellSize: 5, cellsPerSide: 96 });
@@ -19,15 +20,19 @@ const LONG_RIVER_POINTS = 21;
 const HILLSIDE_FOOT = -110;
 const HILLSIDE_SLOPE = 0.25;
 const BIG_RIVER_FLOW = 16;
+const TRIBUTARY_JOIN_X = -80;
+const TRIBUTARY_REACH = 100;
+const GENTLE_SLOPE = 0.1;
+const FLAT_GROUND_GAIN = 1.1;
 const SIZE_SEEDS = 12;
 
 function point(x: number, z: number, flow = 1): RiverPoint {
   return { depth: 1, flow, surface: 0, width: 4, x, z };
 }
 
-function riverThrough(points: readonly (readonly [number, number])[], flow = 1): River {
+function riverThrough(points: readonly (readonly [number, number])[], flow = 1, id = 0): River {
   return {
-    id: 0,
+    id,
     points: points.map(([x, z]) => {
       return point(x, z, flow);
     }),
@@ -56,6 +61,18 @@ function sitingOn(heights: Float32Array, coastDistance = FAR_FROM_COAST, lakeIds
 
 function flatGround(): Float32Array {
   return new Float32Array(GRID.cellCount);
+}
+
+function hillside(): Float32Array {
+  return Float32Array.from({ length: GRID.cellCount }, (_, cell) => {
+    return Math.max(0, HILLSIDE_FOOT - GRID.cellCenterX(cell)) * HILLSIDE_SLOPE;
+  });
+}
+
+function gentleSlopeBehind(headX: number): Float32Array {
+  return Float32Array.from({ length: GRID.cellCount }, (_, cell) => {
+    return Math.max(0, headX - GRID.cellCenterX(cell)) * GENTLE_SLOPE;
+  });
 }
 
 function springOf(river: River, heights = flatGround()): Spring {
@@ -108,12 +125,9 @@ describe("spring ponds", () => {
   });
 
   it("move down the river onto flatter ground and start the river at the pond", () => {
-    const hillside = Float32Array.from({ length: GRID.cellCount }, (_, cell) => {
-      return Math.max(0, HILLSIDE_FOOT - GRID.cellCenterX(cell)) * HILLSIDE_SLOPE;
-    });
     const river = longRiver(0);
 
-    const plan = placeSprings(sitingOn(hillside), [river]);
+    const plan = placeSprings(sitingOn(hillside()), [river]);
 
     const [spring] = plan.springs;
     const [seated] = plan.rivers;
@@ -124,6 +138,41 @@ describe("spring ponds", () => {
     expect(seated.points.at(-1)).toEqual(river.points.at(-1));
     expect(pondEdgeReach(spring, head.x, head.z)).toBeGreaterThan(0);
     expect(spring.radius).toBeGreaterThan(20);
+  });
+
+  it("stay far enough up the river from the first tributary that joins it", () => {
+    const tributary = riverThrough(
+      [
+        [TRIBUTARY_JOIN_X, TRIBUTARY_REACH],
+        [TRIBUTARY_JOIN_X, TRIBUTARY_REACH / 2],
+        [TRIBUTARY_JOIN_X, 0],
+      ],
+      1,
+      1
+    );
+
+    const plan = placeSprings(sitingOn(hillside()), [longRiver(0), tributary]);
+
+    const [head] = plan.rivers[0].points;
+
+    expect(Math.hypot(TRIBUTARY_JOIN_X - head.x, head.z)).toBeGreaterThanOrEqual(SOURCE_REACH);
+  });
+
+  it("draw larger ponds on flat ground than on a gentle slope", () => {
+    const sizes = Array.from({ length: SIZE_SEEDS }, (_, index) => {
+      const offsetZ = (index - SIZE_SEEDS / 2) * 3;
+      const river = riverThrough(
+        STRAIGHT_RIVER.points.map(({ x, z }) => {
+          return [x, z + offsetZ];
+        })
+      );
+
+      return springOf(river).radius / springOf(river, gentleSlopeBehind(river.points[0].x)).radius;
+    });
+
+    for (const size of sizes) {
+      expect(size).toBeGreaterThan(FLAT_GROUND_GAIN);
+    }
   });
 
   it("draw larger ponds for larger rivers", () => {

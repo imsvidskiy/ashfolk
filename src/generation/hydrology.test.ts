@@ -10,6 +10,7 @@ const GENTLE_WALLS = 0.6;
 const STEEP_WALLS = 2;
 const BANK_FREEBOARD = 0.2;
 const DEEPEST_BANK_LOWERING = 10;
+const DEEPEST_POND_SHORE_CUT = 12;
 const UNTOUCHED_DISTANCE = 120;
 const RIDGE_HEIGHT = 10;
 const RIDGE_SPREAD = 2 * 30 * 30;
@@ -174,10 +175,11 @@ describe("river carving", () => {
     }
   });
 
-  it("lowers steep valley walls beside the river by at most ten meters and never notches them", () => {
+  it("lowers steep valley walls by at most ten meters beside the river and twelve at a pond, and never notches them", () => {
     const { carved, grid, result, uncarved } = carveValley(STEEP_WALLS);
 
     let deepestWallCut = 0;
+    let deepestShoreCut = 0;
 
     for (let cell = 0; cell < grid.cellCount; cell += 1) {
       const isPondShore = result.features.springs.some((spring) => {
@@ -187,7 +189,9 @@ describe("river carving", () => {
         );
       });
 
-      if (Math.abs(grid.cellCenterX(cell)) > VALLEY_FLOOR_HALF_WIDTH && !isPondShore) {
+      if (isPondShore) {
+        deepestShoreCut = Math.max(deepestShoreCut, uncarved[cell] - carved[cell]);
+      } else if (Math.abs(grid.cellCenterX(cell)) > VALLEY_FLOOR_HALF_WIDTH) {
         deepestWallCut = Math.max(deepestWallCut, uncarved[cell] - carved[cell]);
       }
     }
@@ -199,6 +203,8 @@ describe("river carving", () => {
 
     expect(deepestWallCut).toBeGreaterThan(5);
     expect(deepestWallCut).toBeLessThanOrEqual(DEEPEST_BANK_LOWERING + 0.01);
+    expect(deepestShoreCut).toBeGreaterThan(0);
+    expect(deepestShoreCut).toBeLessThanOrEqual(DEEPEST_POND_SHORE_CUT + 0.01);
 
     for (let step = 1; step < profile.length; step += 1) {
       expect(profile[step] - profile[step - 1]).toBeGreaterThan(0);
