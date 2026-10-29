@@ -202,9 +202,10 @@ export function addLogPile(
   length: number,
   order: number
 ): void {
+  const [x, , z] = center;
+
   const radius = 0.1;
   const rows = detail(context, 3, 1);
-  const [x, , z] = center;
 
   const alongX = Math.cos(turn) * (length / 2);
   const alongZ = -Math.sin(turn) * (length / 2);

@@ -136,7 +136,7 @@ function insideRing(opening: Opening, step: number, random: RandomSource): Point
 }
 
 function outcropShape(opening: Opening, options: CaveMouthOptions, random: RandomSource): Shape {
-  const writer = new ShapeWriter();
+  const writer = new CaveWriter();
 
   const crown = clamp(options.rise - opening.height, LOWEST_CROWN, HIGHEST_CROWN);
   const spread = { x: opening.width * SHOULDER_SHARE, y: crown };
@@ -231,7 +231,7 @@ export function meshCaveMouth(options: CaveMouthOptions): MeshData {
   return builder.build();
 }
 
-class ShapeWriter {
+class CaveWriter {
   readonly #indices: number[] = [];
   readonly #positions: number[] = [];
 
@@ -247,23 +247,19 @@ class ShapeWriter {
     });
   }
 
-  addTriangle(first: number, second: number, third: number): void {
-    this.#indices.push(first, second, third);
-  }
-
   addBand(inner: readonly number[], outer: readonly number[], isFacingOut: boolean): void {
     for (let index = 0; index < inner.length - 1; index += 1) {
       const corners = [inner[index], inner[index + 1], outer[index + 1], outer[index]];
 
       if (isFacingOut) {
-        this.addTriangle(corners[0], corners[1], corners[2]);
-        this.addTriangle(corners[0], corners[2], corners[3]);
+        this.#addTriangle(corners[0], corners[1], corners[2]);
+        this.#addTriangle(corners[0], corners[2], corners[3]);
 
         continue;
       }
 
-      this.addTriangle(corners[0], corners[2], corners[1]);
-      this.addTriangle(corners[0], corners[3], corners[2]);
+      this.#addTriangle(corners[0], corners[2], corners[1]);
+      this.#addTriangle(corners[0], corners[3], corners[2]);
     }
   }
 
@@ -273,12 +269,12 @@ class ShapeWriter {
       const next = ring[(index + 1) % ring.length];
 
       if (isFacingFront) {
-        this.addTriangle(center, next, current);
+        this.#addTriangle(center, next, current);
 
         continue;
       }
 
-      this.addTriangle(center, current, next);
+      this.#addTriangle(center, current, next);
     }
   }
 
@@ -293,5 +289,9 @@ class ShapeWriter {
       normals: new Float32Array(positions.length),
       positions,
     });
+  }
+
+  #addTriangle(first: number, second: number, third: number): void {
+    this.#indices.push(first, second, third);
   }
 }
