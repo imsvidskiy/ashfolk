@@ -152,26 +152,46 @@ function shoreSlopeAt(distance: number): number {
   );
 }
 
+function rimFallAt(distance: number): number {
+  return distance <= GENTLE_SHORE_WIDTH ? GENTLE_SHORE_SLOPE : STEEPEST_SHORE_SLOPE;
+}
+
 function canCutPast(heights: Float32Array, cut: ShoreCut, cell: number): boolean {
   return cut.distances[cell] <= SHORE_BAND || heights[cell] > cut.ceilings[cell];
 }
 
-function measureShoreCut(heights: Float32Array, grid: WorldGrid, basins: DrainageBasins): ShoreCut {
+function seedLakeCells(
+  grid: WorldGrid,
+  basins: DrainageBasins,
+  values: Float32Array,
+  distances: Float32Array,
+  priorityOf: (level: number) => number
+): MinHeap {
   const { lakeIds, lakes } = basins;
+
+  const heap = new MinHeap(grid.cellsPerSide * 16);
+
+  for (let cell = 0; cell < grid.cellCount; cell += 1) {
+    if (lakeIds[cell] !== NO_CELL) {
+      distances[cell] = 0;
+      values[cell] = lakes[lakeIds[cell]].level;
+      heap.push(cell, priorityOf(values[cell]));
+    }
+  }
+
+  return heap;
+}
+
+function measureShoreCut(heights: Float32Array, grid: WorldGrid, basins: DrainageBasins): ShoreCut {
+  const { lakeIds } = basins;
 
   const cut: ShoreCut = {
     ceilings: new Float32Array(grid.cellCount).fill(Number.POSITIVE_INFINITY),
     distances: new Float32Array(grid.cellCount).fill(Number.POSITIVE_INFINITY),
   };
-  const heap = new MinHeap(grid.cellsPerSide * 16);
-
-  for (let cell = 0; cell < grid.cellCount; cell += 1) {
-    if (lakeIds[cell] !== NO_CELL) {
-      cut.distances[cell] = 0;
-      cut.ceilings[cell] = lakes[lakeIds[cell]].level;
-      heap.push(cell, cut.ceilings[cell]);
-    }
-  }
+  const heap = seedLakeCells(grid, basins, cut.ceilings, cut.distances, (level) => {
+    return level;
+  });
 
   while (heap.size > 0) {
     const cell = heap.pop();
@@ -205,31 +225,43 @@ function measureShoreCut(heights: Float32Array, grid: WorldGrid, basins: Drainag
   return cut;
 }
 
-function measureRimFloors(grid: WorldGrid, basins: DrainageBasins): Float32Array {
-  const { lakeIds, lakes } = basins;
+function measureRimFloors(grid: WorldGrid, basins: DrainageBasins, ceilings: Float32Array): Float32Array {
+  const { lakeIds } = basins;
 
   const floors = new Float32Array(grid.cellCount).fill(Number.NEGATIVE_INFINITY);
-  const heap = new MinHeap(grid.cellsPerSide * 16);
-
-  for (let cell = 0; cell < grid.cellCount; cell += 1) {
-    if (lakeIds[cell] !== NO_CELL) {
-      floors[cell] = lakes[lakeIds[cell]].level;
-      heap.push(cell, -floors[cell]);
-    }
-  }
+  const distances = new Float32Array(grid.cellCount).fill(Number.POSITIVE_INFINITY);
+  const isSettled = new Uint8Array(grid.cellCount);
+  const heap = seedLakeCells(grid, basins, floors, distances, (level) => {
+    return -level;
+  });
 
   while (heap.size > 0) {
     const cell = heap.pop();
+
+    if (isSettled[cell] === 1) {
+      continue;
+    }
+
+    isSettled[cell] = 1;
+
     const column = grid.columnOf(cell);
     const row = grid.rowOf(cell);
-    const fall = lakeIds[cell] === NO_CELL ? STEEPEST_SHORE_SLOPE : 0;
+    const isLake = lakeIds[cell] !== NO_CELL;
 
     for (const offset of NEIGHBOR_OFFSETS) {
       const neighbor = grid.neighborIndex(column, row, offset);
-      const floor = floors[cell] - fall * offset.distance * grid.cellSize;
 
-      if (neighbor >= 0 && floor > floors[neighbor]) {
+      if (neighbor < 0 || lakeIds[neighbor] !== NO_CELL || ceilings[neighbor] === Number.POSITIVE_INFINITY) {
+        continue;
+      }
+
+      const step = isLake ? 0 : offset.distance * grid.cellSize;
+      const distance = distances[cell] + step;
+      const floor = floors[cell] - step * rimFallAt(distance - step / 2);
+
+      if (floor > floors[neighbor]) {
         floors[neighbor] = floor;
+        distances[neighbor] = distance;
         heap.push(neighbor, -floor);
       }
     }
@@ -245,7 +277,7 @@ export function easeLakeShores(
   basins: DrainageBasins
 ): void {
   const { ceilings } = measureShoreCut(heights, grid, basins);
-  const floors = measureRimFloors(grid, basins);
+  const floors = measureRimFloors(grid, basins, ceilings);
 
   for (let cell = 0; cell < grid.cellCount; cell += 1) {
     if (basins.lakeIds[cell] === NO_CELL && isOnIsland(coastDistance, cell)) {
