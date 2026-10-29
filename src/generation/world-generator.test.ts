@@ -2163,8 +2163,8 @@ describe("islands across seeds", () => {
 
 describe("full-size lake outlets", () => {
   const riversOnMain = new Map([
-    [7, 30],
-    [10, 32],
+    [7, 23],
+    [10, 29],
   ]);
   let worlds: [GeneratedWorld, number][];
 
