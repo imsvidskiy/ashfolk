@@ -39,16 +39,6 @@ const FILMING_PARAMETER_NAMES: Readonly<Record<keyof FilmingSettings, string>> =
   isResolutionHeld: "fullResolution",
 };
 
-const FILMING_KEYS: readonly (keyof FilmingSettings)[] = [
-  "areMarkersHidden",
-  "hasFarPlants",
-  "hasFarShadows",
-  "hasFinestGround",
-  "hasSharpestShadows",
-  "isInterfaceHidden",
-  "isResolutionHeld",
-];
-
 const changesSchema = z.strictObject({
   areMarkersHidden: z.boolean().optional(),
   hasFarPlants: z.boolean().optional(),
@@ -58,6 +48,8 @@ const changesSchema = z.strictObject({
   isInterfaceHidden: z.boolean().optional(),
   isResolutionHeld: z.boolean().optional(),
 });
+
+const FILMING_KEYS = changesSchema.keyof().options;
 
 type FilmingDraft = { -readonly [Key in keyof FilmingSettings]: boolean };
 

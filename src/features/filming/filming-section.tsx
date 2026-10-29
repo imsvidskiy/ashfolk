@@ -11,20 +11,6 @@ interface FilmingToggle {
   readonly label: string;
 }
 
-interface FilmingToggleFieldProps {
-  readonly filming: Filming;
-  readonly settings: FilmingSettings;
-  readonly toggle: FilmingToggle;
-}
-
-interface FilmingGroupProps {
-  readonly description: string;
-  readonly filming: Filming;
-  readonly settings: FilmingSettings;
-  readonly title: string;
-  readonly toggles: readonly FilmingToggle[];
-}
-
 const SHADOW_TOGGLES: readonly FilmingToggle[] = [
   {
     description: "Shadows reach across the whole island, and plants cast them at every distance.",
@@ -68,6 +54,20 @@ const FRAME_TOGGLES: readonly FilmingToggle[] = [
     label: "Hide interface",
   },
 ];
+
+interface FilmingToggleFieldProps {
+  readonly filming: Filming;
+  readonly settings: FilmingSettings;
+  readonly toggle: FilmingToggle;
+}
+
+interface FilmingGroupProps {
+  readonly description: string;
+  readonly filming: Filming;
+  readonly settings: FilmingSettings;
+  readonly title: string;
+  readonly toggles: readonly FilmingToggle[];
+}
 
 function useToggleChange(filming: Filming, key: keyof FilmingSettings) {
   return (isChecked: boolean) => {

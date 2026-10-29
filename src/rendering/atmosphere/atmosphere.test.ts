@@ -19,9 +19,10 @@ const HOUR_STEP = 0.001;
 const MOONLIGHT = 0.7;
 const ANKLE_HEIGHT = 0.085;
 const FAR_VIEW = 2500;
+const ISLAND_HALF_SIZE = 2560;
 
 function createAtmosphere(): Atmosphere {
-  return new Atmosphere(new Scene(), { cloudSeaAltitude: -200, islandHalfSize: 2560, shadowMapSize: 1024 });
+  return new Atmosphere(new Scene(), { cloudSeaAltitude: -200, islandHalfSize: ISLAND_HALF_SIZE, shadowMapSize: 1024 });
 }
 
 function lightAt(atmosphere: Atmosphere, hours: number): number {
@@ -89,7 +90,7 @@ describe("atmosphere", () => {
     const filmed = shadowReachAt(atmosphere, new Vector3(1000, 0, 0), FAR_VIEW);
 
     expect(near).toBeLessThan(FAR_VIEW);
-    expect(filmed).toBeGreaterThan(2560 * Math.SQRT2 + 1000);
+    expect(filmed).toBeGreaterThan(ISLAND_HALF_SIZE * Math.SQRT2 + 1000);
   });
 
   it("keeps filmed shadows attached to the feet", () => {

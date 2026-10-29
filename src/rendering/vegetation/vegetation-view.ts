@@ -22,7 +22,6 @@ import { geometryFromMeshData, InstanceBatch, toInstancedGeometry } from "../ins
 import { SHADOW_ONLY_LAYER } from "../shadow-only-layer.ts";
 import type { TerrainTextures } from "../terrain/terrain-textures.ts";
 import { HIDDEN_LEVEL } from "../view-input.ts";
-import { BURN_DETAIL_FADE } from "./plant-burning.ts";
 import { createPlantMaterial, PlantWeather, SpeciesLook } from "./plant-material.ts";
 import { foliageLook } from "./plant-palette.ts";
 import {
@@ -39,6 +38,7 @@ import {
 const LEVEL_DISTANCES: readonly number[] = [160, 600, 1600, 4200];
 const FAR_LEVEL_DISTANCES: readonly number[] = [160, 600, 1600, Number.POSITIVE_INFINITY];
 const SHADOW_LEVEL_COUNT = 2;
+const BURN_DETAIL_FADE = { end: 1300, start: 500 } as const;
 const FAR_BURN_DETAIL_FADE = { end: 24_000, start: 16_000 } as const;
 const NEAREST_LEVEL = 0;
 const SHADOW_PROXY_LEVEL = 1;
@@ -50,7 +50,7 @@ const PLANT_FIELDS = [
   { name: "plantLook", size: 4 },
 ] as const;
 
-export interface PlantReach {
+interface PlantReach {
   readonly hasFarPlants: boolean;
   readonly hasFarShadows: boolean;
 }

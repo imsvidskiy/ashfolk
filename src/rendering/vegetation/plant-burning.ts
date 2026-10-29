@@ -41,8 +41,6 @@ const TONGUE_STRETCH = 0.24;
 const TONGUE_RISE = 2.6;
 const GLOW_FLOOR = 0.004;
 
-export const BURN_DETAIL_FADE = { end: 1300, start: 500 } as const;
-
 interface BurnInput {
   readonly alive: Node<"float">;
   readonly burnt: Node<"float">;

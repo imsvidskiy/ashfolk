@@ -90,6 +90,7 @@ export class WorldRenderer {
   readonly #animals = new AnimalView();
   readonly #atmosphere: Atmosphere;
   readonly #axes = new CameraAxes();
+  readonly #baseQuality: RenderQuality;
   readonly #buildings: BuildingView;
   readonly #changes: WorldChangeReader;
   readonly #crops: CropField;
@@ -109,7 +110,6 @@ export class WorldRenderer {
   readonly #output: RenderOutput;
   readonly #people: PeopleView;
   readonly #plinth: number;
-  readonly #baseQuality: RenderQuality;
   readonly #renderer: WebGPURenderer;
   readonly #ringCenter = new Vector3();
   readonly #selectionRing: GroundRing;

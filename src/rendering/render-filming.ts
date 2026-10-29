@@ -1,7 +1,6 @@
 import type { RenderQuality } from "./render-quality.ts";
 
 const SHARPEST_SHADOW_MAP_SIZE = 8192;
-
 const FAR_PLANT_DETAIL = 4;
 
 export interface RenderFilming {
