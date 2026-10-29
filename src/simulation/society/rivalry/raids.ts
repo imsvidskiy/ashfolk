@@ -14,6 +14,7 @@ const RATION_HUNGER = 0.6;
 const RAID_OVERHEAD_SECONDS = 160;
 const LISTED_GOODS = 3;
 const TORCHED_ROLES: readonly BuildingRole[] = ["enclosure", "craft"];
+const ABLE_HEALTH = 0.45;
 const FIGHTING_HEALTH = 0.6;
 const FIGHTING_HUNGER = 0.5;
 const DEFENDING_HUNGER = 0.85;
@@ -46,7 +47,7 @@ export interface Raid {
 }
 
 export function canFight(person: Person): boolean {
-  return person.isAlive && !isChild(person) && !isElder(person) && person.health >= 0.45;
+  return person.isAlive && !isChild(person) && !isElder(person) && person.health >= ABLE_HEALTH;
 }
 
 export function isFitToDefend(person: Person): boolean {

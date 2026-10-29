@@ -26,7 +26,7 @@ import {
 } from "./frame-packing.ts";
 import { createPerson, type Person } from "./society/person.ts";
 import { createTribe } from "./society/tribe.ts";
-import { standStill } from "./testing/test-rivalry.ts";
+import { idleJob } from "./testing/test-rivalry.ts";
 import { createTestWorld } from "./testing/test-world.ts";
 
 function fieldOffsets(fields: Readonly<Record<string, number>>): number[] {
@@ -54,7 +54,7 @@ function raidingArcher(): Person {
   person.phase = 2.75;
   person.carrying = { amount: 2, item: "fish", resource: "fish" };
   person.weapon = { kind: "bow", material: "bronze" };
-  person.job = { ...standStill(), kind: "raid" };
+  person.job = { ...idleJob(), kind: "raid" };
 
   return person;
 }

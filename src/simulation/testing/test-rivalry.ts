@@ -79,7 +79,7 @@ export function foundNeighboringTribes(harness: SocietyHarness, distance: number
   return [first, second];
 }
 
-export function standStill(): Job {
+export function idleJob(): Job {
   const job: Job = {
     kind: "idle",
     update: () => {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { foundNeighboringTribes, runUntil, SPRING_HARNESS, standStill } from "../../testing/test-rivalry.ts";
+import { foundNeighboringTribes, idleJob, runUntil, SPRING_HARNESS } from "../../testing/test-rivalry.ts";
 import { SocietyHarness, tickFor } from "../../testing/test-society.ts";
 import type { CarriedWeapon } from "../weapons.ts";
 import { BARE_HANDS } from "./combat-stats.ts";
@@ -19,7 +19,7 @@ describe("combat", () => {
     const [brawler] = harness.society.membersOf(second);
 
     for (const person of harness.society.people) {
-      person.job = standStill();
+      person.job = idleJob();
     }
 
     brawler.mover.x = spearman.mover.x + 6;
@@ -42,7 +42,7 @@ describe("combat", () => {
     const [target] = harness.society.membersOf(second);
 
     for (const person of harness.society.people) {
-      person.job = standStill();
+      person.job = idleJob();
     }
 
     first.stock.arrows = QUIVER;
@@ -71,7 +71,7 @@ describe("combat", () => {
     const [target] = harness.society.membersOf(second);
 
     for (const person of harness.society.people) {
-      person.job = standStill();
+      person.job = idleJob();
     }
 
     first.stock.arrows = 0;
