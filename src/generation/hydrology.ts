@@ -698,7 +698,7 @@ function sinkIntoSlopes(land: RiverLand, points: RiverPoint[]): void {
     const sinking = smoothstep(FLAT_CROSS_SLOPE, STEEP_CROSS_SLOPE, Math.abs(left - right) / span);
     const lowestBank = Math.min(left, right) - BANK_FREEBOARD;
 
-    if (sinking > 0 && lowestBank < point.surface) {
+    if (lowestBank < point.surface) {
       point.surface -= sinking * (point.surface - lowestBank);
     }
   }
@@ -956,7 +956,6 @@ function carveCell(
 ): void {
   const halfWidth = sampled.width / 2;
   const wetReach = Math.max(halfWidth, targets.grid.cellSize * DIAGONAL_REACH);
-
   const channelReach = Math.max(halfWidth + bankWidthOf(sampled), wetReach);
 
   if (distanceFromCenter > Math.max(halfWidth + WIDEST_SIDE_CUT, channelReach)) {
