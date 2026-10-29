@@ -1,5 +1,5 @@
 import { Matrix4, Vector3 } from "three";
-import { FULL_TURN, lerp, smoothstep } from "../../shared/math.ts";
+import { FULL_TURN, HALF_TURN, lerp, smoothstep } from "../../shared/math.ts";
 import { createVolumeNoise } from "../../shared/noise.ts";
 import { createRandom, type RandomSource } from "../../shared/random.ts";
 import { LOG_TAPER, STEPPING_STONE_VARIANTS } from "../../world/crossings.ts";
@@ -41,7 +41,6 @@ const GNARL = 0.06;
 const PLATE_REACH = 3.4;
 const PLATE_THICKNESS = 0.7;
 const BARK_NEAR_ROOT = 3;
-const HALF_TURN = Math.PI;
 
 export type CrossingDetailLevel = "high" | "low" | "medium";
 

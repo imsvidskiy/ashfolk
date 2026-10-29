@@ -23,7 +23,7 @@ export function colorChannels(color: number): ColorChannels {
   return [red / CHANNEL_MAXIMUM, green / CHANNEL_MAXIMUM, blue / CHANNEL_MAXIMUM];
 }
 
-function toByte(value: number): number {
+export function toByte(value: number): number {
   return Math.round(saturate(value) * CHANNEL_MAXIMUM);
 }
 

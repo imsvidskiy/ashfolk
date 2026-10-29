@@ -44,6 +44,19 @@ function writePreference(key: string, value: string, subject: string): void {
   }
 }
 
+export function mergeStoredField<State, Key extends keyof State>(
+  key: Key,
+  read: (persisted: unknown) => State[Key]
+): (persisted: unknown, current: State) => State {
+  return (persisted, current) => {
+    if (persisted === undefined) {
+      return current;
+    }
+
+    return { ...current, [key]: read(persisted) };
+  };
+}
+
 export function storedQuality(): QualityLevel | null {
   return readPreference(QUALITY_KEY, qualitySchema, "graphics quality");
 }

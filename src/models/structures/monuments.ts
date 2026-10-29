@@ -1,6 +1,6 @@
 import { type MonumentPiece, PIECE_FORMS, type PieceForm } from "../../content/monuments.ts";
 import { PlantSpecies } from "../../content/plants.ts";
-import { FULL_TURN, lerp } from "../../shared/math.ts";
+import { FULL_TURN, HALF_TURN, lerp } from "../../shared/math.ts";
 import { createRandom, type RandomSource } from "../../shared/random.ts";
 import { MaterialSlot } from "../materials.ts";
 import { MeshBuilder } from "../mesh/mesh-builder.ts";
@@ -33,7 +33,6 @@ const HEAD_SEGMENTS: Readonly<Record<PlantDetailLevel, number>> = { far: 6, high
 const DRUM_SEGMENTS: Readonly<Record<PlantDetailLevel, number>> = { far: 5, high: 24, low: 6, medium: 12 };
 const DRESSED_DETAIL = 2;
 const FLUTES = 12;
-const HALF_TURN = Math.PI;
 const QUARTER_TURN = Math.PI / 2;
 const WEATHERED_STONE: StoneLook = { lichen: 0.24, moss: 0.3, slot: MaterialSlot.Stone };
 const CAIRN_STONE: StoneLook = { lichen: 0.26, moss: 0.14, slot: MaterialSlot.Stone };
@@ -67,6 +66,7 @@ const PLINTH: TransformOptions = { position: [0, 0.1, 0] };
 const SPAN = 1.75;
 const SPRING = 2.95;
 const VOUSSOIRS = 9;
+const MISSING_VOUSSOIR = 5;
 const CAIRN_PEBBLE = 0.35;
 const CAIRN_PEBBLE_SHAPES = 5;
 
@@ -605,7 +605,7 @@ function addArch(context: MonumentContext, form: PieceForm<typeof PlantSpecies.A
     addPier(context, pierBlock, SPAN, 3);
 
     for (let index = 0; index < VOUSSOIRS; index += 1) {
-      if (index !== 5) {
+      if (index !== MISSING_VOUSSOIR) {
         addVoussoir(context, voussoir, index);
       }
     }
@@ -615,7 +615,7 @@ function addArch(context: MonumentContext, form: PieceForm<typeof PlantSpecies.A
 
   addPier(context, pierBlock, SPAN, 2);
 
-  for (let index = 6; index < VOUSSOIRS; index += 1) {
+  for (let index = MISSING_VOUSSOIR + 1; index < VOUSSOIRS; index += 1) {
     addVoussoir(context, voussoir, index);
   }
 

@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
+import { mergeStoredField } from "../../app/preferences.ts";
 import {
   defaultPowerParameters,
   isPowerId,
@@ -59,7 +60,7 @@ export const usePowerStore = create<PowerStore>()(
       };
     },
     {
-      merge: mergeStored,
+      merge: mergeStoredField("parameters", readStoredParameters),
       name: STORAGE_KEY,
       partialize: (state) => {
         return { parameters: state.parameters };
@@ -86,14 +87,6 @@ export function readStoredParameters(value: unknown): StoredParameters {
   }
 
   return parameters;
-}
-
-function mergeStored(persisted: unknown, current: PowerStore): PowerStore {
-  if (persisted === undefined) {
-    return current;
-  }
-
-  return { ...current, parameters: readStoredParameters(persisted) };
 }
 
 export function parametersOf(parameters: StoredParameters, powerId: PowerId): ParameterValueMap {
