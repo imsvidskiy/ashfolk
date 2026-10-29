@@ -3,6 +3,7 @@ import { isChild } from "../person.ts";
 import type { SocietyContext } from "../society-context.ts";
 import { takeFood, totalFood } from "../stock.ts";
 import type { Tribe } from "../tribe.ts";
+import { campDistance } from "../tribe-places.ts";
 import { EnvoyJob } from "./defense-jobs.ts";
 import { FOOD_RESERVE } from "./provisions.ts";
 import { rationsFor } from "./raids.ts";
@@ -37,8 +38,9 @@ export function sendEnvoy(relation: Relation, seeker: Tribe, host: Tribe, contex
     return false;
   }
 
-  const distance = Math.hypot(seeker.campX - host.campX, seeker.campZ - host.campZ);
-  const rations = Math.floor(takeFood(seeker.stock, rationsFor(distance, context.rules.life.hungerRate)));
+  const rations = Math.floor(
+    takeFood(seeker.stock, rationsFor(campDistance(seeker, host), context.rules.life.hungerRate))
+  );
 
   relation.envoyId = envoy.id;
   takeUpJob(envoy, seeker, context, (tick) => {

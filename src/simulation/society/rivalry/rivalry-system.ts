@@ -10,7 +10,7 @@ import type { Person } from "../person.ts";
 import type { SocietyContext } from "../society-context.ts";
 import { emptyStock, type Stock, takeFood, totalFood } from "../stock.ts";
 import { knows, type Tribe } from "../tribe.ts";
-import { litCampfireOf } from "../tribe-places.ts";
+import { campDistance, campPoint, litCampfireOf } from "../tribe-places.ts";
 import { armForHunt, type CarriedWeapon, carriedWeapon } from "../weapons.ts";
 import { ArrowFlights } from "./arrows.ts";
 import { BeastEncounters } from "./beast-encounters.ts";
@@ -358,9 +358,7 @@ export class RivalrySystem implements Battleground {
       return null;
     }
 
-    const distance = Math.hypot(attacker.campX - defender.campX, attacker.campZ - defender.campZ);
-    const rations = rationsFor(distance, context.rules.life.hungerRate);
-
+    const rations = rationsFor(campDistance(attacker, defender), context.rules.life.hungerRate);
     const provisions = rations * warriors.length * PROVISIONED_SHARE;
 
     if (totalFood(attacker.stock) < provisions + attacker.memberCount * FOOD_RESERVE) {
@@ -370,8 +368,7 @@ export class RivalrySystem implements Battleground {
     const campfire = litCampfireOf(attacker, context.buildings);
     const canBurn = knows(attacker, "fire") && burnableBuilding(context.buildings.all, defender) !== null;
     const aim = chooseAim(relation.lastGrudge === "blood", canBurn, -relation.standing / 100);
-    const rally =
-      campfire === null ? { x: attacker.campX, z: attacker.campZ } : towards(campfire, defender, RALLY_DISTANCE);
+    const rally = campfire === null ? campPoint(attacker) : towards(campfire, defender, RALLY_DISTANCE);
 
     const raid: Raid = {
       aim,
@@ -388,7 +385,7 @@ export class RivalrySystem implements Battleground {
       rally,
       routedIds: new Set(),
       struckIds: new Set(),
-      target: { x: defender.campX, z: defender.campZ },
+      target: campPoint(defender),
       warriorIds: warriors.map((warrior) => {
         return warrior.id;
       }),
@@ -598,9 +595,8 @@ export class RivalrySystem implements Battleground {
 
     const isResting = day < untilDay(this.#restingUntil, attacker.id);
     const isMourning = day < untilDay(this.#mourningUntil, attacker.id);
-    const distance = Math.hypot(attacker.campX - defender.campX, attacker.campZ - defender.campZ);
 
-    return !(isResting || isMourning) && distance < LONGEST_RAID_DISTANCE;
+    return !(isResting || isMourning) && campDistance(attacker, defender) < LONGEST_RAID_DISTANCE;
   }
 
   #advanceRaids(seconds: number, context: SocietyContext): void {
