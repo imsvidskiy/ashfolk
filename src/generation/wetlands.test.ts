@@ -8,6 +8,7 @@ import { findPools, findSmallAreas, isWetland, matchWetlandShare, measureWetness
 const grid = new WorldGrid({ cellSize: 10, cellsPerSide: 96 });
 const LAKE_RADIUS = 120;
 const LAKE_LEVEL = 100.5;
+const TIED_WETNESS_SHARE = 1 / 97;
 
 function wetnessOf(seed: number, desert = 0): Float32Array {
   const world = lakeWorld(seed, desert);
@@ -16,6 +17,10 @@ function wetnessOf(seed: number, desert = 0): Float32Array {
   });
 
   return measureWetness(world, slopes);
+}
+
+function bentExponent(before: Float32Array, after: Float32Array, cell: number): number {
+  return Math.log(after[cell]) / Math.log(before[cell]);
 }
 
 function lakeWorld(seed: number, desert = 0) {
@@ -159,12 +164,51 @@ describe("wetlands", () => {
     }).length;
     const wettest = before.indexOf(Math.max(...before));
 
-    expect(wetCells / grid.cellCount).toBeCloseTo(0.2, 1);
+    expect(Math.abs(wetCells / grid.cellCount - 0.2)).toBeLessThan(TIED_WETNESS_SHARE);
     expect(wetness[wettest]).toBe(Math.max(...wetness));
     expect(
       wetness.every((value, cell) => {
         return value <= 1 && (value === 0) === (before[cell] === 0);
       })
     ).toBe(true);
+  });
+  it("matches the share over land only, leaving ocean cells out of the reference", () => {
+    const landCells = grid.cellCount / 2;
+    const coastDistance = Float32Array.from({ length: grid.cellCount }, (_, cell) => {
+      return cell < landCells ? 1 : 0;
+    });
+    const wetness = Float32Array.from({ length: grid.cellCount }, (_, cell) => {
+      return cell < landCells ? 0.2 + (0.5 * cell) / landCells : 0.95;
+    });
+    const before = Float32Array.from(wetness);
+    const reference = before[landCells - 1 - Math.floor(0.2 * landCells)];
+
+    matchWetlandShare(wetness, coastDistance, 0.2);
+
+    expect(bentExponent(before, wetness, 0)).toBeCloseTo(Math.log(0.34) / Math.log(reference), 4);
+  });
+
+  it("bends the gentlest way when too few cells are wet to reach the share", () => {
+    const wetness = Float32Array.from({ length: grid.cellCount }, (_, cell) => {
+      return cell % 10 === 0 ? 0.5 : 0;
+    });
+    const before = Float32Array.from(wetness);
+
+    matchWetlandShare(wetness, landEverywhere(grid.cellCount), 0.2);
+
+    expect(bentExponent(before, wetness, 0)).toBeCloseTo(0.7, 4);
+  });
+
+  it("clamps the bend on very wet and very dry land", () => {
+    const soaked = new Float32Array(grid.cellCount).fill(0.9);
+    const parched = new Float32Array(grid.cellCount).fill(0.05);
+    const soakedBefore = Float32Array.from(soaked);
+    const parchedBefore = Float32Array.from(parched);
+
+    matchWetlandShare(soaked, landEverywhere(grid.cellCount), 0.02);
+    matchWetlandShare(parched, landEverywhere(grid.cellCount), 0.02);
+
+    expect(bentExponent(soakedBefore, soaked, 0)).toBeCloseTo(2.4, 4);
+    expect(bentExponent(parchedBefore, parched, 0)).toBeCloseTo(0.7, 4);
   });
 });
