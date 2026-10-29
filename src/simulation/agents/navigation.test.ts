@@ -81,6 +81,10 @@ function riverWithFord(): WorldState {
   return world;
 }
 
+function isReachable(navigation: NavigationGrid, from: Waypoint, to: Waypoint): boolean {
+  return navigation.reachableSpot(from, to) === to;
+}
+
 function crossesSpring(world: WorldState, from: Waypoint, to: Waypoint): boolean {
   return world.grid.someCellAlong(from.x, from.z, to.x, to.z, (cell) => {
     return world.occupancy[cell] === SPRING_GROUND;
@@ -233,9 +237,9 @@ describe("crossings", () => {
 
     const navigation = new NavigationGrid(parted);
 
-    expect(joined.isReachable({ x: -150, z: -100 }, { x: 150, z: 200 })).toBe(true);
-    expect(navigation.isReachable({ x: -150, z: -100 }, { x: 150, z: 200 })).toBe(false);
-    expect(navigation.isReachable({ x: -150, z: -100 }, { x: -60, z: 200 })).toBe(true);
+    expect(isReachable(joined, { x: -150, z: -100 }, { x: 150, z: 200 })).toBe(true);
+    expect(isReachable(navigation, { x: -150, z: -100 }, { x: 150, z: 200 })).toBe(false);
+    expect(isReachable(navigation, { x: -150, z: -100 }, { x: -60, z: 200 })).toBe(true);
   });
 
   it("sends a mover to the nearest dry ground on its own bank when nothing crosses the river", () => {
@@ -270,7 +274,7 @@ describe("crossings", () => {
     const navigation = new NavigationGrid(world);
 
     expect(navigation.findPath({ x: -150, z: -100 }, { x: 150, z: 0 })).toEqual([{ x: 150, z: 0 }]);
-    expect(navigation.isReachable({ x: -150, z: -100 }, { x: 150, z: 200 })).toBe(true);
+    expect(isReachable(navigation, { x: -150, z: -100 }, { x: 150, z: 200 })).toBe(true);
   });
 
   it("hops a brook back the way a hop from the far bank came", () => {
