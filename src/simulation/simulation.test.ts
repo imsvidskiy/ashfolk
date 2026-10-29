@@ -5,6 +5,7 @@ import { generateWorld } from "../generation/world-generator.ts";
 import { ignore } from "../shared/ignore.ts";
 import { ANIMAL_STRIDE, AnimalField, PERSON_STRIDE, PersonField } from "../world/agent-buffers.ts";
 import type { IslandShapeKind } from "../world/island-shape.ts";
+import { islandDimensions } from "../world/island-size.ts";
 import { isHopping } from "./agents/hops.ts";
 import { setDestination } from "./agents/movement.ts";
 import { Simulation, type SimulationSnapshot } from "./simulation.ts";
@@ -622,5 +623,18 @@ describe("arrival on islands of every layout", () => {
 
       expect(simulation.society.tribes()).toHaveLength(3);
     }
+  });
+});
+
+describe.each(["small", "large"] as const)("a %s island", (size) => {
+  test("settles three tribes", { timeout: 120_000 }, () => {
+    const simulation = new Simulation(
+      generateWorld(7, { ...DEFAULT_GENERATION_OPTIONS, dimensions: islandDimensions(size) })
+    );
+
+    simulation.populate();
+
+    expect(simulation.society.tribes()).toHaveLength(3);
+    expect(simulation.fauna.animals.length).toBeGreaterThan(0);
   });
 });
