@@ -3,7 +3,6 @@ import { altitudeChill } from "../../generation/climate.ts";
 import { generationFingerprint } from "../../generation/generation-fingerprint.ts";
 import type { GeneratedWorld } from "../../generation/world-generator.ts";
 import { clamp } from "../../shared/math.ts";
-import { applySparse, type SparseValues, sparseDifference } from "../../shared/sparse-values.ts";
 import { isBrookCell } from "../../world/brooks.ts";
 import { type CellRegion, RegionChangeTracker, RowChangeTracker } from "../../world/change-tracking.ts";
 import { hasRoomFromCoast, isOnIsland } from "../../world/coast.ts";
@@ -30,6 +29,7 @@ import { NO_WATER, type Spring, type WaterFeatures } from "../../world/water.ts"
 import { WorldGrid } from "../../world/world-grid.ts";
 import { CellSet } from "./cell-set.ts";
 import { ObstacleMap } from "./obstacles.ts";
+import { applySparse, type SparseValues, sparseDifference } from "./sparse-values.ts";
 
 export const NO_BUILDING = -1;
 export const MONUMENT_GROUND = -2;
