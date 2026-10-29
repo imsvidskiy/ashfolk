@@ -22,6 +22,15 @@ const INLET_REACH = 100;
 const PARALLEL_REACH = 180;
 const SMOOTHED_SPLITS = 4;
 const STEP_TOLERANCE = 0.01;
+const BANK_HEIGHT = 1.6;
+const LEVEE_CREST = 10;
+const LEVEE_RISE = 0.4;
+const LEVEE_FALL = 0.25;
+const SHELF_HEIGHT = 5;
+const SHELF_BASIN_OFFSET = 40;
+const SHELF_BASIN_DEPTH = 15;
+const SHELF_BASIN_SPREAD = 2 * 16 * 16;
+const SIDEHILL_REACH = 250;
 
 interface CarvedWater {
   readonly carved: Float32Array;
@@ -221,6 +230,88 @@ describe("river carving", () => {
       for (let index = 1; index < levels.length; index += 1) {
         expect(levels[index]).toBeLessThanOrEqual(levels[index - 1] + 1e-3);
       }
+    }
+  });
+});
+
+describe("river sidehills", () => {
+  function carveSidehill(
+    heightAt: (x: number, z: number) => number,
+    lakeMinimumArea = DEFAULT_HYDROLOGY.lakeMinimumArea
+  ) {
+    const grid = new WorldGrid({ cellSize: 10, cellsPerSide: 64 });
+
+    const uncarved = shapeTerrain(grid, (x, z) => {
+      return 100 + (z + grid.halfSize) * 0.05 + heightAt(x, z);
+    });
+
+    const carved = Float32Array.from(uncarved);
+    const options = { ...DEFAULT_HYDROLOGY, lakeMinimumArea, lakeMinimumCatchmentArea: 0, riverCatchmentArea: 30_000 };
+
+    const result = computeHydrology(
+      carved,
+      grid,
+      new Float32Array(grid.cellCount),
+      landEverywhere(grid.cellCount),
+      options
+    );
+
+    const points = result.features.rivers.flatMap((river) => {
+      return river.points;
+    });
+
+    return { carved, grid, points, result, uncarved };
+  }
+
+  it("keeps a river under a steep wall up at an outer bank that falls away gently", () => {
+    const { carved, grid, points, uncarved } = carveSidehill((x) => {
+      if (x < 0) {
+        return -STEEP_WALLS * x;
+      }
+
+      return x < LEVEE_CREST ? LEVEE_RISE * x : LEVEE_RISE * LEVEE_CREST - LEVEE_FALL * (x - LEVEE_CREST);
+    });
+
+    const inside = points.filter((point) => {
+      return Math.abs(point.z) < SIDEHILL_REACH;
+    });
+
+    expect(inside.length).toBeGreaterThan(20);
+
+    for (const point of inside) {
+      expect(uncarved[grid.cellAt(point.x + grid.cellSize, point.z)] - point.surface).toBeLessThan(2 * BANK_HEIGHT);
+    }
+
+    const outerCuts = Array.from(uncarved, (height, cell) => {
+      return height - carved[cell];
+    }).filter((_, cell) => {
+      const x = grid.cellCenterX(cell);
+
+      return x > 2 * LEVEE_CREST && x < 6 * LEVEE_CREST && Math.abs(grid.cellCenterZ(cell)) < SIDEHILL_REACH;
+    });
+
+    expect(outerCuts.length).toBeGreaterThan(20);
+    expect(Math.max(...outerCuts)).toBeLessThan(1);
+  });
+
+  it("doesn't sink a river toward the bed of a lake beside it", () => {
+    const { grid, points, result, uncarved } = carveSidehill((x, z) => {
+      const basin = Math.exp(-((x - SHELF_BASIN_OFFSET) ** 2 + z * z) / SHELF_BASIN_SPREAD);
+
+      return (x < 0 ? -x : Math.min(LEVEE_RISE * x, SHELF_HEIGHT)) - SHELF_BASIN_DEPTH * basin;
+    }, 500);
+
+    const besideLake = points.filter((point) => {
+      return [2, 3].some((cells) => {
+        return result.lakeIds[grid.cellAt(point.x + cells * grid.cellSize, point.z)] !== NO_CELL;
+      });
+    });
+
+    expect(result.features.lakes.length).toBeGreaterThan(0);
+    expect(besideLake.length).toBeGreaterThan(3);
+
+    for (const point of besideLake) {
+      expect(uncarved[grid.cellAt(point.x, point.z)] - point.surface).toBeLessThan(1);
     }
   });
 });

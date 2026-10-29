@@ -36,6 +36,14 @@ const TRUNK_LAKE_CELLS = 1.5;
 const SMOOTHING_SLACK = 10;
 const LAKE_REACH = 20;
 const RIVER_SAMPLE_STEP = 5;
+const FLOAT_SLACK = 1e-3;
+const INLAND_REACH = 60;
+const HANGING_SLACK = 0.3;
+const SHALLOWEST_BED = 0.3;
+const GENTLE_REACH_DROP = 0.05;
+const SIDEHILL_CROSS_SLOPE = 0.12;
+const NEIGHBOR_CELLS = 1.5;
+const WATER_LEVEL_CELLS = 2.5;
 const STRAIGHT_RUN = 150;
 const STRAIGHT_DEVIATION = 3;
 const VARIETY_DIMENSIONS = { cellSize: 50, cellsPerSide: 128 };
@@ -902,6 +910,134 @@ function endsAwayFromWater(generated: GeneratedWorld): string[] {
     });
 }
 
+function lowestRiverWaterNear(terrain: TerrainData, grid: WorldGrid, cell: number): number {
+  const waters = cellsAround(grid, cell, 1, grid.cellSize * WATER_LEVEL_CELLS)
+    .filter((near) => {
+      return isRiverWater(terrain, near);
+    })
+    .map((near) => {
+      return terrain.waterSurface[near];
+    });
+
+  return Math.min(...waters);
+}
+
+function hangingRiverEdges(generated: GeneratedWorld): { edges: number; hanging: number } {
+  const { terrain } = generated;
+
+  const grid = new WorldGrid(generated.dimensions);
+  let edges = 0;
+  let hanging = 0;
+
+  for (let cell = 0; cell < grid.cellCount; cell += 1) {
+    if (hasWater(terrain.waterSurface[cell], terrain.height[cell]) || terrain.coastDistance[cell] < INLAND_REACH) {
+      continue;
+    }
+
+    const neighbors = cellsAround(grid, cell, 1, grid.cellSize * NEIGHBOR_CELLS);
+
+    const touchesLake = neighbors.some((near) => {
+      return isLakeWater(terrain, near);
+    });
+    const touchesRiver = neighbors.some((near) => {
+      return isRiverWater(terrain, near);
+    });
+
+    if (touchesLake || !touchesRiver) {
+      continue;
+    }
+
+    edges += 1;
+
+    if (terrain.height[cell] < lowestRiverWaterNear(terrain, grid, cell) - HANGING_SLACK) {
+      hanging += 1;
+    }
+  }
+
+  return { edges, hanging };
+}
+
+function bedDepthsBelowBanks(generated: GeneratedWorld): { all: number[]; sidehill: number[] } {
+  const { terrain } = generated;
+
+  const grid = new WorldGrid(generated.dimensions);
+  const all: number[] = [];
+  const sidehill: number[] = [];
+
+  for (const river of generated.water.rivers) {
+    for (let index = 2; index < river.points.length - 2; index += 1) {
+      const point = river.points[index];
+      const before = river.points[index - 2];
+      const after = river.points[index + 2];
+      const length = Math.max(1e-6, Math.hypot(after.x - before.x, after.z - before.z));
+      const cell = grid.cellAt(point.x, point.z);
+
+      const upstream = grid.cellAt(before.x, before.z);
+      const downstream = grid.cellAt(after.x, after.z);
+      const drop = terrain.waterSurface[upstream] - terrain.waterSurface[downstream];
+      const isGentle =
+        isRiverWater(terrain, upstream) && isRiverWater(terrain, downstream) && drop / length <= GENTLE_REACH_DROP;
+      const isInland = terrain.coastDistance[cell] >= INLAND_REACH;
+
+      if (!(isGentle && isInland && isRiverWater(terrain, cell))) {
+        continue;
+      }
+
+      const offset = point.width / 2 + grid.cellSize;
+      const banks = [-1, 1].map((side) => {
+        return grid.cellAt(
+          point.x - ((after.z - before.z) / length) * offset * side,
+          point.z + ((after.x - before.x) / length) * offset * side
+        );
+      });
+
+      const isDryLand = banks.every((bank) => {
+        return isOnIsland(terrain.coastDistance, bank) && !hasWater(terrain.waterSurface[bank], terrain.height[bank]);
+      });
+
+      if (!isDryLand) {
+        continue;
+      }
+
+      const depth = Math.min(terrain.height[banks[0]], terrain.height[banks[1]]) - terrain.height[cell];
+      const uncarvedRise = Math.abs(
+        terrain.height[banks[0]] + terrain.carving[banks[0]] - terrain.height[banks[1]] - terrain.carving[banks[1]]
+      );
+
+      all.push(depth);
+
+      if (uncarvedRise / (2 * offset) > SIDEHILL_CROSS_SLOPE) {
+        sidehill.push(depth);
+      }
+    }
+  }
+
+  return { all, sidehill };
+}
+
+function slopesAddedByCarving(generated: GeneratedWorld): number[] {
+  const { terrain } = generated;
+
+  const grid = new WorldGrid(generated.dimensions);
+  const uncarved = terrain.height.map((height, cell) => {
+    return height + terrain.carving[cell];
+  });
+  const added: number[] = [];
+
+  for (let cell = 0; cell < grid.cellCount; cell += 1) {
+    const isCarvedLand =
+      terrain.carving[cell] > 1 &&
+      terrain.coastDistance[cell] >= INLAND_REACH &&
+      !hasWater(terrain.waterSurface[cell], terrain.height[cell]);
+
+    if (isCarvedLand && !grid.isOnEdge(cell)) {
+      added.push(slopeAt(terrain.height, grid, cell) - slopeAt(uncarved, grid, cell));
+    }
+  }
+
+  return added;
+}
+
 function distanceToWaterfall(generated: GeneratedWorld, grid: WorldGrid, cell: number): number {
   const x = grid.cellCenterX(cell);
   const z = grid.cellCenterZ(cell);
@@ -1536,8 +1672,8 @@ describe("full-size island rim", () => {
   });
 
   it("keeps the trees of the full island apart", () => {
-    expect(closestTreeGap(fullSize)).toBeGreaterThanOrEqual(TREE_SPACING);
-    expect(closestTreeGap(fullSquare)).toBeGreaterThanOrEqual(TREE_SPACING);
+    expect(closestTreeGap(fullSize)).toBeGreaterThanOrEqual(TREE_SPACING - FLOAT_SLACK);
+    expect(closestTreeGap(fullSquare)).toBeGreaterThanOrEqual(TREE_SPACING - FLOAT_SLACK);
   });
 
   it("grows several swamps with pools on low, flat, wet ground on both shapes", () => {
@@ -1647,6 +1783,36 @@ describe("full-size river joins", () => {
   it("ends every river in water: past the coast, in a lake or in another river", () => {
     for (const generated of worlds) {
       expect(endsAwayFromWater(generated)).toEqual([]);
+    }
+  });
+
+  it("keeps the land beside every river at least as high as its water on several seeds and both shapes", () => {
+    for (const generated of worlds) {
+      const { edges, hanging } = hangingRiverEdges(generated);
+
+      expect(edges).toBeGreaterThan(3000);
+      expect(hanging / edges).toBeLessThan(0.005);
+    }
+  });
+
+  it("sinks river beds below both banks, across hillsides too", () => {
+    for (const generated of worlds) {
+      const { all, sidehill } = bedDepthsBelowBanks(generated);
+
+      expect(all.length).toBeGreaterThan(500);
+      expect(sidehill.length).toBeGreaterThan(50);
+      expect(1 - shareAbove(all, SHALLOWEST_BED)).toBeLessThan(0.08);
+      expect(1 - shareAbove(sidehill, SHALLOWEST_BED)).toBeLessThan(0.22);
+      expect(median(sidehill)).toBeGreaterThan(0.8);
+    }
+  });
+
+  it("blends cut banks gently into the land around them", () => {
+    for (const generated of worlds) {
+      const added = slopesAddedByCarving(generated);
+
+      expect(quantile(added, 0.9)).toBeLessThan(0.25);
+      expect(quantile(added, 0.99)).toBeLessThan(0.65);
     }
   });
 });
