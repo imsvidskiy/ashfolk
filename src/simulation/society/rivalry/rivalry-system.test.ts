@@ -77,6 +77,26 @@ describe("relations between tribes", () => {
     expect(relation?.isKin).toBe(true);
     expect(relation?.stance).toBe("friendly");
   });
+
+  it("forget when a vanished tribe rests and mourns", () => {
+    const harness = new SocietyHarness(SPRING_HARNESS);
+
+    const [first] = foundNeighboringTribes(harness, 900);
+    const vanishedId = first.id + 1000;
+
+    const snapshot = harness.rivalry.snapshot();
+
+    snapshot.mourningUntil.set(vanishedId, 50);
+    snapshot.restingUntil.set(vanishedId, 50);
+    snapshot.restingUntil.set(first.id, 50);
+    harness.rivalry.restore(snapshot);
+    harness.run(3);
+
+    const { mourningUntil, restingUntil } = harness.rivalry.snapshot();
+
+    expect([...mourningUntil.keys()]).toEqual([]);
+    expect([...restingUntil.keys()]).toEqual([first.id]);
+  });
 });
 
 describe("a raid", () => {

@@ -207,6 +207,14 @@ function copyDates(target: Map<number, number>, source: ReadonlyMap<number, numb
   }
 }
 
+function forgetDates(dates: Map<number, number>, living: ReadonlySet<number>): void {
+  for (const tribeId of dates.keys()) {
+    if (!living.has(tribeId)) {
+      dates.delete(tribeId);
+    }
+  }
+}
+
 function towards(from: Waypoint, to: Tribe, distance: number): Waypoint {
   const awayX = to.campX - from.x;
   const awayZ = to.campZ - from.z;
@@ -773,5 +781,8 @@ export class RivalrySystem implements Battleground {
         this.relations.forgetTribe(relation.second.tribeId);
       }
     }
+
+    forgetDates(this.#mourningUntil, living);
+    forgetDates(this.#restingUntil, living);
   }
 }
