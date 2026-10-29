@@ -146,21 +146,17 @@ export class VegetationChunks {
     }
   }
 
-  plantsNear(x: number, z: number, radius: number): number[] {
-    const { grid } = this.#mirror;
+  plantsNear(spots: readonly { readonly x: number; readonly z: number }[], radius: number): number[] {
+    const chunks = new Set<number>();
 
-    const last = this.chunksPerSide - 1;
-    const firstColumn = clamp(Math.floor(grid.columnAt(x - radius) / CHUNK_CELLS), 0, last);
-    const lastColumn = clamp(Math.floor(grid.columnAt(x + radius) / CHUNK_CELLS), 0, last);
-    const firstRow = clamp(Math.floor(grid.rowAt(z - radius) / CHUNK_CELLS), 0, last);
-    const lastRow = clamp(Math.floor(grid.rowAt(z + radius) / CHUNK_CELLS), 0, last);
+    for (const { x, z } of spots) {
+      this.#collectChunks(x, z, radius, chunks);
+    }
 
     const plants: number[] = this.#heldPlant === NO_PLANT ? [] : [this.#heldPlant];
 
-    for (let row = firstRow; row <= lastRow; row += 1) {
-      for (let column = firstColumn; column <= lastColumn; column += 1) {
-        plants.push(...this.chunks[row * this.chunksPerSide + column].plants);
-      }
+    for (const chunk of chunks) {
+      plants.push(...this.chunks[chunk].plants);
     }
 
     return plants;
@@ -190,6 +186,22 @@ export class VegetationChunks {
     }
 
     return repacked;
+  }
+
+  #collectChunks(x: number, z: number, radius: number, chunks: Set<number>): void {
+    const { grid } = this.#mirror;
+
+    const last = this.chunksPerSide - 1;
+    const firstColumn = clamp(Math.floor(grid.columnAt(x - radius) / CHUNK_CELLS), 0, last);
+    const lastColumn = clamp(Math.floor(grid.columnAt(x + radius) / CHUNK_CELLS), 0, last);
+    const firstRow = clamp(Math.floor(grid.rowAt(z - radius) / CHUNK_CELLS), 0, last);
+    const lastRow = clamp(Math.floor(grid.rowAt(z + radius) / CHUNK_CELLS), 0, last);
+
+    for (let row = firstRow; row <= lastRow; row += 1) {
+      for (let column = firstColumn; column <= lastColumn; column += 1) {
+        chunks.add(row * this.chunksPerSide + column);
+      }
+    }
   }
 
   #place(plant: number): void {

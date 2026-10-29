@@ -207,8 +207,8 @@ export class WorldRenderer {
     this.#highlighted = target;
   }
 
-  plantsNear(x: number, z: number, radius: number): number[] {
-    return this.#vegetation.chunks.plantsNear(x, z, radius);
+  plantsNear(spots: readonly { readonly x: number; readonly z: number }[], radius: number): number[] {
+    return this.#vegetation.chunks.plantsNear(spots, radius);
   }
 
   setOutlinesShown(areShown: boolean): void {

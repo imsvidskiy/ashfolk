@@ -11,8 +11,8 @@ const WHEEL_ZOOM_RATE = 0.0015;
 const WHEEL_LINE_PIXELS = 16;
 
 export interface ToolGestures {
-  readonly begin: (point: Vector3) => void;
-  readonly canBegin: (point: Vector3, screen: ScreenPoint) => boolean;
+  readonly begin: (point: Vector3 | null) => void;
+  readonly canBegin: (point: Vector3 | null, screen: ScreenPoint) => boolean;
   readonly cancel: () => void;
   readonly canHoldThroughPinch: boolean;
   readonly end: () => void;
@@ -50,7 +50,12 @@ type Gesture =
   | { readonly kind: "orbit" }
   | { readonly kind: "pan"; travel: number }
   | { readonly kind: "tool"; readonly tool: ToolGestures }
-  | { readonly kind: "waiting"; readonly point: Vector3; readonly screen: ScreenPoint; readonly tool: ToolGestures }
+  | {
+      readonly kind: "waiting";
+      readonly point: Vector3 | null;
+      readonly screen: ScreenPoint;
+      readonly tool: ToolGestures;
+    }
   | {
       angle: number;
       readonly carrying: Carrying | null;
@@ -223,7 +228,7 @@ export class PointerControls {
     const point = this.#pick(screen.x, screen.y);
     const tool = this.#activeTool();
 
-    if (tool === null || point === null || !tool.canBegin(point, screen)) {
+    if (tool === null || !tool.canBegin(point, screen)) {
       this.#gesture = { kind: "pan", travel: 0 };
 
       return;

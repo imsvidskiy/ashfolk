@@ -150,7 +150,7 @@ describe("vegetation chunks", () => {
     const chunks = new VegetationChunks(mirror);
     const { vegetation } = mirror;
 
-    const near = chunks.plantsNear(vegetation.x[0], vegetation.z[0], 1);
+    const near = chunks.plantsNear([{ x: vegetation.x[0], z: vegetation.z[0] }], 1);
 
     expect(near).toContain(0);
     expect(near.length).toBeLessThan(alivePlantCount(mirror));
@@ -159,7 +159,7 @@ describe("vegetation chunks", () => {
         return chunkOf(chunks, plant) === chunkOf(chunks, 0);
       })
     ).toBe(true);
-    expect(chunks.plantsNear(0, 0, mirror.grid.worldSize)).toHaveLength(alivePlantCount(mirror));
+    expect(chunks.plantsNear([{ x: 0, z: 0 }], mirror.grid.worldSize)).toHaveLength(alivePlantCount(mirror));
   });
 
   it("finds a held plant that the chunks leave out", () => {
@@ -170,7 +170,7 @@ describe("vegetation chunks", () => {
     chunks.hold(0);
 
     expect(chunkOf(chunks, 0)).toBe(-1);
-    expect(chunks.plantsNear(vegetation.x[0], vegetation.z[0], 1)).toContain(0);
+    expect(chunks.plantsNear([{ x: vegetation.x[0], z: vegetation.z[0] }], 1)).toContain(0);
   });
 
   it("reports every bucket after a height change", () => {
