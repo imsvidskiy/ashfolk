@@ -27,7 +27,7 @@ export function findCraftWork(tick: PersonTick, construction: ResourceAmounts): 
 function craftingSeconds(tribe: Tribe, order: CraftOrder): number {
   const seconds = workSeconds(tribe, RECIPES[order.recipe].seconds);
 
-  if (order.station !== null && order.station.kind === "workshop") {
+  if (order.station?.kind === "workshop") {
     return seconds / WORKSHOP_SPEED;
   }
 

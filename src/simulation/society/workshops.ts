@@ -66,18 +66,6 @@ function isWanted(tribe: Tribe, recipe: RecipeId, construction: ResourceAmounts)
   }
 }
 
-function stationFor(tribe: Tribe, context: SocietyContext, recipe: RecipeId): Building | null | undefined {
-  const { station } = RECIPES[recipe];
-
-  const building = completedOfKind(tribe, context, station);
-
-  if (building === null && station !== "workshop") {
-    return undefined;
-  }
-
-  return building;
-}
-
 function headedInputs(inputs: ResourceAmounts, material: ToolMaterial): ResourceAmounts {
   const { metal } = TOOL_MATERIAL_DEFINITIONS[material];
 
@@ -95,9 +83,9 @@ function resolveOrder(tribe: Tribe, context: SocietyContext, recipe: RecipeId): 
     return null;
   }
 
-  const station = stationFor(tribe, context, recipe);
+  const station = completedOfKind(tribe, context, definition.station);
 
-  if (station === undefined) {
+  if (station === null && definition.station !== "workshop") {
     return null;
   }
 

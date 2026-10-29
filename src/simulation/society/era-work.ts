@@ -93,6 +93,7 @@ export const ERA_WORK_OPTIONS: readonly WorkOption[] = [
 
 const ORE_TARGETS: Readonly<Record<DepositKind, number>> = { clay: 0, copper: 14, iron: 14, tin: 9 };
 const POTTERY_CLAY = 6;
+const POTTERY_STOCK = 12;
 const MINERS_SHARE = 8;
 const CRAFT_WEIGHTS: Readonly<Record<RecipeId, number>> = {
   arrows: 0.8,
@@ -108,7 +109,7 @@ const CRAFT_WEIGHTS: Readonly<Record<RecipeId, number>> = {
 function clayWanted(tick: PersonTick, construction: ResourceAmounts): number {
   const { tribe } = tick;
 
-  const forPottery = tribe.stock.pottery < 12 ? POTTERY_CLAY : 0;
+  const forPottery = tribe.stock.pottery < POTTERY_STOCK ? POTTERY_CLAY : 0;
 
   return amountOf(construction, "clay") + forPottery;
 }
