@@ -66,6 +66,7 @@ const PLINTH: TransformOptions = { position: [0, 0.1, 0] };
 const SPAN = 1.75;
 const SPRING = 2.95;
 const VOUSSOIRS = 9;
+const MISSING_VOUSSOIR = 5;
 const CAIRN_PEBBLE = 0.35;
 const CAIRN_PEBBLE_SHAPES = 5;
 
@@ -604,7 +605,7 @@ function addArch(context: MonumentContext, form: PieceForm<typeof PlantSpecies.A
     addPier(context, pierBlock, SPAN, 3);
 
     for (let index = 0; index < VOUSSOIRS; index += 1) {
-      if (index !== 5) {
+      if (index !== MISSING_VOUSSOIR) {
         addVoussoir(context, voussoir, index);
       }
     }
@@ -614,7 +615,7 @@ function addArch(context: MonumentContext, form: PieceForm<typeof PlantSpecies.A
 
   addPier(context, pierBlock, SPAN, 2);
 
-  for (let index = 6; index < VOUSSOIRS; index += 1) {
+  for (let index = MISSING_VOUSSOIR + 1; index < VOUSSOIRS; index += 1) {
     addVoussoir(context, voussoir, index);
   }
 
