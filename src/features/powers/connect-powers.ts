@@ -1,10 +1,9 @@
 import type { EngineHandle } from "../../game/engine-handle.ts";
+import { TAP_TOLERANCE } from "../../game/input/pointer-controls.ts";
 import type { PowerSelection } from "../../game/tools/power-tool.ts";
 import { type PowerStore, parametersOf, usePowerStore } from "./power-store.ts";
 
 const SECONDARY_BUTTON = 2;
-
-const CLICK_SLOP = 5;
 
 function selectionOf(state: PowerStore): PowerSelection | null {
   const { selectedPowerId } = state;
@@ -22,13 +21,11 @@ function clearOnEscape(event: KeyboardEvent): void {
   }
 }
 
-function clearOnRightClick(): () => void {
+function clearOnRightClick(world: HTMLCanvasElement): () => void {
   let pressedAt: { readonly x: number; readonly y: number } | null = null;
 
   function handlePointerDown(event: PointerEvent): void {
-    const isOnWorld = event.button === SECONDARY_BUTTON && event.target instanceof HTMLCanvasElement;
-
-    pressedAt = isOnWorld ? { x: event.clientX, y: event.clientY } : null;
+    pressedAt = event.button === SECONDARY_BUTTON ? { x: event.clientX, y: event.clientY } : null;
   }
 
   function handlePointerUp(event: PointerEvent): void {
@@ -40,21 +37,21 @@ function clearOnRightClick(): () => void {
 
     pressedAt = null;
 
-    if (travel < CLICK_SLOP) {
+    if (travel < TAP_TOLERANCE) {
       usePowerStore.getState().selectPower(null);
     }
   }
 
-  window.addEventListener("pointerdown", handlePointerDown);
-  window.addEventListener("pointerup", handlePointerUp);
+  world.addEventListener("pointerdown", handlePointerDown);
+  world.addEventListener("pointerup", handlePointerUp);
 
   return () => {
-    window.removeEventListener("pointerdown", handlePointerDown);
-    window.removeEventListener("pointerup", handlePointerUp);
+    world.removeEventListener("pointerdown", handlePointerDown);
+    world.removeEventListener("pointerup", handlePointerUp);
   };
 }
 
-export function connectPowers(engine: Pick<EngineHandle, "selectHand" | "selectPower">): () => void {
+export function connectPowers(engine: Pick<EngineHandle, "canvas" | "selectHand" | "selectPower">): () => void {
   function apply(state: PowerStore): void {
     engine.selectPower(selectionOf(state));
     engine.selectHand(state.isHandSelected);
@@ -64,7 +61,7 @@ export function connectPowers(engine: Pick<EngineHandle, "selectHand" | "selectP
 
   const unsubscribe = usePowerStore.subscribe(apply);
 
-  const stopRightClick = clearOnRightClick();
+  const stopRightClick = clearOnRightClick(engine.canvas);
 
   window.addEventListener("keydown", clearOnEscape);
 

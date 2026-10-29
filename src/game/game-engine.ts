@@ -204,6 +204,10 @@ export class GameEngine implements EngineHandle {
     return engine;
   }
 
+  get canvas(): HTMLCanvasElement {
+    return this.#canvas;
+  }
+
   get landmarks(): readonly Landmark[] {
     return this.session.mirror.landmarks;
   }

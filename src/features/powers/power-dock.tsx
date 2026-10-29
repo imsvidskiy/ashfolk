@@ -9,6 +9,7 @@ import type { GameIconName } from "../../design/game-icon-sources.ts";
 import { Island } from "../../design/island.tsx";
 import { FOCUS_RING } from "../../design/styles.ts";
 import { WithTooltip } from "../../design/tooltip.tsx";
+import { isTypingTarget } from "../../game/input/keyboard-controls.ts";
 import { useGuideStore } from "../guide/guide-store.ts";
 import { suggestedPowerId } from "../guide/guide-tips.ts";
 import { POWER_ICONS } from "./power-icons.tsx";
@@ -20,7 +21,7 @@ const HAND_HINT = "Pick up people, animals, trees and bushes and set them down e
 
 const DIGIT_KEYS = ["Digit1", "Digit2", "Digit3", "Digit4", "Digit5", "Digit6", "Digit7", "Digit8", "Digit9"];
 
-const TYPING_TAGS = new Set(["INPUT", "SELECT", "TEXTAREA"]);
+const DIALOG_SELECTOR = '[role="dialog"], [role="alertdialog"]';
 
 const CELL_CLASS = `grid size-11 shrink-0 snap-start place-items-center rounded-xl transition-[background-color,box-shadow,translate,scale] duration-150 hover:bg-paper-hover active:scale-95 motion-safe:hover:-translate-y-0.5 ${FOCUS_RING}`;
 
@@ -69,8 +70,8 @@ function initialKind(): PowerCategory {
   return selectedPowerId === null ? "elements" : POWERS[selectedPowerId].category;
 }
 
-function isTyping(target: EventTarget | null): boolean {
-  return target instanceof HTMLElement && (target.isContentEditable || TYPING_TAGS.has(target.tagName));
+function isInDialog(target: EventTarget | null): boolean {
+  return target instanceof Element && target.closest(DIALOG_SELECTOR) !== null;
 }
 
 function hotkeyOf(index: number): string | undefined {
@@ -151,7 +152,14 @@ function useDigitHotkeys(kind: PowerCategory): void {
     const powers = powersInCategory(kind);
 
     function handleKeyDown(event: KeyboardEvent): void {
-      if (event.altKey || event.ctrlKey || event.metaKey || event.repeat || isTyping(event.target)) {
+      if (
+        event.altKey ||
+        event.ctrlKey ||
+        event.metaKey ||
+        event.repeat ||
+        isTypingTarget(event.target) ||
+        isInDialog(event.target)
+      ) {
         return;
       }
 

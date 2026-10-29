@@ -36,7 +36,7 @@ const KEY_ACTIONS: ReadonlyMap<string, CameraAction> = new Map([
   ["NumpadSubtract", "zoomOut"],
 ]);
 
-function isTypingTarget(target: EventTarget | null): boolean {
+export function isTypingTarget(target: EventTarget | null): boolean {
   if (!(target instanceof HTMLElement)) {
     return false;
   }

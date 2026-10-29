@@ -112,12 +112,48 @@ describe("power dock", () => {
       <>
         <input aria-label="Seed" />
 
+        <p contentEditable suppressContentEditableWarning>
+          Tribe name
+        </p>
+
         <PowerDock />
       </>
     );
 
     await screen.getByRole("textbox", { name: "Seed" }).click();
     await userEvent.keyboard("2");
+
+    expect(usePowerStore.getState().selectedPowerId).toBeNull();
+
+    await screen.getByText("Tribe name").click();
+    await userEvent.keyboard("2");
+
+    expect(usePowerStore.getState().selectedPowerId).toBeNull();
+  });
+
+  it("leaves the number keys alone while a dialog is open", async () => {
+    const screen = await render(
+      <>
+        <div aria-label="Settings" role="dialog">
+          <button type="button">Close</button>
+        </div>
+
+        <PowerDock />
+      </>
+    );
+
+    screen.getByRole("button", { name: "Close" }).element().focus();
+    await userEvent.keyboard("2");
+
+    expect(usePowerStore.getState().selectedPowerId).toBeNull();
+  });
+
+  it("leaves the number keys to the browser with a modifier held", async () => {
+    await render(<PowerDock />);
+
+    await userEvent.keyboard("{Control>}3{/Control}");
+    await userEvent.keyboard("{Meta>}1{/Meta}");
+    await userEvent.keyboard("{Alt>}2{/Alt}");
 
     expect(usePowerStore.getState().selectedPowerId).toBeNull();
   });
@@ -135,6 +171,11 @@ describe("power dock", () => {
     await userEvent.keyboard("{ArrowRight}");
 
     await expect.element(screen.getByRole("button", { exact: true, name: "Fire" })).toHaveFocus();
+
+    select.element().focus();
+    await userEvent.keyboard("{ArrowLeft}");
+
+    await expect.element(screen.getByRole("button", { exact: true, name: "Life" })).toHaveFocus();
   });
 
   it("selects a power and puts it away when selected again", async () => {
