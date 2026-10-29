@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import type { SavedWorldListing } from "../features/saves/save-database.ts";
 import { useLaunchStore } from "./launch-store.ts";
 
 describe("launch store", () => {
@@ -46,6 +47,49 @@ describe("launch store", () => {
 
     expect(isChoosingWorld).toBe(false);
     expect(launch).toMatchObject({ name: "Ashvale", seed: 42, shape: "square" });
+  });
+
+  it("continues a saved world from its listing without carrying the listing along", () => {
+    useLaunchStore.setState({
+      launch: {
+        camera: {},
+        hours: null,
+        isPaused: false,
+        name: "Mossholm",
+        quality: "low",
+        seed: 7,
+        shape: "round",
+        size: "normal",
+      },
+    });
+
+    const listing: SavedWorldListing = {
+      hasLandChanged: false,
+      id: "old-ford",
+      isLoadable: true,
+      name: "Old Ford",
+      savedAt: 1000,
+      seed: 42,
+      shape: "square",
+      size: "small",
+      summary: null,
+    };
+
+    useLaunchStore.getState().continueWorld("old-ford", listing);
+
+    const { launch, worldId } = useLaunchStore.getState();
+
+    expect(worldId).toBe("old-ford");
+    expect(launch).toEqual({
+      camera: {},
+      hours: null,
+      isPaused: false,
+      name: "Old Ford",
+      quality: "low",
+      seed: 42,
+      shape: "square",
+      size: "small",
+    });
   });
 
   it("writes the world into the address so a reload keeps it", () => {

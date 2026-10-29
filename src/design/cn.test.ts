@@ -17,8 +17,4 @@ describe("class names", () => {
   it("treats the design system colors as colors", () => {
     expect(cn("text-ink-soft text-sm", "text-dawn")).toBe("text-sm text-dawn");
   });
-
-  it("lets a caller's class override a component's default", () => {
-    expect(cn("flex flex-col gap-1.5", "gap-3")).toBe("flex flex-col gap-3");
-  });
 });

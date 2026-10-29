@@ -96,9 +96,11 @@ function useFollowing() {
 
     if (engine.camera.isFollowing) {
       engine.stopFollowing();
-    } else {
-      engine.followSelection();
+
+      return;
     }
+
+    engine.followSelection();
   }
 
   return { handleFollow, isFollowing };
