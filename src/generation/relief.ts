@@ -1,9 +1,9 @@
-import { type ErodedRidgedOptions, GradientNoise, type NoiseGradient } from "../shared/gradient-noise.ts";
 import { lerp, saturate, smoothstep } from "../shared/math.ts";
 import { createNoiseSampler, type NoiseSampler } from "../shared/noise.ts";
 import { createRandom } from "../shared/random.ts";
 import type { IslandShape } from "../world/island-shape.ts";
 import type { WorldGrid } from "../world/world-grid.ts";
+import { type ErodedRidgedOptions, GradientNoise, type NoiseGradient } from "./gradient-noise.ts";
 import {
   basinShapeAt,
   coneHeightAt,
