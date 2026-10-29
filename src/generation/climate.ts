@@ -84,10 +84,18 @@ interface DrainedLand {
   ground: Uint8Array;
 }
 
+function summitChill(height: number): number {
+  return SUMMIT_CHILL * smoothstep(SUMMIT_CHILL_START, SUMMIT_CHILL_FULL, height);
+}
+
+export function altitudeChill(height: number): number {
+  return LAPSE_PER_METER * height + summitChill(height);
+}
+
 function baseTemperature(profile: ClimateProfile, height: number, point: IslandPoint, desert: number): number {
   const warmth = profile.warmthX * point.x + profile.warmthZ * point.z;
 
-  const summit = SUMMIT_CHILL * smoothstep(SUMMIT_CHILL_START, SUMMIT_CHILL_FULL, height);
+  const summit = summitChill(height);
 
   return 9.6 + profile.temperatureOffset - LAPSE_PER_METER * (height - 200) - summit + warmth + 3.5 * desert;
 }

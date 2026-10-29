@@ -94,14 +94,18 @@ describe("world state", () => {
     expect(world.isWalkable(cell)).toBe(false);
   });
 
-  it("cools raised land by the lapse rate", () => {
+  it("cools raised land as generation cools high ground, summit chill included", () => {
     const world = createTestWorld();
 
     const cell = centerCell(world);
 
-    world.setHeight(cell, 1100);
+    world.setHeight(cell, 1200);
 
-    expect(world.terrain.baseTemperature[cell]).toBeCloseTo(15 - 6.5);
+    expect(world.terrain.baseTemperature[cell]).toBeCloseTo(15 - 0.0095 * 1100 - 5.5, 4);
+
+    world.setHeight(cell, 100);
+
+    expect(world.terrain.baseTemperature[cell]).toBeCloseTo(15, 4);
   });
 
   it("resets ground fuel when the ground changes", () => {
