@@ -1,4 +1,5 @@
 import { groundDefinition, isPoolGround } from "../../content/grounds.ts";
+import { altitudeChill } from "../../generation/climate.ts";
 import { generationFingerprint } from "../../generation/generation-fingerprint.ts";
 import type { GeneratedWorld } from "../../generation/world-generator.ts";
 import { clamp } from "../../shared/math.ts";
@@ -40,7 +41,6 @@ export const SNOW_CAPACITY = 1.2;
 const TRODDEN_GROUND = 0.35;
 const MAXIMUM_TERRAIN_HEIGHT = 3200;
 const CROSSING_TOLERANCE = 0.01;
-const TERRAIN_LAPSE_RATE = 6.5 / 1000;
 const LOWEST_EDIT_BELOW_ORIGINAL = 60;
 const TRODDEN_LEVELS = 32;
 
@@ -473,7 +473,7 @@ export class WorldState {
     const next = clamp(height, this.#lowestHeight - LOWEST_EDIT_BELOW_ORIGINAL, MAXIMUM_TERRAIN_HEIGHT);
 
     this.terrain.height[cell] = next;
-    this.terrain.baseTemperature[cell] -= TERRAIN_LAPSE_RATE * (next - previous);
+    this.terrain.baseTemperature[cell] += altitudeChill(previous) - altitudeChill(next);
   }
 
   finishHeightEdit(region: CellRegion): void {
