@@ -46,6 +46,19 @@ describe("waterVertexLevel", () => {
     expect(waterVertexLevel(terrain, grid, 2, RIVER_ROW - 1)).toBe(LEVEL);
     expect(sampleWaterSurface(terrain, grid, grid.centerX(2), grid.centerZ(RIVER_ROW) - 5)).toBeCloseTo(LEVEL);
   });
+
+  it("keeps a bank touched only at its corners by two steps of a river at the lower step", () => {
+    const terrain = createTerrain(LEVEL + 12);
+    const upper = grid.index(1, RIVER_ROW + 1);
+    const lower = grid.index(3, RIVER_ROW + 3);
+
+    terrain.height[upper] = LEVEL + STEP_UP - 1;
+    terrain.waterSurface[upper] = LEVEL + STEP_UP;
+    terrain.height[lower] = LEVEL - 1;
+    terrain.waterSurface[lower] = LEVEL;
+
+    expect(waterVertexLevel(terrain, grid, 2, RIVER_ROW + 2)).toBe(LEVEL);
+  });
 });
 
 describe("sampleWaterSurface", () => {

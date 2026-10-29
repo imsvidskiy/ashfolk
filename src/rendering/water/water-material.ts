@@ -71,16 +71,7 @@ const CAVE_DARKNESS = 0.85;
 const NO_LOWER_WATER = 1e6;
 const BESIDE_OFFSETS = [vec2(1, 0), vec2(-1, 0), vec2(0, 1), vec2(0, -1)];
 const DIAGONAL_OFFSETS = [vec2(1, 1), vec2(-1, -1), vec2(1, -1), vec2(-1, 1)];
-const WINDOW_OFFSETS = [
-  [1, 0],
-  [-1, 0],
-  [0, 1],
-  [0, -1],
-  [1, 1],
-  [-1, -1],
-  [1, -1],
-  [-1, 1],
-] as const;
+const AROUND_OFFSETS = [...BESIDE_OFFSETS, ...DIAGONAL_OFFSETS];
 
 function shoreWobble(depth: Node<"float">, viewDistance: Node<"float">): Node<"float"> {
   const point = positionWorld.xz;
@@ -187,13 +178,19 @@ export function createWaterMaterial(
   }
 
   function lowestNearby(vertex: Node<"vec2">): Node<"float"> {
-    const lowest = float(NO_LOWER_WATER).toVar();
-    const spans = [float(1), step.mul(0.5), step];
+    const lowest = lowestAround(vertex, AROUND_OFFSETS).toVar();
 
-    for (const span of spans) {
-      for (const [columnOffset, rowOffset] of WINDOW_OFFSETS) {
-        lowest.assign(min(lowest, levelAt(vertex, vec2(columnOffset, rowOffset).mul(span))));
-      }
+    for (const span of [step.mul(0.5), step]) {
+      If(lowest.greaterThanEqual(NO_LOWER_WATER), () => {
+        lowest.assign(
+          lowestAround(
+            vertex,
+            AROUND_OFFSETS.map((offset) => {
+              return offset.mul(span);
+            })
+          )
+        );
+      });
     }
 
     return lowest;
