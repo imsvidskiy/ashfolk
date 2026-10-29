@@ -1,23 +1,13 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import type { GameSession } from "../../game/game-session.ts";
-import { createLocalSession } from "../../game/testing/local-session.ts";
 import { ignore } from "../../shared/ignore.ts";
-import { Simulation } from "../../simulation/simulation.ts";
-import { createVegetatedWorld } from "../../simulation/testing/test-world.ts";
+import { createTestSession } from "../testing/engine-fixtures.ts";
 import { deleteSavedWorld, listSavedWorlds, readSavedWorld } from "./save-database.ts";
 import { WorldSaver } from "./world-saver.ts";
 
 const IDENTITY = { id: "old-ford", name: "Old Ford" };
 
-async function createSession(): Promise<GameSession> {
-  const simulation = new Simulation(createVegetatedWorld({ dimensions: { cellSize: 10, cellsPerSide: 64 } }));
-  const { session } = await createLocalSession(simulation);
-
-  return session;
-}
-
 async function createSaver() {
-  const session = await createSession();
+  const session = await createTestSession();
   const onSaved = vi.fn<(savedAt: number) => void>();
   const onSaving = vi.fn<(isSaving: boolean) => void>();
 

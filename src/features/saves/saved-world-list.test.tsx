@@ -1,10 +1,8 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { render } from "vitest-browser-react";
 import { useLaunchStore } from "../../app/launch-store.ts";
-import { createLocalSession } from "../../game/testing/local-session.ts";
 import { ignore } from "../../shared/ignore.ts";
-import { Simulation } from "../../simulation/simulation.ts";
-import { createVegetatedWorld } from "../../simulation/testing/test-world.ts";
+import { createTestSession } from "../testing/engine-fixtures.ts";
 import { deleteSavedWorld, listSavedWorlds, type SavedWorldListing } from "./save-database.ts";
 import { SavedWorldList } from "./saved-world-list.tsx";
 import { useSavesStore } from "./saves-store.ts";
@@ -38,8 +36,7 @@ function listing(changes: Partial<SavedWorldListing>): SavedWorldListing {
 }
 
 async function saveWorld(id: string, name: string): Promise<void> {
-  const simulation = new Simulation(createVegetatedWorld({ dimensions: { cellSize: 10, cellsPerSide: 64 } }));
-  const { session } = await createLocalSession(simulation);
+  const session = await createTestSession();
 
   await new WorldSaver(session, { id, name }, { onSaved: ignore, onSaving: ignore }).save();
   await useSavesStore.getState().refresh();

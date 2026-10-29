@@ -33,7 +33,7 @@ interface TestEngineOptions {
   readonly landmarks?: readonly Landmark[];
 }
 
-async function createTestSession(): Promise<GameSession> {
+export async function createTestSession(): Promise<GameSession> {
   const simulation = new Simulation(createVegetatedWorld({ dimensions: { cellSize: 10, cellsPerSide: 64 } }));
   const { session } = await createLocalSession(simulation);
 

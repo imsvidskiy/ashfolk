@@ -1,11 +1,9 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { render } from "vitest-browser-react";
 import { useLaunchStore } from "../../app/launch-store.ts";
-import { createLocalSession } from "../../game/testing/local-session.ts";
 import { ignore } from "../../shared/ignore.ts";
-import { Simulation } from "../../simulation/simulation.ts";
-import { createVegetatedWorld } from "../../simulation/testing/test-world.ts";
 import { useInterfaceStore } from "../interface/interface-store.ts";
+import { createTestSession } from "../testing/engine-fixtures.ts";
 import { deleteSavedWorld, listSavedWorlds } from "./save-database.ts";
 import { SavesGroup } from "./saves-group.tsx";
 import { connectAutosave, useSavesStore } from "./saves-store.ts";
@@ -14,8 +12,7 @@ const initialSaves = useSavesStore.getState();
 const disconnects: (() => void)[] = [];
 
 async function connectWorld() {
-  const simulation = new Simulation(createVegetatedWorld({ dimensions: { cellSize: 10, cellsPerSide: 64 } }));
-  const { session } = await createLocalSession(simulation);
+  const session = await createTestSession();
   const { launch, worldId } = useLaunchStore.getState();
 
   disconnects.push(connectAutosave(session, { id: worldId, name: launch.name }));
