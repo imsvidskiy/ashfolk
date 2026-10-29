@@ -53,7 +53,7 @@ function useLandChangedDialog() {
   }
 
   function handleGrowAnew(): void {
-    createWorld({ name: launch.name, seed: launch.seed, shape: launch.shape });
+    createWorld({ name: launch.name, seed: launch.seed, shape: launch.shape, size: launch.size });
   }
 
   return { handleAllWorlds: chooseWorld, handleGrowAnew, handlePlayOn, isPending, launch };

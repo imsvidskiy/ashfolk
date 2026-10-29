@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { createRandom } from "../shared/random.ts";
+import { type IslandSizeKind, islandDimensions } from "../world/island-size.ts";
 import { landEverywhere, shapeTerrain, troughWithBasin } from "../world/testing/terrain-fixtures.ts";
 import { WorldGrid } from "../world/world-grid.ts";
 import { analyzeDrainage } from "./hydrology.ts";
@@ -49,6 +50,35 @@ describe("river lakes", () => {
 
     expect(second).toEqual(first);
   });
+});
+
+describe("river lakes on islands of each size", () => {
+  function lakesDugOn(size: IslandSizeKind): number {
+    const sized = new WorldGrid(islandDimensions(size));
+    const sizedDryness = new Float32Array(sized.cellCount);
+    const sizedCoast = landEverywhere(sized.cellCount);
+    const valleys = shapeTerrain(sized, (x, z) => {
+      return 200 - 0.03 * z + 0.12 * Math.abs((((x % 1200) + 1800) % 1200) - 600);
+    });
+
+    digRiverLakes(valleys, {
+      boundaryDistance: (cell) => {
+        return 1 - Math.max(Math.abs(sized.cellCenterX(cell)), Math.abs(sized.cellCenterZ(cell))) / sized.halfSize;
+      },
+      coastDistance: sizedCoast,
+      dryness: sizedDryness,
+      grid: sized,
+      random: createRandom(3),
+    });
+
+    return analyzeDrainage(valleys, sized, sizedDryness, sizedCoast).lakes.length;
+  }
+
+  it("digs more lakes on a larger island", () => {
+    expect(lakesDugOn("small")).toBe(2);
+    expect(lakesDugOn("normal")).toBe(3);
+    expect(lakesDugOn("large")).toBe(4);
+  }, 30_000);
 });
 
 describe("sink filling", () => {

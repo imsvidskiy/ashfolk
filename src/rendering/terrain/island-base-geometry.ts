@@ -3,6 +3,7 @@ import type { WorldMirror } from "../../game/world-mirror.ts";
 import { smoothstep } from "../../shared/math.ts";
 import { createVolumeNoise, type VolumeNoise } from "../../shared/noise.ts";
 import { createRandom } from "../../shared/random.ts";
+import { islandSpanShare } from "../../world/island-size.ts";
 import { sampleHeight } from "../../world/terrain-sampling.ts";
 import type { WorldGrid } from "../../world/world-grid.ts";
 import type { CoastPoint, IslandOutline } from "./island-outline.ts";
@@ -10,7 +11,7 @@ import type { CoastPoint, IslandOutline } from "./island-outline.ts";
 const CLIFF_DROP = 60;
 const SQUARE_CLIFF_BANDS = 6;
 const COAST_CLIFF_BANDS = 1;
-const UNDERSIDE_DEPTH = 1650;
+const NORMAL_UNDERSIDE_DEPTH = 1650;
 const UNDERSIDE_RINGS = 14;
 const UNDERSIDE_COLUMNS = 512;
 const NARROWEST_UNDERSIDE_STRIDE = 4;
@@ -39,6 +40,7 @@ interface BaseOutline {
   readonly plinth: number;
   readonly points: readonly PerimeterPoint[];
   readonly rimOffset: number;
+  readonly undersideDepth: number;
   readonly undersideRadius: number;
 }
 
@@ -151,7 +153,7 @@ function placeVertex(outline: BaseOutline, point: PerimeterPoint, ring: RingVert
   const spikes =
     Math.max(0, noise.fractal(Math.cos(angle) * 23, 4.2, Math.sin(angle) * 23, { octaves: 2 })) * ring.depth ** 2;
 
-  const drop = ring.depth ** 1.1 * UNDERSIDE_DEPTH * (1 + spikes * 0.45) + lumps * 60 * ring.depth;
+  const drop = ring.depth ** 1.1 * outline.undersideDepth * (1 + spikes * 0.45) + lumps * 60 * ring.depth;
 
   return [Math.cos(angle) * radius, plinth - drop, Math.sin(angle) * radius];
 }
@@ -247,7 +249,7 @@ function buildUnderside(outline: BaseOutline): BufferGeometry {
 
   const tip = positions.length / 3;
 
-  positions.push(0, outline.plinth - UNDERSIDE_DEPTH * 1.12, 0);
+  positions.push(0, outline.plinth - outline.undersideDepth * 1.12, 0);
   pushStitch(indices, outline.points.length, stride, rings.length);
   pushStrips(indices, coarsePoints.length, rings.length, outline.points.length);
 
@@ -280,6 +282,7 @@ export function buildIslandBaseGeometry(
     plinth,
     points,
     rimOffset: isSquare ? SQUARE_RIM_OFFSET : COAST_RIM_OFFSET,
+    undersideDepth: NORMAL_UNDERSIDE_DEPTH * islandSpanShare(mirror.grid),
     undersideRadius: isSquare ? SQUARE_UNDERSIDE_RADIUS : COAST_UNDERSIDE_RADIUS,
   };
 

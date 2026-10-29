@@ -42,6 +42,7 @@ function recordFor(id: string, state: SavedWorldState, changes: Partial<SavedWor
     savedAt: Date.now(),
     seed: state.request.seed,
     shape: state.request.options.shape,
+    size: "normal",
     summary: state.summary,
     version: SAVE_VERSION,
     ...changes,
@@ -188,6 +189,28 @@ describe("saved worlds", () => {
     await writeSavedWorld(recordFor("moved", state), state, []);
 
     expect(await listSavedWorlds()).toMatchObject([{ hasLandChanged: false, id: "moved" }]);
+  });
+
+  it("lists and reads back the island size", async () => {
+    const state = savedState();
+
+    await writeSavedWorld(recordFor("large", state, { size: "large" }), state, []);
+
+    expect(await listSavedWorlds()).toMatchObject([{ id: "large", size: "large" }]);
+    expect((await readSavedWorld("large"))?.record.size).toBe("large");
+  });
+
+  it("reads and lists records saved before island sizes as normal", async () => {
+    const state = savedState();
+
+    await writeSavedWorld(recordFor("older", state), state, []);
+
+    const { size: _, ...older } = recordFor("older", state, { size: "large" });
+
+    await putRawRecord(older);
+
+    expect((await readSavedWorld("older"))?.record.size).toBe("normal");
+    expect(await listSavedWorlds()).toMatchObject([{ id: "older", isLoadable: true, size: "normal" }]);
   });
 
   it("reads and lists records saved before fingerprints", async () => {

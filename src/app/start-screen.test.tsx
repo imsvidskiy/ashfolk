@@ -13,6 +13,7 @@ describe("start screen", () => {
 
     await expect.element(screen.getByRole("textbox", { name: "Name" })).toHaveValue(initialLaunch.launch.name);
     await expect.element(screen.getByRole("button", { name: "Round", pressed: true })).toBeVisible();
+    await expect.element(screen.getByRole("button", { name: "Normal", pressed: true })).toBeVisible();
     await expect.element(screen.getByRole("button", { name: "Grow the island" })).toBeEnabled();
   });
 
@@ -26,6 +27,18 @@ describe("start screen", () => {
     await screen.getByRole("button", { name: "Random name" }).click();
 
     await expect.element(screen.getByRole("button", { name: "Grow the island" })).toBeEnabled();
+  });
+
+  it("grows the world at the chosen size", async () => {
+    useLaunchStore.setState({ isChoosingWorld: true });
+
+    const screen = await render(<StartScreen />);
+
+    await screen.getByRole("button", { name: "Large" }).click();
+    await screen.getByRole("button", { name: "Grow the island" }).click();
+
+    expect(useLaunchStore.getState().launch.size).toBe("large");
+    expect(new URLSearchParams(window.location.search).get("size")).toBe("large");
   });
 
   it("grows the named world in the chosen shape", async () => {

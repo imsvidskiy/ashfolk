@@ -1,10 +1,14 @@
 import { beforeAll, describe, expect, it as test } from "vitest";
-import { MONUMENT_SLOPE, MONUMENTS } from "../content/monuments.ts";
+import { Biome } from "../content/biomes.ts";
+import { MONUMENT_KINDS, MONUMENT_SLOPE, MONUMENTS } from "../content/monuments.ts";
 import { isMonumentSpecies, plantSpeciesDefinition } from "../content/plants.ts";
 import { canStandOn } from "../world/footing.ts";
 import type { IslandShapeKind } from "../world/island-shape.ts";
+import { islandDimensions } from "../world/island-size.ts";
 import { isWaterCell } from "../world/terrain-sampling.ts";
+import { createTerrainData } from "../world/testing/terrain-fixtures.ts";
 import { WorldGrid } from "../world/world-grid.ts";
+import { planMonuments } from "./monuments.ts";
 import { cellMask, type GeneratedWorld, generateWorld } from "./world-generator.ts";
 
 const TEST_DIMENSIONS = { cellSize: 40, cellsPerSide: 128 };
@@ -101,5 +105,23 @@ describe.each(["round", "square"] as const)("monuments on a %s island", (shape) 
     }
 
     expect(stones).toBeGreaterThanOrEqual(monuments.length);
+  });
+});
+
+describe.each([
+  ["small", 1],
+  ["normal", 2],
+  ["large", 3],
+] as const)("monuments on a %s island", (size, extras) => {
+  test("raises extra monuments in step with the island area", () => {
+    const dimensions = islandDimensions(size);
+    const terrain = createTerrainData(dimensions);
+
+    terrain.height.fill(50);
+    terrain.biome.fill(Biome.Steppe);
+
+    const { monuments } = planMonuments(new WorldGrid(dimensions), terrain, 3);
+
+    expect(monuments.length - MONUMENT_KINDS.length).toBe(extras);
   });
 });

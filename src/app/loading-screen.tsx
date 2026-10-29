@@ -1,12 +1,15 @@
-import { RotateCcw } from "lucide-react";
+import { RefreshCw, RotateCcw } from "lucide-react";
+import { useState } from "react";
 import { TextButton } from "../design/buttons.tsx";
 import { cn } from "../design/cn.ts";
+import { Island } from "../design/island.tsx";
 import type { GenerationProgress, GenerationStage } from "../generation/generation-options.ts";
 import { CloudSeaBackdrop } from "./cloud-sea-backdrop.tsx";
 import type { EngineStatus } from "./engine-launcher.ts";
 import { useEngineStore } from "./engine-store.ts";
 import { IslandSketchView } from "./island-sketch-view.tsx";
 import { useLaunchStore } from "./launch-store.ts";
+import { reloadPage } from "./reload-page.ts";
 
 const CAPTION_GLOW = "[text-shadow:0_0_12px_rgb(255_255_255/0.9),0_0_2px_rgb(255_255_255/0.9)]";
 
@@ -101,6 +104,35 @@ function StoppedMessage({ message }: { readonly message: string }) {
   );
 }
 
+function useReloadAfterSave(saved: Promise<unknown>) {
+  const [isReloading, setIsReloading] = useState(false);
+
+  function handleReload(): void {
+    setIsReloading(true);
+    saved.then(reloadPage, reloadPage);
+  }
+
+  return { handleReload, isReloading };
+}
+
+function GraphicsLostMessage({ saved }: { readonly saved: Promise<unknown> }) {
+  const { handleReload, isReloading } = useReloadAfterSave(saved);
+
+  return (
+    <Island className="flex max-w-md flex-col items-center gap-5 p-6">
+      <FailureMessage
+        message="Your browser's graphics stopped working. Reload to carry on from your last save, or try Chrome."
+        title="The island went dark"
+      />
+
+      <TextButton disabled={isReloading} onClick={handleReload} tone="accent">
+        <RefreshCw aria-hidden="true" size={16} />
+        Reload
+      </TextButton>
+    </Island>
+  );
+}
+
 function StatusMessage({ status }: { readonly status: Exclude<EngineStatus, { kind: "ready" }> }) {
   const { name, seed } = useLaunchStore((state) => {
     return state.launch;
@@ -109,6 +141,8 @@ function StatusMessage({ status }: { readonly status: Exclude<EngineStatus, { ki
   switch (status.kind) {
     case "failed":
       return <FailureMessage message={status.message} title="The island could not rise" />;
+    case "graphicsLost":
+      return <GraphicsLostMessage saved={status.saved} />;
     case "loading":
       return <LoadingScene name={name} progress={status.progress} seed={seed} />;
     case "stopped":

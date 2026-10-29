@@ -320,6 +320,22 @@ describe("volcanoes", () => {
     expect(simulation.takeNotices()).toEqual(["A volcano needs dry land", "A volcano needs dry land"]);
   });
 
+  it("refuses to rise where its cone would touch another volcano's", () => {
+    const simulation = erupt({ hasRiver: false });
+
+    simulation.execute({ parameters: { radius: RADIUS }, powerId: "volcano", type: "usePower", x: RADIUS * 1.5, z: 0 });
+    simulation.execute({
+      parameters: { radius: RADIUS },
+      powerId: "volcano",
+      type: "usePower",
+      x: -RADIUS * 2.5,
+      z: 0,
+    });
+
+    expect(simulation.volcanoes.all).toHaveLength(2);
+    expect(simulation.takeNotices()).toEqual(["Another volcano is too close"]);
+  });
+
   it("saves and loads in the middle of an eruption", () => {
     const simulation = erupt({ hasRiver: true });
 

@@ -95,6 +95,7 @@ describe("the land changed dialog", () => {
         savedAt: Date.now(),
         seed: saved.request.seed,
         shape: saved.request.options.shape,
+        size: "normal",
         summary: saved.summary,
         version: SAVE_VERSION,
       },
