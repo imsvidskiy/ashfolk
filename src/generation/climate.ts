@@ -1,6 +1,6 @@
 import { Biome, type BiomeIndex } from "../content/biomes.ts";
 import { Ground, type GroundIndex } from "../content/grounds.ts";
-import { saturate } from "../shared/math.ts";
+import { saturate, smoothstep } from "../shared/math.ts";
 import { createNoiseSampler } from "../shared/noise.ts";
 import { createRandom } from "../shared/random.ts";
 import { gradientXAt, gradientZAt, slopeAt } from "../world/footing.ts";
@@ -18,6 +18,10 @@ import {
 } from "./wetlands.ts";
 
 const MAXIMUM_WATER_DISTANCE = 64;
+const LAPSE_PER_METER = 0.0095;
+const SUMMIT_CHILL = 5.5;
+const SUMMIT_CHILL_START = 800;
+const SUMMIT_CHILL_FULL = 1150;
 const GLACIER_TEMPERATURE = -2.4;
 const ICE_CLIFF_SLOPE = 1.2;
 const BARE_ROCK_SLOPE = 0.9;
@@ -83,7 +87,9 @@ interface DrainedLand {
 function baseTemperature(profile: ClimateProfile, height: number, point: IslandPoint, desert: number): number {
   const warmth = profile.warmthX * point.x + profile.warmthZ * point.z;
 
-  return 9.6 + profile.temperatureOffset - (6.5 * (height - 200)) / 1000 + warmth + 3.5 * desert;
+  const summit = SUMMIT_CHILL * smoothstep(SUMMIT_CHILL_START, SUMMIT_CHILL_FULL, height);
+
+  return 9.6 + profile.temperatureOffset - LAPSE_PER_METER * (height - 200) - summit + warmth + 3.5 * desert;
 }
 
 function classifyColdOrSteep(cell: CellClimate): BiomeIndex | null {

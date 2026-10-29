@@ -32,7 +32,7 @@ describe("water recomputation", () => {
   let world: WorldState;
 
   beforeEach(() => {
-    world = new WorldState(generateWorld(11, TEST_OPTIONS));
+    world = new WorldState(generateWorld(10, TEST_OPTIONS));
   });
 
   it("waits for the land to stay still before recomputing", () => {

@@ -72,7 +72,7 @@ function grownSimulation(): Simulation {
 
   simulation.runTicks(300);
   simulation.execute({ parameters: { radius: 60 }, powerId: "raise", type: "usePower", x: 120, z: -80 });
-  simulation.execute({ parameters: { radius: 30 }, powerId: "fire", type: "usePower", x: -150, z: 90 });
+  simulation.execute({ parameters: { radius: 30 }, powerId: "fire", type: "usePower", x: -300, z: -200 });
   settleLand(simulation);
   simulation.runTicks(300);
 

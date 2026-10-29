@@ -1,4 +1,13 @@
-import { clamp, distanceToSegment, FULL_TURN, gaussian, lerp, saturate, smoothstep } from "../shared/math.ts";
+import {
+  clamp,
+  distanceToSegment,
+  FULL_TURN,
+  gaussian,
+  hashToUnit,
+  lerp,
+  saturate,
+  smoothstep,
+} from "../shared/math.ts";
 import { createRandom, type RandomSource } from "../shared/random.ts";
 
 export const LAYOUT_ARCHETYPES = ["rim", "spine", "twin", "crown", "lowland", "plateau"] as const;
@@ -17,19 +26,13 @@ const DESERT_CANDIDATES = 3;
 const DESERT_SPREAD = 0.9;
 const DRIEST_DESERTLESS = 0.28;
 const DESERT_PROBE_SHARE = 0.6;
+const CRATER_SHARE = 0.08;
+const BASIN_LOBES = 0.22;
+const BASIN_TWISTS = 0.14;
 
 type Polyline = readonly (readonly [number, number])[];
 
 type LayoutArchetype = (typeof LAYOUT_ARCHETYPES)[number];
-
-const ARCHETYPE_WEIGHTS: Readonly<Record<LayoutArchetype, number>> = {
-  crown: 1.2,
-  lowland: 1,
-  plateau: 1,
-  rim: 1.6,
-  spine: 1.6,
-  twin: 1.4,
-};
 
 interface MountainRange {
   readonly points: Polyline;
@@ -37,9 +40,10 @@ interface MountainRange {
   readonly strength: number;
 }
 
-interface Summit {
-  readonly spread: number;
-  readonly strength: number;
+export interface Cone {
+  readonly crater: number;
+  readonly height: number;
+  readonly radius: number;
   readonly x: number;
   readonly z: number;
 }
@@ -64,7 +68,9 @@ export interface Basin {
   readonly along: number;
   readonly cosine: number;
   readonly depth: number;
+  readonly lobeTurn: number;
   readonly sine: number;
+  readonly twistTurn: number;
   readonly x: number;
   readonly z: number;
 }
@@ -94,23 +100,27 @@ export interface IslandLayout {
   readonly archetype: LayoutArchetype;
   readonly basins: readonly Basin[];
   readonly climate: ClimateProfile;
-  readonly hilliness: number;
+  readonly cones: readonly Cone[];
   readonly hills: readonly Rise[];
+  readonly peakHeight: number;
   readonly ranges: readonly MountainRange[];
   readonly rises: readonly Rise[];
+  readonly roughness: number;
   readonly shelves: readonly Shelf[];
-  readonly summits: readonly Summit[];
+  readonly shoreWidth: number;
   readonly tilt: Tilt;
 }
 
 interface Landforms {
   basinCount: number;
-  hilliness: number;
+  cones: Cone[];
   hills: Rise[];
+  peakHeight: number;
   ranges: MountainRange[];
   rises: Rise[];
+  roughness: number;
   shelves: Shelf[];
-  summits: Summit[];
+  shoreWidth: number;
   tiltAmount: number;
   tiltBase: number;
 }
@@ -188,35 +198,19 @@ function rangeFrom(random: RandomSource, start: Heading, angle: number, shape: R
   return traceRange(random, { ...shape, angle, x, z });
 }
 
-function pickArchetype(random: RandomSource): LayoutArchetype {
-  const total = LAYOUT_ARCHETYPES.reduce((sum, archetype) => {
-    return sum + ARCHETYPE_WEIGHTS[archetype];
-  }, 0);
-
-  let remaining = random.next() * total;
-
-  for (const archetype of LAYOUT_ARCHETYPES) {
-    remaining -= ARCHETYPE_WEIGHTS[archetype];
-
-    if (remaining < 0) {
-      return archetype;
-    }
-  }
-
-  return "rim";
-}
-
 function emptyLandforms(random: RandomSource): Landforms {
   return {
     basinCount: random.chance(0.45) ? 2 : 1,
-    hilliness: random.between(0.9, 1.15),
+    cones: [],
     hills: [],
+    peakHeight: random.between(1.1, 1.4),
     ranges: [],
     rises: [],
+    roughness: random.between(0.15, 0.4),
     shelves: [],
-    summits: [],
-    tiltAmount: random.between(70, 115),
-    tiltBase: 300,
+    shoreWidth: random.between(1, 2.2),
+    tiltAmount: random.between(50, 90),
+    tiltBase: random.between(255, 295),
   };
 }
 
@@ -302,8 +296,8 @@ function planTwin(random: RandomSource, landforms: Landforms, facing: number): v
   const opposite = facing + Math.PI + random.between(-0.8, 0.8);
 
   for (const [angle, strongest] of [
-    [facing, 0.95],
-    [opposite, 0.88],
+    [facing, 1],
+    [opposite, 0.94],
   ] as const) {
     const center = headingAt(angle, random.between(0.46, 0.54));
 
@@ -311,9 +305,9 @@ function planTwin(random: RandomSource, landforms: Landforms, facing: number): v
       traceRange(random, {
         angle: angle + Math.PI / 2 + random.between(-0.3, 0.3),
         bend: random.between(-0.02, 0.12),
-        length: random.between(0.65, 0.9),
-        reach: random.between(0.4, 0.48),
-        strength: random.between(strongest - 0.15, strongest),
+        length: random.between(0.5, 0.7),
+        reach: random.between(0.36, 0.42),
+        strength: random.between(strongest - 0.1, strongest),
         x: center.x,
         z: center.z,
       })
@@ -321,6 +315,7 @@ function planTwin(random: RandomSource, landforms: Landforms, facing: number): v
   }
 
   landforms.hills.push(hillsAt(random, facing + Math.PI / 2, random.between(0.5, 0.65)));
+  landforms.peakHeight = random.between(1.3, 1.6);
 }
 
 function planCrown(random: RandomSource, landforms: Landforms, facing: number): void {
@@ -328,9 +323,10 @@ function planCrown(random: RandomSource, landforms: Landforms, facing: number): 
   const ridgeCount = random.chance(0.5) ? 3 : 4;
   const turn = random.next() * FULL_TURN;
 
-  landforms.summits.push({
-    spread: random.between(0.15, 0.2),
-    strength: random.between(0.95, 1.05),
+  landforms.cones.push({
+    crater: random.between(30, 60),
+    height: random.between(900, 1150),
+    radius: random.between(0.44, 0.52),
     x: center.x,
     z: center.z,
   });
@@ -341,14 +337,16 @@ function planCrown(random: RandomSource, landforms: Landforms, facing: number): 
     landforms.ranges.push(
       rangeFrom(random, center, angle, {
         bend: random.between(-0.1, 0.1),
-        length: random.between(0.38, 0.55),
-        reach: random.between(0.32, 0.4),
-        strength: random.between(0.66, 0.82),
+        length: random.between(0.4, 0.58),
+        reach: random.between(0.26, 0.34),
+        strength: random.between(0.5, 0.65),
       })
     );
   }
 
   landforms.basinCount = 2;
+  landforms.peakHeight = random.between(0.6, 0.8);
+  landforms.roughness = random.between(0.2, 0.35);
   landforms.tiltAmount = random.between(25, 55);
 }
 
@@ -375,13 +373,20 @@ function planLowland(random: RandomSource, landforms: Landforms, facing: number)
       random.between(0.3, 0.55)
     );
 
-    landforms.rises.push({ ...riseAt(random, place.x, place.z), spread: random.between(0.16, 0.24) });
+    landforms.rises.push({
+      height: random.between(60, 110),
+      spread: random.between(0.14, 0.2),
+      x: place.x,
+      z: place.z,
+    });
   }
 
   landforms.basinCount = random.chance(0.6) ? 2 : 1;
-  landforms.hilliness = random.between(1.35, 1.65);
-  landforms.tiltAmount = random.between(45, 80);
-  landforms.tiltBase = 285;
+  landforms.peakHeight = random.between(0.35, 0.5);
+  landforms.roughness = random.between(0.12, 0.25);
+  landforms.shoreWidth = random.between(2.2, 3);
+  landforms.tiltAmount = random.between(30, 55);
+  landforms.tiltBase = random.between(215, 235);
 }
 
 function planPlateau(random: RandomSource, landforms: Landforms, facing: number): void {
@@ -390,7 +395,7 @@ function planPlateau(random: RandomSource, landforms: Landforms, facing: number)
   landforms.shelves.push({
     directionX: Math.cos(facing),
     directionZ: Math.sin(facing),
-    height: random.between(170, 230),
+    height: random.between(230, 320),
     offset: random.between(-0.12, 0.08),
     width: random.between(0.07, 0.11),
   });
@@ -408,6 +413,9 @@ function planPlateau(random: RandomSource, landforms: Landforms, facing: number)
   );
 
   landforms.hills.push(hillsAt(random, facing + Math.PI + random.between(-0.5, 0.5), random.between(0.45, 0.6)));
+  landforms.peakHeight = random.between(0.9, 1.2);
+  landforms.roughness = random.between(0.25, 0.45);
+  landforms.shoreWidth = random.between(1, 1.4);
   landforms.tiltAmount = random.between(30, 60);
 }
 
@@ -427,18 +435,28 @@ function rangeProfile(x: number, z: number, range: MountainRange): number {
   return range.strength * saturate(1 - rounded / range.reach) ** 1.6;
 }
 
-export function mountainMaskAt(layout: Pick<IslandLayout, "ranges" | "summits">, x: number, z: number): number {
+export function mountainMaskAt(layout: Pick<IslandLayout, "ranges">, x: number, z: number): number {
   let negated = Number.POSITIVE_INFINITY;
 
   for (const range of layout.ranges) {
     negated = smoothMinimum(negated, -rangeProfile(x, z, range), RANGE_BLEND);
   }
 
-  for (const summit of layout.summits) {
-    negated = smoothMinimum(negated, -summit.strength * gaussian(x, z, summit.x, summit.z, summit.spread), RANGE_BLEND);
+  return Number.isFinite(negated) ? clamp(-negated, 0, 1.1) : 0;
+}
+
+export function coneHeightAt(cones: readonly Cone[], x: number, z: number): number {
+  let height = 0;
+
+  for (const cone of cones) {
+    const distance = Math.hypot(x - cone.x, z - cone.z) / cone.radius;
+    const flank = saturate(1 - distance) ** 1.35;
+    const rounded = flank * flank * (3 - 2 * flank) * 0.25 + flank * 0.75;
+
+    height += cone.height * rounded - cone.crater * Math.exp(-((distance / CRATER_SHARE) ** 2));
   }
 
-  return Number.isFinite(negated) ? clamp(-negated, 0, 1.1) : 0;
+  return height;
 }
 
 export function shelfHeightAt(shelves: readonly Shelf[], x: number, z: number): number {
@@ -458,8 +476,11 @@ export function basinShapeAt(basin: Basin, x: number, z: number): number {
   const offsetZ = z - basin.z;
   const along = (offsetX * basin.cosine + offsetZ * basin.sine) / basin.along;
   const across = (offsetZ * basin.cosine - offsetX * basin.sine) / basin.across;
+  const angle = Math.atan2(across, along);
+  const reach =
+    1 + BASIN_LOBES * Math.sin(2 * angle + basin.lobeTurn) + BASIN_TWISTS * Math.sin(3 * angle + basin.twistTurn);
 
-  return Math.exp(-(along * along + across * across) / 2);
+  return Math.exp(-(along * along + across * across) / (2 * reach * reach));
 }
 
 function highGroundHeading(landforms: Landforms): Heading {
@@ -470,7 +491,10 @@ function highGroundHeading(landforms: Landforms): Heading {
     for (let column = 0; column < SURVEY_STEPS; column += 1) {
       const x = (column / (SURVEY_STEPS - 1)) * 1.6 - 0.8;
       const z = (row / (SURVEY_STEPS - 1)) * 1.6 - 0.8;
-      const weight = mountainMaskAt(landforms, x, z) + shelfHeightAt(landforms.shelves, x, z) / 400;
+      const weight =
+        mountainMaskAt(landforms, x, z) +
+        shelfHeightAt(landforms.shelves, x, z) / 400 +
+        coneHeightAt(landforms.cones, x, z) / 1000;
 
       sumX += weight * x;
       sumZ += weight * z;
@@ -491,7 +515,12 @@ function groundAt(landforms: Landforms, x: number, z: number): number {
     return sum + (rise.height / 400) * gaussian(x, z, rise.x, rise.z, rise.spread);
   }, 0);
 
-  return mountainMaskAt(landforms, x, z) + rises + shelfHeightAt(landforms.shelves, x, z) / 300;
+  return (
+    mountainMaskAt(landforms, x, z) +
+    rises +
+    shelfHeightAt(landforms.shelves, x, z) / 300 +
+    coneHeightAt(landforms.cones, x, z) / 1000
+  );
 }
 
 function planBasins(random: RandomSource, landforms: Landforms): Basin[] {
@@ -525,7 +554,9 @@ function planBasins(random: RandomSource, landforms: Landforms): Basin[] {
       along: random.between(0.18, 0.23) * size,
       cosine: Math.cos(angle),
       depth: random.between(120, 145) * size,
+      lobeTurn: random.next() * FULL_TURN,
       sine: Math.sin(angle),
+      twistTurn: random.next() * FULL_TURN,
       x: candidate.x,
       z: candidate.z,
     });
@@ -581,7 +612,7 @@ export function planIslandLayout(seed: number): IslandLayout {
   const climateRandom = random.derive(1);
   const basinRandom = random.derive(2);
 
-  const archetype = pickArchetype(random);
+  const archetype = LAYOUT_ARCHETYPES[Math.floor(hashToUnit(seed, 21, 40) * LAYOUT_ARCHETYPES.length)];
   const facing = random.next() * FULL_TURN;
   const landforms = emptyLandforms(random);
 
@@ -595,12 +626,14 @@ export function planIslandLayout(seed: number): IslandLayout {
     archetype,
     basins: planBasins(basinRandom, landforms),
     climate: planClimate(climateRandom, landforms),
-    hilliness: landforms.hilliness,
+    cones: landforms.cones,
     hills: landforms.hills,
+    peakHeight: landforms.peakHeight,
     ranges: landforms.ranges,
     rises: landforms.rises,
+    roughness: landforms.roughness,
     shelves: landforms.shelves,
-    summits: landforms.summits,
+    shoreWidth: landforms.shoreWidth,
     tilt: { base: landforms.tiltBase, x: Math.cos(tiltAngle) * tiltAmount, z: Math.sin(tiltAngle) * tiltAmount },
   };
 }

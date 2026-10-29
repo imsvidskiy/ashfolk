@@ -6,6 +6,7 @@ import type { IslandShape } from "../world/island-shape.ts";
 import type { WorldGrid } from "../world/world-grid.ts";
 import {
   basinShapeAt,
+  coneHeightAt,
   type DesertPatch,
   type IslandLayout,
   mountainMaskAt,
@@ -34,7 +35,8 @@ const SHORE_BELOW_INLAND = 15;
 const OUTSIDE_SLOPE = 1500;
 const DEEPEST_OUTSIDE_DROP = 200;
 
-const RIDGE_HEIGHT = 420;
+const RIDGE_HEIGHT = 300;
+const MASSIF_HEIGHT = 620;
 const RIDGE_FREQUENCY = 1.2;
 const HILL_HEIGHT = 110;
 const HILL_FREQUENCY = 2.1;
@@ -67,7 +69,6 @@ interface ReliefSample {
 }
 
 export interface Relief {
-  basinDepthAt: (point: IslandPoint) => number;
   boundaryDistanceAt: (point: IslandPoint) => number;
   sampleAt: (point: IslandPoint) => ReliefSample;
 }
@@ -164,16 +165,6 @@ function basinWeight(layout: IslandLayout, point: IslandPoint): number {
   return weight;
 }
 
-function basinDepth(layout: IslandLayout, point: IslandPoint): number {
-  let depth = 0;
-
-  for (const basin of layout.basins) {
-    depth += basin.depth * basinShapeAt(basin, point.x, point.z);
-  }
-
-  return depth;
-}
-
 function risesHeight(rises: readonly Rise[], point: IslandPoint): number {
   let height = 0;
 
@@ -218,15 +209,17 @@ function landformHeight(
   const hillShare = (0.3 + 0.7 * foothills) * (0.35 + 0.65 * smoothstep(0, 0.5, mountains + 0.25));
 
   const tilt = layout.tilt.base + layout.tilt.x * point.x + layout.tilt.z * point.z;
-  const rolling = 70 * noise.primary.fractal(detail.x * 0.9 + 2.2, detail.z * 0.9 + 9.1, { octaves: 4 });
-  const massif = 560 * mountains;
+  const rolling =
+    70 * layout.roughness * noise.primary.fractal(detail.x * 0.9 + 2.2, detail.z * 0.9 + 9.1, { octaves: 4 });
+  const massif = MASSIF_HEIGHT * layout.peakHeight * mountains;
   const peaks = RIDGE_HEIGHT * mountains * ridges;
+  const cones = coneHeightAt(layout.cones, outline.x, outline.z) * (0.94 + 0.12 * ridges) * inland;
   const rises = risesHeight(layout.rises, point) * (0.45 + ridges) * inland;
   const shelves = shelfHeightAt(layout.shelves, outline.x, outline.z) * (0.4 + 0.6 * inland);
-  const hillCover = HILL_HEIGHT * layout.hilliness * hills * hillShare * (0.45 + 0.55 * inland);
+  const hillCover = HILL_HEIGHT * layout.roughness * hills * hillShare * (0.45 + 0.55 * inland);
   const hillClusters = risesHeight(layout.hills, point) * hills * inland;
 
-  const height = tilt + rolling + massif + peaks + rises + shelves + hillCover + hillClusters;
+  const height = tilt + rolling + massif + peaks + cones + rises + shelves + hillCover + hillClusters;
 
   const desertLandform = smoothstep(0.25, 0.65, desert) * (1 - mountains * 0.85);
 
@@ -244,7 +237,13 @@ function shoreHeight(noise: ReliefNoise, point: IslandPoint, inland: number): nu
   return Math.min(shore, inland - SHORE_BELOW_INLAND);
 }
 
-function coastalHeight(noise: ReliefNoise, point: IslandPoint, inland: number, coastDistance: number): number {
+function coastalHeight(
+  noise: ReliefNoise,
+  layout: IslandLayout,
+  point: IslandPoint,
+  inland: number,
+  coastDistance: number
+): number {
   const detail = inDetailUnits(noise, point);
   const fromCoast = coastDistance * noise.detailScale;
 
@@ -254,7 +253,7 @@ function coastalHeight(noise: ReliefNoise, point: IslandPoint, inland: number, c
     return shore + Math.max(fromCoast * OUTSIDE_SLOPE, -DEEPEST_OUTSIDE_DROP);
   }
 
-  const width = 0.07 + 0.11 * smoothstep(shore, shore + 900, inland);
+  const width = (0.07 + 0.11 * smoothstep(shore, shore + 900, inland)) * layout.shoreWidth;
   const cliffs = noise.secondary.ridged(detail.x * 5.5 - 13, detail.z * 5.5 + 4, { octaves: 3 });
 
   return lerp(shore, inland, smoothstep(0, width * (0.7 + 0.6 * cliffs), fromCoast));
@@ -270,7 +269,7 @@ function reliefSample(noise: ReliefNoise, layout: IslandLayout, island: IslandSh
     return { coastDistance, desert, height: landform };
   }
 
-  return { coastDistance, desert, height: coastalHeight(noise, point, landform, boundary) };
+  return { coastDistance, desert, height: coastalHeight(noise, layout, point, landform, boundary) };
 }
 
 export function createRelief(seed: number, layout: IslandLayout, island: IslandShape, halfSize: number): Relief {
@@ -293,9 +292,6 @@ export function createRelief(seed: number, layout: IslandLayout, island: IslandS
   };
 
   return {
-    basinDepthAt: (point) => {
-      return basinDepth(layout, point);
-    },
     boundaryDistanceAt: (point) => {
       return boundaryDistance(noise, island, point, island.coastDistanceAt(point.x, point.z));
     },
