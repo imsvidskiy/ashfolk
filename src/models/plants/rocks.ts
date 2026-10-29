@@ -159,7 +159,7 @@ function strataSections(strata: readonly Stratum[], random: RandomSource): LoftS
     );
   }
 
-  sections.push(ring(last.radius * 0.7, last.top, 0), { radiusX: 0, radiusZ: 0, y: last.top + 0.04 });
+  sections.push(ring(last.radius * 0.7, last.top), { radiusX: 0, radiusZ: 0, y: last.top + 0.04 });
 
   return sections;
 }

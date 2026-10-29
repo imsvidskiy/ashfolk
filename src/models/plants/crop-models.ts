@@ -87,8 +87,10 @@ function stalkBase(top: Triple): Triple {
   return [top[0] * 0.25, 0, top[2] * 0.25];
 }
 
-function addStalk(context: ClumpContext, points: readonly TubePoint[], slot: MaterialSlotIndex): void {
-  context.builder.add(tube(points, { radialSegments: STALK_SIDES }), { style: plantStyle(context, slot, 0) });
+function addStalk(context: ClumpContext, points: readonly TubePoint[]): void {
+  context.builder.add(tube(points, { radialSegments: STALK_SIDES }), {
+    style: plantStyle(context, MaterialSlot.Leaf, 0),
+  });
 }
 
 function straightStalk(base: Triple, top: Triple, radius: number): TubePoint[] {
@@ -124,7 +126,7 @@ function bud(radius: number, thickness: number, segments: number): Shape {
 function addLeafOnStalk(context: ClumpContext, from: Triple, leaf: LeafPlacement): void {
   const { builder, level } = context;
 
-  addStalk(context, straightStalk(from, leaf.position, 0.004), MaterialSlot.Leaf);
+  addStalk(context, straightStalk(from, leaf.position, 0.004));
   builder.add(bud(leaf.radius, leaf.thickness, level === "high" ? 5 : 4), {
     style: plantStyle(context, MaterialSlot.Leaf, 0),
     transform: transformOf({ position: leaf.position, rotation: [0, -leaf.angle, leaf.tilt], scale: leaf.stretch }),
@@ -138,7 +140,7 @@ function addWheat(context: ClumpContext): void {
   for (let stalk = 0; stalk < stalks; stalk += 1) {
     const top = stalkTop(stalk, context.height, 0.06);
 
-    addStalk(context, straightStalk(stalkBase(top), top, 0.008), MaterialSlot.Leaf);
+    addStalk(context, straightStalk(stalkBase(top), top, 0.008));
     context.builder.add(ear, {
       style: plantStyle(context, MaterialSlot.Grain, CROP_HEAD_PART),
       transform: transformOf({ position: [top[0], top[1] - 0.025, top[2]] }),
@@ -157,15 +159,11 @@ function addBarley(context: ClumpContext): void {
     const outward = new Vector3(top[0], 0, top[2]).normalize();
     const nod: Triple = [top[0] + outward.x * 0.07, top[1] - 0.05, top[2] + outward.z * 0.07];
 
-    addStalk(
-      context,
-      [
-        { radius: 0.008, x: base[0], y: base[1], z: base[2] },
-        { radius: 0.0065, x: top[0], y: top[1], z: top[2] },
-        { radius: 0.005, x: nod[0], y: nod[1], z: nod[2] },
-      ],
-      MaterialSlot.Leaf
-    );
+    addStalk(context, [
+      { radius: 0.008, x: base[0], y: base[1], z: base[2] },
+      { radius: 0.0065, x: top[0], y: top[1], z: top[2] },
+      { radius: 0.005, x: nod[0], y: nod[1], z: nod[2] },
+    ]);
 
     const earEnd: Triple = [nod[0] + outward.x * 0.05, nod[1] - 0.12, nod[2] + outward.z * 0.05];
     const awnEnd: Triple = [earEnd[0] + outward.x * 0.03, earEnd[1] - 0.12, earEnd[2] + outward.z * 0.03];
@@ -192,7 +190,7 @@ function addFlax(context: ClumpContext): void {
   for (let stem = 0; stem < stems; stem += 1) {
     const top = stalkTop(stem, context.height, 0.08);
 
-    addStalk(context, straightStalk(stalkBase(top), top, 0.005), MaterialSlot.Leaf);
+    addStalk(context, straightStalk(stalkBase(top), top, 0.005));
     context.builder.add(flower, {
       style: plantStyle(context, MaterialSlot.Flax, CROP_HEAD_PART),
       transform: transformOf({ position: top }),
@@ -220,7 +218,7 @@ function addCarrots(context: ClumpContext): void {
   for (let frond = 0; frond < fronds; frond += 1) {
     const points = frondPoints(frond, fronds, context.height);
 
-    addStalk(context, points, MaterialSlot.Leaf);
+    addStalk(context, points);
 
     if (context.level === "low") {
       continue;
@@ -252,7 +250,7 @@ function addTurnips(context: ClumpContext): void {
   const leaves = context.level === "high" ? 5 : 3;
   const crown: Triple = [0, 0.08, 0];
 
-  addStalk(context, straightStalk([0, 0, 0], crown, 0.012), MaterialSlot.Leaf);
+  addStalk(context, straightStalk([0, 0, 0], crown, 0.012));
 
   for (let leaf = 0; leaf < leaves; leaf += 1) {
     const angle = (leaf / leaves) * FULL_TURN + scatter(leaf, 11) * 0.4;
@@ -278,7 +276,7 @@ function addBeans(context: ClumpContext): void {
   const stem: Triple = [0, context.height * 0.92, 0];
   const pods = plantStyle(context, MaterialSlot.Lichen, CROP_HEAD_PART);
 
-  addStalk(context, straightStalk([0, 0, 0], stem, 0.012), MaterialSlot.Leaf);
+  addStalk(context, straightStalk([0, 0, 0], stem, 0.012));
 
   const leaves = isHigh ? 6 : 3;
 
