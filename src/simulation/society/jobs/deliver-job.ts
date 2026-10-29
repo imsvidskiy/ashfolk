@@ -1,7 +1,6 @@
 import type { Waypoint } from "../../agents/navigation.ts";
 import { dropCarrying, isCarryingAnything, walkSpeed } from "../person.ts";
 import type { PersonTick } from "../society-context.ts";
-import { addToStock } from "../stock.ts";
 import { completedBuilding, nearCamp } from "../tribe-places.ts";
 import { headTo, type Job, walk } from "./job.ts";
 
@@ -24,7 +23,7 @@ function storeCarrying(tick: PersonTick): void {
   const { amount, resource } = tick.person.carrying;
 
   if (resource !== null) {
-    addToStock(tick.tribe.stock, resource, amount);
+    tick.tribe.stock[resource] += amount;
   }
 
   dropCarrying(tick.person);
