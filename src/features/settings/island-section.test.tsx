@@ -7,9 +7,9 @@ import { useInterfaceStore } from "../interface/interface-store.ts";
 import { LARGEST_SEED } from "../new-world/seeds.ts";
 import { IslandSection } from "./island-section.tsx";
 
-const QUALITY_KEY = "dawnfolk.quality";
-const LABELS_KEY = "dawnfolk.labels";
-const OUTLINES_KEY = "dawnfolk.outlines";
+const QUALITY_KEY = "ashfolk.quality";
+const LABELS_KEY = "ashfolk.labels";
+const OUTLINES_KEY = "ashfolk.outlines";
 const WHOLE_NUMBER = /^\d+$/u;
 
 const initialLaunch = useLaunchStore.getState();

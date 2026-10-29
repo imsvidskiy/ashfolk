@@ -1,6 +1,6 @@
 {
   "$schema": "./node_modules/wrangler/config-schema.json",
-  "name": "dawnfolk",
+  "name": "ashfolk",
   "main": "./worker/index.ts",
   "compatibility_date": "2026-10-18",
   "account_id": "1d1a3bd27899eba23e92aa6099285634",

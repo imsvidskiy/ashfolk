@@ -10,7 +10,7 @@ import {
   isGuideTipId,
 } from "./guide-tips.ts";
 
-const STORAGE_KEY = "dawnfolk.guide";
+const STORAGE_KEY = "ashfolk.guide";
 
 const storedSchema = z.object({
   done: z.array(z.string()).default([]),

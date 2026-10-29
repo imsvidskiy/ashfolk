@@ -11,7 +11,7 @@ import { ISLAND_SHAPES, type IslandShapeKind } from "../../world/island-shape.ts
 import { ISLAND_SIZES, type IslandSizeKind } from "../../world/island-size.ts";
 import { CHRONICLE_ICONS } from "../journal/chronicle-icons.ts";
 
-const DATABASE_NAME = "dawnfolk";
+const DATABASE_NAME = "ashfolk";
 const DATABASE_VERSION = 1;
 const WORLDS = "worlds";
 const STATES = "states";

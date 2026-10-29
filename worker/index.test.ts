@@ -22,7 +22,7 @@ describe("worker", () => {
   it("sends the old address to the domain with the path and query kept", async () => {
     const assets = assetsReturning("game");
 
-    const response = await worker.fetch(new Request("https://dawnfolk.svidskiy.workers.dev/?seed=7&shape=round"), {
+    const response = await worker.fetch(new Request("https://ashfolk.svidskiy.workers.dev/?seed=7&shape=round"), {
       ASSETS: assets,
     });
 

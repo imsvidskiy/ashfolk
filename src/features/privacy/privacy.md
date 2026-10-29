@@ -6,7 +6,7 @@ Ashfolk is a free game that runs in your browser. It has no accounts, no ads, no
 
 ## Who is responsible
 
-Ashfolk is made by Vlad Svidskiy, an individual developer. For any question about this page or your data, open an issue on [GitHub](https://github.com/imsvidskiy/dawnfolk/issues) or write to [@imsvidskiy](https://github.com/imsvidskiy) on GitHub.
+Ashfolk is made by Vlad Svidskiy, an individual developer. For any question about this page or your data, open an issue on [GitHub](https://github.com/imsvidskiy/ashfolk/issues) or write to [@imsvidskiy](https://github.com/imsvidskiy) on GitHub.
 
 ## What stays on your device
 
@@ -51,4 +51,4 @@ You can ask to see, correct or delete personal data, object to how it's used, or
 
 ## Changes
 
-This page lives in the game's [source code](https://github.com/imsvidskiy/dawnfolk/blob/main/src/features/privacy/privacy.md), so every change is public in its history. The date at the top shows the last one.
+This page lives in the game's [source code](https://github.com/imsvidskiy/ashfolk/blob/main/src/features/privacy/privacy.md), so every change is public in its history. The date at the top shows the last one.

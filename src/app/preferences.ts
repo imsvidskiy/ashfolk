@@ -1,9 +1,9 @@
 import { z } from "zod";
 import { QUALITY_LEVELS, type QualityLevel } from "../rendering/render-quality.ts";
 
-const QUALITY_KEY = "dawnfolk.quality";
-const LABELS_KEY = "dawnfolk.labels";
-const OUTLINES_KEY = "dawnfolk.outlines";
+const QUALITY_KEY = "ashfolk.quality";
+const LABELS_KEY = "ashfolk.labels";
+const OUTLINES_KEY = "ashfolk.outlines";
 
 const qualitySchema = z.enum(QUALITY_LEVELS);
 const visibilitySchema = z.enum(["hidden", "shown"]);

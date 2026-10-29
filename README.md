@@ -8,9 +8,9 @@
 
 <p align="center">
   <a
-    href="https://github.com/imsvidskiy/dawnfolk/actions/workflows/ci.yml"
+    href="https://github.com/imsvidskiy/ashfolk/actions/workflows/ci.yml"
   ><img
-    src="https://github.com/imsvidskiy/dawnfolk/actions/workflows/ci.yml/badge.svg"
+    src="https://github.com/imsvidskiy/ashfolk/actions/workflows/ci.yml/badge.svg"
     alt="CI"
   ></a>
   <a
@@ -67,8 +67,8 @@ Shape the land, call rain, fire and lightning, and watch small tribes grow from 
 You need [Bun](https://bun.sh) 1.4 or later and a browser with WebGPU or WebGL 2.
 
 ```sh
-git clone https://github.com/imsvidskiy/dawnfolk.git
-cd dawnfolk
+git clone https://github.com/imsvidskiy/ashfolk.git
+cd ashfolk
 bun install
 bun run dev                                           # http://localhost:5173
 ```
@@ -103,11 +103,11 @@ Ashfolk is free and open source. If you enjoy it, you can support its developmen
 
 ## Star history
 
-<a href="https://www.star-history.com/?type=date&repos=imsvidskiy%2Fdawnfolk">
+<a href="https://www.star-history.com/?type=date&repos=imsvidskiy%2Fashfolk">
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/chart?repos=imsvidskiy/dawnfolk&type=date&theme=dark&legend=top-left" />
-    <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/chart?repos=imsvidskiy/dawnfolk&type=date&legend=top-left" />
-    <img alt="Star history of Ashfolk" src="https://api.star-history.com/chart?repos=imsvidskiy/dawnfolk&type=date&legend=top-left" />
+    <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/chart?repos=imsvidskiy/ashfolk&type=date&theme=dark&legend=top-left" />
+    <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/chart?repos=imsvidskiy/ashfolk&type=date&legend=top-left" />
+    <img alt="Star history of Ashfolk" src="https://api.star-history.com/chart?repos=imsvidskiy/ashfolk&type=date&legend=top-left" />
   </picture>
 </a>
 

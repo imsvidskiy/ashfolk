@@ -143,7 +143,7 @@ release, and check each line against them:
   pass removed repeated work. The game plays the same."
 - End with `**Contributors**:` and the GitHub logins of every commit author in
   the range, and `**Full changelog**:` with the compare link
-  `https://github.com/imsvidskiy/dawnfolk/compare/vPREVIOUS...vX.Y.Z`.
+  `https://github.com/imsvidskiy/ashfolk/compare/vPREVIOUS...vX.Y.Z`.
 
 ## License
 

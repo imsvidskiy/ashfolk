@@ -150,7 +150,6 @@ export class EngineLauncher {
 
     if (import.meta.env.DEV) {
       Reflect.set(window, "ashfolk", engine);
-      Reflect.set(window, "dawnfolk", engine);
       engine.filming.set(readFilming(window.location.search));
     }
 

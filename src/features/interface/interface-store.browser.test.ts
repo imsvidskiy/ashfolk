@@ -57,12 +57,12 @@ describe("interface store", () => {
     useInterfaceStore.getState().setLabelsShown(false);
 
     expect(useInterfaceStore.getState().areLabelsShown).toBe(false);
-    expect(localStorage.getItem("dawnfolk.labels")).toBe("hidden");
+    expect(localStorage.getItem("ashfolk.labels")).toBe("hidden");
 
     useInterfaceStore.getState().setLabelsShown(true);
 
     expect(useInterfaceStore.getState().areLabelsShown).toBe(true);
-    expect(localStorage.getItem("dawnfolk.labels")).toBe("shown");
+    expect(localStorage.getItem("ashfolk.labels")).toBe("shown");
   });
 
   it("opens the settings on the World section", () => {

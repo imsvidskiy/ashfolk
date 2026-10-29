@@ -139,7 +139,7 @@ function FilmingControls({ filming }: { readonly filming: Filming }) {
       />
 
       <FilmingGroup
-        description="A clean frame. Scripts can use ?filming=1 or window.dawnfolk.filming.set()."
+        description="A clean frame. Scripts can use ?filming=1 or window.ashfolk.filming.set()."
         filming={filming}
         settings={settings}
         title="Frame"

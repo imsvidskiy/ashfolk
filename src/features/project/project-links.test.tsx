@@ -15,7 +15,7 @@ describe("project links", () => {
 
     await expect
       .element(screen.getByRole("link", { name: "Ashfolk on GitHub" }))
-      .toHaveAttribute("href", "https://github.com/imsvidskiy/dawnfolk");
+      .toHaveAttribute("href", "https://github.com/imsvidskiy/ashfolk");
     await expect.element(screen.getByText("1.2K")).toBeVisible();
     await expect
       .element(screen.getByRole("link", { name: "Sponsor Ashfolk" }))
