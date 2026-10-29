@@ -146,4 +146,13 @@ describe("tornadoes", () => {
 
     expect(hut.burningSeconds).toBe(0);
   });
+
+  it("refuses to touch down off the island", () => {
+    const simulation = createPowerSimulation();
+
+    simulation.usePower("tornado", 2000, 0, { lifetime: 5, strength: 100 });
+
+    expect(simulation.takeNotices()).toEqual(["A tornado has to touch down on the island."]);
+    expect(simulation.advance(0).effects).toEqual([]);
+  });
 });

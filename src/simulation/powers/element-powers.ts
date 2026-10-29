@@ -201,6 +201,14 @@ export function tornadoPower(
   parameters: PowerParameters<"tornado">,
   services: PowerServices
 ): PowerOutcome {
+  const { world } = services;
+
+  const cell = world.grid.cellAt(target.x, target.z);
+
+  if (!world.isOnIsland(cell)) {
+    return refused("A tornado has to touch down on the island.");
+  }
+
   services.tornadoes.touchDown(
     {
       lifetime: parameters.lifetime,
