@@ -20,6 +20,12 @@ export function webGPUDevice(renderer: WebGPURenderer): GPUDevice | null {
   return device instanceof GPUDevice ? device : null;
 }
 
+export function largestTextureSize(renderer: WebGPURenderer): number {
+  const device = webGPUDevice(renderer);
+
+  return device === null ? 0 : device.limits.maxTextureDimension2D;
+}
+
 function quietErrorScopes(device: GPUDevice): void {
   const popErrorScope = device.popErrorScope.bind(device);
 

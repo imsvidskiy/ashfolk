@@ -61,8 +61,14 @@ const BIOME_GROUPS = {
   swamp: [Biome.Swamp],
 } as const;
 const OUTLINE_SAMPLES = 64;
-const SMALLEST_MEAN_POND_AREA = 1500;
 const LEAST_MEAN_OUTLINE_SPREAD = 1.5;
+const LEAST_MEDIAN_POND_ACROSS = 52;
+const LEAST_UPPER_QUARTILE_POND_ACROSS = 65;
+const SMALL_LAKE_ACROSS = 90;
+const LEAST_SMALL_LAKE_SHARE = 0.12;
+const LEAST_LARGEST_POND_ACROSS = 120;
+const MOST_SMALLEST_POND_ACROSS = 45;
+const POND_BANK_SLACK = 0.5;
 
 let world: GeneratedWorld;
 let squareWorld: GeneratedWorld;
@@ -536,6 +542,53 @@ function pondWaterCells(generated: GeneratedWorld, grid: WorldGrid, pond: Spring
       Math.abs(terrain.waterSurface[cell] - pond.level) < 0.05
     );
   });
+}
+
+function pondAcross(generated: GeneratedWorld, grid: WorldGrid, pond: Spring): number {
+  return 2 * Math.sqrt((pondWaterCells(generated, grid, pond).length * grid.cellSize * grid.cellSize) / Math.PI);
+}
+
+function pondBankFaults(generated: GeneratedWorld, grid: WorldGrid, pond: Spring): string[] {
+  const { terrain } = generated;
+
+  const cells = pondWaterCells(generated, grid, pond);
+  const faults: string[] = [];
+
+  let hasOutlet = false;
+
+  for (const cell of cells) {
+    const column = grid.columnOf(cell);
+    const row = grid.rowOf(cell);
+
+    for (const offset of NEIGHBOR_OFFSETS) {
+      const neighbor = grid.neighborIndex(column, row, offset);
+
+      if (neighbor < 0) {
+        continue;
+      }
+
+      hasOutlet ||= isRiverWater(terrain, neighbor);
+
+      const isLowBank =
+        offset.distance === 1 &&
+        !hasWater(terrain.waterSurface[neighbor], terrain.height[neighbor]) &&
+        terrain.height[neighbor] < pond.level - POND_BANK_SLACK;
+
+      if (isLowBank) {
+        faults.push(`the pond of river ${pond.river} spills over a low bank at cell ${neighbor}`);
+      }
+    }
+  }
+
+  if (cells.length === 0) {
+    faults.push(`the pond of river ${pond.river} holds no water`);
+  }
+
+  if (!hasOutlet) {
+    faults.push(`the pond of river ${pond.river} has no river leaving it`);
+  }
+
+  return faults;
 }
 
 function meanOf(values: readonly number[]): number {
@@ -1645,17 +1698,32 @@ describe("full-size island rim", () => {
     }
   });
 
-  it("digs spring ponds larger than before and of varied shapes on both shapes", () => {
-    for (const generated of [fullSize, fullSquare]) {
+  it("digs spring ponds of many sizes, some of them small lakes, on both shapes", () => {
+    const acrosses = [fullSize, fullSquare].flatMap((generated) => {
       const grid = new WorldGrid(generated.dimensions);
+
+      return pondsOf(generated).map((pond) => {
+        return pondAcross(generated, grid, pond);
+      });
+    });
+
+    const smallLakes = acrosses.filter((across) => {
+      return across >= SMALL_LAKE_ACROSS;
+    });
+
+    expect(acrosses.length).toBeGreaterThan(20);
+    expect(median(acrosses)).toBeGreaterThan(LEAST_MEDIAN_POND_ACROSS);
+    expect(quantile(acrosses, 0.75)).toBeGreaterThan(LEAST_UPPER_QUARTILE_POND_ACROSS);
+    expect(smallLakes.length / acrosses.length).toBeGreaterThan(LEAST_SMALL_LAKE_SHARE);
+    expect(Math.max(...acrosses)).toBeGreaterThan(LEAST_LARGEST_POND_ACROSS);
+    expect(Math.min(...acrosses)).toBeLessThan(MOST_SMALLEST_POND_ACROSS);
+  });
+
+  it("gives spring ponds varied shapes on both shapes", () => {
+    for (const generated of [fullSize, fullSquare]) {
       const ponds = pondsOf(generated);
 
-      const areas = ponds.map((pond) => {
-        return pondWaterCells(generated, grid, pond).length * grid.cellSize * grid.cellSize;
-      });
-
       expect(ponds.length).toBeGreaterThan(5);
-      expect(meanOf(areas)).toBeGreaterThan(SMALLEST_MEAN_POND_AREA);
       expect(meanOf(ponds.map(outlineSpread))).toBeGreaterThan(LEAST_MEAN_OUTLINE_SPREAD);
       expect(
         new Set(
@@ -1664,6 +1732,18 @@ describe("full-size island rim", () => {
           })
         ).size
       ).toBeGreaterThan(ponds.length / 2);
+    }
+  });
+
+  it("fills each spring pond flat to banks that hold it and lets its river leave it on both shapes", () => {
+    for (const generated of [fullSize, fullSquare]) {
+      const grid = new WorldGrid(generated.dimensions);
+
+      expect(
+        pondsOf(generated).flatMap((pond) => {
+          return pondBankFaults(generated, grid, pond);
+        })
+      ).toEqual([]);
     }
   });
 

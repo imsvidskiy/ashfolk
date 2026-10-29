@@ -1,5 +1,6 @@
 import type { Camera } from "three/webgpu";
 import type { CameraState, GroundPoint } from "./camera/god-camera.ts";
+import type { Filming } from "./filming.ts";
 import type { GameSession } from "./game-session.ts";
 import type { LabelPlacement } from "./label-projector.ts";
 import type { Landmark } from "./landmarks.ts";
@@ -16,6 +17,7 @@ export interface EngineHandle {
   readonly camera: EngineCamera;
   readonly canvas: HTMLCanvasElement;
   readonly clearSelection: () => void;
+  readonly filming: Filming;
   readonly focusOn: (x: number, z: number, distance?: number) => void;
   readonly followSelection: () => void;
   readonly landmarks: readonly Landmark[];

@@ -88,6 +88,7 @@ export class AgentMarkers {
   readonly #reach = new Sphere();
   readonly #staged: StagedMarker[] = [];
   #count = 0;
+  #isHidden = false;
   #pixelScale = 0;
   #stagedCount = 0;
 
@@ -112,6 +113,11 @@ export class AgentMarkers {
 
   get count(): number {
     return this.#count;
+  }
+
+  setHidden(isHidden: boolean): void {
+    this.#isHidden = isHidden;
+    this.group.visible = this.#count > 0 && !isHidden;
   }
 
   begin(camera: PerspectiveCamera, frustum: Frustum, viewportHeight: number): void {
@@ -312,7 +318,7 @@ export class AgentMarkers {
 
     this.#count = count;
     this.#geometry.instanceCount = count;
-    this.group.visible = count > 0;
+    this.group.visible = count > 0 && !this.#isHidden;
 
     if (count > 0) {
       this.#instances.markUpdated(count);
