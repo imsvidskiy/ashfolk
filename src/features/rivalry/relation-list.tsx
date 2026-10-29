@@ -94,7 +94,7 @@ function RaidSection({ entries }: { readonly entries: readonly TribePair<RaidVie
 
   return (
     <section aria-label="Raids under way" className="flex flex-col gap-1">
-      <h3 className="text-ink-soft px-2.5 text-xs font-semibold tracking-wide uppercase">Raids under way</h3>
+      <h3 className="text-ink-soft px-2.5 text-xs font-semibold">Raids under way</h3>
 
       <ul className="flex flex-col gap-1">
         {entries.map((entry) => {

@@ -83,7 +83,7 @@ export function TribeRelations({ tribeId }: { readonly tribeId: number }) {
 
   return (
     <section aria-label="Neighbors" className="flex flex-col gap-1">
-      <h3 className="text-ink-soft text-xs font-semibold tracking-wide uppercase">Neighbors</h3>
+      <h3 className="text-ink-soft text-xs font-semibold">Neighbors</h3>
 
       <RaidLine tribeId={tribeId} tribes={tribes} />
 
