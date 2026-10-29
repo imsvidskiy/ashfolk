@@ -349,6 +349,8 @@ function PowerRow({ children }: { readonly children: ReactNode }) {
 export function PowerDock({ className }: { readonly className?: string | undefined }) {
   const [kind, setKind] = useState(initialKind);
 
+  const powers = powersInCategory(kind);
+
   useDigitHotkeys(kind);
 
   return (
@@ -363,15 +365,13 @@ export function PowerDock({ className }: { readonly className?: string | undefin
         <DockSeparator />
 
         <PowerRow>
-          {powerGroupsInCategory(kind).map((group, groupIndex, groups) => {
-            const firstIndex = groups.slice(0, groupIndex).flat().length;
-
+          {powerGroupsInCategory(kind).map((group, groupIndex) => {
             return (
               <Fragment key={group[0]}>
-                {groupIndex > 0 && <DockSeparator />}
+                {groupIndex === 0 ? null : <DockSeparator />}
 
-                {group.map((powerId, index) => {
-                  return <PowerTile hotkey={hotkeyOf(firstIndex + index)} key={powerId} powerId={powerId} />;
+                {group.map((powerId) => {
+                  return <PowerTile hotkey={hotkeyOf(powers.indexOf(powerId))} key={powerId} powerId={powerId} />;
                 })}
               </Fragment>
             );
