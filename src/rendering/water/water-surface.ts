@@ -2,7 +2,7 @@ import { clamp } from "../../shared/math.ts";
 import { lookUpCell, type SampledTerrain } from "../../world/terrain-sampling.ts";
 import { NO_WATER } from "../../world/water.ts";
 import type { WorldGrid } from "../../world/world-grid.ts";
-import { BANK_SINK, PRESENT_LEVEL } from "./shore-field.ts";
+import { BANK_SINK, BANK_STEP, PRESENT_LEVEL } from "./shore-field.ts";
 
 const BESIDE = [
   [1, 0],
@@ -24,24 +24,24 @@ function levelAt(terrain: SampledTerrain, grid: WorldGrid, column: number, row: 
   return terrain.waterSurface[grid.index(clamp(column, 0, last), clamp(row, 0, last))];
 }
 
-function lowestLevel(
+function bankLevel(
   terrain: SampledTerrain,
   grid: WorldGrid,
   column: number,
   row: number,
   offsets: readonly (readonly [number, number])[]
 ): number {
-  let lowest = Number.POSITIVE_INFINITY;
+  const levels = offsets
+    .map(([columnOffset, rowOffset]) => {
+      return levelAt(terrain, grid, column + columnOffset, row + rowOffset);
+    })
+    .filter((level) => {
+      return level > PRESENT_LEVEL;
+    });
 
-  for (const [columnOffset, rowOffset] of offsets) {
-    const level = levelAt(terrain, grid, column + columnOffset, row + rowOffset);
-
-    if (level > PRESENT_LEVEL) {
-      lowest = Math.min(lowest, level);
-    }
-  }
-
-  return lowest;
+  return levels.length === 0
+    ? Number.POSITIVE_INFINITY
+    : Math.min(Math.max(...levels), Math.min(...levels) + BANK_STEP);
 }
 
 export function waterVertexLevel(terrain: SampledTerrain, grid: WorldGrid, column: number, row: number): number {
@@ -51,8 +51,8 @@ export function waterVertexLevel(terrain: SampledTerrain, grid: WorldGrid, colum
     return own;
   }
 
-  const beside = lowestLevel(terrain, grid, column, row, BESIDE);
-  const nearest = Number.isFinite(beside) ? beside : lowestLevel(terrain, grid, column, row, DIAGONAL);
+  const beside = bankLevel(terrain, grid, column, row, BESIDE);
+  const nearest = Number.isFinite(beside) ? beside : bankLevel(terrain, grid, column, row, DIAGONAL);
 
   if (!Number.isFinite(nearest)) {
     return NO_WATER;

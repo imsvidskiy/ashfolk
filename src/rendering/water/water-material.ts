@@ -35,7 +35,7 @@ import { unitNoise3 } from "../node-helpers.ts";
 import { mapCoordinatesNode, sampleCellsNode } from "../terrain/height-sampling.ts";
 import type { TerrainTextures } from "../terrain/terrain-textures.ts";
 import { rainDimples } from "./rain-dimples.ts";
-import { BANK_SINK, PRESENT_LEVEL } from "./shore-field.ts";
+import { BANK_SINK, BANK_STEP, PRESENT_LEVEL } from "./shore-field.ts";
 import { perlinWithSteps } from "./wave-noise.ts";
 
 const HIDDEN_DEPTH = 40;
@@ -177,6 +177,17 @@ export function createWaterMaterial(
     }, float(NO_LOWER_WATER));
   }
 
+  function bankAround(base: Node<"vec2">, offsets: readonly Node<"vec2">[]): Node<"float"> {
+    const highest = offsets.reduce<Node<"float">>((top, offset) => {
+      const level = levelAt(base, offset);
+
+      return max(top, select(level.lessThan(NO_LOWER_WATER), level, float(-NO_LOWER_WATER)));
+    }, float(-NO_LOWER_WATER));
+    const lowest = lowestAround(base, offsets);
+
+    return select(lowest.lessThan(NO_LOWER_WATER), min(highest, lowest.add(BANK_STEP)), float(NO_LOWER_WATER));
+  }
+
   function lowestNearby(vertex: Node<"vec2">): Node<"float"> {
     const lowest = lowestAround(vertex, AROUND_OFFSETS).toVar();
 
@@ -212,8 +223,8 @@ export function createWaterMaterial(
         level.assign(min(ground, lowestNearby(vertex)).add(COARSE_LIFT));
       })
       .Else(() => {
-        const beside = lowestAround(vertex, BESIDE_OFFSETS);
-        const nearest = select(beside.lessThan(NO_LOWER_WATER), beside, lowestAround(vertex, DIAGONAL_OFFSETS));
+        const beside = bankAround(vertex, BESIDE_OFFSETS);
+        const nearest = select(beside.lessThan(NO_LOWER_WATER), beside, bankAround(vertex, DIAGONAL_OFFSETS));
 
         If(nearest.lessThan(NO_LOWER_WATER), () => {
           level.assign(min(nearest, ground.sub(BANK_SINK)));
