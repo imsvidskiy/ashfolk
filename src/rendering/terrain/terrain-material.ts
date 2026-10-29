@@ -56,6 +56,7 @@ const STRATA_CONTRAST = 0.035;
 const STRATA_BEND = 6;
 const STRATA_WOBBLE = 1.5;
 const STRATA_LENSES = vec3(0.035, 0.12, 0.035);
+const VEGETATED_ROCK_LIFT = 0.1;
 const STEEP_FACE_SHADE = 0.82;
 const EMBER_THRESHOLD = 0.004;
 const TRODDEN_EARTH = vec3(0.3, 0.22, 0.14);
@@ -270,7 +271,8 @@ export function createTerrainMaterial({
   const strataFade = smoothstep(1.2, 0.4, fwidth(positionWorld.y).mul(0.32));
 
   const surface = texture(textures.surface, mapCoordinates);
-  const albedo = texture(textures.groundAlbedo.texture, mapCoordinates).rgb;
+  const groundSample = texture(textures.groundAlbedo.texture, mapCoordinates);
+  const albedo = groundSample.rgb;
   const layer = positionWorld.y.mul(STRATA_FREQUENCY).add(broad.mul(STRATA_BEND)).add(patches.mul(STRATA_WOBBLE));
   const bands = sin(layer)
     .mul(0.6)
@@ -297,7 +299,8 @@ export function createTerrainMaterial({
     .mul(broad.mul(0.06).add(patches.mul(0.04)).add(1))
     .mul(faceShade);
 
-  const rockStart = mix(float(0.24), float(0.16), snowCover);
+  const vegetated = smoothstep(0.08, 0.3, groundSample.a.add(patches.mul(0.1)).add(fine.mul(0.05)));
+  const rockStart = mix(float(0.24), float(0.16), snowCover).add(vegetated.mul(VEGETATED_ROCK_LIFT));
   const rockBand = mix(float(0.07), float(0.14), snowCover);
   const edgeGrain = fine.mul(float(0.025).mul(float(1).sub(snowCover)));
   const rock = smoothstep(rockStart, rockStart.add(rockBand), steepness.add(broad.mul(0.07)).add(edgeGrain));
