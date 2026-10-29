@@ -1,6 +1,6 @@
 import { clamp, hashToUnit, saturate, smoothstep } from "../shared/math.ts";
 import { MinHeap } from "../shared/min-heap.ts";
-import { isOnIsland } from "../world/coast.ts";
+import { isOnIsland, touchesOffIsland } from "../world/coast.ts";
 import {
   hasWater,
   type Lake,
@@ -181,21 +181,6 @@ export function isNearLake(grid: WorldGrid, lakeIds: Int32Array, x: number, z: n
   return grid.cellsInRadius(x, z, radius).some((cell) => {
     return lakeIds[cell] !== NO_CELL;
   });
-}
-
-export function touchesOffIsland(grid: WorldGrid, coastDistance: Float32Array, cell: number): boolean {
-  const column = grid.columnOf(cell);
-  const row = grid.rowOf(cell);
-
-  for (const offset of NEIGHBOR_OFFSETS) {
-    const neighbor = grid.neighborIndex(column, row, offset);
-
-    if (neighbor >= 0 && !isOnIsland(coastDistance, neighbor)) {
-      return true;
-    }
-  }
-
-  return false;
 }
 
 function wanderingReceiver(grid: WorldGrid, filled: Float32Array, cell: number, weights: Float64Array): number {
