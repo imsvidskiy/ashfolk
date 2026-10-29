@@ -1,8 +1,15 @@
 import { ScrollArea } from "@base-ui/react/scroll-area";
 import { Toolbar } from "@base-ui/react/toolbar";
 import { Hand, MousePointer2 } from "lucide-react";
-import { type ReactNode, type RefObject, useEffect, useRef, useState } from "react";
-import { POWER_CATEGORIES, POWERS, type PowerCategory, type PowerId, powersInCategory } from "../../content/powers.ts";
+import { Fragment, type ReactNode, type RefObject, useEffect, useRef, useState } from "react";
+import {
+  POWER_CATEGORIES,
+  POWERS,
+  type PowerCategory,
+  type PowerId,
+  powerGroupsInCategory,
+  powersInCategory,
+} from "../../content/powers.ts";
 import { cn } from "../../design/cn.ts";
 import { GameIcon } from "../../design/game-icon.tsx";
 import type { GameIconName } from "../../design/game-icon-sources.ts";
@@ -318,6 +325,10 @@ function KindTabs({ chosenKind, onKindChange }: KindChoice) {
   );
 }
 
+function DockSeparator() {
+  return <Toolbar.Separator className="bg-ink/12 mx-1 h-7 w-px shrink-0" />;
+}
+
 function PowerRow({ children }: { readonly children: ReactNode }) {
   const rowReference = useRef<HTMLDivElement>(null);
 
@@ -349,11 +360,21 @@ export function PowerDock({ className }: { readonly className?: string | undefin
 
         <HandTile />
 
-        <Toolbar.Separator className="bg-ink/12 mx-1 h-7 w-px shrink-0" />
+        <DockSeparator />
 
         <PowerRow>
-          {powersInCategory(kind).map((powerId, index) => {
-            return <PowerTile hotkey={hotkeyOf(index)} key={powerId} powerId={powerId} />;
+          {powerGroupsInCategory(kind).map((group, groupIndex, groups) => {
+            const firstIndex = groups.slice(0, groupIndex).flat().length;
+
+            return (
+              <Fragment key={group[0]}>
+                {groupIndex > 0 && <DockSeparator />}
+
+                {group.map((powerId, index) => {
+                  return <PowerTile hotkey={hotkeyOf(firstIndex + index)} key={powerId} powerId={powerId} />;
+                })}
+              </Fragment>
+            );
           })}
         </PowerRow>
       </Island>

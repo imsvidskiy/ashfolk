@@ -1,6 +1,14 @@
 import { describe, expect, it } from "vitest";
 import { describeParameters } from "./parameters.ts";
-import { defaultPowerParameters, POWER_ORDER, POWERS, powersInCategory, readPowerParameters } from "./powers.ts";
+import {
+  defaultPowerParameters,
+  POWER_GROUPS,
+  POWER_ORDER,
+  POWERS,
+  powerGroupsInCategory,
+  powersInCategory,
+  readPowerParameters,
+} from "./powers.ts";
 
 describe("powers", () => {
   it("orders every power exactly once", () => {
@@ -38,6 +46,26 @@ describe("powers", () => {
       "earthquake",
       "volcano",
       "tornado",
+    ]);
+  });
+
+  it("keeps each group of powers within one category", () => {
+    for (const group of POWER_GROUPS) {
+      const categories = new Set(
+        group.map((powerId) => {
+          return POWERS[powerId].category;
+        })
+      );
+
+      expect(categories.size).toBe(1);
+    }
+  });
+
+  it("splits the life powers into the tribe, the animals and the blessings", () => {
+    expect(powerGroupsInCategory("life")).toEqual([
+      ["tribe"],
+      ["deer", "mammoth", "ibex", "hare", "wolf"],
+      ["abundance", "inspiration", "healing"],
     ]);
   });
 
