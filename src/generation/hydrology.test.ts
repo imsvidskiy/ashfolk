@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { lerp, saturate } from "../shared/math.ts";
 import { landEverywhere, shapeTerrain } from "../world/testing/terrain-fixtures.ts";
 import { hasWater, type River, type RiverPoint } from "../world/water.ts";
 import { NEIGHBOR_OFFSETS, WorldGrid } from "../world/world-grid.ts";
@@ -109,15 +110,12 @@ function nearestOnRiver(river: River, x: number, z: number): RiverSpot {
     const alongX = end.x - start.x;
     const alongZ = end.z - start.z;
     const lengthSquared = alongX * alongX + alongZ * alongZ;
-    const share =
-      lengthSquared === 0
-        ? 0
-        : Math.min(1, Math.max(0, ((x - start.x) * alongX + (z - start.z) * alongZ) / lengthSquared));
+    const share = lengthSquared === 0 ? 0 : saturate(((x - start.x) * alongX + (z - start.z) * alongZ) / lengthSquared);
     const point = {
-      depth: start.depth + (end.depth - start.depth) * share,
+      depth: lerp(start.depth, end.depth, share),
       flow: start.flow,
-      surface: start.surface + (end.surface - start.surface) * share,
-      width: start.width + (end.width - start.width) * share,
+      surface: lerp(start.surface, end.surface, share),
+      width: lerp(start.width, end.width, share),
       x: start.x + alongX * share,
       z: start.z + alongZ * share,
     };
@@ -286,8 +284,7 @@ describe("river confluences", () => {
     const grid = new WorldGrid({ cellSize: 10, cellsPerSide: 96 });
 
     const carved = shapeTerrain(grid, (x, z) => {
-      const gully =
-        x > 0 ? STREAM_GULLY_DEPTH * Math.exp(-(z * z) / STREAM_GULLY_SPREAD) * clampUnit((x - 20) / 40) : 0;
+      const gully = x > 0 ? STREAM_GULLY_DEPTH * Math.exp(-(z * z) / STREAM_GULLY_SPREAD) * saturate((x - 20) / 40) : 0;
 
       return 100 + 0.05 * (z + grid.halfSize) + STREAM_WALLS * Math.abs(x) - gully;
     });
@@ -298,10 +295,6 @@ describe("river confluences", () => {
     });
 
     return { carved, grid, result };
-  }
-
-  function clampUnit(value: number): number {
-    return Math.min(1, Math.max(0, value));
   }
 
   function wetCells(grid: WorldGrid, carved: Float32Array, waterSurface: Float32Array): number[] {

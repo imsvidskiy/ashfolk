@@ -205,13 +205,13 @@ function measureShoreCut(heights: Float32Array, grid: WorldGrid, basins: Drainag
 
     for (const offset of NEIGHBOR_OFFSETS) {
       const neighbor = grid.neighborIndex(column, row, offset);
-      const step = offset.distance * grid.cellSize;
-      const distance = cut.distances[cell] + step;
 
       if (neighbor < 0 || lakeIds[neighbor] !== NO_CELL) {
         continue;
       }
 
+      const step = offset.distance * grid.cellSize;
+      const distance = cut.distances[cell] + step;
       const ceiling = cut.ceilings[cell] + step * shoreSlopeAt(distance - step / 2);
 
       if (ceiling < cut.ceilings[neighbor]) {

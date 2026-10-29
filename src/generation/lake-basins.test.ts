@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { saturate } from "../shared/math.ts";
 import { createRandom } from "../shared/random.ts";
 import { type IslandSizeKind, islandDimensions } from "../world/island-size.ts";
 import { landEverywhere, shapeTerrain, troughWithBasin } from "../world/testing/terrain-fixtures.ts";
@@ -133,8 +134,10 @@ describe("lake shore easing", () => {
     readonly uneased: Float32Array;
   }
 
-  function rampUnit(value: number): number {
-    return Math.min(1, Math.max(0, value));
+  function levelsOf(lakes: DrainageBasins["lakes"]): number[][] {
+    return lakes.map((lake) => {
+      return [lake.level, lake.cellCount];
+    });
   }
 
   function easeShores(heightAt: (x: number, z: number) => number, coast = coastDistance): EasedShore {
@@ -148,13 +151,13 @@ describe("lake shore easing", () => {
   }
 
   function besideCliff(x: number, z: number): number {
-    const cliff = CLIFF_HEIGHT * rampUnit((x - CLIFF_START) / CLIFF_WIDTH);
+    const cliff = CLIFF_HEIGHT * saturate((x - CLIFF_START) / CLIFF_WIDTH);
 
-    return troughWithBasin(x, z) + cliff + FAR_WALL_HEIGHT * rampUnit((x - FAR_WALL_START) / CLIFF_WIDTH);
+    return troughWithBasin(x, z) + cliff + FAR_WALL_HEIGHT * saturate((x - FAR_WALL_START) / CLIFF_WIDTH);
   }
 
   function belowTerraceLake(x: number, z: number): number {
-    const terrace = CLIFF_HEIGHT * rampUnit((z - TERRACE_START) / CLIFF_WIDTH);
+    const terrace = CLIFF_HEIGHT * saturate((z - TERRACE_START) / CLIFF_WIDTH);
     const pit = TERRACE_LAKE_DEPTH * Math.exp(-(x * x + (z - TERRACE_LAKE_Z) ** 2) / TERRACE_LAKE_SPREAD);
 
     return troughWithBasin(x, z) + terrace - pit;
@@ -228,14 +231,8 @@ describe("lake shore easing", () => {
   ])("keeps every lake at its level %s when the water is worked out again", (_, heightAt) => {
     const { basins, eased } = easeShores(heightAt);
 
-    const levels = (lakes: DrainageBasins["lakes"]) => {
-      return lakes.map((lake) => {
-        return [lake.level, lake.cellCount];
-      });
-    };
-
     expect(basins.lakes.length).toBeGreaterThan(0);
-    expect(levels(analyzeDrainage(eased, grid, dryness, coastDistance).lakes)).toEqual(levels(basins.lakes));
+    expect(levelsOf(analyzeDrainage(eased, grid, dryness, coastDistance).lakes)).toEqual(levelsOf(basins.lakes));
   });
 
   it("keeps the shore of a higher lake gentle where the cut of a lower lake reaches it", () => {
