@@ -27,7 +27,7 @@ import { BERRY_PART } from "../../models/plants/berries.ts";
 import { clamp as clampNumber } from "../../shared/math.ts";
 import type { WorldGrid } from "../../world/world-grid.ts";
 import { type FireGlow, fireLightAt } from "../effects/fire-glow.ts";
-import { highlightGlow } from "../highlight.ts";
+import { brightenHighlighted } from "../highlight.ts";
 import { rotateAroundUp, SNOW_COLOR, slotColorTable, snowCoverNode } from "../node-helpers.ts";
 import { markOutlined } from "../outlines.ts";
 import { cellAtNode, coarseGroundOffsetNode } from "../terrain/height-sampling.ts";
@@ -45,7 +45,6 @@ const TIER_BURN_SHRINK = 0.85;
 const CROWN_LEFT_FLOOR = 0.06;
 const STRICTLY_ABOVE = 0.0001;
 const HIGHLIGHT_MATCH = 0.05;
-const PLANT_HIGHLIGHT_SHARE = 0.55;
 const FALLEN_TILT = Math.PI / 2 - 0.06;
 const FALLEN_CHARRING = 0.85;
 
@@ -209,15 +208,13 @@ export function createPlantMaterial({
 
   const highlighted = float(1)
     .sub(step(HIGHLIGHT_MATCH, distance(placement.xz, highlight.xy)))
-    .mul(highlight.z)
-    .mul(PLANT_HIGHLIGHT_SHARE);
+    .mul(highlight.z);
 
-  material.colorNode = mix(vertexColor, SNOW_COLOR, snowOnTop);
-  material.emissiveNode = vertexColor
-    .mul(fireLight)
-    .mul(CROWN_FIRE_LIGHT)
-    .add(burning)
-    .add(highlightGlow(varying(highlighted, "plantHighlight")));
+  material.colorNode = brightenHighlighted(
+    mix(vertexColor, SNOW_COLOR, snowOnTop),
+    varying(highlighted, "plantHighlight")
+  );
+  material.emissiveNode = vertexColor.mul(fireLight).mul(CROWN_FIRE_LIGHT).add(burning);
   material.roughnessNode = float(0.88);
 
   markOutlined(material);
