@@ -1,5 +1,6 @@
 import { Color, Group, type MeshStandardNodeMaterial, Sphere, Vector3 } from "three/webgpu";
 import { ANIMAL_KINDS, type AnimalKind } from "../../content/animals.ts";
+import type { GroundPoint } from "../../game/camera/god-camera.ts";
 import { type AnimalAppearance, animalAppearance } from "../../models/animals/animal-appearance.ts";
 import {
   ANIMAL_SPECIES,
@@ -22,7 +23,6 @@ import { HIDDEN_LEVEL } from "../view-input.ts";
 import { AgentMotion } from "./agent-motion.ts";
 import { AgentPalette, NO_ROW } from "./agent-palette.ts";
 import {
-  type AgentSpot,
   type AgentViewInput,
   detailLevel,
   farthestFigure,
@@ -148,7 +148,7 @@ export class AnimalView {
   readonly #previousPose = new Pose(MAMMOTH_BONE_COUNT);
   readonly #seen = new Set<number>();
   readonly #visuals = new Map<number, AnimalVisual>();
-  #hoveredSpot: AgentSpot | null = null;
+  #hoveredSpot: GroundPoint | null = null;
   #selectedId = NO_SELECTION;
 
   constructor() {
@@ -163,7 +163,7 @@ export class AnimalView {
     };
   }
 
-  get hoveredSpot(): AgentSpot | null {
+  get hoveredSpot(): GroundPoint | null {
     return this.#hoveredSpot;
   }
 

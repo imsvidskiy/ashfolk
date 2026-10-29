@@ -1,5 +1,6 @@
 import { Color, type Group, Sphere, Vector3 } from "three/webgpu";
 import { TOOL_MATERIALS, type ToolMaterial, WEAPON_KINDS, type WeaponKind } from "../../content/weapons.ts";
+import type { GroundPoint } from "../../game/camera/god-camera.ts";
 import { MaterialSlot } from "../../models/materials.ts";
 import { type PersonAppearance, personAppearance } from "../../models/people/appearance.ts";
 import { applyHumanClip, HUMAN_CLIPS, type HumanClipContext } from "../../models/people/human-clips.ts";
@@ -18,7 +19,6 @@ import { HIDDEN_LEVEL } from "../view-input.ts";
 import { AgentMotion } from "./agent-motion.ts";
 import { AgentPalette, NO_ROW } from "./agent-palette.ts";
 import {
-  type AgentSpot,
   type AgentViewInput,
   detailLevel,
   farthestFigure,
@@ -122,7 +122,7 @@ export class PeopleView {
   readonly #tribes: TribeLooks;
   readonly #visuals = new Map<number, PersonVisual>();
   #figureCount = 0;
-  #hoveredSpot: AgentSpot | null = null;
+  #hoveredSpot: GroundPoint | null = null;
   #selectedId = NO_SELECTION;
 
   constructor(tribes: TribeLooks) {
@@ -149,7 +149,7 @@ export class PeopleView {
     return this.#batches.group;
   }
 
-  get hoveredSpot(): AgentSpot | null {
+  get hoveredSpot(): GroundPoint | null {
     return this.#hoveredSpot;
   }
 

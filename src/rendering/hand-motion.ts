@@ -1,5 +1,6 @@
 import { clamp, lerp, smoothstep } from "../shared/math.ts";
 import { type GrabbableKind, type GrabTarget, type HeldView, isTarget } from "../simulation/hand/grab-target.ts";
+
 export const HELD_LIFT = 4;
 export const LIFT_SECONDS = 0.38;
 export const FALL_SHARE = 0.62;

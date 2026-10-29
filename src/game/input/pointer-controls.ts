@@ -182,6 +182,7 @@ export class PointerControls {
 
   rehover(): void {
     this.#pickedScreen = null;
+    this.#carriedX = Number.NaN;
   }
 
   update(): void {
