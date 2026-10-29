@@ -10,6 +10,7 @@ import type { GrabTarget } from "../simulation/hand/grab-target.ts";
 import type { SavedWorldState } from "../simulation/saved-world.ts";
 import { type CameraState, GodCamera, type GroundPoint } from "./camera/god-camera.ts";
 import type { EngineHandle } from "./engine-handle.ts";
+import { Filming, type FilmingSettings } from "./filming.ts";
 import { FramePacer } from "./frame-pacer.ts";
 import { GameSession } from "./game-session.ts";
 import { EntityPicker } from "./input/entity-picker.ts";
@@ -77,6 +78,7 @@ async function openSessionOrRelease(
 
 export class GameEngine implements EngineHandle {
   readonly camera: GodCamera;
+  readonly filming = new Filming();
   readonly graphicsLost: Promise<void>;
   readonly hand: HandTool;
   readonly powers: PowerTool;
@@ -169,6 +171,9 @@ export class GameEngine implements EngineHandle {
     });
     this.#resizeObserver.observe(parts.canvas);
     this.#resize();
+    this.filming.subscribe((settings) => {
+      this.#film(settings);
+    });
 
     for (const type of ACTIVITY_EVENTS) {
       window.addEventListener(
@@ -326,6 +331,13 @@ export class GameEngine implements EngineHandle {
 
     this.#noticeCameraMotion(time);
     this.#reportViewFocus();
+  }
+
+  #film(settings: FilmingSettings): void {
+    this.#world.setFilming(settings);
+    this.#resolution.hold(settings.isResolutionHeld);
+    this.#resize();
+    this.#pacer.markActivity(performance.now());
   }
 
   #rehoverOnNewFrame(): void {

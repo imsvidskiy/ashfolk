@@ -1398,8 +1398,10 @@ export function computeHydrology(
   const land: RiverLand = { basins, coastDistance, grid, heights };
 
   const chains = spaceRiverChains(land, traceRiverChains(basins.network, lakeIds, riverThreshold));
-  const rivers = buildRivers(land, chains);
-  const springs = placeSprings({ coastDistance, grid, heights, lakeIds, riverThreshold }, rivers);
+  const { channels, rivers, springs } = placeSprings(
+    { coastDistance, grid, heights, lakeIds, riverThreshold },
+    buildRivers(land, chains)
+  );
   const targets: ChannelTargets = {
     coastDistance,
     grid,
@@ -1414,11 +1416,11 @@ export function computeHydrology(
 
   carveRivers(targets, rivers);
 
-  for (const channel of springs.channels) {
+  for (const channel of channels) {
     carveChannel(targets, channel);
   }
 
-  for (const spring of springs.springs) {
+  for (const spring of springs) {
     if (spring.kind === "pond") {
       carvePond(targets, spring);
     }
@@ -1434,7 +1436,7 @@ export function computeHydrology(
     carving: targets.uncarvedHeights.map((uncarvedHeight, cell) => {
       return uncarvedHeight - heights[cell];
     }),
-    features: { lakes, rivers, springs: springs.springs, waterfalls: findWaterfalls(rivers) },
+    features: { lakes, rivers, springs, waterfalls: findWaterfalls(rivers) },
     lakeIds,
     riverStrength,
     waterSurface,

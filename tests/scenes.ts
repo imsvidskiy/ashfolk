@@ -35,6 +35,10 @@ export const SCENES: readonly Scene[] = [
     query: "seed=7&shape=round&quality=high&paused=1&hours=11&camera=-427.5,1536.9,130,0.75,0.8",
   },
   {
+    name: "spring-lake",
+    query: "seed=12&shape=square&quality=high&paused=1&hours=11&camera=-1340,-2877,300,0.7,0.5",
+  },
+  {
     name: "river-past-cave",
     query: "seed=10&shape=round&quality=high&paused=1&hours=11&camera=35,2332,260,0.8,0",
   },

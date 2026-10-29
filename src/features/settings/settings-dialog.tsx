@@ -8,6 +8,7 @@ import { IconButton } from "../../design/buttons.tsx";
 import { cn } from "../../design/cn.ts";
 import { Island } from "../../design/island.tsx";
 import { SEGMENT, SEGMENT_TRACK } from "../../design/styles.ts";
+import { FilmingSection } from "../filming/filming-section.tsx";
 import { type SettingsTab, useInterfaceStore } from "../interface/interface-store.ts";
 import { ProjectLinks } from "../project/project-links.tsx";
 import { IslandSection } from "./island-section.tsx";
@@ -21,11 +22,16 @@ interface SettingsSection {
   readonly value: SettingsTab;
 }
 
+const DEVELOPER_SECTIONS: readonly SettingsSection[] = import.meta.env.DEV
+  ? [{ Content: FilmingSection, label: "Dev", value: "developer" }]
+  : [];
+
 const SECTIONS: readonly SettingsSection[] = [
   { Content: WorldRulesSection, label: "World", value: "world" },
   { Content: WeatherSection, label: "Weather", value: "weather" },
   { Content: TimeSection, label: "Time", value: "time" },
   { Content: IslandSection, label: "Island", value: "island" },
+  ...DEVELOPER_SECTIONS,
 ];
 
 function isSettingsTab(value: unknown): value is SettingsTab {
