@@ -86,6 +86,23 @@ describe("hand motion", () => {
     expect(motion.subject).toBeNull();
   });
 
+  it("carries on from mid-flight when the same thing is grabbed again", () => {
+    const motion = new HandMotion();
+
+    run(motion, DEER, LIFT_SECONDS);
+    run(motion, { ...DEER, isPlaceable: false, x: 60 }, 1);
+    motion.update(null, FRAME);
+    poseOf(motion);
+    run(motion, null, 0.1);
+
+    const midway = poseOf(motion);
+
+    motion.update({ ...DEER, x: 200 }, FRAME);
+
+    expect(poseOf(motion).x).toBeCloseTo(midway.x);
+    expect(poseOf(motion).x).toBeLessThan(100);
+  });
+
   it("starts afresh when another thing is grabbed", () => {
     const motion = new HandMotion();
 
