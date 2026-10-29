@@ -1,5 +1,5 @@
 import { type ErodedRidgedOptions, GradientNoise, type NoiseGradient } from "../shared/gradient-noise.ts";
-import { gaussian, lerp, saturate, smoothstep } from "../shared/math.ts";
+import { lerp, saturate, smoothstep } from "../shared/math.ts";
 import { createNoiseSampler, type NoiseSampler } from "../shared/noise.ts";
 import { createRandom } from "../shared/random.ts";
 import type { IslandShape } from "../world/island-shape.ts";
@@ -10,7 +10,7 @@ import {
   type DesertPatch,
   type IslandLayout,
   mountainMaskAt,
-  type Rise,
+  risesHeightAt,
   shelfHeightAt,
 } from "./island-layout.ts";
 
@@ -165,16 +165,6 @@ function basinWeight(layout: IslandLayout, point: IslandPoint): number {
   return weight;
 }
 
-function risesHeight(rises: readonly Rise[], point: IslandPoint): number {
-  let height = 0;
-
-  for (const rise of rises) {
-    height += rise.height * gaussian(point.x, point.z, rise.x, rise.z, rise.spread);
-  }
-
-  return height;
-}
-
 function boundaryDistance(noise: ReliefNoise, island: IslandShape, point: IslandPoint, coastDistance: number): number {
   if (island.kind === "square") {
     return distanceToBoundary(noise, point);
@@ -214,10 +204,10 @@ function landformHeight(
   const massif = MASSIF_HEIGHT * layout.peakHeight * mountains;
   const peaks = RIDGE_HEIGHT * mountains * ridges;
   const cones = coneHeightAt(layout.cones, outline.x, outline.z) * (0.94 + 0.12 * ridges) * inland;
-  const rises = risesHeight(layout.rises, point) * (0.45 + ridges) * inland;
+  const rises = risesHeightAt(layout.rises, point.x, point.z) * (0.45 + ridges) * inland;
   const shelves = shelfHeightAt(layout.shelves, outline.x, outline.z) * (0.4 + 0.6 * inland);
   const hillCover = HILL_HEIGHT * layout.roughness * hills * hillShare * (0.45 + 0.55 * inland);
-  const hillClusters = risesHeight(layout.hills, point) * hills * inland;
+  const hillClusters = risesHeightAt(layout.hills, point.x, point.z) * hills * inland;
 
   const height = tilt + rolling + massif + peaks + cones + rises + shelves + hillCover + hillClusters;
 

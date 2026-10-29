@@ -19,8 +19,8 @@ const CREST_ROUNDING = 0.05;
 const SEGMENT_BLEND = 0.08;
 const RANGE_BLEND = 0.1;
 const BASIN_CANDIDATES = 24;
-const FARTHEST_BASIN = 0.46;
-const BASIN_SEPARATION = 0.5;
+export const FARTHEST_BASIN = 0.46;
+export const BASIN_SEPARATION = 0.5;
 const SURVEY_STEPS = 9;
 const DESERT_CANDIDATES = 3;
 const DESERT_SPREAD = 0.9;
@@ -471,6 +471,16 @@ export function shelfHeightAt(shelves: readonly Shelf[], x: number, z: number): 
   return height;
 }
 
+export function risesHeightAt(rises: readonly Rise[], x: number, z: number): number {
+  let height = 0;
+
+  for (const rise of rises) {
+    height += rise.height * gaussian(x, z, rise.x, rise.z, rise.spread);
+  }
+
+  return height;
+}
+
 export function basinShapeAt(basin: Basin, x: number, z: number): number {
   const offsetX = x - basin.x;
   const offsetZ = z - basin.z;
@@ -511,13 +521,9 @@ function highGroundHeading(landforms: Landforms): Heading {
 }
 
 function groundAt(landforms: Landforms, x: number, z: number): number {
-  const rises = landforms.rises.reduce((sum, rise) => {
-    return sum + (rise.height / 400) * gaussian(x, z, rise.x, rise.z, rise.spread);
-  }, 0);
-
   return (
     mountainMaskAt(landforms, x, z) +
-    rises +
+    risesHeightAt(landforms.rises, x, z) / 400 +
     shelfHeightAt(landforms.shelves, x, z) / 300 +
     coneHeightAt(landforms.cones, x, z) / 1000
   );
