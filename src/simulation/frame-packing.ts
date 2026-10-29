@@ -34,6 +34,7 @@ import type { Environment } from "./nature/environment.ts";
 import type { WeatherSystem } from "./nature/weather.ts";
 import type { Building, BuildingSystem } from "./society/buildings.ts";
 import { tribeBuildings } from "./society/camp-plan.ts";
+import type { JobKind } from "./society/jobs/job.ts";
 import { carriedItem, isChild, type Person } from "./society/person.ts";
 import { plantedCount } from "./society/plots.ts";
 import { nextEraName, technologyNames, tribeGoal } from "./society/progress.ts";
@@ -42,7 +43,7 @@ import { SNOW_CAPACITY, type WorldState } from "./world/world-state.ts";
 
 const BYTE = 255;
 const NO_ROW = -1;
-const ARMED_JOBS: ReadonlySet<string> = new Set(["defend", "fight", "hunt", "raid"]);
+const ARMED_JOBS: ReadonlySet<JobKind> = new Set(["defend", "fight", "hunt", "raid"]);
 
 interface TribeSources {
   buildings: BuildingSystem;

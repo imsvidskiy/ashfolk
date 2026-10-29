@@ -6,6 +6,7 @@ import type { Waypoint } from "../../agents/navigation.ts";
 import { dryStandSpot, nearestDrySpot } from "../../agents/walkable-ground.ts";
 import { isCarryingAnything, type Person, walkSpeed } from "../person.ts";
 import type { PersonTick, SocietyContext } from "../society-context.ts";
+import type { Tribe } from "../tribe.ts";
 
 const RUNNING_SPEED = 3.4;
 const DRY_DESTINATION_RADIUS = 40;
@@ -75,6 +76,7 @@ export const JOB_LABELS: Readonly<Record<JobKind, string>> = {
 };
 
 export interface Job {
+  cancel?: (tribe: Tribe) => void;
   readonly claimedPlant?: number;
   readonly isExpedition?: boolean;
   readonly kind: JobKind;

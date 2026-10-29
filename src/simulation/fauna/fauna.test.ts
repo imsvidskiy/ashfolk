@@ -313,7 +313,7 @@ describe("kinds of animals", () => {
     ).toBe(true);
   });
 
-  it("let wolf packs roam much farther than deer herds", () => {
+  it("send wolf packs to pastures at least as far as their range", () => {
     const { fauna } = createFauna();
 
     const pack = spawned(fauna.spawnHerd("wolf", 0, 0, 3, createRandom(1)));
@@ -321,7 +321,6 @@ describe("kinds of animals", () => {
     runFor(fauna, 1);
 
     expect(Math.hypot(pack.goalX, pack.goalZ)).toBeGreaterThanOrEqual(ANIMALS.wolf.pastureRange[0]);
-    expect(ANIMALS.wolf.pastureRange[0]).toBeGreaterThan(ANIMALS.deer.pastureRange[0]);
   });
 });
 

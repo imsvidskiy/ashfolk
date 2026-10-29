@@ -81,12 +81,6 @@ export class NavigationGrid {
     return nearestWalkableSpot(world, point, LANDING_SEARCH_RADIUS);
   }
 
-  isReachable(from: Waypoint, to: Waypoint): boolean {
-    const region = this.#areas.regionNear(from);
-
-    return region !== NO_REGION && region === this.#areas.regionNear(to);
-  }
-
   walkLength(from: Waypoint, to: Waypoint): number {
     return this.#areas.walkLength(from, to);
   }
@@ -229,7 +223,6 @@ export class NavigationGrid {
 
   #nearestStepAshore(cell: number, x: number, z: number): Waypoint | null {
     const world = this.#world;
-
     const { grid } = world;
 
     const closer = this.#shoreSteps[cell] - 1;

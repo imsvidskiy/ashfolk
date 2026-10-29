@@ -272,9 +272,7 @@ export class BuildingSystem {
 
   update(tick: BuildingTick): void {
     for (const building of [...this.#buildings]) {
-      if (building.cell >= 0) {
-        this.#updateBuilding(building, tick);
-      }
+      this.#updateBuilding(building, tick);
     }
   }
 

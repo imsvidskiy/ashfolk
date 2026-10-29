@@ -6,8 +6,7 @@ import type { EffectLog } from "../../effects.ts";
 import type { PeopleSense } from "../../fauna/beast-instincts.ts";
 import { isComplete } from "../buildings.ts";
 import { takeUpJob } from "../decisions.ts";
-import type { JobKind } from "../jobs/job.ts";
-import { isChild, type Person } from "../person.ts";
+import type { Person } from "../person.ts";
 import type { SocietyContext } from "../society-context.ts";
 import { emptyStock, type Stock, takeFood, totalFood } from "../stock.ts";
 import { knows, type Tribe } from "../tribe.ts";
@@ -16,27 +15,25 @@ import { armForHunt, type CarriedWeapon, carriedWeapon } from "../weapons.ts";
 import { ArrowFlights } from "./arrows.ts";
 import { BeastEncounters } from "./beast-encounters.ts";
 import { CombatLedger, type FighterRecord } from "./combat-ledger.ts";
-import { EnvoyJob, MournJob } from "./defense-jobs.ts";
+import { MournJob } from "./defense-jobs.ts";
 import type { Foe } from "./foes.ts";
-import { totalGoods, unpack } from "./provisions.ts";
+import { chafeAtBorders, watchTrespass } from "./land-friction.ts";
+import { agreeTruce, isEnvoyOnTheWay, peacePressure, sendEnvoy } from "./peace.ts";
+import { FOOD_RESERVE, totalGoods, unpack } from "./provisions.ts";
 import { RaidJob } from "./raid-job.ts";
+import { advancePhase, enterPhase, RALLY_DISTANCE } from "./raid-phases.ts";
 import {
   burnableBuilding,
-  capitalized,
   chooseAim,
   chooseWarriors,
   livingRaiders,
-  lossShare,
   type Raid,
   type RaidAim,
   type RaidPhase,
-  raidSummary,
   rationsFor,
-  theTribe,
 } from "./raids.ts";
 import {
   aggrieve,
-  type Grudge,
   isTruce,
   otherSideOf,
   type Relation,
@@ -47,14 +44,11 @@ import {
   stanceFor,
 } from "./relations.ts";
 import { isBusy } from "./responses.ts";
+import { capitalized, raidSummary, stanceNews, theTribe } from "./stories.ts";
 import type { Battleground } from "./strikes.ts";
-import { type Claim, claimOf, claimOverlap, isInsideClaim, rangeOverlap } from "./territory.ts";
+import { type Claim, claimOf } from "./territory.ts";
 
 const SURVEY_SECONDS = 2;
-const CLAIM_FRICTION_PER_DAY = 24;
-const RANGE_FRICTION_PER_DAY = 13;
-const TRESPASS_PER_DAY = 34;
-const POACHING_FACTOR = 2;
 const FEUD_WEARINESS_PER_DAY = 5;
 const BLOOD_GRIEVANCE = 30;
 const DEATH_WEARINESS = 16;
@@ -71,36 +65,11 @@ const WEARY_LIMIT = 70;
 const SMALLEST_RAIDING_TRIBE = 9;
 const LONGEST_RAID_DISTANCE = 1600;
 const SMALLEST_VICTIM_TRIBE = 8;
-const RALLY_DISTANCE = 12;
-const MUSTER_SECONDS = 45;
-const ALARM_DISTANCE = 140;
-const ASSAULT_DISTANCE = 60;
-const LONGEST_MARCH_SECONDS = 700;
-const LONGEST_ASSAULT_SECONDS = 95;
-const LONGEST_RETREAT_SECONDS = 300;
-const ROUT_SHARE = 0.4;
 const MOURNING_DAYS = 0.45;
 const MOURNERS = 4;
-const PEACE_WEARINESS = 30;
-const LONG_FEUD_DAYS = 6;
+const MOURNER_RADIUS = 200;
 const PEACE_PER_DAY = 1.1;
-const PEACE_STANDING = 15;
-const TRUCE_DAYS = 12;
 const PROVISIONED_SHARE = 0.5;
-const LINGERING_WEARINESS = 0.3;
-const SMALLEST_GIFT = 6;
-const LARGEST_GIFT = 16;
-const GIFT_SHARE = 0.3;
-const FOOD_RESERVE = 4;
-const WORK_JOBS: ReadonlySet<JobKind> = new Set(["chop", "fish", "gather", "hunt", "quarry"]);
-
-const GRUDGE_REASONS: Readonly<Record<Grudge, string>> = {
-  blood: "over blood spilled",
-  hunting: "over hunting grounds",
-  land: "over land",
-  plunder: "over stolen stores",
-  trespass: "over trespassing foragers",
-};
 
 interface RivalryDependencies {
   readonly chronicle: Chronicle;
@@ -175,11 +144,6 @@ function isRaidBetween(raid: Raid, firstId: number, secondId: number): boolean {
   );
 }
 
-function enterPhase(raid: Raid, phase: RaidPhase): void {
-  raid.phase = phase;
-  raid.phaseSeconds = 0;
-}
-
 function weighRaid(raid: Raid, relation: Relation): void {
   const plunder = totalGoods(raid.loot);
   const victims = sideOf(relation, raid.defenderId);
@@ -197,35 +161,6 @@ function weighRaid(raid: Raid, relation: Relation): void {
   if (raid.fallenDefenders.length > 0 || plunder > 0 || raid.burned.length > 0) {
     raiders.grievance *= REVENGE_RELIEF;
   }
-}
-
-function sendEnvoy(relation: Relation, seeker: Tribe, host: Tribe, context: SocietyContext): boolean {
-  const surplus = totalFood(seeker.stock) - seeker.memberCount * FOOD_RESERVE;
-  const giftAmount = Math.min(LARGEST_GIFT, surplus * GIFT_SHARE);
-
-  const envoy = context.people.membersOf(seeker).find((person) => {
-    return !(isChild(person) || isBusy(person)) && person.health > 0.6;
-  });
-
-  if (envoy === undefined || giftAmount < SMALLEST_GIFT) {
-    return false;
-  }
-
-  const distance = Math.hypot(seeker.campX - host.campX, seeker.campZ - host.campZ);
-  const rations = Math.floor(takeFood(seeker.stock, rationsFor(distance, context.rules.life.hungerRate)));
-
-  relation.envoyId = envoy.id;
-  takeUpJob(envoy, seeker, context, (tick) => {
-    return new EnvoyJob(tick, host, giftAmount, rations);
-  });
-
-  return true;
-}
-
-function isEnvoyOnTheWay(envoyId: number, context: SocietyContext): boolean {
-  const envoy = context.people.findPerson(envoyId);
-
-  return envoy?.isAlive === true && envoy.job instanceof EnvoyJob;
 }
 
 function recordFall(victim: Person, raid: Raid | null): void {
@@ -264,40 +199,12 @@ function untilDay(dates: ReadonlyMap<number, number>, tribeId: number): number {
   return day;
 }
 
-function advanceMarch(raid: Raid, raiders: readonly Person[]): void {
-  const closest = Math.min(
-    ...raiders.map((raider) => {
-      return distanceFrom(raider, raid.target);
-    })
-  );
-
-  if (closest < ALARM_DISTANCE) {
-    raid.isAlarmRaised = true;
-  }
-
-  if (closest < ASSAULT_DISTANCE) {
-    enterPhase(raid, "assault");
-  }
-
-  if (raid.phaseSeconds > LONGEST_MARCH_SECONDS) {
-    enterPhase(raid, "retreat");
-  }
-}
-
 function copyDates(target: Map<number, number>, source: ReadonlyMap<number, number>): void {
   target.clear();
 
   for (const [tribeId, day] of source) {
     target.set(tribeId, day);
   }
-}
-
-function isNear(person: Person, point: Waypoint, radius: number): boolean {
-  return distanceFrom(person, point) < radius;
-}
-
-function distanceFrom(person: Person, point: Waypoint): number {
-  return Math.hypot(person.mover.x - point.x, person.mover.z - point.z);
 }
 
 function towards(from: Waypoint, to: Tribe, distance: number): Waypoint {
@@ -349,6 +256,7 @@ export class RivalrySystem implements Battleground {
   }
 
   restore(snapshot: RivalrySnapshot): void {
+    this.#arrows.clear();
     this.#claims = snapshot.claims;
     this.ledger.restore(snapshot.ledger);
     copyDates(this.#mourningUntil, snapshot.mourningUntil);
@@ -454,6 +362,15 @@ export class RivalrySystem implements Battleground {
       return null;
     }
 
+    const distance = Math.hypot(attacker.campX - defender.campX, attacker.campZ - defender.campZ);
+    const rations = rationsFor(distance, context.rules.life.hungerRate);
+
+    const provisions = rations * warriors.length * PROVISIONED_SHARE;
+
+    if (totalFood(attacker.stock) < provisions + attacker.memberCount * FOOD_RESERVE) {
+      return null;
+    }
+
     const campfire = litCampfireOf(attacker, context.buildings);
     const canBurn = knows(attacker, "fire") && burnableBuilding(context.buildings.all, defender) !== null;
     const aim = chooseAim(relation.lastGrudge === "blood", canBurn, -relation.standing / 100);
@@ -480,15 +397,6 @@ export class RivalrySystem implements Battleground {
         return warrior.id;
       }),
     };
-
-    const distance = Math.hypot(attacker.campX - defender.campX, attacker.campZ - defender.campZ);
-    const rations = rationsFor(distance, context.rules.life.hungerRate);
-
-    const provisions = rations * warriors.length * PROVISIONED_SHARE;
-
-    if (totalFood(attacker.stock) < provisions + attacker.memberCount * FOOD_RESERVE) {
-      return null;
-    }
 
     takeFood(attacker.stock, provisions);
     this.#nextRaidId += 1;
@@ -578,11 +486,11 @@ export class RivalrySystem implements Battleground {
 
     for (const [index, first] of tribes.entries()) {
       for (const second of tribes.slice(index + 1)) {
-        this.#rub(this.relations.meet(first.id, second.id, areKin(first, second)), days, context);
+        chafeAtBorders(this.relations.meet(first.id, second.id, areKin(first, second)), this.#claims, days, context);
       }
     }
 
-    this.#watchTrespass(days, context);
+    watchTrespass(this.#claims, this.relations, days, context);
 
     for (const relation of this.relations.all) {
       this.#review(relation, days, context);
@@ -591,70 +499,6 @@ export class RivalrySystem implements Battleground {
     for (const relation of this.relations.all) {
       this.#considerRaid(relation, days, context);
       this.#considerPeace(relation, days, context);
-    }
-  }
-
-  #rub(relation: Relation, days: number, context: SocietyContext): void {
-    const first = this.#claims.get(relation.first.tribeId);
-    const second = this.#claims.get(relation.second.tribeId);
-
-    if (first === undefined || second === undefined) {
-      return;
-    }
-
-    const landShare = claimOverlap(first, second);
-    const huntingShare = rangeOverlap(first, second);
-
-    const friction =
-      context.rules.life.rivalry * days * (CLAIM_FRICTION_PER_DAY * landShare + RANGE_FRICTION_PER_DAY * huntingShare);
-
-    if (friction <= 0) {
-      return;
-    }
-
-    const grudge: Grudge = landShare > 0 ? "land" : "hunting";
-
-    aggrieve(relation, first.tribeId, friction / 2, grudge);
-    aggrieve(relation, second.tribeId, friction / 2, grudge);
-  }
-
-  #watchTrespass(days: number, context: SocietyContext): void {
-    const rule = context.rules.life.rivalry;
-
-    for (const tribe of context.people.tribes()) {
-      const home = this.#claims.get(tribe.id);
-
-      for (const person of context.people.membersOf(tribe)) {
-        const kind = person.job?.kind;
-
-        if (kind === undefined || !WORK_JOBS.has(kind) || isChild(person)) {
-          continue;
-        }
-
-        if (home !== undefined && isInsideClaim(home, person.mover)) {
-          continue;
-        }
-
-        this.#trespass(person, kind === "hunt", rule * days, context);
-      }
-    }
-  }
-
-  #trespass(person: Person, isPoaching: boolean, weight: number, context: SocietyContext): void {
-    for (const claim of this.#claims.values()) {
-      if (claim.tribeId === person.tribeId || !isInsideClaim(claim, person.mover)) {
-        continue;
-      }
-
-      const relation = this.relations.find(person.tribeId, claim.tribeId);
-
-      if (relation === null || isTruce(relation, context.environment.day)) {
-        continue;
-      }
-
-      const insult = TRESPASS_PER_DAY * weight * (isPoaching ? POACHING_FACTOR : 1);
-
-      aggrieve(relation, claim.tribeId, insult, isPoaching ? "hunting" : "trespass");
     }
   }
 
@@ -681,6 +525,13 @@ export class RivalrySystem implements Battleground {
     const previous = relation.stance;
 
     relation.stance = stance;
+
+    if (stance === "hostile") {
+      relation.feudStartDay = day;
+    } else if (previous === "hostile") {
+      relation.feudStartDay = null;
+    }
+
     this.#announceStance(relation, previous, context);
   }
 
@@ -692,44 +543,10 @@ export class RivalrySystem implements Battleground {
       return;
     }
 
-    const pair = `${theTribe(first.name)} and ${theTribe(second.name)}`;
-    const x = (first.campX + second.campX) / 2;
-    const z = (first.campZ + second.campZ) / 2;
+    const news = stanceNews(relation, previous, first, second);
 
-    if (relation.stance === "hostile") {
-      relation.feudStartDay = context.environment.day;
-      this.#chronicle.record({
-        category: "feud",
-        text: capitalized(`${pair} became enemies ${GRUDGE_REASONS[relation.lastGrudge]}`),
-        tribeId: first.id,
-        x,
-        z,
-      });
-
-      return;
-    }
-
-    if (previous === "hostile") {
-      relation.feudStartDay = null;
-      this.#chronicle.record({
-        category: "feud",
-        text: capitalized(`${pair} let their feud cool`),
-        tribeId: first.id,
-        x,
-        z,
-      });
-
-      return;
-    }
-
-    if (relation.stance === "friendly") {
-      this.#chronicle.record({
-        category: "peace",
-        text: capitalized(`${pair} became friends`),
-        tribeId: first.id,
-        x,
-        z,
-      });
+    if (news !== null) {
+      this.#chronicle.record(news);
     }
   }
 
@@ -800,9 +617,7 @@ export class RivalrySystem implements Battleground {
   }
 
   #advanceRaid(raid: Raid, context: SocietyContext): void {
-    const raiders = livingRaiders(raid, (id) => {
-      return context.people.findPerson(id);
-    }).filter((raider) => {
+    const raiders = livingRaiders(context.people, raid).filter((raider) => {
       return hasJoinedRaid(raider, raid);
     });
     const attacker = context.people.findTribe(raid.attackerId);
@@ -820,37 +635,7 @@ export class RivalrySystem implements Battleground {
       return;
     }
 
-    if (raid.phase === "muster") {
-      const gathered = raiders.filter((raider) => {
-        return isNear(raider, raid.rally, RALLY_DISTANCE + 6);
-      }).length;
-
-      if (gathered >= raiders.length || raid.phaseSeconds > MUSTER_SECONDS) {
-        enterPhase(raid, "march");
-      }
-
-      return;
-    }
-
-    if (raid.phase === "march") {
-      advanceMarch(raid, raiders);
-
-      return;
-    }
-
-    if (raid.phase === "assault") {
-      const isSpent = raiders.every((raider) => {
-        return raid.struckIds.has(raider.id) || raid.routedIds.has(raider.id);
-      });
-
-      if (isSpent || lossShare(raid) >= ROUT_SHARE || raid.phaseSeconds > LONGEST_ASSAULT_SECONDS) {
-        enterPhase(raid, "retreat");
-      }
-
-      return;
-    }
-
-    if (raid.phaseSeconds > LONGEST_RETREAT_SECONDS) {
+    if (advancePhase(raid, raiders)) {
       this.#endRaid(raid, context);
     }
   }
@@ -906,7 +691,9 @@ export class RivalrySystem implements Battleground {
     const mourners = context.people
       .membersOf(tribe)
       .filter((person) => {
-        return !isBusy(person) && isNear(person, { x: tribe.campX, z: tribe.campZ }, 200);
+        return (
+          !isBusy(person) && Math.hypot(person.mover.x - tribe.campX, person.mover.z - tribe.campZ) < MOURNER_RADIUS
+        );
       })
       .slice(0, MOURNERS);
 
@@ -922,9 +709,7 @@ export class RivalrySystem implements Battleground {
       return;
     }
 
-    const feudDays = context.environment.day - relation.feudStartDay;
-    const weariness = Math.max(relation.first.weariness, relation.second.weariness);
-    const pressure = (weariness - PEACE_WEARINESS) / 40 + (feudDays - LONG_FEUD_DAYS) / 12;
+    const pressure = peacePressure(relation, context.environment.day - relation.feudStartDay);
 
     if (pressure <= 0 || !this.random.chance(1 - Math.exp(-PEACE_PER_DAY * pressure * days))) {
       return;
@@ -951,18 +736,7 @@ export class RivalrySystem implements Battleground {
   }
 
   #makePeace(relation: Relation, context: SocietyContext): void {
-    const { day } = context.environment;
-
-    relation.standing = PEACE_STANDING;
-    relation.truceUntilDay = day + TRUCE_DAYS;
-    relation.feudStartDay = null;
-    relation.envoyId = null;
-    relation.stance = stanceFor(PEACE_STANDING, "neutral");
-
-    for (const side of [relation.first, relation.second]) {
-      side.grievance = 0;
-      side.weariness *= LINGERING_WEARINESS;
-    }
+    agreeTruce(relation, context.environment.day);
 
     for (const raid of this.#raids) {
       if (isRaidBetween(raid, relation.first.tribeId, relation.second.tribeId) && raid.phase !== "retreat") {

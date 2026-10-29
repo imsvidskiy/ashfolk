@@ -9,7 +9,8 @@ import { carriedWeapon } from "../weapons.ts";
 import { FightJob, ShelterJob } from "./defense-jobs.ts";
 import { animalFoe } from "./foes.ts";
 import { describePlace } from "./places.ts";
-import { canFight, capitalized, theTribe } from "./raids.ts";
+import { canFight } from "./raids.ts";
+import { capitalized, theTribe } from "./stories.ts";
 
 const FIRESIDE_RADIUS = 60;
 const CAMP_SHELTER_RADIUS = 50;

@@ -67,7 +67,7 @@ export function assailantOf(tick: PersonTick, tribeId: number): Person | null {
 
   const assailantId = tick.context.rivalry.ledger.assailantOf(person.id);
 
-  if (assailantId === null || assailantId === person.id) {
+  if (assailantId === null) {
     return null;
   }
 

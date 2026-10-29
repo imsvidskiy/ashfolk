@@ -1,4 +1,4 @@
-import { ADULT_YOUTH, ANIMAL_KINDS, ANIMALS, type AnimalKind, animalsAt } from "../../content/animals.ts";
+import { ADULT_YOUTH, ANIMALS, type AnimalKind } from "../../content/animals.ts";
 import type { WorldRules } from "../../content/world-rules.ts";
 import { clamp, distanceSquared, FULL_TURN } from "../../shared/math.ts";
 import { createRandom, type RandomSource, type RandomState } from "../../shared/random.ts";
@@ -15,7 +15,7 @@ import {
   setDestination,
   stopMoving,
 } from "../agents/movement.ts";
-import { aroundPoint, type NavigationGrid, type Waypoint } from "../agents/navigation.ts";
+import type { NavigationGrid, Waypoint } from "../agents/navigation.ts";
 import type { IdentifierSource } from "../identifiers.ts";
 import type { WorldState } from "../world/world-state.ts";
 import {
@@ -27,12 +27,12 @@ import {
   type PeopleSense,
 } from "./beast-instincts.ts";
 import { CALM_FEAR, startleAnimal } from "./fear.ts";
+import { canStand, escapeRoute, findNewHome, findPasture, herdKindAt, smallGameAt } from "./habitat.ts";
 
 const HERD_SPREAD = 30;
 const BURNING_GROUND = 0.25;
 const FIRE_DAMAGE_PER_SECOND = 0.5;
 const FEAR_DECAY_PER_SECOND = 0.12;
-const FLEE_DISTANCE = 120;
 const FLEE_REPLAN_SECONDS = 2.5;
 const FIRE_AWARENESS = 60;
 const WANDER_DISTANCE_TO_FOLLOW = 35;
@@ -40,20 +40,14 @@ const CORPSE_SECONDS = 30;
 const FALL_SECONDS = 1.3;
 const EDGE_MARGIN = 4;
 const YOUTH_DECAY_PER_DAY = 0.5;
-const PASTURE_ATTEMPTS = 8;
-const ANY_BIOME_ATTEMPT = 6;
-const ESCAPE_TURNS: readonly number[] = [0, -0.6, 0.6, -1.1, 1.1];
 const MENACE_SEARCH_PADDING = 1;
 const ALERT_SECONDS: readonly [number, number] = [0.6, 1.2];
 const SKITTISH_ALERT_SECONDS: readonly [number, number] = [0.3, 0.6];
 const SKITTISH_REPLAN_SECONDS = 1.2;
-const ESCAPE_JINK = 0.7;
 const PREDATOR_FEAR = 0.9;
-const EDGE_REACH_CELLS = 3;
 const LIVED_SHARE: readonly [number, number] = [0.05, 0.85];
 const MOST_SMALL_GAME_GROUPS_PER_SQUARE_KILOMETER = 1.3;
 const DISPERSAL_PER_DAY = 0.8;
-const DISPERSAL_RANGE: readonly [number, number] = [120, 420];
 const DISPERSING_MEMBERS = 2;
 
 type AnimalDeathCause = "age" | "blast" | "fire" | "hunt" | "lightning" | "prey" | "tornado";
@@ -116,26 +110,6 @@ function settleFall(animal: Animal): void {
   }
 }
 
-function kindForBiome(biome: number, random: RandomSource): AnimalKind | null {
-  const kinds = animalsAt(biome);
-
-  const total = kinds.reduce((sum, kind) => {
-    return sum + ANIMALS[kind].abundance;
-  }, 0);
-
-  let remaining = random.next() * total;
-
-  for (const kind of kinds) {
-    remaining -= ANIMALS[kind].abundance;
-
-    if (remaining < 0) {
-      return kind;
-    }
-  }
-
-  return null;
-}
-
 function litterSize(range: readonly [number, number], random: RandomSource): number {
   const [smallest, largest] = range;
 
@@ -144,12 +118,6 @@ function litterSize(range: readonly [number, number], random: RandomSource): num
   }
 
   return random.integer(smallest, largest + 1);
-}
-
-function isFavoriteBiome(kind: AnimalKind, biome: number): boolean {
-  return ANIMALS[kind].favoriteBiomes.some((favorite) => {
-    return favorite === biome;
-  });
 }
 
 function phaseRate(kind: AnimalKind): number {
@@ -279,7 +247,7 @@ export class FaunaSystem {
       const x = random.signed() * halfSize * 0.9;
       const z = random.signed() * halfSize * 0.9;
 
-      const kind = this.#suitableKind(x, z, random);
+      const kind = herdKindAt(this.#world, x, z, random);
 
       if (kind === null) {
         continue;
@@ -304,7 +272,7 @@ export class FaunaSystem {
       const x = random.signed() * halfSize * 0.9;
       const z = random.signed() * halfSize * 0.9;
 
-      const kind = this.#smallGameAt(x, z);
+      const kind = smallGameAt(this.#world, x, z);
 
       if (kind === null) {
         continue;
@@ -402,11 +370,7 @@ export class FaunaSystem {
   }
 
   canStand(kind: AnimalKind, x: number, z: number): boolean {
-    if (!this.#world.isWalkableAt(x, z)) {
-      return false;
-    }
-
-    return !(ANIMALS[kind].isSmallGame && this.#world.touchesWater(this.#world.grid.cellAt(x, z)));
+    return canStand(this.#world, kind, x, z);
   }
 
   hold(animal: Animal): void {
@@ -463,12 +427,12 @@ export class FaunaSystem {
     }
 
     this.#breed(tick);
-    this.#removeRemains(tick.seconds);
+    this.#removeRemains();
   }
 
   #addAnimal(herd: Herd, x: number, z: number, random: RandomSource): Animal {
     const start = this.#spawnPoint(herd, x, z);
-    const { lifespanDays } = ANIMALS[herd.kind];
+    const { bodyRadius, health, lifespanDays } = ANIMALS[herd.kind];
 
     const animal: Animal = {
       appearanceSeed: random.next(),
@@ -477,14 +441,14 @@ export class FaunaSystem {
       fear: 0,
       fleeFromX: 0,
       fleeFromZ: 0,
-      health: ANIMALS[herd.kind].health,
+      health,
       herdId: herd.id,
       id: this.#identifiers.next(),
       isAlive: true,
       kind: herd.kind,
       lifeDays: lifespanDays === null ? Number.POSITIVE_INFINITY : random.between(lifespanDays[0], lifespanDays[1]),
       mover: {
-        ...createMover(start.x, start.z, random.next() * FULL_TURN, ANIMALS[herd.kind].bodyRadius),
+        ...createMover(start.x, start.z, random.next() * FULL_TURN, bodyRadius),
         hopSpeed: hopSpeedOf(herd.kind),
       },
       offsetX: random.signed() * HERD_SPREAD * 0.5,
@@ -523,57 +487,6 @@ export class FaunaSystem {
     return { x: herd.goalX, z: herd.goalZ };
   }
 
-  #isHomeGround(kind: AnimalKind, cell: number): boolean {
-    const biome = this.#world.terrain.biome[cell];
-
-    if (isFavoriteBiome(kind, biome)) {
-      return true;
-    }
-
-    return (
-      ANIMALS[kind].edgeBiomes.some((edge) => {
-        return edge === biome;
-      }) && this.#bordersFavorite(kind, cell)
-    );
-  }
-
-  #bordersFavorite(kind: AnimalKind, cell: number): boolean {
-    const { grid, terrain } = this.#world;
-
-    const column = grid.columnOf(cell);
-    const row = grid.rowOf(cell);
-
-    for (let rowStep = -EDGE_REACH_CELLS; rowStep <= EDGE_REACH_CELLS; rowStep += 1) {
-      for (let columnStep = -EDGE_REACH_CELLS; columnStep <= EDGE_REACH_CELLS; columnStep += 1) {
-        const isInside = grid.contains(column + columnStep, row + rowStep);
-
-        if (isInside && isFavoriteBiome(kind, terrain.biome[grid.index(column + columnStep, row + rowStep)])) {
-          return true;
-        }
-      }
-    }
-
-    return false;
-  }
-
-  #smallGameAt(x: number, z: number): AnimalKind | null {
-    const cell = this.#world.grid.cellAt(x, z);
-
-    if (cell < 0) {
-      return null;
-    }
-
-    const kind = ANIMAL_KINDS.find((candidate) => {
-      return ANIMALS[candidate].isSmallGame && this.#isHomeGround(candidate, cell);
-    });
-
-    if (kind === undefined || !this.canStand(kind, x, z)) {
-      return null;
-    }
-
-    return kind;
-  }
-
   #ageFounders(herd: Herd, random: RandomSource): void {
     for (const id of herd.memberIds) {
       const founder = this.findAnimal(id);
@@ -586,16 +499,6 @@ export class FaunaSystem {
 
   #randomFor(kind: AnimalKind, tick: FaunaTick): RandomSource {
     return ANIMALS[kind].isSmallGame ? this.#smallGameRandom : tick.random;
-  }
-
-  #suitableKind(x: number, z: number, random: RandomSource): AnimalKind | null {
-    const cell = this.#world.grid.cellAt(x, z);
-
-    if (cell < 0 || !this.#world.isWalkableAt(x, z)) {
-      return null;
-    }
-
-    return kindForBiome(this.#world.terrain.biome[cell], random);
   }
 
   #steerHerd(herd: Herd, tick: FaunaTick): void {
@@ -611,94 +514,12 @@ export class FaunaSystem {
 
     herd.retargetSeconds = random.between(25, 65);
 
-    const pasture = this.#findPasture(herd.kind, leader.mover, random);
+    const pasture = findPasture(this.#world, herd.kind, leader.mover, random);
 
     if (pasture !== null) {
       herd.goalX = pasture.x;
       herd.goalZ = pasture.z;
     }
-  }
-
-  #findPasture(kind: AnimalKind, from: Waypoint, random: RandomSource): Waypoint | null {
-    const { pastureRange, seeksHighGround } = ANIMALS[kind];
-
-    let best: Waypoint | null = null;
-
-    for (let attempt = 0; attempt < PASTURE_ATTEMPTS; attempt += 1) {
-      const angle = random.next() * FULL_TURN;
-      const distance = random.between(pastureRange[0], pastureRange[1]);
-
-      const pasture = aroundPoint(from, distance, angle);
-
-      if (!this.#isOpenPasture(pasture.x, pasture.z, kind, attempt >= ANY_BIOME_ATTEMPT)) {
-        continue;
-      }
-
-      if (!seeksHighGround) {
-        return pasture;
-      }
-
-      if (best === null || this.#groundHeight(pasture) > this.#groundHeight(best)) {
-        best = pasture;
-      }
-    }
-
-    return best;
-  }
-
-  #groundHeight(point: Waypoint): number {
-    const cell = this.#world.grid.cellAt(point.x, point.z);
-
-    if (cell < 0) {
-      return Number.NEGATIVE_INFINITY;
-    }
-
-    return this.#world.terrain.height[cell];
-  }
-
-  #escapeFrom(animal: Animal, random: RandomSource): Waypoint {
-    const { mover } = animal;
-
-    const awayX = mover.x - animal.fleeFromX;
-    const awayZ = mover.z - animal.fleeFromZ;
-
-    const away = Math.atan2(awayZ, awayX);
-
-    if (ANIMALS[animal.kind].isSmallGame) {
-      return aroundPoint(mover, FLEE_DISTANCE, away + random.signed() * ESCAPE_JINK);
-    }
-
-    if (!ANIMALS[animal.kind].seeksHighGround) {
-      return aroundPoint(mover, FLEE_DISTANCE, away);
-    }
-
-    let best = aroundPoint(mover, FLEE_DISTANCE, away);
-    let bestHeight = Number.NEGATIVE_INFINITY;
-
-    for (const turn of ESCAPE_TURNS) {
-      const candidate = aroundPoint(mover, FLEE_DISTANCE, away + turn);
-
-      const height = this.#groundHeight(candidate);
-
-      if (this.#world.isWalkableAt(candidate.x, candidate.z) && height > bestHeight) {
-        best = candidate;
-        bestHeight = height;
-      }
-    }
-
-    return best;
-  }
-
-  #isOpenPasture(x: number, z: number, kind: AnimalKind, acceptsAnyBiome: boolean): boolean {
-    const world = this.#world;
-
-    const cell = world.grid.cellAt(x, z);
-
-    if (!this.canStand(kind, x, z) || world.isBurning(cell)) {
-      return false;
-    }
-
-    return acceptsAnyBiome || this.#isHomeGround(kind, cell);
   }
 
   #packOf(animal: Animal): Animal[] {
@@ -866,7 +687,7 @@ export class FaunaSystem {
     if (animal.pose !== "run" || animal.poseSeconds <= 0) {
       const random = this.#randomFor(animal.kind, tick);
 
-      setDestination(mover, this.#escapeFrom(animal, random), this.#navigation, { mayPlanRoute: false });
+      setDestination(mover, escapeRoute(this.#world, animal, random), this.#navigation, { mayPlanRoute: false });
       animal.pose = "run";
       animal.poseSeconds = ANIMALS[animal.kind].isSmallGame ? SKITTISH_REPLAN_SECONDS : FLEE_REPLAN_SECONDS;
     }
@@ -1005,7 +826,7 @@ export class FaunaSystem {
       return false;
     }
 
-    const home = this.#findNewHome(herd.kind, leader.mover, random);
+    const home = findNewHome(this.#world, herd.kind, leader.mover, random);
 
     if (home === null) {
       return false;
@@ -1037,21 +858,9 @@ export class FaunaSystem {
     return true;
   }
 
-  #findNewHome(kind: AnimalKind, from: Waypoint, random: RandomSource): Waypoint | null {
-    for (let attempt = 0; attempt < PASTURE_ATTEMPTS; attempt += 1) {
-      const home = aroundPoint(from, random.between(DISPERSAL_RANGE[0], DISPERSAL_RANGE[1]), random.next() * FULL_TURN);
-
-      if (this.#isOpenPasture(home.x, home.z, kind, false)) {
-        return home;
-      }
-    }
-
-    return null;
-  }
-
-  #removeRemains(seconds: number): void {
+  #removeRemains(): void {
     const hasExpired = this.#animals.some((animal) => {
-      return !animal.isAlive && animal.deathSeconds + seconds > CORPSE_SECONDS;
+      return !animal.isAlive && animal.deathSeconds > CORPSE_SECONDS;
     });
 
     if (!hasExpired) {

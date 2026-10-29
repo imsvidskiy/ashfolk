@@ -73,7 +73,7 @@ function isOnTheRoad(job: Job): boolean {
 }
 
 export function assignJob(tick: PersonTick, job: Job): void {
-  releaseClaim(tick.tribe, tick.person.job);
+  leaveJob(tick.tribe, tick.person.job);
   tick.person.job = job;
 }
 
@@ -113,8 +113,13 @@ export function advanceJob(tick: PersonTick): void {
 }
 
 export function dropJob(tribe: Tribe, person: Person): void {
-  releaseClaim(tribe, person.job);
+  leaveJob(tribe, person.job);
   person.job = null;
+}
+
+function leaveJob(tribe: Tribe, job: Job | null): void {
+  job?.cancel?.(tribe);
+  releaseClaim(tribe, job);
 }
 
 function releaseClaim(tribe: Tribe, job: Job | null): void {

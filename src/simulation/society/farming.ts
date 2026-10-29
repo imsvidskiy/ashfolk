@@ -10,7 +10,7 @@ import {
   isSowingTime,
 } from "../../content/crops.ts";
 import { Ground, groundDefinition } from "../../content/grounds.ts";
-import { isWinter } from "../../content/seasons.ts";
+import { isWinter, SEASON_COUNT } from "../../content/seasons.ts";
 import { FULL_TURN } from "../../shared/math.ts";
 import { ORTHOGONAL_STEPS } from "../../world/world-grid.ts";
 import { aroundPoint } from "../agents/navigation.ts";
@@ -32,7 +32,6 @@ const FARTHEST_FIELD = 80;
 const TENDED_GROWTH = 0.45;
 const TENDING_DECAY = 0.5;
 const SPROUT_DISPLAY = 0.04;
-const SEASONS_IN_YEAR = 4;
 
 export type FieldTask = "harvest" | "sow" | "tend";
 
@@ -191,7 +190,7 @@ function seasonsPassed(tribe: Tribe, season: number): number {
     return 0;
   }
 
-  return (season - previous + SEASONS_IN_YEAR) % SEASONS_IN_YEAR;
+  return (season - previous + SEASON_COUNT) % SEASON_COUNT;
 }
 
 function growField(field: Field, seasons: number, season: number): void {

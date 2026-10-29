@@ -1,4 +1,3 @@
-import { isWinter } from "../../../content/seasons.ts";
 import { emptySpot, plantSpot } from "../plots.ts";
 import type { PersonTick } from "../society-context.ts";
 import { learn, type PlotSpot } from "../tribe.ts";
@@ -7,10 +6,6 @@ import { Errand, headTo, type Job } from "./job.ts";
 const PLANTING_SECONDS = 7;
 
 export function findPlanting(tick: PersonTick): PlantJob | null {
-  if (isWinter(tick.context.environment.season)) {
-    return null;
-  }
-
   const spot = emptySpot(tick.tribe, tick.context.world);
 
   if (spot === null) {
