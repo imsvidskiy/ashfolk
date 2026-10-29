@@ -416,10 +416,6 @@ export class WorldState {
   }
 
   markDisturbed(cell: number, day: number): void {
-    if (cell < 0) {
-      return;
-    }
-
     this.disturbedDay[cell] = day;
     this.recovering.add(cell);
   }

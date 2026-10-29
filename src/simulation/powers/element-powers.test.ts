@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import type { LightningEffect } from "../effects.ts";
 import { brush, createPowerSimulation } from "../testing/test-powers.ts";
 import { centerCell, livingCount } from "../testing/test-world.ts";
 
@@ -45,6 +46,24 @@ describe("elements", () => {
 
     expect(simulation.advance(0).effects).toEqual([expect.objectContaining({ isNatural: false, kind: "lightning" })]);
     expect(simulation.fire.burningCount).toBeGreaterThan(0);
+  });
+
+  it("lightning scatters several strikes around the target", () => {
+    const simulation = createPowerSimulation();
+
+    simulation.usePower("lightning", 0, 0, { scatter: 120, strikes: 4 });
+
+    const strikes = simulation.advance(0).effects.filter((effect): effect is LightningEffect => {
+      return effect.kind === "lightning";
+    });
+
+    expect(strikes).toHaveLength(4);
+    expect(strikes[0]).toMatchObject({ x: 0, z: 0 });
+    expect(
+      strikes.every((strike) => {
+        return Math.hypot(strike.x, strike.z) <= 120;
+      })
+    ).toBe(true);
   });
 
   it("an explosion leaves a crater and kills animals around it", () => {
