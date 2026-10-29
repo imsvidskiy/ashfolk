@@ -3,6 +3,11 @@ import type { RenderQuality } from "./render-quality.ts";
 
 const GRAPHICS_UNAVAILABLE = "This browser can't run the island's WebGPU graphics. Try the latest Chrome or Safari.";
 
+export interface Graphics {
+  readonly lost: Promise<void>;
+  readonly renderer: WebGPURenderer;
+}
+
 export function webGPUDevice(renderer: WebGPURenderer): GPUDevice | null {
   const { backend } = renderer;
 
@@ -13,11 +18,6 @@ export function webGPUDevice(renderer: WebGPURenderer): GPUDevice | null {
   const device: unknown = Reflect.get(backend, "device");
 
   return device instanceof GPUDevice ? device : null;
-}
-
-export interface Graphics {
-  readonly lost: Promise<void>;
-  readonly renderer: WebGPURenderer;
 }
 
 function quietErrorScopes(device: GPUDevice): void {

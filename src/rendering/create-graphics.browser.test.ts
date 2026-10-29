@@ -34,10 +34,9 @@ describe("graphics", () => {
     expect(renderer.backend).toBeInstanceOf(WebGPUBackend);
   });
 
-  it("keeps a failing error scope from rejecting", async () => {
+  it("keeps an empty error scope stack from rejecting, as Safari's does once the device is lost", async () => {
     const device = deviceOf(await startGraphics());
 
-    // An empty scope stack rejects like a lost device does in Safari.
     await expect(device.popErrorScope()).resolves.toBeNull();
   });
 
@@ -67,7 +66,7 @@ describe("graphics", () => {
 
   it("refuses to fall back to WebGL2 without WebGPU", async () => {
     vi.spyOn(console, "warn").mockImplementation(ignore);
-    vi.spyOn(navigator, "gpu", "get").mockReturnValue(undefined as unknown as GPU);
+    vi.spyOn(navigator.gpu, "requestAdapter").mockResolvedValue(null);
 
     await expect(startGraphics()).rejects.toThrow("can't run the island's WebGPU graphics");
   });
