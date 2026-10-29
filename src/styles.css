@@ -132,7 +132,7 @@ button:not(:disabled),
 }
 
 @utility scroll-fade-x {
-  --fade-size: 1.25rem;
+  --fade-size: 3rem;
 
   @supports (mask-image: none) {
     mask-image: linear-gradient(
