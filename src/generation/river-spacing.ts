@@ -1,14 +1,6 @@
-import { isOnIsland } from "../world/coast.ts";
+import { isOnIsland, touchesOffIsland } from "../world/coast.ts";
 import type { WorldGrid } from "../world/world-grid.ts";
-import {
-  chainCells,
-  type DrainageBasins,
-  isNearLake,
-  NO_CELL,
-  type RiverChain,
-  riverWidthFor,
-  touchesOffIsland,
-} from "./hydrology.ts";
+import { chainCells, type DrainageBasins, isNearLake, NO_CELL, type RiverChain, riverWidthFor } from "./hydrology.ts";
 
 const SMALLEST_SPACING = 40;
 const SPACING_WIDTHS = 2.5;

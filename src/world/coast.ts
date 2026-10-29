@@ -1,5 +1,5 @@
 import { sampleHeight } from "./terrain-sampling.ts";
-import type { WorldGrid } from "./world-grid.ts";
+import { NEIGHBOR_OFFSETS, type WorldGrid } from "./world-grid.ts";
 
 const PLANT_COAST_CLEARANCE = 6;
 
@@ -15,4 +15,19 @@ export function hasRoomFromCoast(
   clearance = PLANT_COAST_CLEARANCE
 ): boolean {
   return sampleHeight(coastDistance, grid, x, z) > clearance;
+}
+
+export function touchesOffIsland(grid: WorldGrid, coastDistance: Float32Array, cell: number): boolean {
+  const column = grid.columnOf(cell);
+  const row = grid.rowOf(cell);
+
+  for (const offset of NEIGHBOR_OFFSETS) {
+    const neighbor = grid.neighborIndex(column, row, offset);
+
+    if (neighbor >= 0 && !isOnIsland(coastDistance, neighbor)) {
+      return true;
+    }
+  }
+
+  return false;
 }
