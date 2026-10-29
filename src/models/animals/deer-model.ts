@@ -1,18 +1,25 @@
 import { Vector3 } from "three";
 import { FULL_TURN } from "../../shared/math.ts";
-import { alongTube, segmentsAtLeast, segmentsUpTo } from "../level-of-detail.ts";
+import { segmentsAtLeast, segmentsUpTo } from "../level-of-detail.ts";
 import { MaterialSlot } from "../materials.ts";
 import type { MeshBuilder, SurfacePoint } from "../mesh/mesh-builder.ts";
-import { curveBodySections } from "../mesh/path-curves.ts";
-import { type Shape, transformShape } from "../mesh/shape.ts";
-import { type BodySection, lengthwiseLoft, pointAlong, sphere, type TubePoint, tube } from "../mesh/shapes.ts";
+import type { Shape } from "../mesh/shape.ts";
+import { type BodySection, pointAlong, sphere, type TubePoint, tube } from "../mesh/shapes.ts";
 import { outermostHit, surfaceTransform } from "../mesh/surface-probe.ts";
 import { combine, SIDES, sideMirror, type Triple, transformOf } from "../mesh/transforms.ts";
 import { degrees } from "../rig/curves.ts";
 import { rigidStyle } from "../rig/skin-weights.ts";
 import type { AnimalDetail } from "./animal-detail.ts";
 import type { GaitStyle } from "./quadruped-clips.ts";
-import { addEllipsoidEars, addLegs, addMuzzleFace, hoofBelow, legPath } from "./quadruped-parts.ts";
+import {
+  addEllipsoidEars,
+  addLegs,
+  addMuzzleFace,
+  bodyShape,
+  hoofBelow,
+  legPath,
+  muzzleShape,
+} from "./quadruped-parts.ts";
 import { bodyStyle, neckStyle, tailStyle } from "./quadruped-rigging.ts";
 import { QuadrupedBone, type QuadrupedFrame } from "./quadruped-skeleton.ts";
 
@@ -138,29 +145,21 @@ function coatSlot(point: SurfacePoint): number {
   return isBelly || isRump ? MaterialSlot.CoatLight : MaterialSlot.Coat;
 }
 
-function bodyShape(detail: AnimalDetail): Shape {
-  return lengthwiseLoft(curveBodySections(BODY, detail.curveSteps), detail.segments + 2);
-}
-
 function headShape(detail: AnimalDetail): Shape {
-  const muzzle = tube(
-    alongTube(
-      [
-        { radius: 0, x: 0, y: 1.66, z: 0.67 },
-        { radius: 0.062, x: 0, y: 1.665, z: 0.7 },
-        { radius: 0.084, x: 0, y: 1.665, z: 0.75 },
-        { radius: 0.088, x: 0, y: 1.665, z: 0.85 },
-        { radius: 0.066, x: 0, y: 1.6, z: 0.98 },
-        { radius: 0.046, x: 0, y: 1.535, z: 1.08 },
-        { radius: 0.04, x: 0, y: 1.505, z: 1.14 },
-        { radius: 0, x: 0, y: 1.495, z: 1.165 },
-      ],
-      detail
-    ),
-    { hasEndCap: false, radialSegments: detail.segments }
+  return muzzleShape(
+    [
+      { radius: 0, x: 0, y: 1.66, z: 0.67 },
+      { radius: 0.062, x: 0, y: 1.665, z: 0.7 },
+      { radius: 0.084, x: 0, y: 1.665, z: 0.75 },
+      { radius: 0.088, x: 0, y: 1.665, z: 0.85 },
+      { radius: 0.066, x: 0, y: 1.6, z: 0.98 },
+      { radius: 0.046, x: 0, y: 1.535, z: 1.08 },
+      { radius: 0.04, x: 0, y: 1.505, z: 1.14 },
+      { radius: 0, x: 0, y: 1.495, z: 1.165 },
+    ],
+    detail,
+    0.78
   );
-
-  return transformShape(muzzle, transformOf({ scale: [0.78, 1, 1] }));
 }
 
 function addHead(builder: MeshBuilder, detail: AnimalDetail): void {
@@ -175,14 +174,14 @@ function addHead(builder: MeshBuilder, detail: AnimalDetail): void {
   addEllipsoidEars(builder, detail, {
     placement: { position: [0.042, 1.7, 0.78], rotation: [-0.5, 0.2, -0.9] },
     seam: EAR_SEAM,
-    shape: EAR,
+    stretch: EAR,
   });
 }
 
 export function addDeerBody(builder: MeshBuilder, detail: AnimalDetail): void {
   const { segments } = detail;
 
-  builder.add(bodyShape(detail), {
+  builder.add(bodyShape(BODY, detail), {
     seam: BODY_SEAM,
     style: { ...bodyStyle(DEER_FRAME, 0.14), slot: coatSlot },
   });
@@ -277,7 +276,7 @@ export function addFawnSpots(builder: MeshBuilder, detail: AnimalDetail): void {
   }
 
   const style = { ...bodyStyle(DEER_FRAME, 0.14), slot: MaterialSlot.CoatLight };
-  const body = bodyShape(detail);
+  const body = bodyShape(BODY, detail);
   const spot = sphere(0.022, 5, 3);
 
   for (let index = 0; index < SPOT_COUNT; index += 1) {
