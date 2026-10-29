@@ -1,6 +1,6 @@
 import { Matrix4, PerspectiveCamera, type Vector3, type WebGPURenderer } from "three/webgpu";
 import type { GenerationProgress, WorldRequest } from "../generation/generation-options.ts";
-import { createRenderer } from "../rendering/create-renderer.ts";
+import { createGraphics } from "../rendering/create-graphics.ts";
 import { type QualityLevel, RENDER_QUALITY } from "../rendering/render-quality.ts";
 import { WorldRenderer } from "../rendering/world-renderer.ts";
 import { clamp } from "../shared/math.ts";
@@ -49,6 +49,7 @@ interface EngineOptions {
 
 interface EngineParts {
   readonly canvas: HTMLCanvasElement;
+  readonly graphicsLost: Promise<void>;
   readonly quality: QualityLevel;
   readonly renderer: WebGPURenderer;
   readonly session: GameSession;
@@ -76,6 +77,7 @@ async function openSessionOrRelease(
 
 export class GameEngine implements EngineHandle {
   readonly camera: GodCamera;
+  readonly graphicsLost: Promise<void>;
   readonly hand: HandTool;
   readonly powers: PowerTool;
   readonly session: GameSession;
@@ -101,6 +103,7 @@ export class GameEngine implements EngineHandle {
 
   constructor(parts: EngineParts) {
     this.#canvas = parts.canvas;
+    this.graphicsLost = parts.graphicsLost;
     this.#resolution = new ResolutionGovernor(RENDER_QUALITY[parts.quality].maximumPixelRatio);
     this.#renderer = parts.renderer;
     this.session = parts.session;
@@ -182,7 +185,7 @@ export class GameEngine implements EngineHandle {
   }
 
   static async start(options: EngineOptions): Promise<GameEngine> {
-    const renderer = await createRenderer(options.canvas, RENDER_QUALITY[options.quality]);
+    const { lost, renderer } = await createGraphics(options.canvas, RENDER_QUALITY[options.quality]);
 
     const session = await openSessionOrRelease(
       renderer,
@@ -191,7 +194,13 @@ export class GameEngine implements EngineHandle {
       options.onProgress
     );
 
-    const engine = new GameEngine({ canvas: options.canvas, quality: options.quality, renderer, session });
+    const engine = new GameEngine({
+      canvas: options.canvas,
+      graphicsLost: lost,
+      quality: options.quality,
+      renderer,
+      session,
+    });
 
     if (Object.keys(options.camera).length === 0) {
       engine.camera.arriveFromAbove();

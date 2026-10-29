@@ -1,4 +1,5 @@
 import { readSavedWorld } from "../features/saves/save-database.ts";
+import { useSavesStore } from "../features/saves/saves-store.ts";
 import type { EngineHandle } from "../game/engine-handle.ts";
 import type { GameEngine, WorldSource } from "../game/game-engine.ts";
 import type { GameSession } from "../game/game-session.ts";
@@ -9,6 +10,7 @@ import type { LaunchOptions } from "./launch-options.ts";
 export type EngineStatus =
   | { readonly engine: EngineHandle; readonly kind: "ready" }
   | { readonly kind: "failed"; readonly message: string }
+  | { readonly kind: "graphicsLost"; readonly saved: Promise<unknown> }
   | { readonly kind: "loading"; readonly progress: GenerationProgress | null }
   | { readonly kind: "stopped"; readonly message: string };
 
@@ -27,6 +29,24 @@ export function reportStop(session: GameSession, onStatus: EngineStatusListener)
     if (status.kind === "failed") {
       onStatus({ kind: "stopped", message: status.error.message });
     }
+  });
+}
+
+export function reportGraphicsLost(
+  engine: Pick<GameEngine, "graphicsLost" | "stop">,
+  isCurrent: () => boolean,
+  onStatus: EngineStatusListener
+): void {
+  engine.graphicsLost.then(() => {
+    if (!isCurrent()) {
+      return;
+    }
+
+    engine.stop();
+
+    const saved = useSavesStore.getState().saveNow();
+
+    onStatus({ kind: "graphicsLost", saved });
   });
 }
 
@@ -132,6 +152,13 @@ export class EngineLauncher {
       this.#onStatus(status);
     });
     this.#onStatus({ engine, kind: "ready" });
+    reportGraphicsLost(
+      engine,
+      () => {
+        return this.#engine === engine;
+      },
+      this.#onStatus
+    );
   }
 
   #reportProgress(progress: GenerationProgress): void {
