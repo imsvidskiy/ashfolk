@@ -103,6 +103,16 @@ describe("hand tool", () => {
     expect(hand.isActive()).toBe(false);
   });
 
+  it("reaches for a crown against the sky, where no ground lies under the pointer", () => {
+    const { hand, pick } = createHand();
+
+    hand.hover(null, SCREEN);
+
+    expect(hand.hovered).toEqual(DEER);
+    expect(pick).toHaveBeenCalledWith(null, SCREEN);
+    expect(hand.canBegin(null, SCREEN)).toBe(true);
+  });
+
   it("hovers what lies under the pointer while the hand is empty", () => {
     const { hand, pick } = createHand();
 

@@ -10,6 +10,7 @@ import { HUMAN_BONE_COUNT, HUMAN_SKELETON } from "../../models/people/human-skel
 import { Pose } from "../../models/rig/pose.ts";
 import { SkeletonPoser } from "../../models/rig/skeleton-poser.ts";
 import { smoothstep } from "../../shared/math.ts";
+import { isTarget } from "../../simulation/hand/grab-target.ts";
 import { PERSON_STRIDE, PersonField } from "../../world/agent-buffers.ts";
 import { CARRIED_ITEMS, type CarriedItem, PERSON_POSES } from "../../world/agent-poses.ts";
 import type { TribeLooks } from "../tribe-looks.ts";
@@ -17,12 +18,12 @@ import { HIDDEN_LEVEL } from "../view-input.ts";
 import { AgentMotion } from "./agent-motion.ts";
 import { AgentPalette, NO_ROW } from "./agent-palette.ts";
 import {
+  type AgentSpot,
   type AgentViewInput,
   detailLevel,
   farthestFigure,
   forgetUnseen,
   holdFigure,
-  isHighlightedAgent,
   type LevelDistances,
   liftOf,
   NO_SELECTION,
@@ -121,6 +122,7 @@ export class PeopleView {
   readonly #tribes: TribeLooks;
   readonly #visuals = new Map<number, PersonVisual>();
   #figureCount = 0;
+  #hoveredSpot: AgentSpot | null = null;
   #selectedId = NO_SELECTION;
 
   constructor(tribes: TribeLooks) {
@@ -147,11 +149,16 @@ export class PeopleView {
     return this.#batches.group;
   }
 
+  get hoveredSpot(): AgentSpot | null {
+    return this.#hoveredSpot;
+  }
+
   update(input: AgentViewInput): void {
     const { frame } = input.mirror;
 
     this.#seen.clear();
     this.#palette.highlightRow.value = NO_ROW;
+    this.#hoveredSpot = null;
     this.#selectedId = selectedAgentId(frame.inspection, "person");
     this.#batches.begin();
 
@@ -189,6 +196,11 @@ export class PeopleView {
     const x = pose === null ? restX : pose.x;
     const z = pose === null ? restZ : pose.z;
     const y = standingHeight(input.mirror, x, z, WADING_DEPTH) + liftOf(pose);
+    const isHighlighted = isTarget(input.highlighted, "person", id);
+
+    if (isHighlighted) {
+      this.#hoveredSpot = { x, z };
+    }
 
     this.#bounds.center.set(x, y + BOUNDING_LIFT, z);
 
@@ -211,7 +223,7 @@ export class PeopleView {
     this.#palette.ensureRows(row + 1);
     this.#writePose(visual, CARRIED_ITEMS[carriedCode], row);
     this.#palette.lean(row, slopeLean(input.mirror, x, z, visual.motion.heading, LEAN_REACH) * LEAN_SHARE);
-    holdFigure(this.#palette, row, visual.motion.heading, pose, isHighlightedAgent(input.highlighted, "person", id));
+    holdFigure(this.#palette, row, visual.motion.heading, pose, isHighlighted);
     this.#palette.writeRoot(row, x, y, z, visual.motion.heading);
 
     for (const [index, color] of visual.colors.entries()) {

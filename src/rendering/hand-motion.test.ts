@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { HeldView } from "../simulation/hand/grab-target.ts";
-import { BOUNCE_HEIGHT, FALL_SHARE, HandMotion, LIFT_SECONDS, landing, liftPop } from "./hand-motion.ts";
-import { HELD_LIFT } from "./view-input.ts";
+import { BOUNCE_HEIGHT, FALL_SHARE, HandMotion, HELD_LIFT, LIFT_SECONDS, landing, liftPop } from "./hand-motion.ts";
 
 const FRAME = 1 / 60;
 const DEER: HeldView = { id: 4, isPlaceable: true, kind: "animal", x: 0, z: 0 };
@@ -84,6 +83,23 @@ describe("hand motion", () => {
     run(motion, null, 2);
 
     expect(motion.subject).toBeNull();
+  });
+
+  it("carries on from mid-flight when the same thing is grabbed again", () => {
+    const motion = new HandMotion();
+
+    run(motion, DEER, LIFT_SECONDS);
+    run(motion, { ...DEER, isPlaceable: false, x: 60 }, 1);
+    motion.update(null, FRAME);
+    poseOf(motion);
+    run(motion, null, 0.1);
+
+    const midway = poseOf(motion);
+
+    motion.update({ ...DEER, x: 200 }, FRAME);
+
+    expect(poseOf(motion).x).toBeCloseTo(midway.x);
+    expect(poseOf(motion).x).toBeLessThan(100);
   });
 
   it("starts afresh when another thing is grabbed", () => {

@@ -15,6 +15,10 @@ export interface HeldView extends GrabTarget {
   readonly z: number;
 }
 
+export function isTarget(target: GrabTarget | null, kind: GrabbableKind, id: number): boolean {
+  return target !== null && target.kind === kind && target.id === id;
+}
+
 export function isGrabbablePlant(species: number): boolean {
   return isTreeSpecies(species) || isShrubSpecies(species);
 }

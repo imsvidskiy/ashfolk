@@ -4,6 +4,7 @@ import type { WorldMirror } from "../../game/world-mirror.ts";
 import { canonicalHeight, farVariantOf, footprintRadius, plantVariantCount } from "../../models/plants/plant-models.ts";
 import { isDistantLevel, type PlantDetailLevel } from "../../models/plants/tree-mesher.ts";
 import { grownIndexArray } from "../../shared/growth.ts";
+import { clamp } from "../../shared/math.ts";
 import type { CellRegion } from "../../world/change-tracking.ts";
 import { NO_PLANT, PlantState, type VegetationChannels } from "../../world/vegetation-store.ts";
 
@@ -145,6 +146,22 @@ export class VegetationChunks {
     }
   }
 
+  plantsNear(spots: readonly { readonly x: number; readonly z: number }[], radius: number): number[] {
+    const chunks = new Set<number>();
+
+    for (const { x, z } of spots) {
+      this.#collectChunks(x, z, radius, chunks);
+    }
+
+    const plants: number[] = this.#heldPlant === NO_PLANT ? [] : [this.#heldPlant];
+
+    for (const chunk of chunks) {
+      plants.push(...this.chunks[chunk].plants);
+    }
+
+    return plants;
+  }
+
   heightsChanged(region: CellRegion): void {
     const firstChunkColumn = Math.floor(region.firstColumn / CHUNK_CELLS);
     const lastChunkColumn = Math.floor(region.lastColumn / CHUNK_CELLS);
@@ -169,6 +186,22 @@ export class VegetationChunks {
     }
 
     return repacked;
+  }
+
+  #collectChunks(x: number, z: number, radius: number, chunks: Set<number>): void {
+    const { grid } = this.#mirror;
+
+    const last = this.chunksPerSide - 1;
+    const firstColumn = clamp(Math.floor(grid.columnAt(x - radius) / CHUNK_CELLS), 0, last);
+    const lastColumn = clamp(Math.floor(grid.columnAt(x + radius) / CHUNK_CELLS), 0, last);
+    const firstRow = clamp(Math.floor(grid.rowAt(z - radius) / CHUNK_CELLS), 0, last);
+    const lastRow = clamp(Math.floor(grid.rowAt(z + radius) / CHUNK_CELLS), 0, last);
+
+    for (let row = firstRow; row <= lastRow; row += 1) {
+      for (let column = firstColumn; column <= lastColumn; column += 1) {
+        chunks.add(row * this.chunksPerSide + column);
+      }
+    }
   }
 
   #place(plant: number): void {

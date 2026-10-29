@@ -117,8 +117,14 @@ function runFrames(rig: Rig): void {
   }
 }
 
-function lastMovedPoint(tool: ToolSpy): Vector3 | undefined {
-  return tool.move.mock.lastCall?.[0];
+function lastMovedPoint(tool: ToolSpy): Vector3 {
+  const call = tool.move.mock.lastCall;
+
+  if (call === undefined) {
+    throw new Error("The tool should have moved");
+  }
+
+  return call[0];
 }
 
 function wait(milliseconds: number): Promise<void> {
@@ -292,7 +298,7 @@ describe("pointer controls", () => {
   it("keeps carrying through a pinch and zooms the camera with it", async () => {
     const rig = createRig();
 
-    const before = rig.camera.state.distance;
+    const before = rig.camera.state;
 
     touch(rig, "pointerdown", 1, 195, 420);
     await wait(HOLD_MILLISECONDS);
@@ -310,7 +316,8 @@ describe("pointer controls", () => {
     expect(rig.tool.begin).toHaveBeenCalledTimes(1);
     expect(rig.tool.cancel).not.toHaveBeenCalled();
     expect(rig.tool.end).toHaveBeenCalledTimes(1);
-    expect(rig.camera.state.distance).toBeLessThan(before);
+    expect(rig.camera.state.distance).toBeLessThan(before.distance);
+    expect(rig.camera.state.yaw).toBeCloseTo(before.yaw);
   });
 
   it("cancels a tool that cannot hold through a pinch", async () => {
@@ -339,6 +346,41 @@ describe("pointer controls", () => {
     expect(rig.tool.tap).not.toHaveBeenCalled();
   });
 
+  it("returns what it carries when the browser cancels the holding finger during a pinch", async () => {
+    const rig = createRig();
+
+    touch(rig, "pointerdown", 1, 195, 420);
+    await wait(HOLD_MILLISECONDS);
+    touch(rig, "pointerdown", 2, 260, 520);
+    touch(rig, "pointercancel", 1, 195, 420);
+    touch(rig, "pointerup", 2, 260, 520);
+
+    expect(rig.tool.cancel).toHaveBeenCalledTimes(1);
+    expect(rig.tool.end).not.toHaveBeenCalled();
+  });
+
+  it("keeps the holding finger in charge when a third finger comes and goes during a pinch", async () => {
+    const rig = createRig();
+
+    touch(rig, "pointerdown", 1, 195, 420);
+    await wait(HOLD_MILLISECONDS);
+    touch(rig, "pointerdown", 2, 260, 520);
+    touch(rig, "pointerdown", 3, 120, 600);
+    touch(rig, "pointerup", 3, 120, 600);
+
+    const moves = rig.tool.move.mock.calls.length;
+
+    touch(rig, "pointermove", 2, 300, 560);
+    touch(rig, "pointerup", 2, 300, 560);
+
+    expect(rig.tool.move).toHaveBeenCalledTimes(moves);
+    expect(rig.tool.end).not.toHaveBeenCalled();
+
+    touch(rig, "pointerup", 1, 195, 420);
+
+    expect(rig.tool.end).toHaveBeenCalledTimes(1);
+  });
+
   it("carries to the ground under the still pointer as the camera zooms", () => {
     const rig = createRig();
 
@@ -354,9 +396,7 @@ describe("pointer controls", () => {
 
     mouse(rig, "pointerup", 110, 300);
 
-    expect(beforeZoom).toBeDefined();
-    expect(afterZoom).toBeDefined();
-    expect(afterZoom?.distanceTo(beforeZoom ?? afterZoom)).toBeGreaterThan(1);
+    expect(afterZoom.distanceTo(beforeZoom)).toBeGreaterThan(1);
     expect(rig.tool.cancel).not.toHaveBeenCalled();
     expect(rig.tool.end).toHaveBeenCalledTimes(1);
   });
@@ -400,7 +440,7 @@ describe("pointer controls", () => {
     wheel(rig, 400);
     runFrames(rig);
 
-    expect(rig.tool.hover.mock.calls.length).toBeGreaterThan(1);
+    expect(rig.tool.hover.mock.calls.length).toBeGreaterThan(2);
 
     mouse(rig, "pointerleave", 120, 200);
 
