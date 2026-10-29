@@ -19,6 +19,8 @@ export interface PlantVolume {
   readonly trunkRadius: number;
 }
 
+const measured = new Map<number, PlantVolume>();
+
 export interface StandingPlant {
   readonly baseY: number;
   readonly height: number;
@@ -26,8 +28,6 @@ export interface StandingPlant {
   readonly x: number;
   readonly z: number;
 }
-
-const measured = new Map<number, PlantVolume>();
 
 function bandWidths(species: PlantSpeciesIndex): { readonly top: number; readonly widths: number[] } {
   const height = canonicalHeight(species);

@@ -85,13 +85,7 @@ function twoPlants(species: number, first: GroundPoint, second: GroundPoint): Ve
 }
 
 function lowCamera(): PerspectiveCamera {
-  const camera = new PerspectiveCamera(45, VIEWPORT.width / VIEWPORT.height, 1, 40_000);
-
-  camera.position.set(0, 15, 60);
-  camera.lookAt(0, 6, 0);
-  camera.updateMatrixWorld();
-
-  return camera;
+  return cameraAt(0, 15, 60, { x: 0, y: 6, z: 0 });
 }
 
 function screenOf(camera: PerspectiveCamera, x: number, y: number, z: number): ScreenPoint {
@@ -134,13 +128,7 @@ function plantsNearSpots(vegetation: VegetationBuffers) {
 }
 
 function horizonCamera(): PerspectiveCamera {
-  const camera = new PerspectiveCamera(45, VIEWPORT.width / VIEWPORT.height, 1, 40_000);
-
-  camera.position.set(0, 20, 3000);
-  camera.lookAt(0, 20 - Math.tan(MINIMUM_PITCH) * 100, 2900);
-  camera.updateMatrixWorld();
-
-  return camera;
+  return cameraAt(0, 20, 3000, { x: 0, y: 20 - Math.tan(MINIMUM_PITCH) * 100, z: 2900 });
 }
 
 function crestHeight(x: number, z: number): number {
@@ -195,13 +183,7 @@ function grabAt(vegetation: VegetationBuffers, ...people: readonly (readonly [nu
 }
 
 function farCamera(): PerspectiveCamera {
-  const camera = new PerspectiveCamera(45, VIEWPORT.width / VIEWPORT.height, 1, 40_000);
-
-  camera.position.set(0, 4000, 3000);
-  camera.lookAt(0, 0, 0);
-  camera.updateMatrixWorld();
-
-  return camera;
+  return cameraAt(0, 4000, 3000, { x: 0, y: 0, z: 0 });
 }
 
 function flatGround(): number {

@@ -72,6 +72,7 @@ function searchAlong(ray: Ray, end: Vector3, heightAt: HeightField): RaySearch {
   const length = origin.distanceTo(end);
   const across = Math.hypot(end.x - origin.x, end.z - origin.z);
   const count = Math.ceil(across / SEARCH_STEP) + 1;
+  const reachPerMeter = length / Math.max(across, 1);
   const point = new Vector3();
 
   const spots: GroundPoint[] = [];
@@ -85,7 +86,7 @@ function searchAlong(ray: Ray, end: Vector3, heightAt: HeightField): RaySearch {
 
     const clearance = point.y - heightAt(point.x, point.z);
 
-    if (lowestClearance(ray, reach, length / Math.max(across, 1), heightAt) <= TALLEST_PLANT + WIDEST_CROWN) {
+    if (lowestClearance(ray, reach, reachPerMeter, heightAt) <= TALLEST_PLANT + WIDEST_CROWN) {
       spots.push({ x: point.x, z: point.z });
       farthest = reach;
     }
@@ -241,7 +242,7 @@ export class EntityPicker {
     const { vegetation } = scene;
 
     const ray = aimRay(this.#raycaster, this.#camera, pointer.screen, pointer.viewport);
-    const end = pointer.ground ?? ray.at(this.#camera.far, new Vector3());
+    const end = pointer.ground === null ? ray.at(this.#camera.far, new Vector3()) : pointer.ground;
     const { origin } = ray;
     const { farthest, spots } = searchAlong(ray, end, this.#heightAt);
     const slackPerMeter =

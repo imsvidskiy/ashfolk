@@ -1,12 +1,22 @@
 import { Ray, Vector3 } from "three/webgpu";
 import { describe, expect, it } from "vitest";
 import { PlantSpecies } from "../../content/plants.ts";
-import { plantHitDistance, plantVolume } from "./plant-volumes.ts";
+import { plantHitDistance, plantVolume, type StandingPlant } from "./plant-volumes.ts";
 
 const OAK = { baseY: 0, height: 12, species: PlantSpecies.Oak, x: 0, z: 0 };
 
 function sideways(y: number): Ray {
   return new Ray(new Vector3(-50, y, 0), new Vector3(1, 0, 0));
+}
+
+function hitSideways(plant: StandingPlant, y: number): number {
+  const distance = plantHitDistance(sideways(y), plant, 0);
+
+  if (distance === null) {
+    throw new Error("The ray should meet the plant");
+  }
+
+  return distance;
 }
 
 describe("plant volumes", () => {
@@ -22,24 +32,18 @@ describe("plant volumes", () => {
   });
 
   it("meets the crown first, then the trunk, and misses above the tree", () => {
-    const crown = plantHitDistance(sideways(OAK.height * 0.6), OAK, 0);
-    const trunk = plantHitDistance(sideways(0.5), OAK, 0);
+    const crown = hitSideways(OAK, OAK.height * 0.6);
+    const trunk = hitSideways(OAK, 0.5);
 
-    expect(crown).not.toBeNull();
-    expect(crown ?? 0).toBeLessThan(trunk ?? 0);
-    expect(trunk ?? 0).toBeGreaterThan(49);
+    expect(crown).toBeLessThan(trunk);
+    expect(trunk).toBeGreaterThan(49);
     expect(plantHitDistance(sideways(OAK.height * 1.5), OAK, 0)).toBeNull();
   });
 
   it("narrows a conifer toward its tip", () => {
     const spruce = { ...OAK, height: 20, species: PlantSpecies.Spruce };
 
-    const low = plantHitDistance(sideways(4), spruce, 0);
-    const high = plantHitDistance(sideways(17), spruce, 0);
-
-    expect(low).not.toBeNull();
-    expect(high).not.toBeNull();
-    expect(low ?? 0).toBeLessThan(high ?? 0);
+    expect(hitSideways(spruce, 4)).toBeLessThan(hitSideways(spruce, 17));
     expect(plantHitDistance(sideways(spruce.height * 1.25), spruce, 0)).toBeNull();
   });
 });
