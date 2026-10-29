@@ -3,7 +3,7 @@ import type { EngineHandle } from "../../game/engine-handle.ts";
 import type { LabelPlacement } from "../../game/label-projector.ts";
 
 const LABEL_SELECTOR = "[data-label]";
-const LABEL_ATTRIBUTES = ["data-label", "data-lift", "data-priority", "data-x", "data-z"];
+const LABEL_ATTRIBUTES = ["data-label", "data-lift", "data-priority", "data-rank", "data-x", "data-z"];
 const TOP_CLEARANCE = 76;
 const FAR_DISTANCE = 2600;
 const CROWDED_WIDTH = 150;
@@ -13,10 +13,19 @@ interface PlacedLabel {
   readonly isPriority: boolean;
   readonly label: HTMLElement;
   readonly placement: LabelPlacement;
+  readonly rank: number;
 }
 
 function isCrowding(first: LabelPlacement, second: LabelPlacement): boolean {
   return Math.abs(first.left - second.left) < CROWDED_WIDTH && Math.abs(first.top - second.top) < CROWDED_HEIGHT;
+}
+
+function byRank(first: PlacedLabel, second: PlacedLabel): number {
+  if (first.isPriority !== second.isPriority) {
+    return first.isPriority ? -1 : 1;
+  }
+
+  return first.rank - second.rank;
 }
 
 function showLabel(label: HTMLElement, placement: LabelPlacement): void {
@@ -32,7 +41,7 @@ function placeVisibleLabels(engine: EngineHandle, layer: HTMLElement): PlacedLab
   const placed: PlacedLabel[] = [];
 
   for (const label of layer.querySelectorAll<HTMLElement>(LABEL_SELECTOR)) {
-    const { lift, x, z } = label.dataset;
+    const { lift, rank = "0", x, z } = label.dataset;
 
     const placement = engine.placeLabel(Number(x), Number(z), Number(lift));
 
@@ -41,7 +50,12 @@ function placeVisibleLabels(engine: EngineHandle, layer: HTMLElement): PlacedLab
       continue;
     }
 
-    placed.push({ isPriority: label.hasAttribute("data-priority"), label, placement });
+    placed.push({
+      isPriority: label.hasAttribute("data-priority"),
+      label,
+      placement,
+      rank: Number(rank),
+    });
   }
 
   return placed;
@@ -51,14 +65,12 @@ function placeLabels(engine: EngineHandle, layer: HTMLElement): void {
   layer.toggleAttribute("data-far", engine.camera.state.distance > FAR_DISTANCE);
 
   const placed = placeVisibleLabels(engine, layer);
-  const priority = placed.filter((entry) => {
-    return entry.isPriority;
-  });
+  const shown: PlacedLabel[] = [];
 
-  for (const entry of placed) {
+  for (const entry of placed.toSorted(byRank)) {
     const isCrowded =
       !entry.isPriority &&
-      priority.some((other) => {
+      shown.some((other) => {
         return isCrowding(other.placement, entry.placement);
       });
 
@@ -67,6 +79,7 @@ function placeLabels(engine: EngineHandle, layer: HTMLElement): void {
       continue;
     }
 
+    shown.push(entry);
     showLabel(entry.label, entry.placement);
   }
 }
