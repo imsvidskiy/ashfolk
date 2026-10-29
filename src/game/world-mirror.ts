@@ -238,6 +238,7 @@ export class WorldMirror {
       lakes: this.water.lakes,
       monuments: this.monuments,
       seed: this.seed,
+      springs: this.water.springs,
     });
   }
 
