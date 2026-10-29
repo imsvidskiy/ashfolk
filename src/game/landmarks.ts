@@ -1,19 +1,22 @@
-import { LAKE_NAMES, PEAK_NAMES } from "../content/landmarks.ts";
+import { LAKE_NAMES, PEAK_NAMES, POND_NAMES, WATER_NAME_QUALIFIERS } from "../content/landmarks.ts";
 import { MONUMENTS } from "../content/monuments.ts";
-import { createRandom } from "../shared/random.ts";
-import { countForArea } from "../world/island-size.ts";
+import { FULL_TURN } from "../shared/math.ts";
+import { createRandom, shuffle } from "../shared/random.ts";
 import type { Monument } from "../world/monuments.ts";
-import type { Lake } from "../world/water.ts";
+import { type Lake, pondOutlineRadius, type Spring } from "../world/water.ts";
 import type { WorldGrid } from "../world/world-grid.ts";
 
+export const SMALLEST_NAMED_POND_ACROSS = 70;
+
 const LANDMARK_STREAM = 31;
-const NORMAL_NAMED_LAKES = 3;
-const SMALLEST_NAMED_LAKE = 60;
+const LAKE_NAME_STREAM = 1;
+const POND_NAME_STREAM = 2;
+const POND_OUTLINE_SAMPLES = 64;
 const PEAK_LIFT = 30;
 const LAKE_LIFT = 4;
 const MONUMENT_LIFT = 9;
 
-type LandmarkKind = "lake" | "monument" | "peak";
+export type LandmarkKind = "lake" | "monument" | "peak" | "pond";
 
 export interface Landmark {
   readonly detail: string | null;
@@ -31,6 +34,7 @@ export interface LandmarkSource {
   readonly lakes: readonly Lake[];
   readonly monuments: readonly Monument[];
   readonly seed: number;
+  readonly springs: readonly Spring[];
 }
 
 function highestCell(heights: Float32Array): number {
@@ -59,8 +63,42 @@ function peakLandmark(source: LandmarkSource, name: string): Landmark {
   };
 }
 
+export function pondAcross(spring: Spring): number {
+  let area = 0;
+
+  for (let sample = 0; sample < POND_OUTLINE_SAMPLES; sample += 1) {
+    const radius = pondOutlineRadius(spring, (sample / POND_OUTLINE_SAMPLES) * FULL_TURN);
+
+    area += (radius * radius * FULL_TURN) / POND_OUTLINE_SAMPLES / 2;
+  }
+
+  return 2 * Math.sqrt(area / Math.PI);
+}
+
+export function waterNameAt(names: readonly string[], index: number): string {
+  const name = names[index % names.length];
+  const round = Math.floor(index / names.length);
+
+  if (round === 0) {
+    return name;
+  }
+
+  const qualifier = WATER_NAME_QUALIFIERS[(round - 1) % WATER_NAME_QUALIFIERS.length];
+  const cycle = Math.floor((round - 1) / WATER_NAME_QUALIFIERS.length);
+
+  return cycle === 0 ? `${qualifier} ${name}` : `${qualifier} ${name} ${cycle + 1}`;
+}
+
+function isNamedPond(spring: Spring): boolean {
+  return spring.kind === "pond" && pondAcross(spring) >= SMALLEST_NAMED_POND_ACROSS;
+}
+
 function lakeLandmark(lake: Lake, name: string): Landmark {
   return { detail: null, id: `lake-${lake.id}`, kind: "lake", lift: LAKE_LIFT, name, x: lake.centerX, z: lake.centerZ };
+}
+
+function pondLandmark(spring: Spring, name: string): Landmark {
+  return { detail: null, id: `pond-${spring.river}`, kind: "pond", lift: LAKE_LIFT, name, x: spring.x, z: spring.z };
 }
 
 function monumentLandmark(monument: Monument): Landmark {
@@ -77,21 +115,22 @@ function monumentLandmark(monument: Monument): Landmark {
 
 export function findLandmarks(source: LandmarkSource): Landmark[] {
   const random = createRandom(source.seed).derive(LANDMARK_STREAM);
-  const firstLakeName = random.integer(0, LAKE_NAMES.length);
-  const largestLakes = source.lakes
-    .filter((lake) => {
-      return lake.cellCount >= SMALLEST_NAMED_LAKE;
-    })
+  const lakeNames = shuffle(random.derive(LAKE_NAME_STREAM), [...LAKE_NAMES]);
+  const pondNames = shuffle(random.derive(POND_NAME_STREAM), [...POND_NAMES]);
+
+  const lakes = source.lakes
     .toSorted((first, second) => {
-      return second.cellCount - first.cellCount;
+      return first.id - second.id;
     })
-    .slice(0, countForArea(source.grid, NORMAL_NAMED_LAKES));
-  const lakes = largestLakes.map((lake, index) => {
-    return lakeLandmark(lake, LAKE_NAMES[(firstLakeName + index) % LAKE_NAMES.length]);
+    .map((lake, index) => {
+      return lakeLandmark(lake, waterNameAt(lakeNames, index));
+    });
+  const ponds = source.springs.filter(isNamedPond).map((spring, index) => {
+    return pondLandmark(spring, waterNameAt(pondNames, index));
   });
   const monuments = source.monuments.map((monument) => {
     return monumentLandmark(monument);
   });
 
-  return [peakLandmark(source, random.pick(PEAK_NAMES)), ...lakes, ...monuments];
+  return [peakLandmark(source, random.pick(PEAK_NAMES)), ...lakes, ...ponds, ...monuments];
 }
