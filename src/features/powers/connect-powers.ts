@@ -60,7 +60,6 @@ export function connectPowers(engine: Pick<EngineHandle, "canvas" | "selectHand"
   apply(usePowerStore.getState());
 
   const unsubscribe = usePowerStore.subscribe(apply);
-
   const stopRightClick = clearOnRightClick(engine.canvas);
 
   window.addEventListener("keydown", clearOnEscape);

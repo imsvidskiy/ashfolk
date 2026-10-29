@@ -145,12 +145,6 @@ button:not(:disabled),
   }
 }
 
-@utility scrollbar-none {
-  @supports (scrollbar-width: none) {
-    scrollbar-width: none;
-  }
-}
-
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
