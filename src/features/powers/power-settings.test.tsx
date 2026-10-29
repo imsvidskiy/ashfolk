@@ -96,6 +96,24 @@ describe("power settings", () => {
     await expect.element(screen.getByRole("combobox", { name: "Species" })).toHaveTextContent("Oak");
   });
 
+  it("shows a painted icon beside every species", async () => {
+    const screen = await renderSettingsOf("forest");
+
+    const species = screen.getByRole("combobox", { name: "Species" });
+
+    expect(species.element().querySelectorAll("img")).toHaveLength(1);
+
+    await species.click();
+
+    const options = screen.getByRole("option").elements();
+
+    expect(options).toHaveLength(12);
+
+    for (const option of options) {
+      expect(option.querySelectorAll("img")).toHaveLength(1);
+    }
+  });
+
   it("restores the defaults", async () => {
     usePowerStore.getState().setParameter("fire", "intensity", 90);
 
