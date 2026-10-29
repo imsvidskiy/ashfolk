@@ -339,7 +339,7 @@ export function cactusForm(variant: number): CactusForm {
 }
 
 export function meshCactus(seed: number, level: PlantDetailLevel, form: CactusForm): MeshData {
-  const builder = new MeshBuilder({ slot: MaterialSlot.Cactus, sway: 0 });
+  const builder = new MeshBuilder({ slot: MaterialSlot.Cactus });
 
   FORM_BUILDERS[form](builder, createRandom(seed), CACTUS_DETAILS[level]);
 
