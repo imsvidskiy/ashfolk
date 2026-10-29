@@ -2,7 +2,6 @@ import type { Frustum, PerspectiveCamera, Sphere } from "three/webgpu";
 import type { WorldMirror } from "../game/world-mirror.ts";
 
 export const HIDDEN_LEVEL = -1;
-export const HELD_LIFT = 4;
 
 export interface ViewInput {
   readonly camera: PerspectiveCamera;

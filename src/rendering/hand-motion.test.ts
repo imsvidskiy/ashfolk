@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { HeldView } from "../simulation/hand/grab-target.ts";
-import { BOUNCE_HEIGHT, FALL_SHARE, HandMotion, LIFT_SECONDS, landing, liftPop } from "./hand-motion.ts";
-import { HELD_LIFT } from "./view-input.ts";
+import { BOUNCE_HEIGHT, FALL_SHARE, HandMotion, HELD_LIFT, LIFT_SECONDS, landing, liftPop } from "./hand-motion.ts";
 
 const FRAME = 1 / 60;
 const DEER: HeldView = { id: 4, isPlaceable: true, kind: "animal", x: 0, z: 0 };

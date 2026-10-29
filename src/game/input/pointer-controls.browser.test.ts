@@ -117,8 +117,14 @@ function runFrames(rig: Rig): void {
   }
 }
 
-function lastMovedPoint(tool: ToolSpy): Vector3 | undefined {
-  return tool.move.mock.lastCall?.[0];
+function lastMovedPoint(tool: ToolSpy): Vector3 {
+  const call = tool.move.mock.lastCall;
+
+  if (call === undefined) {
+    throw new Error("The tool should have moved");
+  }
+
+  return call[0];
 }
 
 function wait(milliseconds: number): Promise<void> {
@@ -390,9 +396,7 @@ describe("pointer controls", () => {
 
     mouse(rig, "pointerup", 110, 300);
 
-    expect(beforeZoom).toBeDefined();
-    expect(afterZoom).toBeDefined();
-    expect(afterZoom?.distanceTo(beforeZoom ?? afterZoom)).toBeGreaterThan(1);
+    expect(afterZoom.distanceTo(beforeZoom)).toBeGreaterThan(1);
     expect(rig.tool.cancel).not.toHaveBeenCalled();
     expect(rig.tool.end).toHaveBeenCalledTimes(1);
   });

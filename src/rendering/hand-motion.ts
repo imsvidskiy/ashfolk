@@ -1,7 +1,6 @@
 import { clamp, lerp, smoothstep } from "../shared/math.ts";
 import { type GrabbableKind, type GrabTarget, type HeldView, isTarget } from "../simulation/hand/grab-target.ts";
-import { HELD_LIFT } from "./view-input.ts";
-
+export const HELD_LIFT = 4;
 export const LIFT_SECONDS = 0.38;
 export const FALL_SHARE = 0.62;
 export const BOUNCE_HEIGHT = 0.45;
@@ -15,6 +14,7 @@ const TILT_DAMPING = 8;
 const DROP_SECONDS = 0.42;
 const RETURN_METERS_PER_SECOND = 120;
 const LONGEST_RETURN_SECONDS = 0.9;
+const LONGEST_SETTLE_SECONDS = DROP_SECONDS + LONGEST_RETURN_SECONDS;
 const ARC_PER_METER = 0.12;
 const HIGHEST_ARC = 8;
 const UNKNOWN_DURATION = 0;
@@ -164,10 +164,9 @@ export class HandMotion {
     this.#seconds += seconds;
     this.#swing(0, 0, seconds);
 
-    const longest = DROP_SECONDS + LONGEST_RETURN_SECONDS;
     const isKnownAndDone = this.#duration !== UNKNOWN_DURATION && this.#seconds >= this.#duration;
 
-    if (isKnownAndDone || this.#seconds >= longest) {
+    if (isKnownAndDone || this.#seconds >= LONGEST_SETTLE_SECONDS) {
       this.#subject = null;
     }
   }

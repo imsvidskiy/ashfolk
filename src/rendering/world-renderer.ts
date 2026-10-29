@@ -98,7 +98,6 @@ export class WorldRenderer {
   readonly #grass: GrassField;
   readonly #hand = new HandMotion();
   readonly #heldRing: GroundRing;
-  readonly #ringCenter = new Vector3();
   readonly #islandBase: IslandBase;
   readonly #lilies: LilyPads;
   readonly #markers: AgentMarkers;
@@ -109,6 +108,7 @@ export class WorldRenderer {
   readonly #plinth: number;
   readonly #quality: RenderQuality;
   readonly #renderer: WebGPURenderer;
+  readonly #ringCenter = new Vector3();
   readonly #selectionRing: GroundRing;
   readonly #splashes: RainSplashes;
   readonly #springs = new SpringView();
@@ -473,8 +473,7 @@ export class WorldRenderer {
   }
 
   #markHeld(camera: PerspectiveCamera): void {
-    const mirror = this.#mirror;
-    const { held } = mirror.frame;
+    const { held } = this.#mirror.frame;
 
     if (held === null) {
       this.#markHover(camera);

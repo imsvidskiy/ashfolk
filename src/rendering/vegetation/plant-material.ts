@@ -207,12 +207,12 @@ export function createPlantMaterial({
   const fireLight = varying(fireLightAt(glow, grid, placement.xz), "plantFireLight");
   const burning = burnGlow({ embers, flames, phase: placement.x.mul(0.37).fract().mul(6), smolder });
 
-  material.colorNode = mix(vertexColor, SNOW_COLOR, snowOnTop);
   const highlighted = float(1)
     .sub(step(HIGHLIGHT_MATCH, distance(placement.xz, highlight.xy)))
     .mul(highlight.z)
     .mul(PLANT_HIGHLIGHT_SHARE);
 
+  material.colorNode = mix(vertexColor, SNOW_COLOR, snowOnTop);
   material.emissiveNode = vertexColor
     .mul(fireLight)
     .mul(CROWN_FIRE_LIGHT)

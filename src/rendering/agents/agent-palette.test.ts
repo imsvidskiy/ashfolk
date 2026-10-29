@@ -24,10 +24,9 @@ function uprightPalette(): AgentPalette {
 
 function worldUp(palette: AgentPalette, heading: number): { x: number; y: number; z: number } {
   const offset = palette.rowOffset(ROW);
-  const up = [0, 1, 2].map((axis) => {
-    return palette.data[offset + axis * CHANNELS + 1] ?? 0;
-  });
-  const [x = 0, y = 0, z = 0] = up;
+  const x = palette.data[offset + 1];
+  const y = palette.data[offset + CHANNELS + 1];
+  const z = palette.data[offset + 2 * CHANNELS + 1];
   const cosine = Math.cos(heading);
   const sine = Math.sin(heading);
 
