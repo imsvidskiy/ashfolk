@@ -3,7 +3,7 @@ import { ignore } from "../shared/ignore.ts";
 import { FILMING_OFF, FILMING_ON, Filming, readFilming } from "./filming.ts";
 
 describe("filming", () => {
-  it("starts with every optimization on", () => {
+  it("starts with every filming setting off", () => {
     expect(new Filming().settings).toEqual(FILMING_OFF);
   });
 
