@@ -4,7 +4,7 @@ import { cn } from "../../design/cn.ts";
 import { GameIcon } from "../../design/game-icon.tsx";
 import { FOCUS_RING, PAPER_SURFACE } from "../../design/styles.ts";
 import type { EngineHandle } from "../../game/engine-handle.ts";
-import type { Landmark } from "../../game/landmarks.ts";
+import type { Landmark, LandmarkKind } from "../../game/landmarks.ts";
 import type { TribeSummary } from "../../simulation/frame.ts";
 import type { RivalryView } from "../../simulation/society/rivalry/rivalry-system.ts";
 import { useShowTribe } from "../inspector/use-focus-camera.ts";
@@ -15,6 +15,7 @@ import { useWorldStore, type WorldSnapshot } from "../world/world-store.ts";
 import { useLabelLayout } from "./use-label-layout.ts";
 
 const TRIBE_LIFT = 18;
+const LANDMARK_RANKS: Readonly<Record<LandmarkKind, number>> = { lake: 1, monument: 2, peak: 0, pond: 3 };
 const LABEL_FRAME =
   "invisible absolute top-0 left-0 opacity-0 transition-[opacity,visibility] duration-200 will-change-transform data-shown:visible data-shown:opacity-100";
 
@@ -74,10 +75,15 @@ function LandmarkLabel({ landmark }: { readonly landmark: Landmark }) {
       className={cn(LABEL_FRAME, "flex flex-col items-center text-white text-shadow-black/55 text-shadow-md")}
       data-label=""
       data-lift={landmark.lift}
+      data-rank={LANDMARK_RANKS[landmark.kind]}
       data-x={landmark.x}
       data-z={landmark.z}
     >
-      <span className={cn("text-sm font-semibold tracking-wide", { italic: landmark.kind === "lake" })}>
+      <span
+        className={cn("text-sm font-semibold tracking-wide", {
+          italic: landmark.kind === "lake" || landmark.kind === "pond",
+        })}
+      >
         {landmark.name}
       </span>
 

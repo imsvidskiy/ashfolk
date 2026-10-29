@@ -8,6 +8,7 @@ import { WorldLabels } from "./world-labels.tsx";
 
 const PEAK: Landmark = { detail: "1460 m", id: "peak", kind: "peak", lift: 30, name: "Graycrown", x: 40, z: -20 };
 const LAKE: Landmark = { detail: null, id: "lake-3", kind: "lake", lift: 4, name: "Mirror Lake", x: -300, z: 90 };
+const POND: Landmark = { detail: null, id: "pond-5", kind: "pond", lift: 4, name: "Frog Pool", x: -280, z: 95 };
 const RING: Landmark = {
   detail: "Stone circle",
   id: "monument-2",
@@ -161,7 +162,9 @@ describe("world labels", () => {
   it("names the peak with its height and the lakes", async () => {
     const { placeLabel, renderFrame } = await startTestEngine({ landmarks: [PEAK, LAKE] });
 
-    placeLabel.mockReturnValue(ON_SCREEN);
+    placeLabel.mockImplementation((x) => {
+      return { left: ON_SCREEN.left + x, top: ON_SCREEN.top };
+    });
     showWorld({ tribes: [] });
 
     const screen = await render(<WorldLabels />);
@@ -206,6 +209,20 @@ describe("world labels", () => {
 
     await expect.element(screen.getByRole("button", { exact: false, name: "Fox Clan" })).toBeVisible();
     await expect.element(screen.getByText("Mirror Lake", { exact: true })).not.toBeVisible();
+  });
+
+  it("lets a pond name give way to a lake name it would cover", async () => {
+    const { placeLabel, renderFrame } = await startTestEngine({ landmarks: [POND, LAKE] });
+
+    placeLabel.mockReturnValue(ON_SCREEN);
+    showWorld({ tribes: [] });
+
+    const screen = await render(<WorldLabels />);
+
+    renderFrame();
+
+    await expect.element(screen.getByText("Mirror Lake", { exact: true })).toBeVisible();
+    await expect.element(screen.getByText("Frog Pool", { exact: true })).not.toBeVisible();
   });
 
   it("places the labels again only once the camera moves", async () => {

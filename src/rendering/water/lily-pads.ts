@@ -24,16 +24,14 @@ import {
   MeshStandardNodeMaterial,
   type Node,
 } from "three/webgpu";
-import { isPoolGround } from "../../content/grounds.ts";
 import type { WorldMirror } from "../../game/world-mirror.ts";
-import { FULL_TURN, hashToUnit, lerp, smoothstep as smoothstepNumber } from "../../shared/math.ts";
-import { isOnIsland } from "../../world/coast.ts";
-import { hasWater } from "../../world/water.ts";
+import { FULL_TURN, smoothstep as smoothstepNumber } from "../../shared/math.ts";
 import type { WorldGrid } from "../../world/world-grid.ts";
 import { markOutlined } from "../outlines.ts";
 import { POOL_BANK, poolReachNode } from "../terrain/bog-pools.ts";
 import { cellAtNode, coarseGroundOffsetNode, sampleHeightNode } from "../terrain/height-sampling.ts";
 import type { TerrainTextures } from "../terrain/terrain-textures.ts";
+import { placeLilies, SHALLOWEST_LILY_WATER } from "./lily-placement.ts";
 
 const LilyPart = {
   Heart: 2,
@@ -45,27 +43,7 @@ const PAD_SEGMENTS = 10;
 const NOTCH_ANGLE = 0.5;
 const PETALS = 6;
 const FLOATS_PER_LILY = 4;
-const SALT_POOL = 3.17;
-const SALT_SHORE = 5.31;
-const SALT_CLUSTER = 7.43;
-const SALT_PAD = 11.9;
-const CLUSTER_CELLS = 4;
-const POOL_CHANCE = 0.75;
-const SHORE_CHANCE = 0.55;
-const CLUSTER_CHANCE = 0.35;
-const SHALLOWEST_LILY_WATER = 0.15;
-const DEEPEST_LILY_WATER = 2.4;
-const COLDEST_LILY = 4;
-const LEAST_LILY_MOISTURE = 0.42;
-const POOL_PADS = 7;
-const SHORE_PADS = 9;
-const POOL_SPREAD = 0.16;
-const SHORE_SPREAD = 0.48;
-const SMALLEST_PAD = 0.35;
-const LARGEST_PAD = 0.7;
-const FLOWER_SHARE = 0.2;
 const FLOWER_SCALE = 2;
-const PINK_SHARE = 0.35;
 const FLOAT_LIFT = 0.03;
 const POOL_LIFT = 0.05;
 const POOL_SHRINK = 0.2;
@@ -76,11 +54,6 @@ const PAD_YELLOW = vec3(0.3, 0.32, 0.1);
 const WHITE_PETAL = vec3(0.92, 0.92, 0.86);
 const PINK_PETAL = vec3(0.92, 0.55, 0.68);
 const FLOWER_HEART = vec3(0.95, 0.75, 0.2);
-
-interface LilyPlacements {
-  readonly flowers: number[];
-  readonly pads: number[];
-}
 
 interface LilyShape {
   readonly parts: number[];
@@ -162,85 +135,6 @@ function createGeometry(shape: LilyShape, lilies: number[]): InstancedBufferGeom
   geometry.instanceCount = lilies.length / FLOATS_PER_LILY;
 
   return geometry;
-}
-
-function isLilyShore(mirror: WorldMirror, cell: number): boolean {
-  const { grid, terrain } = mirror;
-
-  const depth = terrain.waterSurface[cell] - terrain.height[cell];
-
-  if (terrain.riverStrength[cell] !== 0 || depth < SHALLOWEST_LILY_WATER || depth > DEEPEST_LILY_WATER) {
-    return false;
-  }
-
-  const column = grid.columnOf(cell);
-  const row = grid.rowOf(cell);
-
-  return hashToUnit(Math.floor(column / CLUSTER_CELLS), Math.floor(row / CLUSTER_CELLS), SALT_CLUSTER) < CLUSTER_CHANCE;
-}
-
-function canHoldLilies(mirror: WorldMirror, cell: number): boolean {
-  const { terrain } = mirror;
-
-  if (!isOnIsland(terrain.coastDistance, cell) || terrain.moisture[cell] < LEAST_LILY_MOISTURE) {
-    return false;
-  }
-
-  return terrain.baseTemperature[cell] > COLDEST_LILY;
-}
-
-function scatter(placements: LilyPlacements, grid: WorldGrid, cell: number, count: number, spread: number): void {
-  const column = grid.columnOf(cell);
-  const row = grid.rowOf(cell);
-
-  for (let pad = 0; pad < count; pad += 1) {
-    const salt = SALT_PAD + pad * 4;
-    const angle = hashToUnit(column, row, salt) * FULL_TURN;
-    const reach = Math.sqrt(hashToUnit(column, row, salt + 1)) * spread * grid.cellSize;
-    const size = lerp(SMALLEST_PAD, LARGEST_PAD, hashToUnit(column, row, salt + 2));
-    const look = hashToUnit(column, row, salt + 3);
-
-    const x = grid.cellCenterX(cell) + Math.cos(angle) * reach;
-    const z = grid.cellCenterZ(cell) + Math.sin(angle) * reach;
-    const turn = look * FULL_TURN * 7;
-
-    placements.pads.push(x, z, turn, size);
-
-    if (look < FLOWER_SHARE) {
-      placements.flowers.push(x, z, turn, look < FLOWER_SHARE * PINK_SHARE ? -size : size);
-    }
-  }
-}
-
-function placeLilies(mirror: WorldMirror): LilyPlacements {
-  const { grid, terrain } = mirror;
-
-  const placements: LilyPlacements = { flowers: [], pads: [] };
-
-  for (let cell = 0; cell < grid.cellCount; cell += 1) {
-    if (!canHoldLilies(mirror, cell)) {
-      continue;
-    }
-
-    const column = grid.columnOf(cell);
-    const row = grid.rowOf(cell);
-
-    if (isPoolGround(terrain.ground[cell])) {
-      if (hashToUnit(column, row, SALT_POOL) < POOL_CHANCE) {
-        scatter(placements, grid, cell, POOL_PADS, POOL_SPREAD);
-      }
-
-      continue;
-    }
-
-    const isLilyWater = hasWater(terrain.waterSurface[cell], terrain.height[cell]) && isLilyShore(mirror, cell);
-
-    if (isLilyWater && hashToUnit(column, row, SALT_SHORE) < SHORE_CHANCE) {
-      scatter(placements, grid, cell, SHORE_PADS, SHORE_SPREAD);
-    }
-  }
-
-  return placements;
 }
 
 function lilyPresenceFor(season: number): number {
