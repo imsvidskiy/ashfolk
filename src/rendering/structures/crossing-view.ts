@@ -67,7 +67,6 @@ import { createBarGeometry, createBarMaterial, createFoamMaterial, FOAM_FIELDS }
 const LEVEL_DISTANCES: readonly number[] = [150, 650, 3600];
 const SHADOW_LEVEL_COUNT = 2;
 const FINE_LEVEL_COUNT = 2;
-const DRY_LEVEL = -10_000;
 const PEBBLE_BATCH = STEPPING_STONE_VARIANTS + FALLEN_LOG_VARIANTS;
 const FOAM_BATCH = -1;
 const FOAM_WAKE = 3.2;
@@ -183,7 +182,7 @@ function logPiece(bridge: LogBridge): PlacedPiece {
       radius,
       radius,
       Math.atan2(rise, horizontal),
-      DRY_LEVEL,
+      NO_WATER,
       0.92 + 0.16 * bridge.seed,
       0,
       0,
@@ -390,7 +389,7 @@ export class CrossingView {
 
     const foam = stones
       .filter((stone) => {
-        return (stone.kind === "step" || stone.kind === "boulder") && stone.waterLevel !== NO_WATER;
+        return stone.kind === "step" || stone.kind === "boulder";
       })
       .filter((stone) => {
         return stone.top > stone.waterLevel - FOAM_ABOVE;
