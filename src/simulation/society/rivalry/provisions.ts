@@ -1,6 +1,8 @@
 import { FOOD_KINDS, RESOURCE_KINDS, RESOURCES } from "../../../content/resources.ts";
 import { emptyStock, type Stock, totalFood } from "../stock.ts";
 
+export const FOOD_RESERVE = 4;
+
 export function packFood(stock: Stock, amount: number): Stock {
   const pack = emptyStock();
 

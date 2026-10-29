@@ -23,7 +23,7 @@ const WORK_REACH = 2.2;
 const PLUNDER_SECONDS = 3;
 const KINDLING_SECONDS = 2.5;
 const PLUNDER_SHARE = 0.06;
-const FOOD_RESERVE = 8;
+const SPARED_FOOD = 8;
 const BROKEN_HEALTH = 0.25;
 const RALLY_SPREAD = 1.4;
 const TARGET_SPREAD = 2.2;
@@ -227,7 +227,7 @@ export class RaidJob implements Job {
   }
 
   #plunder(raid: Raid, victims: Tribe): void {
-    const taken = plunderSurplus(victims.stock, PLUNDER_SHARE, victims.memberCount * FOOD_RESERVE);
+    const taken = plunderSurplus(victims.stock, PLUNDER_SHARE, victims.memberCount * SPARED_FOOD);
 
     unpack(raid.loot, { ...taken });
     unpack(this.#loot, taken);
