@@ -55,6 +55,7 @@ interface CrownShape {
 
 interface PlantMaterialOptions {
   readonly crown: CrownShape;
+  readonly detailFade: UniformNode<"vec2", Vector2>;
   readonly glow: FireGlow;
   readonly grid: WorldGrid;
   readonly highlight: UniformNode<"vec3", Vector3>;
@@ -106,6 +107,7 @@ function tiltOver(vector: Node<"vec3">): Node<"vec3"> {
 
 export function createPlantMaterial({
   crown,
+  detailFade,
   glow,
   grid,
   highlight,
@@ -204,7 +206,7 @@ export function createPlantMaterial({
   const vertexColor = varying(charredColor(shaded, charring), "plantColor");
   const snowOnTop = snow.mul(smoothstep(0.25, 0.75, normalWorld.y));
   const fireLight = varying(fireLightAt(glow, grid, placement.xz), "plantFireLight");
-  const burning = burnGlow({ embers, flames, phase: placement.x.mul(0.37).fract().mul(6), smolder });
+  const burning = burnGlow({ detailFade, embers, flames, phase: placement.x.mul(0.37).fract().mul(6), smolder });
 
   const highlighted = float(1)
     .sub(step(HIGHLIGHT_MATCH, distance(placement.xz, highlight.xy)))

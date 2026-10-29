@@ -1,6 +1,7 @@
 import { readSavedWorld } from "../features/saves/save-database.ts";
 import { useSavesStore } from "../features/saves/saves-store.ts";
 import type { EngineHandle } from "../game/engine-handle.ts";
+import { readFilming } from "../game/filming.ts";
 import type { GameEngine, WorldSource } from "../game/game-engine.ts";
 import type { GameSession } from "../game/game-session.ts";
 import { DEFAULT_GENERATION_OPTIONS, type GenerationProgress } from "../generation/generation-options.ts";
@@ -149,6 +150,7 @@ export class EngineLauncher {
 
     if (import.meta.env.DEV) {
       Reflect.set(window, "dawnfolk", engine);
+      engine.filming.set(readFilming(window.location.search));
     }
 
     reportStop(engine.session, (status) => {

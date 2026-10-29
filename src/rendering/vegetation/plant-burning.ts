@@ -39,8 +39,6 @@ const PATCH_SCALE = 0.45;
 const TONGUE_SCALE = 0.42;
 const TONGUE_STRETCH = 0.24;
 const TONGUE_RISE = 2.6;
-const DETAIL_FADE_START = 500;
-const DETAIL_FADE_END = 1300;
 const GLOW_FLOOR = 0.004;
 
 interface BurnInput {
@@ -62,6 +60,7 @@ interface PlantBurn {
 }
 
 interface BurnGlowInput {
+  readonly detailFade: Node<"vec2">;
   readonly embers: Node<"float">;
   readonly flames: Node<"float">;
   readonly phase: Node<"float">;
@@ -109,14 +108,12 @@ export function charredColor(color: Node<"vec3">, charring: Node<"float">): Node
   return mix(browned, CHARCOAL, smoothstep(0.35, 0.95, charring));
 }
 
-export function burnGlow({ embers, flames, phase, smolder }: BurnGlowInput): Node<"vec3"> {
+export function burnGlow({ detailFade, embers, flames, phase, smolder }: BurnGlowInput): Node<"vec3"> {
   return Fn(() => {
     const glow = vec3(0).toVar();
 
     If(embers.add(flames).greaterThan(GLOW_FLOOR), () => {
-      const detail = float(1).sub(
-        smoothstep(DETAIL_FADE_START, DETAIL_FADE_END, positionWorld.distance(cameraPosition))
-      );
+      const detail = float(1).sub(smoothstep(detailFade.x, detailFade.y, positionWorld.distance(cameraPosition)));
 
       glow.assign(
         FAR_FLAME_COLOR.mul(flames.mul(0.45).add(embers.mul(0.25)).add(smolder.mul(0.1))).mul(float(1).sub(detail))

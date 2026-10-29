@@ -35,6 +35,7 @@ describe("settings dialog", () => {
     await expect.element(sections.getByRole("tab", { name: "Weather" })).toBeVisible();
     await expect.element(sections.getByRole("tab", { name: "Time" })).toBeVisible();
     await expect.element(sections.getByRole("tab", { name: "Island" })).toBeVisible();
+    await expect.element(sections.getByRole("tab", { name: "Dev" })).toBeVisible();
   });
 
   it("switches sections from its tabs and remembers the choice", async () => {

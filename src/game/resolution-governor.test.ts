@@ -60,4 +60,15 @@ describe("resolution governor", () => {
   it("follows a screen that has fewer pixels than the quality allows", () => {
     expect(new ResolutionGovernor(2).pixelRatio(1)).toBe(1);
   });
+
+  it("holds the sharpest resolution while filming however slow the frames are", () => {
+    const governor = new ResolutionGovernor(2);
+
+    playFrames(governor, 40, 120);
+    governor.hold(true);
+
+    expect(governor.pixelRatio(2)).toBe(2);
+    expect(playFrames(governor, 40, 600)).toBe(0);
+    expect(governor.pixelRatio(2)).toBe(2);
+  });
 });
