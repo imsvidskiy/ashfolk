@@ -11,6 +11,7 @@ const POND_STRETCH_SKEW = 1.6;
 const POND_AXIS_SWING = Math.PI;
 const POND_WAIST = { deepest: 0.34, narrowest: 0.5, shift: 0.8, widest: 0.9 } as const;
 const POND_LOBES = 2;
+const POND_SHAPE_FEATURE = POND_LOBES + 2;
 const POND_LOBE = { least: -0.1, most: 0.32, narrowest: 0.25, widest: 0.6 } as const;
 const POND_SPIT = { chance: 0.5, deepest: 0.42, least: 0.22, narrowest: 0.16, widest: 0.28 } as const;
 const POND_RIPPLES = [
@@ -24,7 +25,6 @@ const POND_CALM_OUTLET = { from: 0.3, to: 0.9 } as const;
 const POND_NARROWEST_SWELL = 0.4;
 const POND_EXTENT_SAMPLES = 256;
 const POND_EXTENT_SLACK = 1.02;
-const POND_SHAPE_SALT = 41.7;
 const POND_FEATURE_SALT = 59.3;
 const REMEMBERED_POND_SHAPES = 1024;
 const NARROWEST_RIVER = 3.5;
@@ -121,10 +121,6 @@ export function mirroredWater({ lakes, springs, waterfalls }: WaterFeatures): Mi
   return { lakes, springs, waterfalls };
 }
 
-function pondDraw(spring: Spring, index: number): number {
-  return hashToUnit(spring.seed, index, POND_SHAPE_SALT);
-}
-
 function featureDraw(spring: Spring, feature: number, index: number): number {
   return hashToUnit(spring.seed, feature * 7 + index, POND_FEATURE_SALT);
 }
@@ -206,14 +202,14 @@ function outlineRadius(outline: PondOutline, angle: number): number {
 
 function outlineOf(spring: Spring): PondOutline {
   const outlet = Math.atan2(spring.directionZ, spring.directionX);
-  const axis = outlet + (pondDraw(spring, 1) - 0.5) * POND_AXIS_SWING;
+  const axis = outlet + (featureDraw(spring, POND_SHAPE_FEATURE, 1) - 0.5) * POND_AXIS_SWING;
 
   return {
     axis,
     features: featuresOf(spring, axis),
     outlet,
     ripples: ripplesOf(spring),
-    stretch: 1 + POND_STRETCH * pondDraw(spring, 0) ** POND_STRETCH_SKEW,
+    stretch: 1 + POND_STRETCH * featureDraw(spring, POND_SHAPE_FEATURE, 0) ** POND_STRETCH_SKEW,
   };
 }
 
