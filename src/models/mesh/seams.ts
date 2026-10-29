@@ -327,8 +327,8 @@ function straddles(
   triangle: number,
   sides: Map<number, number>
 ): boolean {
-  let inside = false;
-  let outside = false;
+  let hasInside = false;
+  let hasOutside = false;
 
   for (let corner = 0; corner < 3; corner += 1) {
     const side = sideOf(geometry, owner, geometry.indices[triangle * 3 + corner], sides);
@@ -338,13 +338,13 @@ function straddles(
     }
 
     if (side < 0) {
-      inside = true;
+      hasInside = true;
     } else {
-      outside = true;
+      hasOutside = true;
     }
   }
 
-  return inside && outside;
+  return hasInside && hasOutside;
 }
 
 function collectBlends(
