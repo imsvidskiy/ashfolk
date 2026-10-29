@@ -31,7 +31,13 @@ interface LoadOptions extends SessionOptions {
   journal?: readonly ChronicleEntry[];
 }
 
+interface SavedOrigin {
+  hasLandChanged: boolean;
+  journal: readonly ChronicleEntry[];
+}
+
 export class GameSession {
+  readonly hasLandChanged: boolean;
   readonly mirror: WorldMirror;
   readonly #chronicle: ChronicleEntry[] = [];
   readonly #commandListeners = new Set<CommandListener>();
@@ -45,10 +51,15 @@ export class GameSession {
   #request: Promise<void> | null = null;
   #status: SessionStatus = { kind: "running" };
 
-  constructor(connection: SimulationConnection, mirror: WorldMirror, journal: readonly ChronicleEntry[] = []) {
+  constructor(
+    connection: SimulationConnection,
+    mirror: WorldMirror,
+    origin: SavedOrigin = { hasLandChanged: false, journal: [] }
+  ) {
     this.#connection = connection;
     this.mirror = mirror;
-    this.#chronicle.push(...journal);
+    this.hasLandChanged = origin.hasLandChanged;
+    this.#chronicle.push(...origin.journal);
     this.#remember(mirror.frame);
   }
 
@@ -71,9 +82,9 @@ export class GameSession {
   ): Promise<GameSession> {
     const { journal = [], onProgress = ignore } = options;
 
-    const initial = await connection.loadWorld(saved, onProgress);
+    const { hasLandChanged, world } = await connection.loadWorld(saved, onProgress);
 
-    return new GameSession(connection, new WorldMirror(initial, performance.now()), journal);
+    return new GameSession(connection, new WorldMirror(world, performance.now()), { hasLandChanged, journal });
   }
 
   get changes(): number {

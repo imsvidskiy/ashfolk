@@ -4,14 +4,14 @@ import { buffersWithin } from "../shared/buffers.ts";
 import { ignore } from "../shared/ignore.ts";
 import type { SimulationCommand } from "../simulation/commands.ts";
 import type { InitialWorld, SimulationFrame } from "../simulation/frame.ts";
-import type { SavedWorldState } from "../simulation/saved-world.ts";
+import type { LoadedWorld, SavedWorldState } from "../simulation/saved-world.ts";
 import type { SimulationWorkerApi } from "../workers/simulation-worker-api.ts";
 
 export interface SimulationConnection {
   advance: (realSeconds: number) => Promise<SimulationFrame>;
   createWorld: (request: WorldRequest, onProgress: (progress: GenerationProgress) => void) => Promise<InitialWorld>;
   dispose: () => void;
-  loadWorld: (saved: SavedWorldState, onProgress: (progress: GenerationProgress) => void) => Promise<InitialWorld>;
+  loadWorld: (saved: SavedWorldState, onProgress: (progress: GenerationProgress) => void) => Promise<LoadedWorld>;
   saveWorld: () => Promise<SavedWorldState | null>;
   send: (command: SimulationCommand) => void;
 }
@@ -57,7 +57,7 @@ export class WorkerSimulationConnection implements SimulationConnection {
     return Promise.race([this.#remote.createWorld(request, proxy(onProgress)), this.#failure]);
   }
 
-  loadWorld(saved: SavedWorldState, onProgress: (progress: GenerationProgress) => void): Promise<InitialWorld> {
+  loadWorld(saved: SavedWorldState, onProgress: (progress: GenerationProgress) => void): Promise<LoadedWorld> {
     this.#commands.splice(0);
 
     const sent = transfer(saved, buffersWithin(saved));

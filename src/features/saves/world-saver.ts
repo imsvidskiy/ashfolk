@@ -89,7 +89,9 @@ export class WorldSaver {
     const savedAt = Date.now();
 
     const record = {
+      generationFingerprint: state.generationFingerprint,
       id: this.#identity.id,
+      isLandChanged: false,
       name: this.#identity.name,
       savedAt,
       seed: state.request.seed,

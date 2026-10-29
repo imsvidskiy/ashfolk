@@ -9,7 +9,7 @@ import { Island } from "../../design/island.tsx";
 import { ScrollPanel } from "../../design/scroll-panel.tsx";
 import { useIsCompact } from "../../design/use-media-query.ts";
 import { ParameterControl } from "../parameters/parameter-control.tsx";
-import { POWER_ICONS } from "./power-icons.tsx";
+import { POWER_ICONS, POWER_OPTION_ICONS } from "./power-icons.tsx";
 import { parametersOf, usePowerStore } from "./power-store.ts";
 
 const USAGE_HINTS = {
@@ -97,6 +97,7 @@ function PowerSettingsContent({ powerId }: { readonly powerId: PowerId }) {
                   field={field}
                   key={field.key}
                   onChange={handleParameterChange}
+                  optionIcons={POWER_OPTION_ICONS[powerId]?.[field.key]}
                   value={values[field.key]}
                 />
               );

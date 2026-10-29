@@ -78,14 +78,14 @@ export class PowerTool implements ToolGestures {
     return this.#selection !== null;
   }
 
-  canBegin(): boolean {
-    return this.isActive();
+  canBegin(point: Vector3 | null): boolean {
+    return this.isActive() && point !== null;
   }
 
-  begin(point: Vector3): void {
+  begin(point: Vector3 | null): void {
     const selection = this.#selection;
 
-    if (selection === null) {
+    if (selection === null || point === null) {
       return;
     }
 

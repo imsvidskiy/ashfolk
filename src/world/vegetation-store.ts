@@ -357,6 +357,8 @@ export class VegetationStore implements VegetationChannels {
     const column = grid.columnAt(x);
     const row = grid.rowAt(z);
     const span = Math.ceil(reach / grid.cellSize);
+    const storedX = Math.fround(x);
+    const storedZ = Math.fround(z);
 
     for (let nearRow = row - span; nearRow <= row + span; nearRow += 1) {
       for (let nearColumn = column - span; nearColumn <= column + span; nearColumn += 1) {
@@ -369,7 +371,7 @@ export class VegetationStore implements VegetationChannels {
         for (let index = this.#firstInCell[cell]; index !== NO_PLANT; index = this.#nextInCell[index]) {
           const isTree = this.state[index] === PlantState.Alive && isTreeSpecies(this.species[index]);
 
-          if (isTree && Math.hypot(this.x[index] - Math.fround(x), this.z[index] - Math.fround(z)) < reach) {
+          if (isTree && Math.hypot(this.x[index] - storedX, this.z[index] - storedZ) < reach) {
             return true;
           }
         }

@@ -27,3 +27,36 @@ export const POWER_ICONS: Readonly<Record<PowerId, GameIconName>> = {
   volcano: "volcano",
   wolf: "wolf",
 };
+
+export const POWER_OPTION_ICONS: Readonly<
+  Partial<Record<PowerId, Readonly<Record<string, Readonly<Record<string, GameIconName>>>>>>
+> = {
+  forest: {
+    species: {
+      acacia: "acacia",
+      alder: "alder",
+      birch: "birch",
+      bush: "berry-bush",
+      climate: "mixed-grove",
+      maple: "maple",
+      oak: "oak",
+      palm: "palm",
+      pine: "pine",
+      poplar: "poplar",
+      spruce: "spruce",
+      willow: "willow",
+    },
+  },
+  paint: {
+    material: {
+      dirt: "bare-earth",
+      forest: "forest-floor",
+      meadow: "meadow",
+      rock: "rock",
+      sand: "sand",
+      snow: "snowfield",
+      steppe: "dry-grass",
+      swamp: "swamp",
+    },
+  },
+};

@@ -1,4 +1,5 @@
 import { groundDefinition, isPoolGround } from "../../content/grounds.ts";
+import { generationFingerprint } from "../../generation/generation-fingerprint.ts";
 import type { GeneratedWorld } from "../../generation/world-generator.ts";
 import { clamp } from "../../shared/math.ts";
 import { applySparse, type SparseValues, sparseDifference } from "../../shared/sparse-values.ts";
@@ -147,6 +148,7 @@ export class WorldState {
   readonly deposits: readonly Deposit[];
   readonly fields: SurfaceFields;
   readonly footingChanges = new RegionChangeTracker();
+  readonly generationFingerprint: number;
   readonly grid: WorldGrid;
   readonly groundChanges: RowChangeTracker;
   readonly heightChanges = new RegionChangeTracker();
@@ -173,6 +175,7 @@ export class WorldState {
   #hasSuddenHeightEdit = false;
 
   constructor(generated: GeneratedWorld) {
+    this.generationFingerprint = generationFingerprint(generated);
     this.grid = new WorldGrid(generated.dimensions);
     this.seed = generated.seed;
     this.shape = generated.shape;

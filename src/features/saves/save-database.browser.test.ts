@@ -8,6 +8,7 @@ import { createSimulationWorkerApi } from "../../workers/simulation-worker-api.t
 import {
   deleteSavedWorld,
   listSavedWorlds,
+  markLandChanged,
   readSavedWorld,
   type SavedWorldRecord,
   writeSavedWorld,
@@ -34,7 +35,9 @@ function savedState(): SavedWorldState {
 
 function recordFor(id: string, state: SavedWorldState, changes: Partial<SavedWorldRecord> = {}): SavedWorldRecord {
   return {
+    generationFingerprint: state.generationFingerprint,
     id,
+    isLandChanged: false,
     name: "Old Ford",
     savedAt: Date.now(),
     seed: state.request.seed,
@@ -43,6 +46,34 @@ function recordFor(id: string, state: SavedWorldState, changes: Partial<SavedWor
     version: SAVE_VERSION,
     ...changes,
   };
+}
+
+async function putRawRecord(record: object): Promise<void> {
+  const opening = indexedDB.open("dawnfolk");
+
+  const database = await new Promise<IDBDatabase>((resolve, reject) => {
+    opening.addEventListener("success", () => {
+      resolve(opening.result);
+    });
+    opening.addEventListener("error", () => {
+      reject(opening.error);
+    });
+  });
+
+  const transaction = database.transaction("worlds", "readwrite");
+
+  transaction.objectStore("worlds").put(record);
+
+  await new Promise<void>((resolve, reject) => {
+    transaction.addEventListener("complete", () => {
+      resolve();
+    });
+    transaction.addEventListener("error", () => {
+      reject(transaction.error);
+    });
+  });
+
+  database.close();
 }
 
 afterEach(async () => {
@@ -126,10 +157,52 @@ describe("saved worlds", () => {
       }
     );
 
-    const world = api.loadWorld(stored.state, ignore);
+    const { hasLandChanged, world } = api.loadWorld(stored.state, ignore);
 
     expect(world.frame.tick).toBe(state.simulation.tick);
     expect(world.frame.personCount).toBe(state.simulation.society.people.length);
     expect(world.frame.personCount).toBeGreaterThan(0);
+    expect(hasLandChanged).toBe(false);
+  });
+
+  it("leaves worlds saved without a fingerprint unmarked until loading finds the land changed", async () => {
+    const state = savedState();
+
+    await writeSavedWorld(recordFor("older", state, { generationFingerprint: null, savedAt: 1000 }), state, []);
+
+    expect(await listSavedWorlds()).toMatchObject([{ hasLandChanged: false, id: "older" }]);
+
+    await markLandChanged("older");
+
+    expect(await listSavedWorlds()).toMatchObject([{ hasLandChanged: true, id: "older" }]);
+  });
+
+  it("marks a world whose land has changed until it is saved again", async () => {
+    const state = savedState();
+
+    await writeSavedWorld(recordFor("moved", state), state, []);
+
+    expect(await markLandChanged("moved")).toBe(true);
+    expect(await listSavedWorlds()).toMatchObject([{ hasLandChanged: true, id: "moved" }]);
+
+    await writeSavedWorld(recordFor("moved", state), state, []);
+
+    expect(await listSavedWorlds()).toMatchObject([{ hasLandChanged: false, id: "moved" }]);
+  });
+
+  it("reads and lists records saved before fingerprints", async () => {
+    const state = savedState();
+
+    await writeSavedWorld(recordFor("older", state), state, []);
+
+    const { generationFingerprint: _, isLandChanged: __, ...older } = recordFor("older", state, { savedAt: 1000 });
+
+    await putRawRecord(older);
+
+    expect((await readSavedWorld("older"))?.record).toMatchObject({
+      generationFingerprint: null,
+      isLandChanged: false,
+    });
+    expect(await listSavedWorlds()).toMatchObject([{ hasLandChanged: false, id: "older", isLoadable: true }]);
   });
 });

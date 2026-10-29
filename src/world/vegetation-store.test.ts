@@ -79,6 +79,15 @@ describe("tree spacing", () => {
     expect(store.hasTreeWithin(14, 3, 4)).toBe(false);
   });
 
+  it("measures the gap at the stored precision of the positions", () => {
+    const store = new VegetationStore(new WorldGrid({ cellSize: 10, cellsPerSide: 8 }), 16);
+
+    plantAt(store, PlantSpecies.Spruce, 12.3);
+
+    expect(Math.fround(14.3) - Math.fround(12.3)).toBe(2);
+    expect(store.hasTreeWithin(14.3, 3, 2)).toBe(false);
+  });
+
   it("ignores rocks and dead trees", () => {
     const store = new VegetationStore(new WorldGrid({ cellSize: 10, cellsPerSide: 8 }), 16);
 

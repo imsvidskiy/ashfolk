@@ -22,6 +22,12 @@ interface ChoiceFieldProps {
   readonly value: string;
 }
 
+function optionOf(options: readonly ChoiceOption[], value: string): ChoiceOption | undefined {
+  return options.find((option) => {
+    return option.value === value;
+  });
+}
+
 function SegmentOption({ option }: { readonly option: ChoiceOption }) {
   return (
     <Toggle className={cn(SEGMENT, "flex-1")} value={option.value}>
@@ -72,8 +78,26 @@ function ListOption({ option }: { readonly option: ChoiceOption }) {
         <Check aria-hidden="true" size={14} strokeWidth={2.4} />
       </Select.ItemIndicator>
 
-      <Select.ItemText className="col-start-2">{option.label}</Select.ItemText>
+      <span className="col-start-2 flex min-w-0 items-center gap-2">
+        {option.icon}
+
+        <Select.ItemText className="truncate">{option.label}</Select.ItemText>
+      </span>
     </Select.Item>
+  );
+}
+
+function SelectedOption({ option }: { readonly option: ChoiceOption | undefined }) {
+  if (option === undefined) {
+    return null;
+  }
+
+  return (
+    <span className="flex min-w-0 items-center gap-2">
+      {option.icon}
+
+      <span className="truncate">{option.label}</span>
+    </span>
   );
 }
 
@@ -90,7 +114,11 @@ function ListChoice({ label, onChange, options, value }: ChoiceFieldProps) {
           "text-ink flex h-9 w-full items-center justify-between gap-3 transition-colors hover:bg-white/80 pointer-coarse:h-10"
         )}
       >
-        <Select.Value />
+        <Select.Value>
+          {(selected: string) => {
+            return <SelectedOption option={optionOf(options, selected)} />;
+          }}
+        </Select.Value>
 
         <Select.Icon className="text-ink-muted">
           <ChevronsUpDown aria-hidden="true" size={14} />

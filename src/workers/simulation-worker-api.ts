@@ -3,6 +3,8 @@ import type { GenerationProgress, WorldRequest } from "../generation/generation-
 import { buffersWithin } from "../shared/buffers.ts";
 import type { InitialWorld, SimulationFrame } from "../simulation/frame.ts";
 import {
+  hasLandChanged,
+  type LoadedWorld,
   PLANT_SPECIES_NAMES,
   restoreSavedWorld,
   SAVE_VERSION,
@@ -17,7 +19,7 @@ import { withSmallSketches } from "./island-sketch.ts";
 export interface SimulationWorkerApi {
   advance: (realSeconds: number, commands: readonly unknown[]) => SimulationFrame;
   createWorld: (request: WorldRequest, onProgress: (progress: GenerationProgress) => void) => InitialWorld;
-  loadWorld: (saved: unknown, onProgress: (progress: GenerationProgress) => void) => InitialWorld;
+  loadWorld: (saved: unknown, onProgress: (progress: GenerationProgress) => void) => LoadedWorld;
   saveWorld: () => SavedWorldState | null;
 }
 
@@ -119,13 +121,11 @@ export function createSimulationWorkerApi(
   let simulation: Simulation | null = null;
   let request: WorldRequest | null = null;
 
-  function sendWorld(created: Simulation, createdFrom: WorldRequest): InitialWorld {
+  function startWorld(created: Simulation, createdFrom: WorldRequest): InitialWorld {
     simulation = created;
     request = createdFrom;
 
-    const world = created.initialWorld();
-
-    return transfer(world, initialWorldTransferables(world));
+    return created.initialWorld();
   }
 
   return {
@@ -143,7 +143,9 @@ export function createSimulationWorkerApi(
       return transfer(frame, uniqueArrayBuffers(frameBuffers(frame)));
     },
     createWorld: (worldRequest, onProgress) => {
-      return sendWorld(createSimulation(worldRequest, withSmallSketches(onProgress)), worldRequest);
+      const world = startWorld(createSimulation(worldRequest, withSmallSketches(onProgress)), worldRequest);
+
+      return transfer(world, initialWorldTransferables(world));
     },
     loadWorld: (saved, onProgress) => {
       const state = readSavedWorld(saved);
@@ -152,7 +154,9 @@ export function createSimulationWorkerApi(
 
       restoreSavedWorld(loaded, state);
 
-      return sendWorld(loaded, state.request);
+      const world = startWorld(loaded, state.request);
+
+      return transfer({ hasLandChanged: hasLandChanged(loaded, state), world }, initialWorldTransferables(world));
     },
     saveWorld: () => {
       if (simulation === null || request === null) {
@@ -166,6 +170,7 @@ export function createSimulationWorkerApi(
       }
 
       const saved: SavedWorldState = {
+        generationFingerprint: simulation.world.generationFingerprint,
         plantSpecies: PLANT_SPECIES_NAMES,
         request,
         simulation: snapshot,

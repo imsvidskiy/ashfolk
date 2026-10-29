@@ -11,6 +11,7 @@ import { NoticeFeed } from "../features/notices/notice-feed.tsx";
 import { PowerDock } from "../features/powers/power-dock.tsx";
 import { PowerSettings } from "../features/powers/power-settings.tsx";
 import { ProjectLinks } from "../features/project/project-links.tsx";
+import { LandChangedDialog } from "../features/saves/land-changed-dialog.tsx";
 import { SettingsDialog } from "../features/settings/settings-dialog.tsx";
 import { useEngineBridges } from "./use-engine-bridges.ts";
 
@@ -88,6 +89,8 @@ function HudLayout() {
       {isCompact ? <CompactHud /> : <WideHud />}
 
       <SettingsDialog />
+
+      <LandChangedDialog />
     </>
   );
 }

@@ -4,7 +4,7 @@ import { Ground, isPoolGround } from "../../content/grounds.ts";
 import type { WorldMirror } from "../../game/world-mirror.ts";
 import type { CellRegion, RowRun } from "../../world/change-tracking.ts";
 import { sampleCells } from "../../world/terrain-sampling.ts";
-import { POND_SHORE_SLOPE, pondEdgeReach } from "../../world/water.ts";
+import { POND_SHORE_SLOPE, pondEdgeReach, pondOutlineExtent } from "../../world/water.ts";
 import { byteTexture, floatDataTexture } from "../data-textures.ts";
 import { CaveOutlets } from "../water/cave-outlets.ts";
 import { FordField } from "../water/ford-field.ts";
@@ -199,7 +199,11 @@ export class TerrainTextures {
         continue;
       }
 
-      for (const cell of grid.cellsInRadius(spring.x, spring.z, spring.radius + grid.cellSize * POND_SHORE_CELLS)) {
+      for (const cell of grid.cellsInRadius(
+        spring.x,
+        spring.z,
+        pondOutlineExtent(spring) + grid.cellSize * POND_SHORE_CELLS
+      )) {
         const reach = pondEdgeReach(spring, grid.cellCenterX(cell), grid.cellCenterZ(cell));
 
         this.#pondDepths[cell] = Math.min(this.#pondDepths[cell], reach * POND_SHORE_SLOPE);

@@ -25,6 +25,8 @@ const FLOW_LOOKAROUND = 3;
 const PARALLEL_REACH = 180;
 const PARALLEL_RUN = 400;
 
+export const SOURCE_REACH = 100;
+
 export interface RiverLand {
   readonly basins: DrainageBasins;
   readonly coastDistance: Float32Array;
@@ -42,6 +44,12 @@ interface NearbyOffset {
   readonly column: number;
   readonly distance: number;
   readonly row: number;
+}
+
+interface JoinedSource {
+  readonly at: number;
+  readonly isFree: boolean;
+  readonly trunk: number;
 }
 
 interface NearbyRiver {
@@ -372,6 +380,52 @@ function runsBesideRiver(spacing: Spacing, chain: RiverChain): boolean {
   return false;
 }
 
+function claim(spacing: Spacing, spaced: RiverChain[], chain: RiverChain, index: number): void {
+  for (const cell of chain.cells) {
+    spacing.owners[cell] = index;
+  }
+
+  spaced[index] = chain;
+}
+
+function sourceJoined(spacing: Spacing, spaced: readonly RiverChain[], chain: RiverChain): JoinedSource | null {
+  const { grid, owners } = spacing;
+
+  if (chain.joinsCell === NO_CELL) {
+    return null;
+  }
+
+  const trunk = owners[chain.joinsCell];
+
+  if (isFedByLake(spacing, spaced[trunk])) {
+    return null;
+  }
+
+  const { cells } = spaced[trunk];
+  const at = cells.indexOf(chain.joinsCell);
+
+  if (at < 0 || pathLength(grid, cells.slice(0, at + 1)) >= SOURCE_REACH) {
+    return null;
+  }
+
+  const headCells = new Set(cells.slice(0, at));
+  const isFree = spaced.every((other) => {
+    return !headCells.has(other.joinsCell);
+  });
+
+  return { at, isFree, trunk };
+}
+
+function extendUpstream(spacing: Spacing, spaced: RiverChain[], source: JoinedSource, upper: RiverChain): void {
+  const trunk = spaced[source.trunk];
+
+  for (const cell of trunk.cells.slice(0, source.at)) {
+    spacing.owners[cell] = NO_CELL;
+  }
+
+  claim(spacing, spaced, { ...trunk, cells: [...upper.cells, ...trunk.cells.slice(source.at)] }, source.trunk);
+}
+
 function isFedByLake(spacing: Spacing, chain: RiverChain): boolean {
   const { basins, grid } = spacing;
 
@@ -425,11 +479,16 @@ export function spaceRiverChains(land: RiverLand, chains: readonly RiverChain[])
       continue;
     }
 
-    for (const cell of kept.cells) {
-      spacing.owners[cell] = spaced.length;
+    const source = sourceJoined(spacing, spaced, kept);
+
+    if (source === null) {
+      claim(spacing, spaced, kept, spaced.length);
+      continue;
     }
 
-    spaced.push(kept);
+    if (source.isFree) {
+      extendUpstream(spacing, spaced, source, kept);
+    }
   }
 
   return spaced;

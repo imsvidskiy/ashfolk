@@ -17,6 +17,7 @@ const STATES = "states";
 
 const listingSchema = z.object({
   id: z.string(),
+  isLandChanged: z.boolean().catch(false),
   name: z.string().catch("Unnamed world"),
   savedAt: z.number().catch(0),
   seed: z.number().catch(1),
@@ -26,7 +27,9 @@ const listingSchema = z.object({
 });
 
 const recordSchema = z.object({
+  generationFingerprint: z.number().int().nullable().default(null),
   id: z.string(),
+  isLandChanged: z.boolean().default(false),
   name: z.string(),
   savedAt: z.number(),
   seed: z.number(),
@@ -60,7 +63,9 @@ const storedStateSchema = z.object({
 });
 
 export interface SavedWorldRecord {
+  readonly generationFingerprint: number | null;
   readonly id: string;
+  readonly isLandChanged: boolean;
   readonly name: string;
   readonly savedAt: number;
   readonly seed: number;
@@ -70,6 +75,7 @@ export interface SavedWorldRecord {
 }
 
 export interface SavedWorldListing {
+  readonly hasLandChanged: boolean;
   readonly id: string;
   readonly isLoadable: boolean;
   readonly name: string;
@@ -167,9 +173,18 @@ function readListing(value: unknown): SavedWorldListing | null {
     return null;
   }
 
-  const { id, name, savedAt, seed, shape, summary, version } = result.data;
+  const { id, isLandChanged, name, savedAt, seed, shape, summary, version } = result.data;
 
-  return { id, isLoadable: version === SAVE_VERSION && summary !== null, name, savedAt, seed, shape, summary };
+  return {
+    hasLandChanged: isLandChanged,
+    id,
+    isLoadable: version === SAVE_VERSION && summary !== null,
+    name,
+    savedAt,
+    seed,
+    shape,
+    summary,
+  };
 }
 
 export function listSavedWorlds(): Promise<SavedWorldListing[]> {
@@ -237,6 +252,30 @@ export function readSavedWorld(id: string): Promise<StoredWorld | null> {
     },
     null,
     "The saved world could not be read"
+  );
+}
+
+export function markLandChanged(id: string): Promise<boolean> {
+  return attempt(
+    async () => {
+      const database = await openDatabase();
+
+      const transaction = database.transaction(WORLDS, "readwrite");
+      const worlds = transaction.objectStore(WORLDS);
+
+      const record = recordSchema.safeParse(await settleRequest(worlds.get(id)));
+
+      if (!record.success) {
+        return false;
+      }
+
+      worlds.put({ ...record.data, isLandChanged: true });
+      await settleTransaction(transaction);
+
+      return true;
+    },
+    false,
+    "The saved world could not be marked"
   );
 }
 
