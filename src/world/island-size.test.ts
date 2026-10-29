@@ -4,7 +4,7 @@ import { DEFAULT_GRID_DIMENSIONS } from "./world-grid.ts";
 
 describe("island sizes", () => {
   it("keeps the normal island on the default grid", () => {
-    expect(islandDimensions("normal")).toBe(DEFAULT_GRID_DIMENSIONS);
+    expect(islandDimensions("normal")).toEqual(DEFAULT_GRID_DIMENSIONS);
   });
 
   it("keeps 10 m cells and tiles every size into whole terrain patches", () => {

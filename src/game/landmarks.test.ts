@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { LAKE_NAMES, PEAK_NAMES } from "../content/landmarks.ts";
+import { islandDimensions } from "../world/island-size.ts";
 import type { Monument } from "../world/monuments.ts";
 import type { Lake } from "../world/water.ts";
 import { WorldGrid } from "../world/world-grid.ts";
@@ -43,6 +44,22 @@ describe("findLandmarks", () => {
         return landmark.id;
       })
     ).toEqual(["lake-2", "lake-4", "lake-5"]);
+  });
+
+  it("names more lakes on a larger island and fewer on a smaller one", () => {
+    const lakes = [lake(1, 80), lake(2, 400), lake(3, 120), lake(4, 150), lake(5, 90)];
+
+    function namedLakesOn(size: "large" | "small"): number {
+      const grid = new WorldGrid(islandDimensions(size));
+      const source = { grid, heights: new Float32Array(grid.cellCount), lakes, monuments: [], seed: 7 };
+
+      return findLandmarks(source).filter((landmark) => {
+        return landmark.kind === "lake";
+      }).length;
+    }
+
+    expect(namedLakesOn("large")).toBe(4);
+    expect(namedLakesOn("small")).toBe(2);
   });
 
   it("gives every lake its own name", () => {

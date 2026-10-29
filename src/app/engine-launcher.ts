@@ -31,7 +31,7 @@ export function reportStop(session: GameSession, onStatus: EngineStatusListener)
   });
 }
 
-async function worldSourceFor(launch: LaunchOptions, worldId: string): Promise<WorldSource> {
+export async function worldSourceFor(launch: LaunchOptions, worldId: string): Promise<WorldSource> {
   const saved = await readSavedWorld(worldId);
 
   if (saved === null) {
