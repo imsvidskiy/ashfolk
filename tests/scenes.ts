@@ -37,6 +37,10 @@ export const SCENES: readonly Scene[] = [
     query: "seed=10&shape=round&quality=high&paused=1&hours=11&camera=355,-625,260,0.8,0",
   },
   {
+    name: "river-across-hillside",
+    query: "seed=7&shape=round&quality=high&paused=1&hours=11&camera=-255,-470,180,0.7,1.57",
+  },
+  {
     cast: { parameters: { intensity: 60, radius: 25 }, powerId: "fire", x: -1050, z: 640 },
     name: "smoke-over-forest",
     query: "seed=7&shape=round&quality=high&hours=11&camera=-1050,640,160,0.5,2.6",

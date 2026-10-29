@@ -36,6 +36,12 @@ const MINIMUM_POINT_DROP = 0.04;
 const SHALLOWEST_CHANNEL = 0.6;
 const DESCENT_PASSES = 8;
 const LIFT_ALLOWANCE = 0.3;
+const SLOPE_LOOKAROUND = 2;
+const BANK_SAMPLES = 3;
+const GENTLE_BANK_SLOPE = 0.2;
+const WIDEST_SIDE_CUT = 40;
+const FLAT_CROSS_SLOPE = 0.04;
+const STEEP_CROSS_SLOPE = 0.12;
 const FLOW_REACH = 15;
 const PINCH_PASSES = 2;
 const PINCHED_DEPTH = 0.6;
@@ -636,6 +642,70 @@ export function chainFlows(network: DrainageNetwork, chains: readonly RiverChain
   return flows;
 }
 
+function bankGroundAt(land: RiverLand, x: number, z: number): number {
+  const { basins, coastDistance, grid, heights } = land;
+
+  if (!grid.contains(grid.columnAt(x), grid.rowAt(z))) {
+    return Number.NaN;
+  }
+
+  const cell = grid.cellAt(x, z);
+
+  if (!isOnIsland(coastDistance, cell) || basins.lakeIds[cell] !== NO_CELL) {
+    return Number.NaN;
+  }
+
+  return heights[cell];
+}
+
+function lowestBankGround(land: RiverLand, point: RiverPoint, acrossX: number, acrossZ: number): number {
+  const nearest = point.width / 2 + bankWidthOf(point);
+  let lowest = Number.POSITIVE_INFINITY;
+
+  for (let step = 0; step < BANK_SAMPLES; step += 1) {
+    const reach = nearest + step * land.grid.cellSize;
+    const ground = bankGroundAt(land, point.x + acrossX * reach, point.z + acrossZ * reach);
+
+    if (Number.isNaN(ground)) {
+      return Number.NaN;
+    }
+
+    lowest = Math.min(lowest, ground);
+  }
+
+  return lowest;
+}
+
+function sinkIntoSlopes(land: RiverLand, points: RiverPoint[]): void {
+  for (const [index, point] of points.entries()) {
+    const before = points[Math.max(0, index - SLOPE_LOOKAROUND)];
+    const after = points[Math.min(points.length - 1, index + SLOPE_LOOKAROUND)];
+    const length = Math.hypot(after.x - before.x, after.z - before.z);
+
+    if (length < 1e-6) {
+      continue;
+    }
+
+    const acrossX = -(after.z - before.z) / length;
+    const acrossZ = (after.x - before.x) / length;
+
+    const left = lowestBankGround(land, point, acrossX, acrossZ);
+    const right = lowestBankGround(land, point, -acrossX, -acrossZ);
+
+    if (Number.isNaN(left) || Number.isNaN(right)) {
+      continue;
+    }
+
+    const span = 2 * (point.width / 2 + bankWidthOf(point) + land.grid.cellSize);
+    const sinking = smoothstep(FLAT_CROSS_SLOPE, STEEP_CROSS_SLOPE, Math.abs(left - right) / span);
+    const lowestBank = Math.min(left, right) - BANK_FREEBOARD;
+
+    if (sinking > 0 && lowestBank < point.surface) {
+      point.surface -= sinking * (point.surface - lowestBank);
+    }
+  }
+}
+
 function buildRivers(land: RiverLand, chains: readonly RiverChain[]): River[] {
   const { basins, grid } = land;
 
@@ -656,6 +726,8 @@ function buildRivers(land: RiverLand, chains: readonly RiverChain[]): River[] {
     });
     const lakeId = lakeAtMouth(basins.lakeIds, chain);
     const reachesEdge = chain.mouthReceiver === NO_CELL && chain.joinsCell === NO_CELL;
+
+    sinkIntoSlopes(land, points);
 
     if (lakeId >= 0) {
       appendLakeEntry(grid, points, basins.lakes[lakeId], chain.mouthReceiver);
@@ -810,6 +882,20 @@ function channelBed(distanceFromCenter: number, point: RiverPoint, uncarvedHeigh
   return Math.max(shapedBank, lowestBank);
 }
 
+function sideCut(distanceFromCenter: number, point: RiverPoint, uncarvedHeight: number): number {
+  const brink = point.surface + BANK_HEIGHT;
+  const rise = uncarvedHeight - brink;
+
+  if (rise <= 0) {
+    return uncarvedHeight;
+  }
+
+  const cutWidth = clamp(rise / GENTLE_BANK_SLOPE, MINIMUM_BANK_WIDTH, WIDEST_SIDE_CUT);
+  const blend = smoothstep(0, 1, (distanceFromCenter - point.width / 2) / cutWidth);
+
+  return uncarvedHeight - Math.min(rise, DEEPEST_BANK_LOWERING) * (1 - blend);
+}
+
 function sampleSegment(grid: WorldGrid, points: readonly RiverPoint[], segment: number, samples: ChannelSamples): void {
   const start = points[segment];
   const end = points[segment + 1];
@@ -818,7 +904,7 @@ function sampleSegment(grid: WorldGrid, points: readonly RiverPoint[], segment: 
   const segmentZ = end.z - start.z;
 
   const reach =
-    Math.max(start.width, end.width) / 2 + Math.max(MINIMUM_BANK_WIDTH, start.width, end.width) + grid.cellSize;
+    Math.max(start.width, end.width) / 2 + Math.max(WIDEST_SIDE_CUT, start.width, end.width) + grid.cellSize;
   const lengthSquared = Math.max(1e-6, segmentX * segmentX + segmentZ * segmentZ);
 
   const firstColumn = Math.max(0, grid.columnAt(Math.min(start.x, end.x) - reach));
@@ -873,7 +959,9 @@ function carveCell(
   const halfWidth = sampled.width / 2;
   const wetReach = Math.max(halfWidth, targets.grid.cellSize * DIAGONAL_REACH);
 
-  if (distanceFromCenter > Math.max(halfWidth + bankWidthOf(sampled), wetReach)) {
+  const channelReach = Math.max(halfWidth + bankWidthOf(sampled), wetReach);
+
+  if (distanceFromCenter > Math.max(halfWidth + WIDEST_SIDE_CUT, channelReach)) {
     return;
   }
 
@@ -884,7 +972,15 @@ function carveCell(
   const uncarvedHeight = targets.uncarvedHeights[cell];
 
   const point = isPastCoast ? sampled : settledOnGround(sampled, uncarvedHeight);
-  const bed = channelBed(distanceFromCenter, point, uncarvedHeight);
+  const cut = sideCut(distanceFromCenter, point, uncarvedHeight);
+
+  if (distanceFromCenter > channelReach) {
+    targets.heights[cell] = Math.min(targets.heights[cell], cut);
+
+    return;
+  }
+
+  const bed = Math.min(channelBed(distanceFromCenter, point, uncarvedHeight), cut);
   const isUnderWater = distanceFromCenter <= wetReach || bed < point.surface - SHALLOWEST_WATER;
 
   if (!isUnderWater) {
