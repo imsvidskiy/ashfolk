@@ -134,6 +134,10 @@ export class BuildingSystem {
   }
 
   restore(snapshot: BuildingsSnapshot): void {
+    for (const building of this.#buildings) {
+      this.#world.obstacles.clearBuilding(building.id);
+    }
+
     this.#buildings.length = 0;
     this.#buildingsById.clear();
     this.#incidents = [];
