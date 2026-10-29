@@ -154,7 +154,7 @@ function weighRaid(raid: Raid, relation: Relation): void {
   }
 
   if (raid.burned.length > 0) {
-    aggrieve(relation, raid.defenderId, raid.burned.length * BURNING_GRIEVANCE, "plunder");
+    aggrieve(relation, raid.defenderId, raid.burned.length * BURNING_GRIEVANCE, "burning");
     victims.weariness += raid.burned.length * BURNING_WEARINESS;
   }
 

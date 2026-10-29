@@ -9,6 +9,7 @@ const LISTED_GOODS = 3;
 const NUMBER_WORDS: readonly string[] = ["no one", "one", "two", "three", "four", "five", "six", "seven", "eight"];
 const GRUDGE_REASONS: Readonly<Record<Grudge, string>> = {
   blood: "over blood spilled",
+  burning: "over buildings set ablaze",
   hunting: "over hunting grounds",
   land: "over land",
   plunder: "over stolen stores",

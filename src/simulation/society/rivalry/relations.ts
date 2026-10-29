@@ -19,7 +19,7 @@ const STAYS_FRIENDLY = 22;
 
 export type Stance = "friendly" | "hostile" | "neutral" | "wary";
 
-export type Grudge = "blood" | "hunting" | "land" | "plunder" | "trespass";
+export type Grudge = "blood" | "burning" | "hunting" | "land" | "plunder" | "trespass";
 
 interface RelationSide {
   deaths: number;

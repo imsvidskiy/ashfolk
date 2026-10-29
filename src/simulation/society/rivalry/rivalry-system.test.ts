@@ -159,6 +159,25 @@ describe("a raid", () => {
     expect(story).toContainEqual(expect.stringMatching(PLUNDER_STORY));
   });
 
+  it("leaves a grudge over burning when it sets the camp ablaze", () => {
+    const harness = new SocietyHarness(SPRING_HARNESS);
+
+    const raiders = foundTribe(harness, { adults: 8, children: 0, x: -200, z: 0 });
+    const victims = foundTribe(harness, { adults: 0, children: 4, x: 200, z: 0 });
+
+    armTribe(raiders, 200);
+    setFood(victims, 80);
+
+    const raid = harness.rivalry.launchRaid(raiders, victims, harness.context);
+
+    raid?.burned.push("hut");
+    runUntil(harness, 900, () => {
+      return harness.rivalry.raids.length === 0;
+    });
+
+    expect(harness.rivalry.relations.find(raiders.id, victims.id)?.lastGrudge).toBe("burning");
+  });
+
   it("brings plunder home from a camp too far to reach before the retreat ends", () => {
     const harness = new SocietyHarness({
       ...SPRING_HARNESS,
