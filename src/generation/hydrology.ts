@@ -38,6 +38,7 @@ const DESCENT_PASSES = 8;
 const LIFT_ALLOWANCE = 0.3;
 const SLOPE_LOOKAROUND = 2;
 const BANK_SAMPLES = 3;
+const OUTER_BANK_SLOPE = 0.3;
 const GENTLE_BANK_SLOPE = 0.2;
 const WIDEST_SIDE_CUT = 40;
 const FLAT_CROSS_SLOPE = 0.04;
@@ -670,7 +671,7 @@ function lowestBankGround(land: RiverLand, point: RiverPoint, acrossX: number, a
       return Number.NaN;
     }
 
-    lowest = Math.min(lowest, ground);
+    lowest = Math.min(lowest, ground + step * land.grid.cellSize * OUTER_BANK_SLOPE);
   }
 
   return lowest;

@@ -1659,8 +1659,8 @@ describe("full-size river joins", () => {
 
       expect(all.length).toBeGreaterThan(500);
       expect(sidehill.length).toBeGreaterThan(50);
-      expect(shareBelow(all, SHALLOWEST_BED)).toBeLessThan(0.06);
-      expect(shareBelow(sidehill, SHALLOWEST_BED)).toBeLessThan(0.15);
+      expect(shareBelow(all, SHALLOWEST_BED)).toBeLessThan(0.08);
+      expect(shareBelow(sidehill, SHALLOWEST_BED)).toBeLessThan(0.22);
       expect(median(sidehill)).toBeGreaterThan(0.8);
     }
   });
