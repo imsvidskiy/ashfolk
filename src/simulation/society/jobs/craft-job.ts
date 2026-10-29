@@ -91,9 +91,13 @@ export class CraftJob implements Job {
     headToWork(tick.person, target, tick.context);
   }
 
+  cancel(tribe: Tribe): void {
+    addResources(tribe.stock, this.#order.inputs);
+  }
+
   update(tick: PersonTick): Job | null {
     if (this.#stationId !== null && tick.context.buildings.find(this.#stationId) === null) {
-      addResources(tick.tribe.stock, this.#order.inputs);
+      this.cancel(tick.tribe);
 
       return null;
     }
@@ -101,7 +105,7 @@ export class CraftJob implements Job {
     const progress = this.#errand.update(tick);
 
     if (progress === "abandoned") {
-      addResources(tick.tribe.stock, this.#order.inputs);
+      this.cancel(tick.tribe);
 
       return null;
     }
