@@ -75,7 +75,7 @@ const WORK_OPTIONS: readonly WorkOption[] = [
     start: (tick) => {
       const campfire = completedBuilding(tick.context.buildings, tick.tribe.buildings.campfireId);
 
-      if (campfire === null || tick.tribe.stock.wood < 1) {
+      if (campfire === null) {
         return null;
       }
 
@@ -194,7 +194,7 @@ const WORK_OPTIONS: readonly WorkOption[] = [
 
 function expeditionBuilders(tick: PersonTick): number {
   return tick.context.people.membersOf(tick.tribe).filter((member) => {
-    return member.job !== null && member.job.kind === "build" && member.job.isExpedition === true;
+    return member.job?.kind === "build" && member.job.isExpedition === true;
   }).length;
 }
 
