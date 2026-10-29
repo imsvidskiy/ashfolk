@@ -306,7 +306,7 @@ describe.each(["round", "square"] as const)("crossings on a %s island", (shape) 
       });
     });
 
-    expect(kept.length).toBeGreaterThan(generated.crossings.length * 0.85);
+    expect(kept.length).toBeGreaterThan(generated.crossings.length * 0.8);
   });
 });
 

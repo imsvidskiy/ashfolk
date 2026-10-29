@@ -61,6 +61,8 @@ const BIOME_GROUPS = {
 const OUTLINE_SAMPLES = 64;
 const SMALLEST_MEAN_POND_AREA = 1500;
 const LEAST_MEAN_OUTLINE_SPREAD = 1.5;
+const LAKE_SHORE_REACH = 100;
+const HIGHEST_LAKE_SHORE = 25;
 
 let world: GeneratedWorld;
 let squareWorld: GeneratedWorld;
@@ -79,6 +81,7 @@ interface SwampSurvey {
 interface IslandSurvey {
   readonly flatShare: number;
   readonly highGroundAngle: number;
+  readonly lakeShoreRise: number;
   readonly lakes: number;
   readonly rivers: number;
   readonly shares: Readonly<Record<keyof typeof BIOME_GROUPS, number>>;
@@ -1056,6 +1059,41 @@ function countOf(counts: ReadonlyMap<number, number>, biome: number): number {
   return count === undefined ? 0 : count;
 }
 
+function highestLakeShore(generated: GeneratedWorld): number {
+  const { terrain } = generated;
+
+  const grid = new WorldGrid(generated.dimensions);
+  const levels = new Set(
+    generated.water.lakes.map((lake) => {
+      return lake.level;
+    })
+  );
+  const nearestLevels = new Float32Array(grid.cellCount).fill(Number.NEGATIVE_INFINITY);
+
+  for (let cell = 0; cell < grid.cellCount; cell += 1) {
+    if (!(isLakeWater(terrain, cell) && levels.has(terrain.waterSurface[cell]))) {
+      continue;
+    }
+
+    for (const near of grid.cellsInRadius(grid.cellCenterX(cell), grid.cellCenterZ(cell), LAKE_SHORE_REACH)) {
+      nearestLevels[near] = Math.max(nearestLevels[near], terrain.waterSurface[cell]);
+    }
+  }
+
+  let highest = Number.NEGATIVE_INFINITY;
+
+  for (let cell = 0; cell < grid.cellCount; cell += 1) {
+    const isDryLand =
+      isOnIsland(terrain.coastDistance, cell) && !hasWater(terrain.waterSurface[cell], terrain.height[cell]);
+
+    if (isDryLand && nearestLevels[cell] > Number.NEGATIVE_INFINITY) {
+      highest = Math.max(highest, terrain.height[cell] - nearestLevels[cell]);
+    }
+  }
+
+  return highest;
+}
+
 function surveyIsland(generated: GeneratedWorld): IslandSurvey {
   const { terrain } = generated;
 
@@ -1107,6 +1145,7 @@ function surveyIsland(generated: GeneratedWorld): IslandSurvey {
   return {
     flatShare: flatCells / landCells,
     highGroundAngle: Math.atan2(towardZ, towardX),
+    lakeShoreRise: highestLakeShore(generated),
     lakes: generated.water.lakes.length,
     rivers: generated.water.rivers.length,
     shares: {
@@ -1755,6 +1794,12 @@ describe("islands across seeds", () => {
       expect(shares.cold).toBeLessThan(0.25);
       expect(shares.swamp).toBeGreaterThan(0.001);
       expect(shares.swamp).toBeLessThan(0.07);
+    }
+  });
+
+  it("rises gently from the shore of every lake, with no mountain standing in the water", () => {
+    for (const survey of surveys) {
+      expect(survey.lakeShoreRise).toBeLessThan(HIGHEST_LAKE_SHORE);
     }
   });
 

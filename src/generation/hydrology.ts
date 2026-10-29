@@ -992,7 +992,9 @@ function carveCell(
     return;
   }
 
-  targets.waterSurface[cell] = Math.max(targets.waterSurface[cell], point.surface);
+  const surface = targets.waterSurface[cell];
+
+  targets.waterSurface[cell] = surface === NO_WATER ? point.surface : Math.min(surface, point.surface);
 
   const strength = riverCodeOfStrength(riverStrengthFor(point.flow, targets.threshold));
 
@@ -1215,15 +1217,11 @@ function applySideCuts(targets: ChannelTargets): void {
   for (let cell = 0; cell < sideCuts.length; cell += 1) {
     const cut = sideCuts[cell];
 
-    if (cut === Number.POSITIVE_INFINITY) {
+    if (cut === Number.POSITIVE_INFINITY || hasWater(waterSurface[cell], heights[cell])) {
       continue;
     }
 
-    const floor = hasWater(waterSurface[cell], heights[cell])
-      ? Number.NEGATIVE_INFINITY
-      : highestWaterBeside(targets, cell, false);
-
-    heights[cell] = Math.min(heights[cell], Math.max(cut, floor));
+    heights[cell] = Math.min(heights[cell], Math.max(cut, highestWaterBeside(targets, cell, false)));
   }
 }
 

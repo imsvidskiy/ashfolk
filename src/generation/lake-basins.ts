@@ -1,6 +1,8 @@
-import { clamp } from "../shared/math.ts";
+import { clamp, lerp, smoothstep } from "../shared/math.ts";
+import { MinHeap } from "../shared/min-heap.ts";
 import { type RandomSource, shuffle } from "../shared/random.ts";
-import type { WorldGrid } from "../world/world-grid.ts";
+import { isOnIsland } from "../world/coast.ts";
+import { NEIGHBOR_OFFSETS, type WorldGrid } from "../world/world-grid.ts";
 import { analyzeDrainage, DEFAULT_HYDROLOGY, type DrainageBasins, NO_CELL } from "./hydrology.ts";
 
 const LAKE_COUNT = 3;
@@ -15,6 +17,11 @@ const LAKE_CLEARANCE = 400;
 const SHALLOWEST_DIG = 12;
 const DEEPEST_DIG = 45;
 const CLOSING_MARGIN = 2.2;
+const SHORE_BAND = 150;
+const GENTLE_SHORE_SLOPE = 0.12;
+const STEEPEST_SHORE_SLOPE = 0.85;
+const GENTLE_SHORE_WIDTH = 40;
+const SHORE_STEEPENING_WIDTH = 240;
 
 export interface LakeSiting {
   readonly boundaryDistance: (cell: number) => number;
@@ -27,6 +34,11 @@ export interface LakeSiting {
 interface LakeSite {
   readonly cell: number;
   readonly riverSlope: number;
+}
+
+interface ShoreCut {
+  readonly ceilings: Float32Array;
+  readonly distances: Float32Array;
 }
 
 interface Pond {
@@ -130,6 +142,116 @@ function digBasin(heights: Float32Array, grid: WorldGrid, site: LakeSite, random
   }
 }
 
+function shoreSlopeAt(distance: number): number {
+  return lerp(
+    GENTLE_SHORE_SLOPE,
+    STEEPEST_SHORE_SLOPE,
+    smoothstep(GENTLE_SHORE_WIDTH, SHORE_STEEPENING_WIDTH, distance)
+  );
+}
+
+function canCutPast(heights: Float32Array, cut: ShoreCut, cell: number): boolean {
+  return cut.distances[cell] <= SHORE_BAND || heights[cell] > cut.ceilings[cell];
+}
+
+function measureShoreCut(heights: Float32Array, grid: WorldGrid, basins: DrainageBasins): ShoreCut {
+  const { lakeIds, lakes } = basins;
+
+  const cut: ShoreCut = {
+    ceilings: new Float32Array(grid.cellCount).fill(Number.POSITIVE_INFINITY),
+    distances: new Float32Array(grid.cellCount).fill(Number.POSITIVE_INFINITY),
+  };
+  const heap = new MinHeap(grid.cellsPerSide * 16);
+
+  for (let cell = 0; cell < grid.cellCount; cell += 1) {
+    if (lakeIds[cell] !== NO_CELL) {
+      cut.distances[cell] = 0;
+      cut.ceilings[cell] = lakes[lakeIds[cell]].level;
+      heap.push(cell, cut.ceilings[cell]);
+    }
+  }
+
+  while (heap.size > 0) {
+    const cell = heap.pop();
+
+    if (!canCutPast(heights, cut, cell)) {
+      continue;
+    }
+
+    const column = grid.columnOf(cell);
+    const row = grid.rowOf(cell);
+
+    for (const offset of NEIGHBOR_OFFSETS) {
+      const neighbor = grid.neighborIndex(column, row, offset);
+      const step = offset.distance * grid.cellSize;
+      const distance = cut.distances[cell] + step;
+
+      if (neighbor < 0 || lakeIds[neighbor] !== NO_CELL) {
+        continue;
+      }
+
+      const ceiling = cut.ceilings[cell] + step * shoreSlopeAt(distance - step / 2);
+
+      if (ceiling < cut.ceilings[neighbor]) {
+        cut.ceilings[neighbor] = ceiling;
+        cut.distances[neighbor] = distance;
+        heap.push(neighbor, ceiling);
+      }
+    }
+  }
+
+  return cut;
+}
+
+function measureRimFloors(grid: WorldGrid, basins: DrainageBasins): Float32Array {
+  const { lakeIds, lakes } = basins;
+
+  const floors = new Float32Array(grid.cellCount).fill(Number.NEGATIVE_INFINITY);
+  const heap = new MinHeap(grid.cellsPerSide * 16);
+
+  for (let cell = 0; cell < grid.cellCount; cell += 1) {
+    if (lakeIds[cell] !== NO_CELL) {
+      floors[cell] = lakes[lakeIds[cell]].level;
+      heap.push(cell, -floors[cell]);
+    }
+  }
+
+  while (heap.size > 0) {
+    const cell = heap.pop();
+    const column = grid.columnOf(cell);
+    const row = grid.rowOf(cell);
+    const fall = lakeIds[cell] === NO_CELL ? STEEPEST_SHORE_SLOPE : 0;
+
+    for (const offset of NEIGHBOR_OFFSETS) {
+      const neighbor = grid.neighborIndex(column, row, offset);
+      const floor = floors[cell] - fall * offset.distance * grid.cellSize;
+
+      if (neighbor >= 0 && floor > floors[neighbor]) {
+        floors[neighbor] = floor;
+        heap.push(neighbor, -floor);
+      }
+    }
+  }
+
+  return floors;
+}
+
+export function easeLakeShores(
+  heights: Float32Array,
+  grid: WorldGrid,
+  coastDistance: Float32Array,
+  basins: DrainageBasins
+): void {
+  const { ceilings } = measureShoreCut(heights, grid, basins);
+  const floors = measureRimFloors(grid, basins);
+
+  for (let cell = 0; cell < grid.cellCount; cell += 1) {
+    if (basins.lakeIds[cell] === NO_CELL && isOnIsland(coastDistance, cell)) {
+      heights[cell] = Math.min(heights[cell], Math.max(ceilings[cell], floors[cell]));
+    }
+  }
+}
+
 export function digRiverLakes(heights: Float32Array, siting: LakeSiting): void {
   const basins = analyzeDrainage(heights, siting.grid, siting.dryness, siting.coastDistance);
 
@@ -143,12 +265,14 @@ export function fillSinks(
   grid: WorldGrid,
   dryness: Float32Array,
   coastDistance: Float32Array
-): void {
-  const { lakeIds, network } = analyzeDrainage(heights, grid, dryness, coastDistance);
+): DrainageBasins {
+  const basins = analyzeDrainage(heights, grid, dryness, coastDistance);
 
-  for (const [cell, level] of network.filled.entries()) {
-    if (lakeIds[cell] === NO_CELL) {
+  for (const [cell, level] of basins.network.filled.entries()) {
+    if (basins.lakeIds[cell] === NO_CELL) {
       heights[cell] = Math.max(heights[cell], level);
     }
   }
+
+  return basins;
 }
