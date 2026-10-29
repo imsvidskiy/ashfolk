@@ -59,6 +59,37 @@ describe("thermal relaxation", () => {
     expect(steepestSlope(heights, size)).toBeLessThan(0.81);
     expect(sumOf(heights)).toBeCloseTo(before, -1);
   });
+
+  it("lowers a steep face to an even slope instead of a staircase", () => {
+    const size = 64;
+    const heights = Float32Array.from({ length: size * size }, (_, cell) => {
+      const column = cell % size;
+      const row = (cell - column) / size;
+
+      return Math.max(0, 40 - column) * 15 + row * 0.3;
+    });
+
+    relaxSlopes(heights, size, CELL_SIZE, new Float32Array(size * size).fill(0.92), 72);
+
+    let turns = 0;
+    let samples = 0;
+
+    for (let row = 4; row < size - 4; row += 1) {
+      const drops = Array.from({ length: 38 }, (_, offset) => {
+        return heights[row * size + offset + 2] - heights[row * size + offset + 3];
+      });
+
+      for (let index = 1; index + 1 < drops.length; index += 1) {
+        const before = drops[index] - drops[index - 1];
+        const after = drops[index + 1] - drops[index];
+
+        samples += 1;
+        turns += before * after < 0 && Math.abs(before) > 0.5 && Math.abs(after) > 0.5 ? 1 : 0;
+      }
+    }
+
+    expect(turns / samples).toBeLessThan(0.02);
+  });
 });
 
 describe("slope limit", () => {

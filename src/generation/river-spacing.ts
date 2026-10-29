@@ -14,6 +14,7 @@ const SMALLEST_SPACING = 40;
 const SPACING_WIDTHS = 2.5;
 const LARGEST_SPACING = 65;
 const SPACING_CELLS = 1.5;
+const JUNCTION_APPROACH = 80;
 const HEAD_CLEARANCE = 60;
 const NATURAL_APPROACH = 2;
 const SHORTEST_RIVER = 250;
@@ -245,7 +246,7 @@ function connectorCells(grid: WorldGrid, from: number, to: number, direction: { 
 }
 
 function isConnectorClear(spacing: Spacing, connector: readonly number[], from: number, to: number): boolean {
-  const { basins, coastDistance, heights, owners } = spacing;
+  const { basins, coastDistance, grid, heights, owners } = spacing;
 
   const drop = heights[from] - heights[to];
 
@@ -257,7 +258,9 @@ function isConnectorClear(spacing: Spacing, connector: readonly number[], from: 
       basins.lakeIds[cell] === NO_CELL &&
       isOnIsland(coastDistance, cell) &&
       heights[cell] <= expected + CAPTURE_BUMP &&
-      !hasRiverWithin(spacing, cell, SMALLEST_SPACING, owners[to])
+      nearestRiver(spacing, cell, SMALLEST_SPACING, (other) => {
+        return owners[other] !== owners[to] || grid.distanceBetween(other, to) > JUNCTION_APPROACH;
+      }) === null
     );
   });
 }

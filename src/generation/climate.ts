@@ -1,6 +1,6 @@
 import { Biome, type BiomeIndex } from "../content/biomes.ts";
 import { Ground, type GroundIndex } from "../content/grounds.ts";
-import { saturate, smoothstep } from "../shared/math.ts";
+import { lerp, saturate, smoothstep } from "../shared/math.ts";
 import { createNoiseSampler } from "../shared/noise.ts";
 import { createRandom } from "../shared/random.ts";
 import { gradientXAt, gradientZAt, slopeAt } from "../world/footing.ts";
@@ -25,8 +25,11 @@ const SUMMIT_CHILL_FULL = 1150;
 const GLACIER_TEMPERATURE = -2.4;
 const ICE_CLIFF_SLOPE = 1.2;
 const BARE_ROCK_SLOPE = 0.9;
-const COLD_ROCK_SLOPE = 0.55;
-const COLD_ROCK_TEMPERATURE = 3.2;
+const WEAK_ROCK_SLOPE = 1.15;
+const STRONG_ROCK_SLOPE = 0.86;
+const WEAK_COLD_ROCK_SLOPE = 0.75;
+const STRONG_COLD_ROCK_SLOPE = 0.45;
+const ROCK_ECOTONE_TEMPERATURE = 3;
 const ESCARPMENT_SLOPE = 0.62;
 const TREE_LINE_TEMPERATURE = 1.6;
 const ALPINE_SLOPE = 0.42;
@@ -70,6 +73,7 @@ interface CellClimate {
   isWater: boolean;
   isWetland: boolean;
   moisture: number;
+  rockSlope: number;
   slope: number;
   temperature: number;
 }
@@ -98,12 +102,25 @@ function baseTemperature(profile: ClimateProfile, height: number, warmSide: numb
   return 9.6 + profile.temperatureOffset - LAPSE_PER_METER * (height - 200) - summit + warmSide + 3.5 * desert;
 }
 
+export function bareRockSlope(temperature: number, rockStrength: number, desert: number): number {
+  if (desert > 0.5) {
+    return BARE_ROCK_SLOPE;
+  }
+
+  const outcrop = saturate(0.5 + 0.5 * rockStrength);
+  const lowland = lerp(WEAK_ROCK_SLOPE, STRONG_ROCK_SLOPE, outcrop);
+  const cold = lerp(WEAK_COLD_ROCK_SLOPE, STRONG_COLD_ROCK_SLOPE, outcrop);
+  const alpine = smoothstep(TREE_LINE_TEMPERATURE + ROCK_ECOTONE_TEMPERATURE, TREE_LINE_TEMPERATURE, temperature);
+
+  return lerp(lowland, cold, alpine);
+}
+
 function classifyColdOrSteep(cell: CellClimate): BiomeIndex | null {
   if (cell.temperature < GLACIER_TEMPERATURE) {
     return cell.slope > ICE_CLIFF_SLOPE ? Biome.Alpine : Biome.Glacier;
   }
 
-  if (cell.slope > BARE_ROCK_SLOPE || (cell.slope > COLD_ROCK_SLOPE && cell.temperature < COLD_ROCK_TEMPERATURE)) {
+  if (cell.slope > cell.rockSlope) {
     return cell.desert > 0.5 ? Biome.Mesa : Biome.Alpine;
   }
 
@@ -342,7 +359,11 @@ function groundFor(biome: BiomeIndex, cell: CellClimate, waterLevel: number): Gr
   return BIOME_GROUND[biome];
 }
 
-export function buildClimate(profile: ClimateProfile, inputs: WetlandInputs): ClimateResult {
+export function buildClimate(
+  profile: ClimateProfile,
+  inputs: WetlandInputs,
+  rockStrength: Float32Array
+): ClimateResult {
   const { grid, heights, waterSurface } = inputs;
 
   const noise = createNoiseSampler(createRandom(inputs.seed * 13 + 5));
@@ -398,6 +419,7 @@ export function buildClimate(profile: ClimateProfile, inputs: WetlandInputs): Cl
         isWater,
         isWetland: isWetland(wetness[cell]),
         moisture,
+        rockSlope: bareRockSlope(temperature, rockStrength[cell], desert),
         slope,
         temperature,
       };

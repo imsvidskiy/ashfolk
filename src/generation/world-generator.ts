@@ -33,6 +33,7 @@ import { type Basin, basinShapeAt, type IslandLayout, planIslandLayout } from ".
 import { digRiverLakes, easeLakeShores, fillSinks } from "./lake-basins.ts";
 import { planMonuments } from "./monuments.ts";
 import { createRelief, islandPointAt, type Relief } from "./relief.ts";
+import { measureRockStrength } from "./rock-strength.ts";
 import { carveValleys } from "./valleys.ts";
 import { plantInitialVegetation } from "./vegetation.ts";
 import { openWoodland } from "./woodland.ts";
@@ -44,6 +45,7 @@ const CAPROCK_TALUS = 1.15;
 const BEDROCK_HEIGHT = 650;
 const SUMMIT_HEIGHT = 950;
 const STEEPEST_SLOPE = 1.25;
+const TALUS_VARIATION = 0.18;
 const BASIN_LEVEL_EDGE = 0.1;
 const BASIN_LEVEL_CORE = 0.5;
 const ROUGH_RELAXATION_ITERATIONS = 24;
@@ -93,11 +95,12 @@ function erosionPlan(grid: WorldGrid, heights: Float32Array, dryness: Float32Arr
   };
 }
 
-function talusSlopes(heights: Float32Array, dryness: Float32Array): Float32Array {
+function talusSlopes(heights: Float32Array, dryness: Float32Array, rockStrength: Float32Array): Float32Array {
   return heights.map((height, cell) => {
     const rock = lerp(SOIL_TALUS, BEDROCK_TALUS, smoothstep(BEDROCK_HEIGHT, SUMMIT_HEIGHT, height));
+    const varied = rock * (1 + TALUS_VARIATION * rockStrength[cell]);
 
-    return lerp(rock, CAPROCK_TALUS, dryness[cell]);
+    return lerp(varied, CAPROCK_TALUS, dryness[cell]);
   });
 }
 
@@ -181,7 +184,7 @@ export function generateWorld(
   const layout = planIslandLayout(seed);
   const { coastDistance, desert, dryness, heights, relief } = buildRelief(grid, seed, layout, options.shape);
 
-  const talus = talusSlopes(heights, dryness);
+  const rockStrength = measureRockStrength(grid, seed);
 
   const sketch: IslandSketch = {
     cellSize: grid.cellSize,
@@ -192,7 +195,7 @@ export function generateWorld(
     waterSurface: null,
   };
 
-  relaxSlopes(heights, size, grid.cellSize, talus, ROUGH_RELAXATION_ITERATIONS);
+  relaxSlopes(heights, size, grid.cellSize, talusSlopes(heights, dryness, rockStrength), ROUGH_RELAXATION_ITERATIONS);
   onProgress({ island: sketch, stage: "erosion" });
   erodeAcrossScales(
     heights,
@@ -209,7 +212,7 @@ export function generateWorld(
     random: createRandom(seed * 11 + 5),
   });
   carveValleys(heights, grid, dryness, coastDistance);
-  relaxSlopes(heights, size, grid.cellSize, talus, FINAL_RELAXATION_ITERATIONS);
+  relaxSlopes(heights, size, grid.cellSize, talusSlopes(heights, dryness, rockStrength), FINAL_RELAXATION_ITERATIONS);
   limitSlopes(heights, size, grid.cellSize, STEEPEST_SLOPE);
   smoothHeights(heights, size);
   easeLakeShores(heights, grid, coastDistance, fillSinks(heights, grid, dryness, coastDistance));
@@ -219,17 +222,21 @@ export function generateWorld(
 
   onProgress({ island: { ...sketch, waterSurface: hydrology.waterSurface }, stage: "climate" });
 
-  const climate = buildClimate(layout.climate, {
-    coastDistance,
-    desert,
-    grid,
-    heights,
-    lakeIds: hydrology.lakeIds,
-    riverStrength: hydrology.riverStrength,
-    rivers: hydrology.features.rivers,
-    seed,
-    waterSurface: hydrology.waterSurface,
-  });
+  const climate = buildClimate(
+    layout.climate,
+    {
+      coastDistance,
+      desert,
+      grid,
+      heights,
+      lakeIds: hydrology.lakeIds,
+      riverStrength: hydrology.riverStrength,
+      rivers: hydrology.features.rivers,
+      seed,
+      waterSurface: hydrology.waterSurface,
+    },
+    rockStrength
+  );
 
   bareOffIsland(climate.ground, coastDistance);
 

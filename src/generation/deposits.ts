@@ -22,6 +22,8 @@ const SMALLEST_VEIN = 4;
 const VEIN_WIDTH = 0.5;
 const VEIN_WAVINESS = 0.16;
 const VEIN_SALT = 61.7;
+const FOREST_VEIN_CELLS = 6;
+const SMALLEST_OPEN_SHARE = 0.15;
 const BARREN_GROUNDS: ReadonlySet<number> = new Set([Ground.Snow, Ground.Sand]);
 
 interface DepositPlanner {
@@ -68,6 +70,18 @@ function isVeinGround(planner: DepositPlanner, cell: number): boolean {
   const slope = slopeAt(planner.terrain.height, planner.grid, cell);
 
   return slope >= GENTLEST_VEIN_SLOPE && slope <= STEEPEST_VEIN_SLOPE;
+}
+
+function isForested(planner: DepositPlanner, cell: number): boolean {
+  return planner.terrain.ground[cell] === Ground.Forest;
+}
+
+function preferOpenGround(planner: DepositPlanner, cells: readonly number[]): readonly number[] {
+  const open = cells.filter((cell) => {
+    return !isForested(planner, cell);
+  });
+
+  return open.length >= cells.length * SMALLEST_OPEN_SHARE ? open : cells;
 }
 
 function isNearWater(planner: DepositPlanner, cell: number): boolean {
@@ -144,8 +158,20 @@ function veinCells(planner: DepositPlanner, kind: DepositKind, center: number): 
     });
   }
 
-  return nearby.filter((cell) => {
+  const vein = nearby.filter((cell) => {
     return isVeinGround(planner, cell) && isInVein(planner, center, cell, angle, radius);
+  });
+  const forested = vein
+    .filter((cell) => {
+      return isForested(planner, cell);
+    })
+    .sort((first, second) => {
+      return grid.distanceBetween(center, first) - grid.distanceBetween(center, second);
+    });
+  const kept = new Set(forested.slice(0, FOREST_VEIN_CELLS));
+
+  return vein.filter((cell) => {
+    return !isForested(planner, cell) || kept.has(cell);
   });
 }
 
@@ -176,9 +202,12 @@ export function planDeposits(grid: WorldGrid, terrain: TerrainData, seed: number
   const planner: DepositPlanner = { grid, placed: [], random: createRandom(seed * 13 + 29), reserved, terrain };
 
   const hill = hillHeight(planner);
-  const ores = cellsWhere(planner, (cell) => {
-    return planner.terrain.height[cell] >= hill && isVeinGround(planner, cell);
-  });
+  const ores = preferOpenGround(
+    planner,
+    cellsWhere(planner, (cell) => {
+      return planner.terrain.height[cell] >= hill && isVeinGround(planner, cell);
+    })
+  );
   const clay = cellsWhere(planner, (cell) => {
     return isClayGround(planner, cell);
   });

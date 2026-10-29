@@ -393,7 +393,7 @@ function shedExcess(relaxation: SlopeRelaxation, column: number, row: number): b
     return false;
   }
 
-  const moved = 0.5 * largest;
+  const moved = 0.4 * largest;
 
   for (let neighbor = 0; neighbor < 8; neighbor += 1) {
     const excess = excesses[neighbor];
