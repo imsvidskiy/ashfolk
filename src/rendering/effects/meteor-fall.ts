@@ -1,5 +1,5 @@
 import { type Mesh, Vector3 } from "three/webgpu";
-import { hashToUnit, saturate, smoothstep } from "../../shared/math.ts";
+import { hashToUnit, smoothstep } from "../../shared/math.ts";
 import type { MeteorEffect } from "../../simulation/effects.ts";
 import type { ActiveEffect, EffectContext, SpriteSinks } from "./transient-effects.ts";
 
@@ -60,11 +60,11 @@ export class MeteorFall implements ActiveEffect {
   update(seconds: number, sinks: SpriteSinks): boolean {
     this.#age += seconds;
 
-    const duration = Math.max(0.1, this.#effect.durationSeconds);
+    const duration = this.#effect.durationSeconds;
     const isFalling = this.#age < duration;
 
     if (isFalling) {
-      this.#fall(seconds, sinks, saturate(this.#age / duration));
+      this.#fall(seconds, sinks, this.#age / duration);
     } else {
       this.#rock.visible = false;
       this.#sheath.visible = false;
@@ -73,7 +73,7 @@ export class MeteorFall implements ActiveEffect {
     this.#drawTrail(sinks);
     this.#drawSparks(seconds, sinks);
 
-    return isFalling || this.#age < duration + SMOKE_SECONDS;
+    return this.#age < duration + SMOKE_SECONDS;
   }
 
   #fall(seconds: number, sinks: SpriteSinks, time: number): void {

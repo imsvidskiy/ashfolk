@@ -40,17 +40,17 @@ function useInterfaceKey(): void {
 
 function useIsHintShown(): boolean {
   const { isInterfaceHidden } = useFilming();
-  const [isHintShown, setHintShown] = useState(false);
+  const [isHintShown, setIsHintShown] = useState(false);
 
   useEffect(() => {
-    setHintShown(isInterfaceHidden);
+    setIsHintShown(isInterfaceHidden);
 
     if (!isInterfaceHidden) {
       return;
     }
 
     const timer = window.setTimeout(() => {
-      setHintShown(false);
+      setIsHintShown(false);
     }, HINT_MILLISECONDS);
 
     return () => {

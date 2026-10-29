@@ -10,7 +10,7 @@ import type { CarriedWeapon } from "../weapons.ts";
 import { Engagement } from "./engagement.ts";
 import { distanceTo, type Foe, foeMover, isFoeAlive, personFoe } from "./foes.ts";
 import { packFood } from "./provisions.ts";
-import { livingRaiders, RATION_RELIEF, type Raid } from "./raids.ts";
+import { eatRation, livingRaiders, type Raid } from "./raids.ts";
 import { assailantOf, nearestFoeAmong } from "./war-parties.ts";
 
 const GUARD_RADIUS = 110;
@@ -23,7 +23,6 @@ const GIVE_UP_DISTANCE = 45;
 const FLED_BEAST_DISTANCE = 12;
 const REFUGE_SPREAD = 4;
 const HIDING_DISTANCE = 70;
-const RATION_HUNGER = 0.6;
 const MOURNING_SECONDS = 24;
 const MOURNING_SPREAD = 9;
 
@@ -44,9 +43,7 @@ function guardPost(tribe: Tribe, raid: Raid, person: Person): Waypoint {
 function nearestRaider(tick: PersonTick, raid: Raid, radius: number): Foe | null {
   const { tribe } = tick;
 
-  const raiders = livingRaiders(raid, (id) => {
-    return tick.context.people.findPerson(id);
-  }).filter((raider) => {
+  const raiders = livingRaiders(tick.context.people, raid).filter((raider) => {
     return Math.hypot(raider.mover.x - tribe.campX, raider.mover.z - tribe.campZ) < GUARD_RADIUS;
   });
 
@@ -218,10 +215,7 @@ export class EnvoyJob implements Job {
       return null;
     }
 
-    if (person.hunger > RATION_HUNGER && this.#rations > 0) {
-      person.hunger = Math.max(0, person.hunger - RATION_RELIEF);
-      this.#rations -= 1;
-    }
+    this.#rations = eatRation(person, this.#rations);
 
     if (!walk(tick, walkSpeed(person))) {
       return this;

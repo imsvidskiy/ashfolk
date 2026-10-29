@@ -75,15 +75,20 @@ class BoulderJob implements Job {
   }
 
   update(tick: PersonTick): Job | null {
+    const { world } = tick.context;
+
+    const boulder = this.claimedPlant;
+
+    if (!world.vegetation.isAlive(boulder)) {
+      return null;
+    }
+
     const progress = this.#errand.update(tick);
 
     if (progress !== "finished") {
       return progress === "abandoned" ? null : this;
     }
 
-    const { world } = tick.context;
-
-    const boulder = this.claimedPlant;
     const wear = world.vegetation.wearDown(boulder);
 
     if (wear >= TRIPS_PER_BOULDER) {

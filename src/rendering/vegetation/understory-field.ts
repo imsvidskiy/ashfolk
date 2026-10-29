@@ -1,4 +1,4 @@
-import { ClampToEdgeWrapping, DataTexture, LinearFilter, RedFormat, UnsignedByteType } from "three/webgpu";
+import { type DataTexture, RedFormat } from "three/webgpu";
 import { isTreeSpecies } from "../../content/plants.ts";
 import type { WorldMirror } from "../../game/world-mirror.ts";
 import { grownIndexArray } from "../../shared/growth.ts";
@@ -6,6 +6,7 @@ import { smoothstep } from "../../shared/math.ts";
 import { type CellRegion, grownRegion } from "../../world/change-tracking.ts";
 import { slopeAt } from "../../world/footing.ts";
 import { PlantState } from "../../world/vegetation-store.ts";
+import { byteTexture } from "../data-textures.ts";
 
 const BYTE = 255;
 const NO_CELL = -1;
@@ -27,11 +28,7 @@ export class UnderstoryField {
     this.#mirror = mirror;
     this.#cover = new Uint8Array(cellCount);
     this.#trees = new Uint8Array(cellCount);
-    this.texture = new DataTexture(this.#cover, cellsPerSide, cellsPerSide, RedFormat, UnsignedByteType);
-    this.texture.minFilter = LinearFilter;
-    this.texture.magFilter = LinearFilter;
-    this.texture.wrapS = ClampToEdgeWrapping;
-    this.texture.wrapT = ClampToEdgeWrapping;
+    this.texture = byteTexture(this.#cover, cellsPerSide, RedFormat);
 
     for (let plant = 0; plant < mirror.vegetation.count; plant += 1) {
       this.#place(plant);
@@ -40,8 +37,6 @@ export class UnderstoryField {
     for (let cell = 0; cell < cellCount; cell += 1) {
       this.#paint(cell);
     }
-
-    this.texture.needsUpdate = true;
   }
 
   plantsChanged(indices: readonly number[]): void {

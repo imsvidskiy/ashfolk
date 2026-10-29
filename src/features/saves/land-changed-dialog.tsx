@@ -4,7 +4,9 @@ import { useEffect, useRef } from "react";
 import { useLaunchStore } from "../../app/launch-store.ts";
 import { useEngine } from "../../app/use-engine.ts";
 import { TextButton } from "../../design/buttons.tsx";
+import { cn } from "../../design/cn.ts";
 import { Island } from "../../design/island.tsx";
+import { DIALOG_BACKDROP, DIALOG_POPUP, DIALOG_VIEWPORT } from "../../design/styles.ts";
 import { ignore } from "../../shared/ignore.ts";
 import { markLandChanged } from "./save-database.ts";
 import { useIsLandChangePending, useSavesStore } from "./saves-store.ts";
@@ -65,10 +67,10 @@ export function LandChangedDialog() {
   return (
     <AlertDialog.Root open={isPending}>
       <AlertDialog.Portal>
-        <AlertDialog.Backdrop className="bg-ink/12 fixed inset-0 z-40 transition-opacity duration-200 data-ending-style:opacity-0 data-starting-style:opacity-0" />
+        <AlertDialog.Backdrop className={DIALOG_BACKDROP} />
 
-        <AlertDialog.Viewport className="fixed inset-0 z-50 flex items-center justify-center px-3 pt-(--dialog-inset-top) pb-(--dialog-inset-bottom)">
-          <AlertDialog.Popup className="w-notice ease-glide transition-[scale,opacity] duration-200 outline-none data-ending-style:scale-97 data-ending-style:opacity-0 data-starting-style:scale-97 data-starting-style:opacity-0">
+        <AlertDialog.Viewport className={DIALOG_VIEWPORT}>
+          <AlertDialog.Popup className={cn(DIALOG_POPUP, "w-notice")}>
             <Island className="flex flex-col gap-5 p-5 sm:p-6">
               <div className="flex flex-col gap-2">
                 <AlertDialog.Title className="text-ink text-lg leading-tight font-semibold">

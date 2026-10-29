@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
+import { mergeStoredField } from "../../app/preferences.ts";
 import {
   applyGuideEvent,
   dismissTip,
@@ -29,23 +30,23 @@ export const useGuideStore = create<GuideStore>()(
     (set) => {
       return {
         dismiss: () => {
-          return set((state) => {
+          set((state) => {
             return { progress: dismissTip(state.progress) };
           });
         },
         progress: FRESH_GUIDE,
         record: (event) => {
-          return set((state) => {
+          set((state) => {
             return { progress: applyGuideEvent(state.progress, event) };
           });
         },
         setTipsShown: (areShown) => {
-          return set({ progress: areShown ? FRESH_GUIDE : { ...FRESH_GUIDE, isOff: true } });
+          set({ progress: areShown ? FRESH_GUIDE : { ...FRESH_GUIDE, isOff: true } });
         },
       };
     },
     {
-      merge: mergeStored,
+      merge: mergeStoredField("progress", readStoredGuide),
       name: STORAGE_KEY,
       partialize: (state) => {
         return { done: state.progress.done, isOff: state.progress.isOff };
@@ -64,12 +65,4 @@ export function readStoredGuide(value: unknown): GuideProgress {
   }
 
   return { ...FRESH_GUIDE, done: result.data.done.filter(isGuideTipId), isOff: result.data.isOff };
-}
-
-function mergeStored(persisted: unknown, current: GuideStore): GuideStore {
-  if (persisted === undefined) {
-    return current;
-  }
-
-  return { ...current, progress: readStoredGuide(persisted) };
 }

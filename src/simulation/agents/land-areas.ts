@@ -191,7 +191,7 @@ export class LandAreas {
       return Number.POSITIVE_INFINITY;
     }
 
-    const steps = startArea === goalArea ? [] : this.#searchAreas(startArea, goalArea);
+    const steps = this.#searchAreas(startArea, goalArea);
 
     if (steps === null) {
       return Number.POSITIVE_INFINITY;

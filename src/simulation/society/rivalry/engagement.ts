@@ -15,6 +15,7 @@ const CLOSING_SHARE = 0.75;
 const BOW_CLOSEST = 7;
 const BOW_PREFERRED = 18;
 const BACK_OFF_DISTANCE = 10;
+const BACK_OFF_PACE = 1.3;
 const STRIKE_SPREAD = 0.15;
 const FLANK_SALT = 17.3;
 const FLANK_SPREAD = 1.5;
@@ -202,7 +203,7 @@ export class Engagement {
       );
     }
 
-    walk(tick, walkSpeed(person) * 1.3);
+    walk(tick, walkSpeed(person) * BACK_OFF_PACE);
   }
 
   #nextCooldown(tick: PersonTick): number {

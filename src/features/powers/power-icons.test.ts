@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { describeParameters } from "../../content/parameters.ts";
 import { POWER_ORDER, POWERS, type PowerId } from "../../content/powers.ts";
-import { POWER_OPTION_ICONS } from "./power-icons.tsx";
+import { POWER_OPTION_ICONS } from "./power-icons.ts";
 
 function choiceOptionsOf(powerId: PowerId) {
   return describeParameters(POWERS[powerId].parameters).flatMap((field) => {

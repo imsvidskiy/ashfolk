@@ -1,17 +1,16 @@
 import type { AnimalPose } from "../../world/agent-poses.ts";
-import { alongPath, alongTube, segmentsAtLeast, segmentsUpTo } from "../level-of-detail.ts";
+import { alongPath, segmentsAtLeast, segmentsUpTo } from "../level-of-detail.ts";
 import { MaterialSlot } from "../materials.ts";
 import type { MeshBuilder, SurfacePoint, VertexStyle } from "../mesh/mesh-builder.ts";
-import { curveBodySections } from "../mesh/path-curves.ts";
-import { type Shape, transformShape } from "../mesh/shape.ts";
-import { type BodySection, lengthwiseLoft, type TubePoint, tube } from "../mesh/shapes.ts";
+import type { Shape } from "../mesh/shape.ts";
+import { type BodySection, type TubePoint, tube } from "../mesh/shapes.ts";
 import { combine, SIDES, sideMirror, transformOf } from "../mesh/transforms.ts";
 import { degrees, wave } from "../rig/curves.ts";
 import type { Pose } from "../rig/pose.ts";
 import { rigidStyle } from "../rig/skin-weights.ts";
 import type { AnimalDetail } from "./animal-detail.ts";
 import type { GaitStyle } from "./quadruped-clips.ts";
-import { addLegs, addMuzzleFace, legPath } from "./quadruped-parts.ts";
+import { addLegs, addMuzzleFace, bodyShape, legPath, muzzleShape } from "./quadruped-parts.ts";
 import { bodyStyle, legStyle, neckStyle, tailStyle } from "./quadruped-rigging.ts";
 import { FIRST_EXTRA_BONE, QuadrupedBone, type QuadrupedFrame } from "./quadruped-skeleton.ts";
 
@@ -158,9 +157,7 @@ function coatSlot(point: SurfacePoint): number {
 }
 
 function headShape(detail: AnimalDetail): Shape {
-  const head = tube(alongTube(HEAD, detail), { hasEndCap: false, radialSegments: detail.segments });
-
-  return transformShape(head, transformOf({ scale: [0.82, 1, 1] }));
+  return muzzleShape(HEAD, detail, 0.82);
 }
 
 function addEars(builder: MeshBuilder, detail: AnimalDetail): void {
@@ -225,7 +222,7 @@ function addFeet(builder: MeshBuilder, detail: AnimalDetail): void {
 }
 
 export function addHareBody(builder: MeshBuilder, detail: AnimalDetail): void {
-  builder.add(lengthwiseLoft(curveBodySections(BODY, detail.curveSteps), detail.segments + 2), {
+  builder.add(bodyShape(BODY, detail), {
     seam: BODY_SEAM,
     style: { ...bodyStyle(HARE_FRAME, 0.05), slot: coatSlot },
   });

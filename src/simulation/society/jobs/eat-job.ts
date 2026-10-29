@@ -1,5 +1,5 @@
 import type { Waypoint } from "../../agents/navigation.ts";
-import { carriedFood, type Person } from "../person.ts";
+import { carriedFood, type Person, putDown } from "../person.ts";
 import type { PersonTick } from "../society-context.ts";
 import { takeFood, totalFood } from "../stock.ts";
 import type { Tribe } from "../tribe.ts";
@@ -26,7 +26,7 @@ function eatMeal(person: Person, tribe: Tribe, isCooked: boolean): void {
 
 function takeFoodPortion(person: Person, tribe: Tribe): boolean {
   if (carriedFood(person) >= 1) {
-    person.carrying.amount -= 1;
+    putDown(person, 1);
 
     return true;
   }

@@ -79,13 +79,12 @@ export function paintMinimapTerrain(mirror: WorldMirror, size: number): ImageDat
   const palette = GROUNDS.map((_, index) => {
     return seasonalGroundColor(index, frame.calendar.season);
   });
-  const last = grid.cellsPerSide - 1;
 
   for (let pixelRow = 0; pixelRow < size; pixelRow += 1) {
-    const row = Math.min(last, Math.floor((pixelRow / size) * grid.cellsPerSide));
+    const row = Math.floor((pixelRow / size) * grid.cellsPerSide);
 
     for (let pixelColumn = 0; pixelColumn < size; pixelColumn += 1) {
-      const column = Math.min(last, Math.floor((pixelColumn / size) * grid.cellsPerSide));
+      const column = Math.floor((pixelColumn / size) * grid.cellsPerSide);
       const cell = grid.index(column, row);
 
       if (!isOnIsland(terrain.coastDistance, cell)) {

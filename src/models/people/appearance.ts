@@ -237,9 +237,9 @@ function beardStyle(random: RandomSource, ageGroup: AgeGroup, isFemale: boolean)
     { value: "short", weight: 0.4 },
     { value: "full", weight: 0.24 },
   ]);
-  const growsFull = random.chance(0.4);
+  const isBeardFull = random.chance(0.4);
 
-  if (ageGroup === "elder" && beard === "short" && growsFull) {
+  if (ageGroup === "elder" && beard === "short" && isBeardFull) {
     return "full";
   }
 
@@ -272,13 +272,13 @@ function outfit(random: RandomSource, ageGroup: AgeGroup, isFemale: boolean): Ou
 function accessories(random: RandomSource, ageGroup: AgeGroup): Set<Accessory> {
   const chosen = new Set<Accessory>();
   const adultFactor = ageGroup === "child" ? 0.4 : 1;
-  const wearsFeather = random.chance(0.4);
-  const wearsHeadband = random.chance(0.36 * adultFactor);
+  const hasFeather = random.chance(0.4);
+  const hasHeadband = random.chance(0.36 * adultFactor);
 
-  if (wearsHeadband) {
+  if (hasHeadband) {
     chosen.add("headband");
 
-    if (wearsFeather) {
+    if (hasFeather) {
       chosen.add("feather");
     }
   }
@@ -395,8 +395,8 @@ function withEraDetails(appearance: PersonAppearance, era: number, seed: number)
 
   const rolls = eraRolls(seed);
 
-  const wearsCape = era >= BRONZE_AGE && appearance.ageGroup !== "child" && rolls.cape < 0.3;
-  const hasCape = appearance.hasCape || wearsCape;
+  const hasEraCape = era >= BRONZE_AGE && appearance.ageGroup !== "child" && rolls.cape < 0.3;
+  const hasCape = appearance.hasCape || hasEraCape;
 
   return {
     ...appearance,
@@ -412,8 +412,8 @@ export function personAppearance(input: AppearanceInput): PersonAppearance {
   const ageGroup = ageGroupOf(input.age);
   const elderGray = smoothstep(ELDER_AGE, ELDER_AGE + 15, input.age);
   const skinDarkness = skinTonePosition(random, input.tribe.id);
-  const wearsCape = random.chance(0.3);
-  const wearsCloak = random.chance(0.45);
+  const isCapeRolled = random.chance(0.3);
+  const isCloakRolled = random.chance(0.45);
   const skin = colorFromPalette(SKIN_TONES, skinDarkness);
   const hair = mixColors(hairColor(random.derive(1), ageGroup, skinDarkness), ELDER_HAIR[1], elderGray * 0.3);
 
@@ -425,8 +425,8 @@ export function personAppearance(input: AppearanceInput): PersonAppearance {
     colors: { accent: input.tribe.accent, hair, skin, ...clothingColors(random, input.tribe) },
     hair: hairStyle(random.derive(4), ageGroup, input.isFemale),
     hasBoots: random.chance(0.5),
-    hasCape: ageGroup !== "child" && wearsCape,
-    hasCloak: ageGroup === "elder" && wearsCloak,
+    hasCape: ageGroup !== "child" && isCapeRolled,
+    hasCloak: ageGroup === "elder" && isCloakRolled,
     isFemale: input.isFemale,
     motion: motionStyle(random, ageGroup),
     outfit: outfit(random, ageGroup, input.isFemale),

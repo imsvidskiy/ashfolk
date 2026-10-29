@@ -18,8 +18,6 @@ function enclosurePieces(kind: EnclosureKind, level: StructureLevel): MeshData[]
 describe.each(ENCLOSURES)("%s pieces", (kind) => {
   test.each(LEVELS)("butt their %s ends at half a segment either side", (level) => {
     for (const piece of enclosurePieces(kind, level)) {
-      expect(piece.bounds.minimum[0]).toBeCloseTo(-ENCLOSURE_SEGMENT_LENGTH / 2, 1);
-      expect(piece.bounds.maximum[0]).toBeCloseTo(ENCLOSURE_SEGMENT_LENGTH / 2, 1);
       expect(Math.abs(piece.bounds.minimum[0] + ENCLOSURE_SEGMENT_LENGTH / 2)).toBeLessThan(END_TOLERANCE);
       expect(Math.abs(piece.bounds.maximum[0] - ENCLOSURE_SEGMENT_LENGTH / 2)).toBeLessThan(END_TOLERANCE);
     }

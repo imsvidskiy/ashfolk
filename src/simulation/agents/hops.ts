@@ -165,13 +165,7 @@ function visibleShore(
   return { from, to };
 }
 
-export function continueHop(mover: Mover, seconds: number): void {
-  const { hop } = mover;
-
-  if (hop === null) {
-    return;
-  }
-
+export function continueHop(mover: Mover, hop: Hop, seconds: number): void {
   const before = hop.travelled;
 
   hop.travelled = Math.min(hop.length, before + hop.speed * seconds);

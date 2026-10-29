@@ -7,7 +7,7 @@ import {
   plantSpeciesDefinition,
 } from "../../../content/plants.ts";
 import { placementAt, plantNear, WORK_SPOT_TOLERANCE, workUntilPosed } from "../../testing/test-jobs.ts";
-import { firstMemberTick, MORNING, SocietyHarness, settle } from "../../testing/test-society.ts";
+import { firstMemberTick, MORNING, runToCompletion, SocietyHarness, settle } from "../../testing/test-society.ts";
 import { findStone } from "./quarry-job.ts";
 
 const ROCKS: readonly PlantSpeciesIndex[] = PLANT_SPECIES.filter((species) => {
@@ -53,5 +53,28 @@ describe("quarrying", () => {
     workUntilPosed(job, tick, "mine");
 
     expect(placementAt(tick, rock, 0.6).missedBy).toBeLessThan(WORK_SPOT_TOLERANCE);
+  });
+
+  it("gives up on a boulder that is gone before the work is done", () => {
+    const harness = new SocietyHarness({ day: MORNING });
+
+    const tick = firstMemberTick(harness, settle(harness, 1));
+
+    const boulder = plantNear(tick, PlantSpecies.Boulder, 3);
+    const job = findStone(tick);
+
+    expect(job?.claimedPlant).toBe(boulder);
+
+    if (job === null) {
+      return;
+    }
+
+    const { stock } = tick.tribe;
+    const { stone } = stock;
+
+    tick.context.world.removePlant(boulder);
+
+    expect(runToCompletion(job, tick, 120)).toBe(true);
+    expect(stock.stone).toBe(stone);
   });
 });

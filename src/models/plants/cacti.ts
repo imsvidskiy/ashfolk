@@ -1,4 +1,4 @@
-import { Vector3 } from "three";
+import { type Matrix4, Vector3 } from "three";
 import { FULL_TURN, smoothstep } from "../../shared/math.ts";
 import { createRandom, type RandomSource } from "../../shared/random.ts";
 import { thinned } from "../level-of-detail.ts";
@@ -242,7 +242,7 @@ function addBarrel(builder: MeshBuilder, random: RandomSource, detail: CactusDet
   }
 }
 
-function padTransform(pad: Pad) {
+function padTransform(pad: Pad): Matrix4 {
   return transformOf({
     position: pad.center.toArray(),
     rotation: [0, pad.turn, pad.tilt],
@@ -339,7 +339,7 @@ export function cactusForm(variant: number): CactusForm {
 }
 
 export function meshCactus(seed: number, level: PlantDetailLevel, form: CactusForm): MeshData {
-  const builder = new MeshBuilder({ slot: MaterialSlot.Cactus, sway: 0 });
+  const builder = new MeshBuilder({ slot: MaterialSlot.Cactus });
 
   FORM_BUILDERS[form](builder, createRandom(seed), CACTUS_DETAILS[level]);
 

@@ -233,7 +233,7 @@ export class EmberFlight implements ActiveEffect {
   update(seconds: number, sinks: SpriteSinks): boolean {
     this.#age += seconds;
 
-    const duration = Math.max(0.2, this.#effect.durationSeconds);
+    const duration = this.#effect.durationSeconds;
     const flicker = 0.6 + Math.random() * 0.4;
     const progress = saturate(this.#age / duration);
 

@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { Biome } from "../../content/biomes.ts";
 import { Ground } from "../../content/grounds.ts";
 import { PlantSpecies } from "../../content/plants.ts";
 import { WorldGrid } from "../../world/world-grid.ts";
@@ -8,9 +9,11 @@ import {
   centerCell,
   createVegetatedWorld,
   monumentAround,
+  plantInCell,
   plantsTooSteep,
   steepeningRamp,
 } from "../testing/test-world.ts";
+import { cellsInArea } from "../world/terrain-editing.ts";
 
 describe("land", () => {
   it("flatten pulls the land towards where the stroke began", () => {
@@ -33,14 +36,35 @@ describe("land", () => {
     expect(simulation.world.terrain.height[centerCell(simulation.world)]).toBeLessThan(120);
   });
 
+  it("raise lifts the land and lower sinks it", () => {
+    const simulation = createPowerSimulation();
+
+    const { terrain } = simulation.world;
+
+    const cell = centerCell(simulation.world);
+    const before = terrain.height[cell];
+
+    brush(simulation, "raise", 1);
+
+    const raised = terrain.height[cell];
+
+    brush(simulation, "lower", 2);
+
+    expect(raised).toBeGreaterThan(before + 5);
+    expect(terrain.height[cell]).toBeLessThan(before - 5);
+  });
+
   it("paint changes the ground and clears plants from rock", () => {
     const simulation = createPowerSimulation();
 
+    const cell = centerCell(simulation.world);
+
+    plantInCell(simulation.world, cell, PlantSpecies.Oak);
     simulation.beginStroke("paint", 0, 0, { material: "rock", radius: 40 });
     simulation.endStroke();
 
-    expect(simulation.world.terrain.ground[centerCell(simulation.world)]).toBe(Ground.Rock);
-    expect(simulation.world.vegetation.hasPlantsInCell(centerCell(simulation.world))).toBe(false);
+    expect(simulation.world.terrain.ground[cell]).toBe(Ground.Rock);
+    expect(simulation.world.vegetation.hasPlantsInCell(cell)).toBe(false);
   });
 
   it("forest plants the chosen trees", () => {
@@ -103,6 +127,32 @@ describe("land", () => {
     expect(
       planted.filter((cell) => {
         return simulation.world.isObstructed(cell);
+      })
+    ).toEqual([]);
+  });
+
+  it("forest turns the ground to forest floor only where a tree took root", () => {
+    const simulation = new Simulation(
+      createVegetatedWorld({ biome: Biome.Forest, dimensions: { cellSize: 10, cellsPerSide: 96 } })
+    );
+    const { terrain, vegetation } = simulation.world;
+
+    const area = cellsInArea(simulation.world, { radius: 120, x: 0, z: 0 });
+
+    for (const { cell } of area) {
+      simulation.world.clearPlants(cell, true);
+      terrain.coastDistance[cell] = 1;
+    }
+
+    simulation.beginStroke("forest", 0, 0, { density: 100, radius: 100, species: "oak" });
+
+    for (let step = 0; step < 40; step += 1) {
+      simulation.advance(0.05);
+    }
+
+    expect(
+      area.filter(({ cell }) => {
+        return terrain.ground[cell] === Ground.Forest || vegetation.hasPlantsInCell(cell);
       })
     ).toEqual([]);
   });

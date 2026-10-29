@@ -85,7 +85,9 @@ function HudPanels({ isCompact }: { readonly isCompact: boolean }) {
   return isCompact ? <CompactHud /> : <WideHud />;
 }
 
-function HudLayout() {
+export function Hud() {
+  useEngineBridges();
+
   const isCompact = useIsCompact();
   const { areMarkersHidden, isInterfaceHidden } = useFilming();
 
@@ -102,10 +104,4 @@ function HudLayout() {
       {import.meta.env.DEV ? <FilmingHint /> : null}
     </>
   );
-}
-
-export function Hud() {
-  useEngineBridges();
-
-  return <HudLayout />;
 }

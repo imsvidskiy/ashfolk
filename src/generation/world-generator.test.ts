@@ -1481,20 +1481,17 @@ describe("world generation", () => {
   });
 
   it("covers lake cells with water at the lake level", () => {
-    const lake = world.water.lakes.at(0);
-    const grid = new WorldGrid(TEST_DIMENSIONS);
+    for (const generated of [world, squareWorld]) {
+      expect(generated.water.lakes.length).toBeGreaterThan(0);
 
-    expect(lake).toBeDefined();
+      for (const lake of generated.water.lakes) {
+        const covered = generated.terrain.waterSurface.filter((surface) => {
+          return surface === lake.level;
+        });
 
-    if (lake === undefined) {
-      return;
+        expect(covered.length).toBeGreaterThanOrEqual(lake.cellCount);
+      }
     }
-
-    const cell = grid.cellAt(lake.centerX, lake.centerZ);
-
-    const surface = world.terrain.waterSurface[cell];
-
-    expect(surface).not.toBe(NO_WATER);
   });
 
   it("traces rivers that flow downhill", () => {
@@ -2162,14 +2159,14 @@ describe("islands across seeds", () => {
 });
 
 describe("full-size lake outlets", () => {
-  const riversOnMain = new Map([
+  const pinnedRiverCounts = new Map([
     [7, 23],
     [10, 29],
   ]);
   let worlds: [GeneratedWorld, number][];
 
   beforeAll(() => {
-    worlds = [...riversOnMain].map(([seed, count]) => {
+    worlds = [...pinnedRiverCounts].map(([seed, count]) => {
       return [generateWorld(seed), count];
     });
   }, 120_000);
@@ -2183,7 +2180,7 @@ describe("full-size lake outlets", () => {
     );
   }
 
-  it("keeps about as many rivers as before the shores were eased on seeds 7 and 10", () => {
+  it("keeps close to the pinned river counts on seeds 7 and 10", () => {
     for (const [generated, count] of worlds) {
       expect(Math.abs(generated.water.rivers.length - count)).toBeLessThanOrEqual(RIVER_COUNT_SLACK);
     }

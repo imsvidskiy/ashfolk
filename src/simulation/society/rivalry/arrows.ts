@@ -100,6 +100,10 @@ export class ArrowFlights {
     });
   }
 
+  clear(): void {
+    this.#flights = [];
+  }
+
   update(seconds: number, battleground: Battleground, context: SocietyContext): void {
     if (this.#flights.length === 0) {
       return;

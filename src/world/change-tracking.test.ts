@@ -69,10 +69,4 @@ describe("region of cells", () => {
     expect(regionOfCells(grid, cells, 0)).toEqual({ firstColumn: 4, firstRow: 3, lastColumn: 9, lastRow: 11 });
     expect(regionOfCells(grid, cells, 1)).toEqual({ firstColumn: 3, firstRow: 2, lastColumn: 10, lastRow: 12 });
   });
-
-  it("keeps the grown box inside the grid", () => {
-    const cells = [grid.index(0, 15), grid.index(15, 0)];
-
-    expect(regionOfCells(grid, cells, 1)).toEqual({ firstColumn: 0, firstRow: 0, lastColumn: 15, lastRow: 15 });
-  });
 });

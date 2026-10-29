@@ -51,7 +51,11 @@ function runFor(simulation: Simulation, seconds: number): LavaView | null {
   let sent: LavaView | null = null;
 
   for (let elapsed = 0; elapsed < seconds; elapsed += 0.1) {
-    sent = simulation.advance(0.1).lava ?? sent;
+    const { lava } = simulation.advance(0.1);
+
+    if (lava !== null) {
+      sent = lava;
+    }
   }
 
   return sent;
@@ -303,7 +307,7 @@ describe("volcanoes", () => {
     simulation.execute({ parameters: { radius: RADIUS }, powerId: "volcano", type: "usePower", x: 400, z: 0 });
 
     expect(simulation.volcanoes.all).toHaveLength(0);
-    expect(simulation.takeNotices()).toEqual(["A volcano needs dry land"]);
+    expect(simulation.takeNotices()).toEqual(["A volcano needs dry land."]);
   });
 
   it("refuses to rise past the coast or off the map", () => {
@@ -317,7 +321,7 @@ describe("volcanoes", () => {
     }
 
     expect(simulation.volcanoes.all).toHaveLength(0);
-    expect(simulation.takeNotices()).toEqual(["A volcano needs dry land", "A volcano needs dry land"]);
+    expect(simulation.takeNotices()).toEqual(["A volcano needs dry land.", "A volcano needs dry land."]);
   });
 
   it("refuses to rise where its cone would touch another volcano's", () => {
@@ -333,7 +337,7 @@ describe("volcanoes", () => {
     });
 
     expect(simulation.volcanoes.all).toHaveLength(2);
-    expect(simulation.takeNotices()).toEqual(["Another volcano is too close"]);
+    expect(simulation.takeNotices()).toEqual(["Another volcano is too close."]);
   });
 
   it("saves and loads in the middle of an eruption", () => {

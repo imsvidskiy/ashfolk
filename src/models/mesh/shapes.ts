@@ -489,7 +489,7 @@ function addFlatCap(writer: ShapeWriter, radius: number, y: number, segments: nu
   capRing(writer, center, ring, isTop);
 }
 
-export function cone(radius: number, height: number, segments = 8): Shape {
+export function cone(radius: number, height: number, segments: number): Shape {
   return cylinder({ height, radialSegments: segments, radiusBottom: radius, radiusTop: 0 });
 }
 
@@ -814,7 +814,7 @@ export function ribbon(points: readonly TubePoint[]): Shape {
   return { ...shape, normals: computeSmoothNormals(shape.positions, shape.indices) };
 }
 
-export function torus(radius: number, thickness: number, segments = 16, sides = 6): Shape {
+export function torus(radius: number, thickness: number, segments: number, sides: number): Shape {
   const writer = new ShapeWriter();
   const rings: number[][] = [];
 

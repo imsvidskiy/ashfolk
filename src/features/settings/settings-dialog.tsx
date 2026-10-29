@@ -7,7 +7,7 @@ import { useLaunchStore } from "../../app/launch-store.ts";
 import { IconButton } from "../../design/buttons.tsx";
 import { cn } from "../../design/cn.ts";
 import { Island } from "../../design/island.tsx";
-import { SEGMENT, SEGMENT_TRACK } from "../../design/styles.ts";
+import { DIALOG_BACKDROP, DIALOG_POPUP, DIALOG_VIEWPORT, SEGMENT, SEGMENT_TRACK } from "../../design/styles.ts";
 import { FilmingSection } from "../filming/filming-section.tsx";
 import { type SettingsTab, useInterfaceStore } from "../interface/interface-store.ts";
 import { ProjectLinks } from "../project/project-links.tsx";
@@ -90,10 +90,10 @@ export function SettingsDialog() {
   return (
     <Dialog.Root onOpenChange={setSettingsOpen} open={isSettingsOpen}>
       <Dialog.Portal>
-        <Dialog.Backdrop className="bg-ink/12 fixed inset-0 z-40 transition-opacity duration-200 data-ending-style:opacity-0 data-starting-style:opacity-0" />
+        <Dialog.Backdrop className={DIALOG_BACKDROP} />
 
-        <Dialog.Viewport className="fixed inset-0 z-50 flex items-center justify-center px-3 pt-(--dialog-inset-top) pb-(--dialog-inset-bottom)">
-          <Dialog.Popup className="w-dialog ease-glide transition-[scale,opacity] duration-200 outline-none data-ending-style:scale-97 data-ending-style:opacity-0 data-starting-style:scale-97 data-starting-style:opacity-0">
+        <Dialog.Viewport className={DIALOG_VIEWPORT}>
+          <Dialog.Popup className={cn(DIALOG_POPUP, "w-dialog")}>
             <Island className="max-h-dialog flex flex-col">
               <Tabs.Root className="flex min-h-0 flex-col" onValueChange={handleTabChange} value={settingsTab}>
                 <div className="flex items-start justify-between gap-4 px-5 pt-5 pb-4 sm:px-6">

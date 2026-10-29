@@ -9,7 +9,7 @@ import type { TribeSummary } from "../../simulation/frame.ts";
 import type { RivalryView } from "../../simulation/society/rivalry/rivalry-system.ts";
 import { useShowTribe } from "../inspector/use-focus-camera.ts";
 import { useInterfaceStore } from "../interface/interface-store.ts";
-import { isFeuding, raidOf } from "../rivalry/stance-looks.ts";
+import { isFeuding, raidOf } from "../rivalry/rivalry-queries.ts";
 import { TribeDot } from "../tribes/tribe-dot.tsx";
 import { useWorldStore, type WorldSnapshot } from "../world/world-store.ts";
 import { useLabelLayout } from "./use-label-layout.ts";

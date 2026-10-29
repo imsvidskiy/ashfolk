@@ -1,4 +1,4 @@
-import { type RandomSource, shuffle } from "./random.ts";
+import { type RandomSource, shuffle } from "../shared/random.ts";
 
 const SQUARE_ROOT_OF_THREE = Math.sqrt(3);
 const SKEW = 0.5 * (SQUARE_ROOT_OF_THREE - 1);

@@ -28,6 +28,12 @@ function strikeDistance(strike: number, scatter: number, random: RandomSource): 
   return random.next() * scatter;
 }
 
+function weatherFalloff(distance: number, radius: number): number {
+  const relativeDistance = distance / radius;
+
+  return 1 - relativeDistance * relativeDistance;
+}
+
 export function firePower(
   target: PowerTarget,
   parameters: PowerParameters<"fire">,
@@ -79,9 +85,7 @@ export function rainPower(
   const soaking = target.seconds * RAIN_PER_SECOND * intensity * rules.water.rainStrength;
 
   for (const { cell, distance } of cellsInArea(world, { ...target, radius: parameters.radius })) {
-    const relativeDistance = distance / parameters.radius;
-
-    const falloff = 1 - relativeDistance * relativeDistance;
+    const falloff = weatherFalloff(distance, parameters.radius);
 
     world.fields.wetness[cell] = Math.min(1, world.fields.wetness[cell] + soaking * falloff);
     fire.douse(cell, soaking * 2 * falloff);
@@ -107,9 +111,7 @@ export function snowPower(
       continue;
     }
 
-    const relativeDistance = distance / parameters.radius;
-
-    const falloff = 1 - relativeDistance * relativeDistance;
+    const falloff = weatherFalloff(distance, parameters.radius);
 
     world.fields.snow[cell] = Math.min(SNOW_CAPACITY, world.fields.snow[cell] + snowfall * falloff);
     fire.douse(cell, snowfall * 3 * falloff);
@@ -199,6 +201,14 @@ export function tornadoPower(
   parameters: PowerParameters<"tornado">,
   services: PowerServices
 ): PowerOutcome {
+  const { world } = services;
+
+  const cell = world.grid.cellAt(target.x, target.z);
+
+  if (!world.isOnIsland(cell)) {
+    return refused("A tornado has to touch down on the island.");
+  }
+
   services.tornadoes.touchDown(
     {
       lifetime: parameters.lifetime,
@@ -222,12 +232,12 @@ export function volcanoPower(
 
   const cell = world.grid.cellAt(target.x, target.z);
 
-  if (cell < 0 || !world.isOnIsland(cell) || world.isWater(cell)) {
-    return refused("A volcano needs dry land");
+  if (!world.isOnIsland(cell) || world.isWater(cell)) {
+    return refused("A volcano needs dry land.");
   }
 
   if (services.volcanoes.isCrowding(target.x, target.z, parameters.radius)) {
-    return refused("Another volcano is too close");
+    return refused("Another volcano is too close.");
   }
 
   services.volcanoes.rumble(

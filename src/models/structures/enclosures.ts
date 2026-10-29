@@ -1,14 +1,13 @@
-import { hashToUnit } from "../../shared/math.ts";
+import { hashToUnit, saturate } from "../../shared/math.ts";
 import { createRandom } from "../../shared/random.ts";
 import { MaterialSlot } from "../materials.ts";
 import { MeshBuilder } from "../mesh/mesh-builder.ts";
 import type { MeshData } from "../mesh/mesh-data.ts";
-import { card } from "../mesh/shapes.ts";
-import { transformOf } from "../mesh/transforms.ts";
+import { card, lathe } from "../mesh/shapes.ts";
+import { type Triple, transformOf } from "../mesh/transforms.ts";
 import {
   addBlock,
   addLog,
-  addStake,
   detail,
   isDetailed,
   rising,
@@ -73,6 +72,36 @@ function railInset(context: StructureContext): number {
   return reach + detail(context, RAIL_GRIP, 0.03);
 }
 
+function addStake(context: StructureContext, base: Triple, height: number, radius: number): void {
+  const [x, y, z] = base;
+
+  const tipHeight = radius * 2.4;
+  const sides = detail(context, 6, 4);
+  const shaftTop = y + height - tipHeight;
+  const rings = PALISADE_RAILS.filter((band) => {
+    return band > y && band < shaftTop;
+  }).map((band) => {
+    return { radius: radius - (radius * 0.06 * (band - y)) / (shaftTop - y), y: band };
+  });
+
+  context.builder.add(
+    lathe(
+      [{ radius: 0, y }, { radius, y }, ...rings, { radius: radius * 0.94, y: shaftTop }, { radius: 0, y: y + height }],
+      sides
+    ),
+    {
+      style: {
+        buildOrder: rising(0.05, 0.82, -ENCLOSURE_FOOTING_DEPTH, 3.5),
+        shade: (point) => {
+          return 0.82 + 0.18 * saturate(point.position.y / 3);
+        },
+        slot: MaterialSlot.Wood,
+      },
+      transform: transformOf({ position: [x, 0, z] }),
+    }
+  );
+}
+
 function addStakeRun(context: StructureContext, span: Span): void {
   const spacing = stakeSpacing(context);
   const radius = stakeRadius(context);
@@ -84,14 +113,7 @@ function addStakeRun(context: StructureContext, span: Span): void {
     const x = span.from + (stake + 0.5) * step;
     const height = 3 + 0.5 * hashToUnit(Math.round(x * 10), STAKE_SALT);
 
-    addStake(
-      context,
-      [x, -ENCLOSURE_FOOTING_DEPTH, 0],
-      height + ENCLOSURE_FOOTING_DEPTH,
-      radius,
-      rising(0.05, 0.82, -ENCLOSURE_FOOTING_DEPTH, 3.5),
-      PALISADE_RAILS
-    );
+    addStake(context, [x, -ENCLOSURE_FOOTING_DEPTH, 0], height + ENCLOSURE_FOOTING_DEPTH, radius);
   }
 
   const inset = railInset(context);
@@ -168,21 +190,27 @@ function addStoneCourse(context: StructureContext, span: Span, course: number): 
   }
 }
 
-function addStoneRun(context: StructureContext, span: Span): void {
-  if (isDetailed(context)) {
-    const courses = Math.ceil((WALL_TOP + ENCLOSURE_FOOTING_DEPTH) / COURSE_HEIGHT);
-
-    for (let course = 0; course < courses; course += 1) {
-      addStoneCourse(context, span, course);
-    }
-  } else {
+function addStoneBody(context: StructureContext, span: Span): void {
+  if (!isDetailed(context)) {
     addBlock(
       context,
       [span.to - span.from, WALL_TOP + ENCLOSURE_FOOTING_DEPTH, WALL_THICKNESS],
       [(span.from + span.to) / 2, (WALL_TOP - ENCLOSURE_FOOTING_DEPTH) / 2, 0],
       { buildOrder: rising(0.05, 0.8, -ENCLOSURE_FOOTING_DEPTH, WALL_TOP), shade: 0.85, slot: MaterialSlot.Stone }
     );
+
+    return;
   }
+
+  const courses = Math.ceil((WALL_TOP + ENCLOSURE_FOOTING_DEPTH) / COURSE_HEIGHT);
+
+  for (let course = 0; course < courses; course += 1) {
+    addStoneCourse(context, span, course);
+  }
+}
+
+function addStoneRun(context: StructureContext, span: Span): void {
+  addStoneBody(context, span);
 
   addBlock(context, [span.to - span.from, 0.22, WALL_THICKNESS + 0.1], [(span.from + span.to) / 2, WALL_TOP + 0.1, 0], {
     buildOrder: 0.92,

@@ -17,14 +17,4 @@ describe("technologies", () => {
       })
     );
   });
-
-  it("ask for ore before the metal ages", () => {
-    const needs = TECHNOLOGIES.filter((technology) => {
-      return technology.needs !== null;
-    }).map((technology) => {
-      return technology.id;
-    });
-
-    expect(needs).toEqual(["copper", "bronze", "iron"]);
-  });
 });

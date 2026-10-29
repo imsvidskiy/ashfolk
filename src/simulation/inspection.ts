@@ -101,23 +101,6 @@ interface InspectionSources {
   world: WorldState;
 }
 
-export function inspect(selection: Selection, sources: InspectionSources): Inspection | null {
-  switch (selection.kind) {
-    case "animal":
-      return inspectAnimal(selection.id, sources);
-    case "building":
-      return inspectBuilding(selection.id, sources);
-    case "cell":
-      return inspectCell(selection.x, selection.z, sources);
-    case "person":
-      return inspectPerson(selection.id, sources);
-    case "tribe":
-      return inspectTribe(selection.id, sources);
-    default:
-      throw new Error(`Unknown selection ${JSON.stringify(selection)}`);
-  }
-}
-
 function tribeName(tribeId: number, sources: InspectionSources): string {
   const tribe = sources.society.findTribe(tribeId);
 
@@ -261,4 +244,21 @@ function inspectTribe(id: number, sources: InspectionSources): TribeInspection |
   }
 
   return { kind: "tribe", summary };
+}
+
+export function inspect(selection: Selection, sources: InspectionSources): Inspection | null {
+  switch (selection.kind) {
+    case "animal":
+      return inspectAnimal(selection.id, sources);
+    case "building":
+      return inspectBuilding(selection.id, sources);
+    case "cell":
+      return inspectCell(selection.x, selection.z, sources);
+    case "person":
+      return inspectPerson(selection.id, sources);
+    case "tribe":
+      return inspectTribe(selection.id, sources);
+    default:
+      throw new Error(`Unknown selection ${JSON.stringify(selection)}`);
+  }
 }

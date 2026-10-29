@@ -48,10 +48,6 @@ export function totalFood(stock: Stock): number {
   }, 0);
 }
 
-export function addToStock(stock: Stock, resource: ResourceKind, amount: number): void {
-  stock[resource] = Math.max(0, stock[resource] + amount);
-}
-
 export function takeFood(stock: Stock, amount: number): number {
   let remaining = amount;
 

@@ -110,7 +110,7 @@ function clearSkyPalette(sunHeight: number): SkyPalette {
 
   for (const upper of PALETTE_KEYS) {
     if (sunHeight < upper.sunHeight) {
-      const amount = saturate(inverseLerp(lower.sunHeight, upper.sunHeight, sunHeight));
+      const amount = inverseLerp(lower.sunHeight, upper.sunHeight, sunHeight);
 
       return mixPalettes(lower.palette, upper.palette, amount);
     }

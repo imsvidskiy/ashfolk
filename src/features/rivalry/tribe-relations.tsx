@@ -3,8 +3,9 @@ import type { TribeSummary } from "../../simulation/frame.ts";
 import type { RelationView } from "../../simulation/society/rivalry/rivalry-system.ts";
 import { TribeDot } from "../tribes/tribe-dot.tsx";
 import { useWorldStore } from "../world/world-store.ts";
+import { RAID_PHASE_LABELS } from "./rivalry-labels.ts";
 import { RelationNote, StanceBadge } from "./rivalry-parts.tsx";
-import { byStance, isRelationOf, otherTribeOf, RAID_PHASE_LABELS, raidOf } from "./stance-looks.ts";
+import { byStance, isRelationOf, otherTribeOf, raidOf } from "./rivalry-queries.ts";
 
 interface NeighborProps {
   readonly relation: RelationView;
@@ -83,7 +84,7 @@ export function TribeRelations({ tribeId }: { readonly tribeId: number }) {
 
   return (
     <section aria-label="Neighbors" className="flex flex-col gap-1">
-      <h3 className="text-ink-soft text-xs font-semibold tracking-wide uppercase">Neighbors</h3>
+      <h3 className="text-ink-soft text-xs font-semibold">Neighbors</h3>
 
       <RaidLine tribeId={tribeId} tribes={tribes} />
 

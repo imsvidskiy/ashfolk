@@ -12,7 +12,7 @@ import type { CarriedWeapon } from "../weapons.ts";
 import { Engagement } from "./engagement.ts";
 import { type Foe, personFoe } from "./foes.ts";
 import { plunderSurplus, totalGoods, unpack } from "./provisions.ts";
-import { buildingName, burnableBuilding, MARCH_SPEED, RATION_RELIEF, type Raid } from "./raids.ts";
+import { buildingName, burnableBuilding, eatRation, MARCH_SPEED, type Raid } from "./raids.ts";
 import { assailantOf, formationOffset, nearbyFighters, nearestFoeAmong, offsetFrom } from "./war-parties.ts";
 
 const ENGAGE_RADIUS = 22;
@@ -23,13 +23,12 @@ const WORK_REACH = 2.2;
 const PLUNDER_SECONDS = 3;
 const KINDLING_SECONDS = 2.5;
 const PLUNDER_SHARE = 0.06;
-const FOOD_RESERVE = 8;
+const SPARED_FOOD = 8;
 const BROKEN_HEALTH = 0.25;
 const RALLY_SPREAD = 1.4;
 const TARGET_SPREAD = 2.2;
 const HOME_SPREAD = 3;
 const LOADED_SPEED_SHARE = 1.15;
-const RATION_HUNGER = 0.6;
 const CATCH_UP_DISTANCE = 30;
 const SLOWEST_PACE = 0.55;
 const FASTEST_PACE = 1.35;
@@ -115,7 +114,7 @@ export class RaidJob implements Job {
   update(tick: PersonTick): Job | null {
     const raid = tick.context.rivalry.raidOf(this.raidId);
 
-    this.#eatRation(tick);
+    this.#rations = eatRation(tick.person, this.#rations);
 
     if (raid === null || this.#leg === "homeward" || raid.phase === "retreat") {
       return this.#goHome(tick);
@@ -145,17 +144,6 @@ export class RaidJob implements Job {
     this.#assault(tick, raid);
 
     return this;
-  }
-
-  #eatRation(tick: PersonTick): void {
-    const { person } = tick;
-
-    if (person.hunger < RATION_HUNGER || this.#rations <= 0) {
-      return;
-    }
-
-    person.hunger = Math.max(0, person.hunger - RATION_RELIEF);
-    this.#rations -= 1;
   }
 
   #muster(tick: PersonTick, raid: Raid): void {
@@ -239,7 +227,7 @@ export class RaidJob implements Job {
   }
 
   #plunder(raid: Raid, victims: Tribe): void {
-    const taken = plunderSurplus(victims.stock, PLUNDER_SHARE, victims.memberCount * FOOD_RESERVE);
+    const taken = plunderSurplus(victims.stock, PLUNDER_SHARE, victims.memberCount * SPARED_FOOD);
 
     unpack(raid.loot, { ...taken });
     unpack(this.#loot, taken);

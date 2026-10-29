@@ -42,7 +42,7 @@ const ORE_SLOTS: Readonly<Record<MineOre, MaterialSlotIndex>> = {
 const ORE_RICHNESS: Readonly<Record<MineOre, number>> = { copper: 0.13, iron: 0.15, tin: 0.12 };
 
 function oreLook(ore: MineOre, richness: number): OreLook {
-  return { ore: ORE_SLOTS[ore], richness, rock: MaterialSlot.Stone };
+  return { ore: ORE_SLOTS[ore], richness };
 }
 
 function addHill(context: StructureContext, ore: MineOre): void {

@@ -2,6 +2,7 @@ import { describe, expect, it, it as test, vi } from "vitest";
 import type { TechnologyId } from "../content/technologies.ts";
 import { DEFAULT_GENERATION_OPTIONS } from "../generation/generation-options.ts";
 import { generateWorld } from "../generation/world-generator.ts";
+import { buffersWithin } from "../shared/buffers.ts";
 import { ignore } from "../shared/ignore.ts";
 import { ANIMAL_STRIDE, AnimalField, PERSON_STRIDE, PersonField } from "../world/agent-buffers.ts";
 import type { IslandShapeKind } from "../world/island-shape.ts";
@@ -9,6 +10,7 @@ import { islandDimensions } from "../world/island-size.ts";
 import { isHopping } from "./agents/hops.ts";
 import { setDestination } from "./agents/movement.ts";
 import { Simulation, type SimulationSnapshot } from "./simulation.ts";
+import { personFoe } from "./society/rivalry/foes.ts";
 import { generateSimulation, snapshotOf } from "./testing/test-simulation.ts";
 import { createVegetatedWorld, floodCells, floodStrip } from "./testing/test-world.ts";
 import { TICK_SECONDS } from "./tick.ts";
@@ -31,6 +33,11 @@ const SETTLERS_BY_CROSSINGS = 2;
 const FLOOD_RADIUS = 45;
 const FLOOD_DEPTH = 1.6;
 const SECONDS_TO_SWIM_OUT = 75;
+const RAID_PROVISIONS = 200;
+const TICKS_BETWEEN_COMPARISONS = 10;
+const COMPARISONS = 40;
+const ARROWS_IN_FLIGHT = 8;
+const SETTLING_STEP = 0.25;
 
 interface Walker {
   readonly id: number;
@@ -65,6 +72,7 @@ function grownSimulation(): Simulation {
 
   simulation.populate();
   simulation.execute({ speed: 16, type: "setSpeed" });
+  simulation.execute({ type: "setWeather", weather: "rain" });
 
   for (const tribe of simulation.society.tribes()) {
     tribe.technologies.add("fire");
@@ -74,10 +82,42 @@ function grownSimulation(): Simulation {
   simulation.runTicks(300);
   simulation.execute({ parameters: { radius: 60 }, powerId: "raise", type: "usePower", x: 120, z: -80 });
   simulation.execute({ parameters: { radius: 30 }, powerId: "fire", type: "usePower", x: -300, z: -200 });
+  simulation.execute({ parameters: { radius: 80 }, powerId: "volcano", type: "usePower", x: 300, z: 300 });
   settleLand(simulation);
   simulation.runTicks(300);
+  settleLand(simulation);
 
   return simulation;
+}
+
+function raidingSimulation(): Simulation {
+  const simulation = grownSimulation();
+  const [attacker, defender] = simulation.society.tribes();
+
+  for (const person of simulation.society.people) {
+    person.health = 1;
+    person.hunger = 0;
+  }
+
+  attacker.stock.meat = RAID_PROVISIONS;
+
+  if (simulation.rivalry.launchRaid(attacker, defender, simulation.services) === null) {
+    throw new Error("The test tribes could not raid");
+  }
+
+  simulation.runTicks(200);
+
+  return simulation;
+}
+
+function looseArrows(simulation: Simulation): void {
+  const [shooter, target] = simulation.society.people.filter((person) => {
+    return person.isAlive;
+  });
+
+  for (let arrow = 0; arrow < ARROWS_IN_FLIGHT; arrow += 1) {
+    simulation.rivalry.loose(shooter, { kind: "bow", material: "stone" }, personFoe(target));
+  }
 }
 
 function restored(snapshot: SimulationSnapshot): Simulation {
@@ -482,47 +522,47 @@ describe("world snapshots", () => {
     expect(snapshotOf(copy)).toStrictEqual(snapshot);
   });
 
-  it("keeps the world going after a restore", () => {
-    const original = grownSimulation();
+  it("keeps simulating as the saving world does once it drops what a save leaves out", { timeout: 60_000 }, () => {
+    const original = raidingSimulation();
+
+    original.execute({ speed: 1, type: "setSpeed" });
+    looseArrows(original);
+
     const snapshot = snapshotOf(original);
+
+    original.restore(structuredClone(snapshot));
 
     const copy = restored(snapshot);
 
-    const tribeIds = copy.society.tribes().map((tribe) => {
-      return tribe.id;
-    });
-
-    expect(tribeIds).toEqual(
-      original.society.tribes().map((tribe) => {
-        return tribe.id;
-      })
-    );
-    expect(copy.society.population).toBe(original.society.population);
-    expect(
-      copy.buildings.all.map((building) => {
-        return building.id;
-      })
-    ).toEqual(
-      original.buildings.all.map((building) => {
-        return building.id;
-      })
-    );
-    expect(copy.world.vegetation.aliveCount).toBe(original.world.vegetation.aliveCount);
+    expect(snapshot.volcanoes).toHaveLength(1);
+    expect(snapshot.rivalry.raids).toHaveLength(1);
+    expect(snapshot.weather.kind).toBe("rain");
+    expect(snapshot.fauna.animals.length).toBeGreaterThan(0);
+    expect(snapshot.chronicle.entries.length).toBeGreaterThan(0);
     expect(plantsByCell(copy)).toStrictEqual(plantsByCell(original));
-    expect(copy.world.terrain).toStrictEqual(original.world.terrain);
-    expect(copy.calendar.view()).toEqual(original.calendar.view());
+    expect(copy.initialWorld()).toStrictEqual(original.initialWorld());
 
-    copy.runTicks(600);
+    for (let comparison = 0; comparison < COMPARISONS; comparison += 1) {
+      original.runTicks(TICKS_BETWEEN_COMPARISONS);
+      copy.runTicks(TICKS_BETWEEN_COMPARISONS);
 
-    expect(copy.tick).toBe(original.tick + 600);
-    expect(copy.society.tribes().length).toBeGreaterThan(0);
-    expect(copy.calendar.day).toBeGreaterThan(original.calendar.day);
+      do {
+        expect(copy.advance(SETTLING_STEP)).toStrictEqual(original.advance(SETTLING_STEP));
+      } while (original.isBusy);
 
-    for (const tribe of copy.society.tribes().filter((survivor) => {
-      return tribeIds.includes(survivor.id);
-    })) {
-      expect(tribe.technologies.has("fire")).toBe(true);
+      expect(snapshotOf(copy)).toStrictEqual(snapshotOf(original));
     }
+  });
+
+  it("leaves the running world whole when the save's buffers move to another thread", () => {
+    const original = grownSimulation();
+    const snapshot = snapshotOf(original);
+
+    const kept = structuredClone(snapshot);
+
+    structuredClone(snapshot, { transfer: buffersWithin(snapshot) });
+
+    expect(snapshotOf(original)).toStrictEqual(kept);
   });
 
   it("sends the restored world to the renderer in full", () => {

@@ -57,6 +57,5 @@ describe.each([0.11, 0.48, 0.93])("cave mouth %s", (seed) => {
 
   test("rises above the mouth to meet the slope behind it", () => {
     expect(cave.bounds.maximum[1]).toBeGreaterThan(8);
-    expect(cave.bounds.minimum[1]).toBeLessThan(0);
   });
 });

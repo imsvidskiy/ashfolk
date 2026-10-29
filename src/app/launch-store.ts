@@ -42,9 +42,11 @@ export const useLaunchStore = create<LaunchStore>()((set, get) => {
       replaceAddress(window.location.pathname);
       set({ isChoosingWorld: true });
     },
-    continueWorld: launchWorld,
+    continueWorld: (worldId, choice) => {
+      launchWorld(worldId, changesOf(choice));
+    },
     createWorld: (choice) => {
-      launchWorld(createWorldId(), choice);
+      launchWorld(createWorldId(), changesOf(choice));
     },
     isChoosingWorld: !choosesWorld(window.location.search),
     launch: readLaunchOptions(window.location.search),
@@ -54,6 +56,10 @@ export const useLaunchStore = create<LaunchStore>()((set, get) => {
     worldId: initialWorldId(),
   };
 });
+
+function changesOf({ name, seed, shape, size }: WorldChoice): LaunchChanges {
+  return { name, seed, shape, size };
+}
 
 function replaceAddress(search: string): void {
   try {

@@ -38,6 +38,17 @@ describe("buildings", () => {
     expect(buildings.takeLosses()).toEqual([{ building: hut, reason: "abandoned" }]);
   });
 
+  it("stop blocking the way once a snapshot without them is restored", () => {
+    const { buildings, world } = createBuildings();
+
+    const empty = buildings.snapshot();
+    const hut = buildings.add({ kind: "hut", rotation: 0, tribeId: 1, x: 5, z: 5 }, createRandom(1));
+
+    buildings.restore(empty);
+
+    expect(world.obstacles.near(hut.x, hut.z, 1)).toEqual([]);
+  });
+
   it("catch fire from a wildfire and burn down", () => {
     const { buildings, fire, world } = createBuildings();
 

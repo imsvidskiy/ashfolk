@@ -50,7 +50,7 @@ interface ShoreCut {
   readonly distances: Float32Array;
 }
 
-interface Pond {
+interface Clearance {
   readonly radius: number;
   readonly x: number;
   readonly z: number;
@@ -78,12 +78,12 @@ function riverSlope(basins: DrainageBasins, heights: Float32Array, grid: WorldGr
   return (heights[start] - heights[cell]) / length;
 }
 
-function isClearOf(grid: WorldGrid, cell: number, ponds: readonly Pond[]): boolean {
+function isClearOf(grid: WorldGrid, cell: number, clearances: readonly Clearance[]): boolean {
   const x = grid.cellCenterX(cell);
   const z = grid.cellCenterZ(cell);
 
-  return ponds.every((pond) => {
-    return Math.hypot(pond.x - x, pond.z - z) > pond.radius;
+  return clearances.every((clearance) => {
+    return Math.hypot(clearance.x - x, clearance.z - z) > clearance.radius;
   });
 }
 
@@ -108,7 +108,7 @@ function chooseSites(heights: Float32Array, basins: DrainageBasins, siting: Lake
   const { grid } = siting;
 
   const cellArea = grid.cellSize * grid.cellSize;
-  const ponds: Pond[] = basins.lakes.map((lake) => {
+  const clearances: Clearance[] = basins.lakes.map((lake) => {
     return {
       radius: Math.sqrt((lake.cellCount * cellArea) / Math.PI) + LAKE_CLEARANCE,
       x: lake.centerX,
@@ -123,7 +123,7 @@ function chooseSites(heights: Float32Array, basins: DrainageBasins, siting: Lake
       break;
     }
 
-    if (!isClearOf(grid, cell, ponds) || siting.boundaryDistance(cell) <= NEAREST_BOUNDARY) {
+    if (!isClearOf(grid, cell, clearances) || siting.boundaryDistance(cell) <= NEAREST_BOUNDARY) {
       continue;
     }
 
@@ -131,7 +131,7 @@ function chooseSites(heights: Float32Array, basins: DrainageBasins, siting: Lake
 
     if (slope < STEEPEST_RIVER) {
       sites.push({ cell, riverSlope: slope });
-      ponds.push({ radius: SITE_SEPARATION, x: grid.cellCenterX(cell), z: grid.cellCenterZ(cell) });
+      clearances.push({ radius: SITE_SEPARATION, x: grid.cellCenterX(cell), z: grid.cellCenterZ(cell) });
     }
   }
 

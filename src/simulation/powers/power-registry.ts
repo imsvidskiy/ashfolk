@@ -27,7 +27,7 @@ import type { PowerHandler, PowerOutcome, PowerServices, PowerTarget } from "./p
 
 type PowerHandlers = { readonly [Id in PowerId]: PowerHandler<Id> };
 
-export const POWER_HANDLERS: PowerHandlers = {
+const POWER_HANDLERS: PowerHandlers = {
   abundance: abundancePower,
   deer: deerPower,
   earthquake: earthquakePower,

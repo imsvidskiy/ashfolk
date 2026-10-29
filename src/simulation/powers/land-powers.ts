@@ -5,6 +5,7 @@ import type { PowerParameters } from "../../content/powers.ts";
 import { plantHeight } from "../../generation/vegetation.ts";
 import { FULL_TURN } from "../../shared/math.ts";
 import type { RandomSource } from "../../shared/random.ts";
+import { NO_PLANT } from "../../world/vegetation-store.ts";
 import { brushFalloff, cellsInArea, flattenTerrain, raiseTerrain, smoothTerrain } from "../world/terrain-editing.ts";
 import { NO_BUILDING, type WorldState } from "../world/world-state.ts";
 import {
@@ -137,7 +138,7 @@ function plantTree(cell: number, species: PlantSpeciesIndex, services: PowerServ
   const { environment, random, world } = services;
   const { grid } = world;
 
-  world.plant({
+  const plant = world.plant({
     bornDay: environment.day,
     height: plantHeight(species, random, 1),
     rotation: random.next() * FULL_TURN,
@@ -146,6 +147,10 @@ function plantTree(cell: number, species: PlantSpeciesIndex, services: PowerServ
     x: grid.cellCenterX(cell) + random.between(-0.4, 0.4) * grid.cellSize,
     z: grid.cellCenterZ(cell) + random.between(-0.4, 0.4) * grid.cellSize,
   });
+
+  if (plant === NO_PLANT) {
+    return;
+  }
 
   const isForestLand = WOODED_BIOMES.has(world.terrain.biome[cell]);
 
