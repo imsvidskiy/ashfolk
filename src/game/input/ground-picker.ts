@@ -1,4 +1,5 @@
-import { type PerspectiveCamera, Raycaster, Vector2, Vector3 } from "three/webgpu";
+import { type PerspectiveCamera, Raycaster, Vector3 } from "three/webgpu";
+import { aimRay } from "./screen-projection.ts";
 
 const LONGEST_RAY = 30_000;
 const SHORTEST_STEP = 0.5;
@@ -20,7 +21,6 @@ export interface ViewportSize {
 export class GroundPicker {
   readonly #camera: PerspectiveCamera;
   readonly #heightAt: HeightField;
-  readonly #normalized = new Vector2();
   readonly #point = new Vector3();
   readonly #raycaster = new Raycaster();
   readonly #worldHalfSize: number;
@@ -32,8 +32,7 @@ export class GroundPicker {
   }
 
   pick(point: ScreenPoint, viewport: ViewportSize): Vector3 | null {
-    this.#normalized.set((point.x / viewport.width) * 2 - 1, -(point.y / viewport.height) * 2 + 1);
-    this.#raycaster.setFromCamera(this.#normalized, this.#camera);
+    aimRay(this.#raycaster, this.#camera, point, viewport);
 
     return this.#march();
   }

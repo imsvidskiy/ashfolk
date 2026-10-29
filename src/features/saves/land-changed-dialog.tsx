@@ -28,7 +28,7 @@ function useLandChangedDialog() {
   const acceptLand = useSavesStore((state) => {
     return state.acceptLand;
   });
-  const wasPaused = useRef(false);
+  const wasPaused = useRef<boolean>(false);
 
   useEffect(() => {
     if (session === null || !isPending) {

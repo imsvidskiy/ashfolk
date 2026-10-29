@@ -146,7 +146,6 @@ function fillPlants(plants: PlantBatch, chunks: readonly VegetationChunk[], cast
 export class VegetationView {
   readonly chunks: VegetationChunks;
   readonly group = new Group();
-  readonly highlight = uniform(new Vector3());
   readonly weather = new PlantWeather();
   readonly #batches: readonly (readonly PlantBatch[])[];
   readonly #changedBuckets: readonly Set<number>[];
@@ -154,6 +153,7 @@ export class VegetationView {
   readonly #chunkShadows: Uint8Array;
   readonly #heldBatches = new Map<number, InstanceBatch>();
   readonly #heldInstance = new Float32Array(FLOATS_PER_PLANT);
+  readonly #highlight = uniform(new Vector3());
   readonly #looks: readonly SpeciesLook[];
   readonly #mirror: WorldMirror;
   readonly #shadowProxies: readonly PlantBatch[];
@@ -185,7 +185,7 @@ export class VegetationView {
         },
         glow,
         grid: mirror.grid,
-        highlight: this.highlight,
+        highlight: this.#highlight,
         isFlammable: PLANT_SPECIES[species].canopyFuel > 0,
         look,
         textures,
@@ -220,12 +220,12 @@ export class VegetationView {
     const { vegetation } = this.#mirror;
 
     if (plant === NO_PLANT) {
-      this.highlight.value.set(0, 0, 0);
+      this.#highlight.value.set(0, 0, 0);
 
       return;
     }
 
-    this.highlight.value.set(vegetation.x[plant], vegetation.z[plant], 1);
+    this.#highlight.value.set(vegetation.x[plant], vegetation.z[plant], 1);
   }
 
   hold(hand: HandMotion): void {
