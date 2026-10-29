@@ -72,6 +72,7 @@ interface PlacedPiece {
 }
 
 interface Planner {
+  readonly candidates: number;
   readonly grid: WorldGrid;
   readonly placed: Monument[];
   readonly terrain: TerrainData;
@@ -440,11 +441,10 @@ function judge(planner: Planner, kind: MonumentKind, layout: Layout, site: Site)
 
 function bestSite(planner: Planner, kind: MonumentKind, layout: Layout, random: RandomSource): Choice | null {
   const limit = planner.grid.halfSize - RIM_MARGIN;
-  const candidates = countForArea(planner.grid, NORMAL_CANDIDATES);
 
   let best: Choice | null = null;
 
-  for (let candidate = 0; candidate < candidates; candidate += 1) {
+  for (let candidate = 0; candidate < planner.candidates; candidate += 1) {
     const site: Site = { angle: random.next() * FULL_TURN, x: random.signed() * limit, z: random.signed() * limit };
     const choice = judge(planner, kind, layout, site);
 
@@ -470,7 +470,7 @@ function unusedName(names: readonly string[], first: number, used: ReadonlySet<s
 
 export function planMonuments(grid: WorldGrid, terrain: TerrainData, seed: number): MonumentPlan {
   const random = createRandom(seed * 17 + 9);
-  const planner: Planner = { grid, placed: [], terrain };
+  const planner: Planner = { candidates: countForArea(grid, NORMAL_CANDIDATES), grid, placed: [], terrain };
   const pieces: PlantPlacement[] = [];
 
   const extras = Array.from({ length: countForArea(grid, NORMAL_EXTRA_MONUMENTS) }, () => {

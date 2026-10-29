@@ -40,6 +40,7 @@ interface BaseOutline {
   readonly plinth: number;
   readonly points: readonly PerimeterPoint[];
   readonly rimOffset: number;
+  readonly undersideDepth: number;
   readonly undersideRadius: number;
 }
 
@@ -122,10 +123,6 @@ export function islandPlinthHeight(mirror: WorldMirror, outline: IslandOutline):
   return lowest - CLIFF_DROP;
 }
 
-function undersideDepth(grid: WorldGrid): number {
-  return NORMAL_UNDERSIDE_DEPTH * islandSpanShare(grid);
-}
-
 function undersideReach(depth: number): number {
   return 1 - 0.97 * depth ** 0.62;
 }
@@ -156,7 +153,7 @@ function placeVertex(outline: BaseOutline, point: PerimeterPoint, ring: RingVert
   const spikes =
     Math.max(0, noise.fractal(Math.cos(angle) * 23, 4.2, Math.sin(angle) * 23, { octaves: 2 })) * ring.depth ** 2;
 
-  const drop = ring.depth ** 1.1 * undersideDepth(outline.grid) * (1 + spikes * 0.45) + lumps * 60 * ring.depth;
+  const drop = ring.depth ** 1.1 * outline.undersideDepth * (1 + spikes * 0.45) + lumps * 60 * ring.depth;
 
   return [Math.cos(angle) * radius, plinth - drop, Math.sin(angle) * radius];
 }
@@ -252,7 +249,7 @@ function buildUnderside(outline: BaseOutline): BufferGeometry {
 
   const tip = positions.length / 3;
 
-  positions.push(0, outline.plinth - undersideDepth(outline.grid) * 1.12, 0);
+  positions.push(0, outline.plinth - outline.undersideDepth * 1.12, 0);
   pushStitch(indices, outline.points.length, stride, rings.length);
   pushStrips(indices, coarsePoints.length, rings.length, outline.points.length);
 
@@ -285,6 +282,7 @@ export function buildIslandBaseGeometry(
     plinth,
     points,
     rimOffset: isSquare ? SQUARE_RIM_OFFSET : COAST_RIM_OFFSET,
+    undersideDepth: NORMAL_UNDERSIDE_DEPTH * islandSpanShare(mirror.grid),
     undersideRadius: isSquare ? SQUARE_UNDERSIDE_RADIUS : COAST_UNDERSIDE_RADIUS,
   };
 
