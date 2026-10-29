@@ -1,12 +1,13 @@
 import { LAKE_NAMES, PEAK_NAMES } from "../content/landmarks.ts";
 import { MONUMENTS } from "../content/monuments.ts";
 import { createRandom } from "../shared/random.ts";
+import { countForArea } from "../world/island-size.ts";
 import type { Monument } from "../world/monuments.ts";
 import type { Lake } from "../world/water.ts";
 import type { WorldGrid } from "../world/world-grid.ts";
 
 const LANDMARK_STREAM = 31;
-const NAMED_LAKES = 3;
+const NORMAL_NAMED_LAKES = 3;
 const SMALLEST_NAMED_LAKE = 60;
 const PEAK_LIFT = 30;
 const LAKE_LIFT = 4;
@@ -84,7 +85,7 @@ export function findLandmarks(source: LandmarkSource): Landmark[] {
     .toSorted((first, second) => {
       return second.cellCount - first.cellCount;
     })
-    .slice(0, NAMED_LAKES);
+    .slice(0, countForArea(source.grid, NORMAL_NAMED_LAKES));
   const lakes = largestLakes.map((lake, index) => {
     return lakeLandmark(lake, LAKE_NAMES[(firstLakeName + index) % LAKE_NAMES.length]);
   });
