@@ -79,6 +79,7 @@ interface SwampSurvey {
 interface IslandSurvey {
   readonly flatShare: number;
   readonly highGroundAngle: number;
+  readonly lakes: number;
   readonly rivers: number;
   readonly shares: Readonly<Record<keyof typeof BIOME_GROUPS, number>>;
 }
@@ -1104,6 +1105,7 @@ function surveyIsland(generated: GeneratedWorld): IslandSurvey {
   return {
     flatShare: flatCells / landCells,
     highGroundAngle: Math.atan2(towardZ, towardX),
+    lakes: generated.water.lakes.length,
     rivers: generated.water.rivers.length,
     shares: {
       cold: shareOf(BIOME_GROUPS.cold),
@@ -1754,10 +1756,11 @@ describe("islands across seeds", () => {
     }
   });
 
-  it("leaves every island enough flat land and rivers", () => {
+  it("leaves every island enough flat land, rivers and a lake", () => {
     for (const survey of surveys) {
       expect(survey.flatShare).toBeGreaterThan(0.06);
       expect(survey.rivers).toBeGreaterThanOrEqual(15);
+      expect(survey.lakes).toBeGreaterThanOrEqual(1);
     }
   });
 });
