@@ -11,9 +11,9 @@ export const SMALLEST_NAMED_POND_ACROSS = 60;
 const LANDMARK_STREAM = 31;
 const LAKE_NAME_STREAM = 1;
 const POND_NAME_STREAM = 2;
-const POND_OUTLINE_SAMPLES = 64;
 const LAKE_NAME_SALT = 1;
 const POND_NAME_SALT = 2;
+const POND_OUTLINE_SAMPLES = 64;
 const PEAK_LIFT = 30;
 const LAKE_LIFT = 4;
 const MONUMENT_LIFT = 9;
@@ -112,13 +112,12 @@ function namesByCell(names: readonly string[], cells: readonly number[], salt: n
 
   for (const index of order) {
     const preferred = Math.floor(hashToUnit(cells[index], salt) * names.length);
-    let step = 0;
 
-    while (taken.has(nameSlot(names, preferred, step))) {
-      step += 1;
+    let slot = nameSlot(names, preferred, 0);
+
+    for (let step = 1; taken.has(slot); step += 1) {
+      slot = nameSlot(names, preferred, step);
     }
-
-    const slot = nameSlot(names, preferred, step);
 
     taken.add(slot);
     assigned[index] = waterNameAt(names, slot);

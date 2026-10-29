@@ -113,13 +113,14 @@ describe("findLandmarks", () => {
   it("keeps the names of the other lakes and ponds when one appears", () => {
     const lakes = [lake(1, 100), lake(3, 100), lake(5, 100)];
     const springs = [pond(1, 60), pond(3, 60)];
-    const namesOf = (landmarks: readonly Landmark[]): Map<string, string> => {
+
+    function namesOf(landmarks: readonly Landmark[]): Map<string, string> {
       return new Map(
         lakeLandmarks(landmarks).map((landmark) => {
           return [`${landmark.x},${landmark.z}`, landmark.name];
         })
       );
-    };
+    }
 
     const before = namesOf(findLandmarks({ ...sourceWith(lakes), springs }));
     const after = namesOf(
@@ -167,7 +168,9 @@ describe("findLandmarks", () => {
     expect(new Set(names).size).toBe(names.length);
     expect(
       names.filter((name) => {
-        return WATER_NAME_QUALIFIERS.includes(name.split(" ")[0] ?? "");
+        return WATER_NAME_QUALIFIERS.some((qualifier) => {
+          return name === qualifier || name.startsWith(`${qualifier} `);
+        });
       })
     ).toEqual([]);
   });
