@@ -16,12 +16,12 @@ import { transformOf } from "../mesh/transforms.ts";
 import { BERRY_PART } from "./berries.ts";
 import { addBlob, addLimb, addTrunk, BLOB_TINT, createGrowth, finish, type Growth } from "./tree-growth.ts";
 import {
+  BROADLEAF_LOOK,
   FOLIAGE_FLUTTER,
   foliageStyle,
   meshTree,
   type PlantDetailLevel,
   plantSway,
-  type TreeLook,
 } from "./tree-mesher.ts";
 import {
   type FoliageBlob,
@@ -59,10 +59,8 @@ const HANGING_STEP = 1.45;
 const FRUIT_SINK = 0.4;
 const PEAR_CENTER = 0.72;
 const ORCHARD_SPECIES: ReadonlySet<number> = new Set(Object.keys(ORCHARD_HEIGHTS).map(Number));
-const FRUIT_TREE_LOOK: TreeLook = { bark: MaterialSlot.Bark, foliage: MaterialSlot.Leaf, hasBarkMarks: false };
 const LEAF_NOISE = createVolumeNoise(createRandom(7171));
 const GROUNDED_ENVELOPE = 0.8;
-const BURIED_MARGIN = 0.01;
 
 type OrchardSpecies = keyof typeof ORCHARD_HEIGHTS;
 
@@ -610,7 +608,7 @@ function distantBush(structure: BushStructure): MeshData {
   const envelope = envelopeLeaf(structure);
 
   builder.add(icosphere(envelope.radius, 0), {
-    style: foliageStyle(structure, FRUIT_TREE_LOOK, envelope.tint, envelope.center),
+    style: foliageStyle(structure, BROADLEAF_LOOK, envelope.tint, envelope.center),
     transform: transformOf({ position: envelope.center.toArray(), scale: [1, envelope.squash, 1] }),
   });
 
@@ -642,7 +640,7 @@ function bushLeaf(structure: BushStructure, leaf: BushLeaf, level: PlantDetailLe
   const builder = new MeshBuilder();
 
   builder.add(leafShape(leaf, level), {
-    style: foliageStyle(structure, FRUIT_TREE_LOOK, leaf.tint, leaf.center),
+    style: foliageStyle(structure, BROADLEAF_LOOK, leaf.tint, leaf.center),
     transform: transformOf({ position: leaf.center.toArray(), scale: [1, leaf.squash, 1] }),
   });
 
@@ -673,7 +671,7 @@ function isFruitTree(species: OrchardSpecies): species is FruitTreeSpecies {
 
 function meshFruitTree(species: FruitTreeSpecies, seed: number, level: PlantDetailLevel): MeshData {
   const structure = FRUIT_TREE_GENERATORS[species](seed);
-  const tree = meshTree(structure, FRUIT_TREE_LOOK, level);
+  const tree = meshTree(structure, BROADLEAF_LOOK, level);
 
   const detail = fruitDetail(level);
 
@@ -723,10 +721,10 @@ function meshBerryBush(species: BushSpecies, seed: number, level: PlantDetailLev
   });
 
   const shownBerries = berries.map((berry, index) => {
-    return withoutBuriedTriangles(berry, [...leaves, ...othersThan(berries, index)], BURIED_MARGIN);
+    return withoutBuriedTriangles(berry, [...leaves, ...othersThan(berries, index)]);
   });
 
-  return mergeMeshes([stems, ...withoutBuriedOverlaps(leaves, BURIED_MARGIN), ...shownBerries]);
+  return mergeMeshes([stems, ...withoutBuriedOverlaps(leaves), ...shownBerries]);
 }
 
 export function meshOrchardPlant(species: OrchardSpecies, seed: number, level: PlantDetailLevel): MeshData {

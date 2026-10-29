@@ -63,6 +63,8 @@ export interface TreeLook {
   readonly hasBarkMarks: boolean;
 }
 
+export const BROADLEAF_LOOK: TreeLook = { bark: MaterialSlot.Bark, foliage: MaterialSlot.Leaf, hasBarkMarks: false };
+
 interface SkirtDetail {
   readonly hasRoundedUnderside: boolean;
   readonly segments: number;

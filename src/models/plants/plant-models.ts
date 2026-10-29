@@ -8,7 +8,7 @@ import { berryClusters } from "./berries.ts";
 import { CACTUS_FORMS, cactusForm, meshCactus } from "./cacti.ts";
 import { isOrchardModel, meshOrchardPlant, ORCHARD_HEIGHTS, ORCHARD_VARIANT_COUNTS } from "./orchard-plants.ts";
 import { isRockModel, meshRock, ROCK_HEIGHTS, ROCK_VARIANT_COUNTS } from "./rocks.ts";
-import { isDistantLevel, meshTree, type PlantDetailLevel, type TreeLook } from "./tree-mesher.ts";
+import { BROADLEAF_LOOK, isDistantLevel, meshTree, type PlantDetailLevel, type TreeLook } from "./tree-mesher.ts";
 import { DESERT_SHRUB_FORM_COUNT, TREE_GENERATORS, TREE_HEIGHTS } from "./tree-species.ts";
 
 export const PLANT_DETAIL_LEVELS: readonly PlantDetailLevel[] = ["high", "medium", "low", "far"];
@@ -89,27 +89,25 @@ const CROWNS_WITHOUT_BURIED_FOLIAGE: ReadonlySet<PlantSpeciesIndex> = new Set([
 
 const FORM_PER_VARIANT: ReadonlySet<PlantSpeciesIndex> = new Set([PlantSpecies.Cactus, PlantSpecies.DesertShrub]);
 const FOOTPRINT_HEIGHT = 0.3;
-const BURIED_MARGIN = 0.01;
-const BROADLEAF: TreeLook = { bark: MaterialSlot.Bark, foliage: MaterialSlot.Leaf, hasBarkMarks: false };
 const CONIFER: TreeLook = { bark: MaterialSlot.Bark, foliage: MaterialSlot.Needle, hasBarkMarks: false };
 const BIRCH: TreeLook = { bark: MaterialSlot.BirchBark, foliage: MaterialSlot.Leaf, hasBarkMarks: true };
 const PALM: TreeLook = { bark: MaterialSlot.Wood, foliage: MaterialSlot.Leaf, hasBarkMarks: true };
 const DEADWOOD: TreeLook = { bark: MaterialSlot.Deadwood, foliage: MaterialSlot.Leaf, hasBarkMarks: false };
 
 const TREE_LOOKS: Readonly<Partial<Record<PlantSpeciesIndex, TreeLook>>> = {
-  [PlantSpecies.Acacia]: BROADLEAF,
-  [PlantSpecies.Alder]: BROADLEAF,
+  [PlantSpecies.Acacia]: BROADLEAF_LOOK,
+  [PlantSpecies.Alder]: BROADLEAF_LOOK,
   [PlantSpecies.Birch]: BIRCH,
-  [PlantSpecies.Bush]: BROADLEAF,
+  [PlantSpecies.Bush]: BROADLEAF_LOOK,
   [PlantSpecies.DeadTree]: DEADWOOD,
   [PlantSpecies.DesertShrub]: DEADWOOD,
-  [PlantSpecies.Maple]: BROADLEAF,
-  [PlantSpecies.Oak]: BROADLEAF,
+  [PlantSpecies.Maple]: BROADLEAF_LOOK,
+  [PlantSpecies.Oak]: BROADLEAF_LOOK,
   [PlantSpecies.Palm]: PALM,
   [PlantSpecies.Pine]: CONIFER,
-  [PlantSpecies.Poplar]: BROADLEAF,
+  [PlantSpecies.Poplar]: BROADLEAF_LOOK,
   [PlantSpecies.Spruce]: CONIFER,
-  [PlantSpecies.Willow]: BROADLEAF,
+  [PlantSpecies.Willow]: BROADLEAF_LOOK,
 };
 
 function withoutBuriedFoliage(tree: MeshData, berries: readonly MeshData[], look: TreeLook): MeshData {
@@ -124,9 +122,9 @@ function withoutBuriedFoliage(tree: MeshData, berries: readonly MeshData[], look
 
   return mergeMeshes([
     ...wood,
-    ...withoutBuriedOverlaps(foliage, BURIED_MARGIN),
+    ...withoutBuriedOverlaps(foliage),
     ...berries.map((berry) => {
-      return withoutBuriedTriangles(berry, foliage, BURIED_MARGIN);
+      return withoutBuriedTriangles(berry, foliage);
     }),
   ]);
 }
