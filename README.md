@@ -103,11 +103,11 @@ Dawnfolk is free and open source. If you enjoy it, you can support its developme
 
 ## Star history
 
-<a href="https://www.star-history.com/#imsvidskiy/dawnfolk&Date">
+<a href="https://www.star-history.com/?type=date&repos=imsvidskiy%2Fdawnfolk">
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=imsvidskiy/dawnfolk&type=Date&theme=dark" />
-    <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=imsvidskiy/dawnfolk&type=Date" />
-    <img alt="Star history of Dawnfolk" src="https://api.star-history.com/svg?repos=imsvidskiy/dawnfolk&type=Date" />
+    <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/chart?repos=imsvidskiy/dawnfolk&type=date&theme=dark&legend=top-left" />
+    <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/chart?repos=imsvidskiy/dawnfolk&type=date&legend=top-left" />
+    <img alt="Star history of Dawnfolk" src="https://api.star-history.com/chart?repos=imsvidskiy/dawnfolk&type=date&legend=top-left" />
   </picture>
 </a>
 
