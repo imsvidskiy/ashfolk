@@ -349,6 +349,7 @@ export class RivalrySystem implements Battleground {
   }
 
   restore(snapshot: RivalrySnapshot): void {
+    this.#arrows.clear();
     this.#claims = snapshot.claims;
     this.ledger.restore(snapshot.ledger);
     copyDates(this.#mourningUntil, snapshot.mourningUntil);
