@@ -292,7 +292,7 @@ describe("pointer controls", () => {
   it("keeps carrying through a pinch and zooms the camera with it", async () => {
     const rig = createRig();
 
-    const before = rig.camera.state.distance;
+    const before = rig.camera.state;
 
     touch(rig, "pointerdown", 1, 195, 420);
     await wait(HOLD_MILLISECONDS);
@@ -310,7 +310,8 @@ describe("pointer controls", () => {
     expect(rig.tool.begin).toHaveBeenCalledTimes(1);
     expect(rig.tool.cancel).not.toHaveBeenCalled();
     expect(rig.tool.end).toHaveBeenCalledTimes(1);
-    expect(rig.camera.state.distance).toBeLessThan(before);
+    expect(rig.camera.state.distance).toBeLessThan(before.distance);
+    expect(rig.camera.state.yaw).toBeCloseTo(before.yaw);
   });
 
   it("cancels a tool that cannot hold through a pinch", async () => {
@@ -337,6 +338,19 @@ describe("pointer controls", () => {
 
     expect(rig.tool.end).toHaveBeenCalledTimes(1);
     expect(rig.tool.tap).not.toHaveBeenCalled();
+  });
+
+  it("returns what it carries when the browser cancels the holding finger during a pinch", async () => {
+    const rig = createRig();
+
+    touch(rig, "pointerdown", 1, 195, 420);
+    await wait(HOLD_MILLISECONDS);
+    touch(rig, "pointerdown", 2, 260, 520);
+    touch(rig, "pointercancel", 1, 195, 420);
+    touch(rig, "pointerup", 2, 260, 520);
+
+    expect(rig.tool.cancel).toHaveBeenCalledTimes(1);
+    expect(rig.tool.end).not.toHaveBeenCalled();
   });
 
   it("carries to the ground under the still pointer as the camera zooms", () => {
@@ -400,7 +414,7 @@ describe("pointer controls", () => {
     wheel(rig, 400);
     runFrames(rig);
 
-    expect(rig.tool.hover.mock.calls.length).toBeGreaterThan(1);
+    expect(rig.tool.hover.mock.calls.length).toBeGreaterThan(2);
 
     mouse(rig, "pointerleave", 120, 200);
 
