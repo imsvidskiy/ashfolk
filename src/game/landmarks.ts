@@ -1,6 +1,6 @@
 import { LAKE_NAMES, PEAK_NAMES, POND_NAMES, WATER_NAME_QUALIFIERS } from "../content/landmarks.ts";
 import { MONUMENTS } from "../content/monuments.ts";
-import { FULL_TURN } from "../shared/math.ts";
+import { FULL_TURN, hashToUnit } from "../shared/math.ts";
 import { createRandom, shuffle } from "../shared/random.ts";
 import type { Monument } from "../world/monuments.ts";
 import { type Lake, pondOutlineRadius, type Spring } from "../world/water.ts";
@@ -12,6 +12,8 @@ const LANDMARK_STREAM = 31;
 const LAKE_NAME_STREAM = 1;
 const POND_NAME_STREAM = 2;
 const POND_OUTLINE_SAMPLES = 64;
+const LAKE_NAME_SALT = 1;
+const POND_NAME_SALT = 2;
 const PEAK_LIFT = 30;
 const LAKE_LIFT = 4;
 const MONUMENT_LIFT = 9;
@@ -93,6 +95,38 @@ function isNamedPond(spring: Spring): boolean {
   return spring.kind === "pond" && pondAcross(spring) >= SMALLEST_NAMED_POND_ACROSS;
 }
 
+function nameSlot(names: readonly string[], preferred: number, step: number): number {
+  return ((preferred + step) % names.length) + names.length * Math.floor(step / names.length);
+}
+
+function namesByCell(names: readonly string[], cells: readonly number[], salt: number): string[] {
+  const taken = new Set<number>();
+  const order = cells
+    .map((_, index) => {
+      return index;
+    })
+    .toSorted((first, second) => {
+      return cells[first] - cells[second];
+    });
+  const assigned: string[] = [];
+
+  for (const index of order) {
+    const preferred = Math.floor(hashToUnit(cells[index], salt) * names.length);
+    let step = 0;
+
+    while (taken.has(nameSlot(names, preferred, step))) {
+      step += 1;
+    }
+
+    const slot = nameSlot(names, preferred, step);
+
+    taken.add(slot);
+    assigned[index] = waterNameAt(names, slot);
+  }
+
+  return assigned;
+}
+
 function lakeLandmark(lake: Lake, name: string): Landmark {
   return { detail: null, id: `lake-${lake.id}`, kind: "lake", lift: LAKE_LIFT, name, x: lake.centerX, z: lake.centerZ };
 }
@@ -116,21 +150,36 @@ function monumentLandmark(monument: Monument): Landmark {
 export function findLandmarks(source: LandmarkSource): Landmark[] {
   const random = createRandom(source.seed).derive(LANDMARK_STREAM);
   const lakeNames = shuffle(random.derive(LAKE_NAME_STREAM), [...LAKE_NAMES]);
+  const peakName = random.pick(PEAK_NAMES);
   const pondNames = shuffle(random.derive(POND_NAME_STREAM), [...POND_NAMES]);
 
-  const lakes = source.lakes
-    .toSorted((first, second) => {
-      return first.id - second.id;
-    })
-    .map((lake, index) => {
-      return lakeLandmark(lake, waterNameAt(lakeNames, index));
-    });
-  const ponds = source.springs.filter(isNamedPond).map((spring, index) => {
-    return pondLandmark(spring, waterNameAt(pondNames, index));
+  const namedLakes = source.lakes.toSorted((first, second) => {
+    return first.id - second.id;
+  });
+  const lakeNamesByCell = namesByCell(
+    lakeNames,
+    namedLakes.map((lake) => {
+      return source.grid.cellAt(lake.centerX, lake.centerZ);
+    }),
+    LAKE_NAME_SALT
+  );
+  const lakes = namedLakes.map((lake, index) => {
+    return lakeLandmark(lake, lakeNamesByCell[index]);
+  });
+  const namedPonds = source.springs.filter(isNamedPond);
+  const pondNamesByCell = namesByCell(
+    pondNames,
+    namedPonds.map((spring) => {
+      return source.grid.cellAt(spring.x, spring.z);
+    }),
+    POND_NAME_SALT
+  );
+  const ponds = namedPonds.map((spring, index) => {
+    return pondLandmark(spring, pondNamesByCell[index]);
   });
   const monuments = source.monuments.map((monument) => {
     return monumentLandmark(monument);
   });
 
-  return [peakLandmark(source, random.pick(PEAK_NAMES)), ...lakes, ...ponds, ...monuments];
+  return [peakLandmark(source, peakName), ...lakes, ...ponds, ...monuments];
 }

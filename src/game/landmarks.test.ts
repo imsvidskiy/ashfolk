@@ -110,6 +110,40 @@ describe("findLandmarks", () => {
     );
   });
 
+  it("keeps the names of the other lakes and ponds when one appears", () => {
+    const lakes = [lake(1, 100), lake(3, 100), lake(5, 100)];
+    const springs = [pond(1, 60), pond(3, 60)];
+    const namesOf = (landmarks: readonly Landmark[]): Map<string, string> => {
+      return new Map(
+        lakeLandmarks(landmarks).map((landmark) => {
+          return [`${landmark.x},${landmark.z}`, landmark.name];
+        })
+      );
+    };
+
+    const before = namesOf(findLandmarks({ ...sourceWith(lakes), springs }));
+    const after = namesOf(
+      findLandmarks({
+        ...sourceWith([
+          lake(0, 100),
+          ...lakes.map((each) => {
+            return { ...each, id: each.id + 1 };
+          }),
+        ]),
+        springs: [pond(0, 60), ...springs],
+      })
+    );
+
+    for (const [place, name] of before) {
+      expect(after.get(place)).toBe(name);
+    }
+  });
+
+  it("keeps the peak name the seed gave before ponds were named", () => {
+    expect(findLandmarks(sourceWith([], 7))[0]?.name).toBe("Greycrown");
+    expect(findLandmarks(sourceWith([], 1))[0]?.name).toBe("Frostcap");
+  });
+
   it("never runs out of names, even past the lists", () => {
     const lakes = Array.from({ length: LAKE_NAMES.length * 15 }, (_, index) => {
       return lake(index, 100);
