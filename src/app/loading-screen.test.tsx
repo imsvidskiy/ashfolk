@@ -31,6 +31,25 @@ describe("loading screen", () => {
     await expect.element(screen.getByText("WebGPU is not available")).toBeVisible();
   });
 
+  it("asks for a reload when the graphics are lost and waits for the save first", async () => {
+    useEngineStore.setState({
+      status: {
+        kind: "graphicsLost",
+        saved: new Promise(ignore),
+      },
+    });
+
+    const screen = await render(<LoadingScreen />);
+
+    await expect.element(screen.getByRole("alert").getByText("The island went dark")).toBeVisible();
+
+    const reload = screen.getByRole("button", { name: "Reload" });
+
+    await reload.click();
+
+    await expect.element(reload).toBeDisabled();
+  });
+
   it("tells the player when the simulation stops and starts the world again", async () => {
     vi.spyOn(console, "error").mockImplementation(ignore);
 
