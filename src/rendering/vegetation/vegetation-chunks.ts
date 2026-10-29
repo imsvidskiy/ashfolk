@@ -1,5 +1,6 @@
 import { Box3, Vector3 } from "three/webgpu";
 import { isMonumentSpecies, PLANT_SPECIES, type PlantSpeciesIndex } from "../../content/plants.ts";
+import type { GroundPoint } from "../../game/camera/god-camera.ts";
 import type { WorldMirror } from "../../game/world-mirror.ts";
 import { canonicalHeight, farVariantOf, footprintRadius, plantVariantCount } from "../../models/plants/plant-models.ts";
 import { isDistantLevel, type PlantDetailLevel } from "../../models/plants/tree-mesher.ts";
@@ -146,7 +147,7 @@ export class VegetationChunks {
     }
   }
 
-  plantsNear(spots: readonly { readonly x: number; readonly z: number }[], radius: number): number[] {
+  plantsNear(spots: readonly GroundPoint[], radius: number): number[] {
     const chunks = new Set<number>();
 
     for (const { x, z } of spots) {

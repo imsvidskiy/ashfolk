@@ -1,4 +1,5 @@
 import { Frustum, Matrix4, type PerspectiveCamera, Scene, Vector2, Vector3, type WebGPURenderer } from "three/webgpu";
+import type { GroundPoint } from "../game/camera/god-camera.ts";
 import type { WorldMirror } from "../game/world-mirror.ts";
 import { lerp } from "../shared/math.ts";
 import type { SimulationEffect } from "../simulation/effects.ts";
@@ -207,7 +208,7 @@ export class WorldRenderer {
     this.#highlighted = target;
   }
 
-  plantsNear(spots: readonly { readonly x: number; readonly z: number }[], radius: number): number[] {
+  plantsNear(spots: readonly GroundPoint[], radius: number): number[] {
     return this.#vegetation.chunks.plantsNear(spots, radius);
   }
 

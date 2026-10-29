@@ -20,11 +20,6 @@ export interface AgentViewInput extends ViewInput {
   readonly secondsSinceTick: number;
 }
 
-export interface AgentSpot {
-  readonly x: number;
-  readonly z: number;
-}
-
 export interface LevelDistances {
   readonly far: number;
   readonly high: number;
