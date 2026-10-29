@@ -63,6 +63,14 @@ describe("power dock", () => {
     );
   });
 
+  it("separates the groups of the chosen kind", async () => {
+    const screen = await render(<PowerDock />);
+
+    await screen.getByRole("group", { name: "Kinds" }).getByRole("button", { name: "Life" }).click();
+
+    expect(screen.getByRole("separator").elements()).toHaveLength(3);
+  });
+
   it("opens on the kind of the selected power", async () => {
     usePowerStore.setState({ selectedPowerId: "smooth" });
 

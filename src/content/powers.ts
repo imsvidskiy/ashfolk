@@ -406,32 +406,17 @@ export type PowerId = keyof typeof POWERS;
 
 export type PowerParameters<Id extends PowerId> = z.output<(typeof POWERS)[Id]["parameters"]>;
 
-export const POWER_ORDER: readonly PowerId[] = [
-  "fire",
-  "lightning",
-  "rain",
-  "snow",
-  "explosion",
-  "meteor",
-  "earthquake",
-  "volcano",
-  "tornado",
-  "raise",
-  "lower",
-  "flatten",
-  "smooth",
-  "forest",
-  "paint",
-  "tribe",
-  "deer",
-  "mammoth",
-  "ibex",
-  "hare",
-  "wolf",
-  "abundance",
-  "inspiration",
-  "healing",
+export const POWER_GROUPS: readonly (readonly PowerId[])[] = [
+  ["fire", "lightning", "rain", "snow"],
+  ["explosion", "meteor", "earthquake", "volcano", "tornado"],
+  ["raise", "lower", "flatten", "smooth"],
+  ["forest", "paint"],
+  ["tribe"],
+  ["deer", "mammoth", "ibex", "hare", "wolf"],
+  ["abundance", "inspiration", "healing"],
 ];
+
+export const POWER_ORDER: readonly PowerId[] = POWER_GROUPS.flat();
 
 function brushRadius(defaultValue: number, maximum: number) {
   return rangeParameter({
@@ -459,6 +444,12 @@ function strength(defaultValue: number, description: string) {
 
 export function isPowerId(value: string): value is PowerId {
   return Object.hasOwn(POWERS, value);
+}
+
+export function powerGroupsInCategory(category: PowerCategory): readonly (readonly PowerId[])[] {
+  return POWER_GROUPS.filter((group) => {
+    return POWERS[group[0]].category === category;
+  });
 }
 
 export function powersInCategory(category: PowerCategory): readonly PowerId[] {
