@@ -11,6 +11,7 @@ import { islandPointAt } from "./relief.ts";
 import {
   findPools,
   findSmallAreas,
+  isStillWater,
   isWetland,
   matchWetlandShare,
   measureWetness,
@@ -314,14 +315,6 @@ function findRiverBanks(inputs: WetlandInputs, slopes: Float32Array): Uint8Array
   }
 
   return banks;
-}
-
-function isStillWater(inputs: WetlandInputs, cell: number): boolean {
-  if (inputs.lakeIds[cell] >= 0) {
-    return true;
-  }
-
-  return inputs.riverStrength[cell] === 0 && hasWater(inputs.waterSurface[cell], inputs.heights[cell]);
 }
 
 function isNearLakeShore(inputs: WetlandInputs, column: number, row: number, height: number): boolean {

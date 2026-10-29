@@ -1,6 +1,7 @@
 import { clamp, smoothstep } from "../shared/math.ts";
 import { createNoiseSampler } from "../shared/noise.ts";
 import { createRandom } from "../shared/random.ts";
+import { isOnIsland } from "../world/coast.ts";
 import { hasWater, type River, type RiverPoint } from "../world/water.ts";
 import { ORTHOGONAL_STEPS, type WorldGrid } from "../world/world-grid.ts";
 import { boxBlur } from "./box-blur.ts";
@@ -59,7 +60,7 @@ interface WaterReach {
   span: Float32Array;
 }
 
-function isStillWater(inputs: WetlandInputs, cell: number): boolean {
+export function isStillWater(inputs: WetlandInputs, cell: number): boolean {
   if (!hasWater(inputs.waterSurface[cell], inputs.heights[cell])) {
     return false;
   }
@@ -220,7 +221,7 @@ export function measureWetness(inputs: WetlandInputs, slopes: Float64Array): Flo
   for (let cell = 0; cell < grid.cellCount; cell += 1) {
     const height = heights[cell];
 
-    if (coastDistance[cell] <= 0 || hasWater(waterSurface[cell], height) || desert[cell] > DRY_DESERT) {
+    if (!isOnIsland(coastDistance, cell) || hasWater(waterSurface[cell], height) || desert[cell] > DRY_DESERT) {
       continue;
     }
 
@@ -263,7 +264,7 @@ export function matchWetlandShare(wetness: Float32Array, coastDistance: Float32A
   let wetCells = 0;
 
   for (let cell = 0; cell < wetness.length; cell += 1) {
-    if (coastDistance[cell] <= 0) {
+    if (!isOnIsland(coastDistance, cell)) {
       continue;
     }
 
