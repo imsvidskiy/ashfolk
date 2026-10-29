@@ -6,7 +6,7 @@ import type { Monument } from "../world/monuments.ts";
 import { type Lake, pondOutlineRadius, type Spring } from "../world/water.ts";
 import type { WorldGrid } from "../world/world-grid.ts";
 
-export const SMALLEST_NAMED_POND_ACROSS = 70;
+export const SMALLEST_NAMED_POND_ACROSS = 60;
 
 const LANDMARK_STREAM = 31;
 const LAKE_NAME_STREAM = 1;
