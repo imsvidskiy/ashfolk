@@ -107,14 +107,6 @@ function shareAbove(values: readonly number[], limit: number): number {
   );
 }
 
-function shareBelow(values: readonly number[], limit: number): number {
-  return (
-    values.filter((value) => {
-      return value < limit;
-    }).length / values.length
-  );
-}
-
 function edgeSides(grid: WorldGrid): number[][] {
   const last = grid.cellsPerSide - 1;
   const positions = Array.from({ length: grid.cellsPerSide }, (_, position) => {
@@ -1659,8 +1651,8 @@ describe("full-size river joins", () => {
 
       expect(all.length).toBeGreaterThan(500);
       expect(sidehill.length).toBeGreaterThan(50);
-      expect(shareBelow(all, SHALLOWEST_BED)).toBeLessThan(0.08);
-      expect(shareBelow(sidehill, SHALLOWEST_BED)).toBeLessThan(0.22);
+      expect(1 - shareAbove(all, SHALLOWEST_BED)).toBeLessThan(0.08);
+      expect(1 - shareAbove(sidehill, SHALLOWEST_BED)).toBeLessThan(0.22);
       expect(median(sidehill)).toBeGreaterThan(0.8);
     }
   });
