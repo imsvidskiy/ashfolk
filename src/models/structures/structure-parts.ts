@@ -21,8 +21,6 @@ export interface StructureContext {
   readonly random: RandomSource;
 }
 
-type Order = number | ((point: SurfacePoint) => number);
-
 interface PitchedRoof {
   readonly eave: number;
   readonly length: number;
@@ -94,46 +92,6 @@ export function addLog(
       radiusTop: radius * 0.92,
     }),
     { style, transform: segmentTransform(start, end) }
-  );
-}
-
-export function addStake(
-  context: StructureContext,
-  base: Triple,
-  height: number,
-  radius: number,
-  order: Order,
-  bands: readonly number[]
-): void {
-  const tipHeight = radius * 2.4;
-  const sides = detail(context, 6, 4);
-
-  const [x, y, z] = base;
-
-  const shaftTop = y + height - tipHeight;
-  const rings = bands
-    .filter((band) => {
-      return band > y && band < shaftTop;
-    })
-    .map((band) => {
-      return { radius: radius - (radius * 0.06 * (band - y)) / (shaftTop - y), y: band };
-    });
-
-  context.builder.add(
-    lathe(
-      [{ radius: 0, y }, { radius, y }, ...rings, { radius: radius * 0.94, y: shaftTop }, { radius: 0, y: y + height }],
-      sides
-    ),
-    {
-      style: {
-        buildOrder: order,
-        shade: (point) => {
-          return 0.82 + 0.18 * saturate(point.position.y / 3);
-        },
-        slot: MaterialSlot.Wood,
-      },
-      transform: transformOf({ position: [x, 0, z] }),
-    }
   );
 }
 
