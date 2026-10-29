@@ -1,4 +1,4 @@
-import { smoothstep } from "../shared/math.ts";
+import { clamp, smoothstep } from "../shared/math.ts";
 import { createNoiseSampler } from "../shared/noise.ts";
 import { createRandom } from "../shared/random.ts";
 import { hasWater, type River, type RiverPoint } from "../world/water.ts";
@@ -32,6 +32,8 @@ const PATCH_SPAN = 420;
 const PATCH_START = -0.3;
 const PATCH_END = 0.1;
 const WETLAND_THRESHOLD = 0.34;
+const GENTLEST_WETNESS_CURVE = 0.7;
+const STEEPEST_WETNESS_CURVE = 2.4;
 const WETNESS_SPREAD = 50;
 const SMALLEST_WETLAND = 3000;
 const POOL_SPAN = 24;
@@ -294,6 +296,36 @@ export function measureWetness(inputs: WetlandInputs, slopes: Float64Array): Flo
   }
 
   return spread;
+}
+
+export function matchWetlandShare(wetness: Float32Array, coastDistance: Float32Array, share: number): void {
+  const wet = new Float32Array(wetness.length);
+
+  let landCells = 0;
+  let wetCells = 0;
+
+  for (let cell = 0; cell < wetness.length; cell += 1) {
+    if (coastDistance[cell] <= 0) {
+      continue;
+    }
+
+    landCells += 1;
+
+    if (wetness[cell] > 0) {
+      wet[wetCells] = wetness[cell];
+      wetCells += 1;
+    }
+  }
+
+  const ascending = wet.subarray(0, wetCells).sort();
+  const rank = Math.floor(share * landCells);
+  const reference = rank < wetCells ? ascending[wetCells - 1 - rank] : undefined;
+  const exponent = reference === undefined ? GENTLEST_WETNESS_CURVE : Math.log(WETLAND_THRESHOLD) / Math.log(reference);
+  const clamped = clamp(exponent, GENTLEST_WETNESS_CURVE, STEEPEST_WETNESS_CURVE);
+
+  for (let cell = 0; cell < wetness.length; cell += 1) {
+    wetness[cell] **= clamped;
+  }
 }
 
 export function isWetland(wetness: number): boolean {

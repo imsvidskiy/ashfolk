@@ -15,17 +15,30 @@ const TEST_OPTIONS: GenerationOptions = {
   shape: "round",
 };
 
+function riverMiddle(world: WorldState): { x: number; z: number } {
+  const longest = world.water.rivers.reduce((first, second) => {
+    return second.points.length > first.points.length ? second : first;
+  });
+  const middle = longest.points[Math.floor(longest.points.length / 2)];
+
+  if (middle === undefined) {
+    throw new Error("Expected the island to have a river");
+  }
+
+  return { x: middle.x, z: middle.z };
+}
+
 describe("water recomputation", () => {
   let world: WorldState;
 
   beforeEach(() => {
-    world = new WorldState(generateWorld(11, TEST_OPTIONS));
+    world = new WorldState(generateWorld(10, TEST_OPTIONS));
   });
 
   it("waits for the land to stay still before recomputing", () => {
     const recomputation = new WaterRecomputation(world);
 
-    raiseTerrain(world, { radius: 200, x: 0, z: 0 }, 5);
+    raiseTerrain(world, { radius: 200, ...riverMiddle(world) }, 5);
 
     expect(recomputation.update(0.1)).toBe("none");
     expect(recomputation.isPending).toBe(true);
@@ -159,7 +172,7 @@ describe("water recomputation", () => {
   it("keeps carving depths positive after an edit", () => {
     const recomputation = new WaterRecomputation(world);
 
-    raiseTerrain(world, { radius: 300, x: 0, z: 0 }, 20);
+    raiseTerrain(world, { radius: 300, ...riverMiddle(world) }, 20);
     recomputation.recompute();
 
     expect(Math.min(...world.terrain.carving)).toBeGreaterThanOrEqual(0);

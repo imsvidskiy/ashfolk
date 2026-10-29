@@ -72,7 +72,7 @@ function grownSimulation(): Simulation {
 
   simulation.runTicks(300);
   simulation.execute({ parameters: { radius: 60 }, powerId: "raise", type: "usePower", x: 120, z: -80 });
-  simulation.execute({ parameters: { radius: 30 }, powerId: "fire", type: "usePower", x: -150, z: 90 });
+  simulation.execute({ parameters: { radius: 30 }, powerId: "fire", type: "usePower", x: -300, z: -200 });
   settleLand(simulation);
   simulation.runTicks(300);
 
@@ -608,5 +608,19 @@ describe.each(["round", "square"] as const)("a long day on a %s island", (shape)
         return isInOpenWater(simulation, walker);
       })
     ).toEqual([]);
+  });
+});
+
+describe("arrival on islands of every layout", () => {
+  it("settles all the first tribes whatever the island's layout", { timeout: 60_000 }, () => {
+    for (let seed = 1; seed <= 12; seed += 1) {
+      const simulation = new Simulation(
+        generateWorld(seed, { dimensions: { cellSize: 50, cellsPerSide: 128 }, erosionStrength: 1, shape: "round" })
+      );
+
+      simulation.populate();
+
+      expect(simulation.society.tribes()).toHaveLength(3);
+    }
   });
 });

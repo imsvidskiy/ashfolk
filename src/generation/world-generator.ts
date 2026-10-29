@@ -29,6 +29,7 @@ import {
   type IslandSketch,
 } from "./generation-options.ts";
 import { computeHydrology } from "./hydrology.ts";
+import { type Basin, basinShapeAt, type IslandLayout, planIslandLayout } from "./island-layout.ts";
 import { digRiverLakes, fillSinks } from "./lake-basins.ts";
 import { planMonuments } from "./monuments.ts";
 import { createRelief, islandPointAt, type Relief } from "./relief.ts";
@@ -43,6 +44,8 @@ const CAPROCK_TALUS = 1.15;
 const BEDROCK_HEIGHT = 650;
 const SUMMIT_HEIGHT = 950;
 const STEEPEST_SLOPE = 1.25;
+const BASIN_LEVEL_EDGE = 0.1;
+const BASIN_LEVEL_CORE = 0.5;
 const ROUGH_RELAXATION_ITERATIONS = 24;
 const FINAL_RELAXATION_ITERATIONS = 72;
 const DESERT_RESISTANCE = 0.85;
@@ -98,10 +101,22 @@ function talusSlopes(heights: Float32Array, dryness: Float32Array): Float32Array
   });
 }
 
-function digLakeBasins(heights: Float32Array, grid: WorldGrid, relief: Relief): void {
+function digLakeBasins(heights: Float32Array, grid: WorldGrid, basins: readonly Basin[]): void {
+  const floors = basins.map((basin) => {
+    return heights[grid.cellAt(basin.x * grid.halfSize, basin.z * grid.halfSize)];
+  });
+
   for (let row = 0; row < grid.cellsPerSide; row += 1) {
     for (let column = 0; column < grid.cellsPerSide; column += 1) {
-      heights[grid.index(column, row)] -= relief.basinDepthAt(islandPointAt(grid, column, row));
+      const cell = grid.index(column, row);
+      const point = islandPointAt(grid, column, row);
+
+      for (const [index, basin] of basins.entries()) {
+        const shape = basinShapeAt(basin, point.x, point.z);
+        const level = lerp(heights[cell], floors[index], smoothstep(BASIN_LEVEL_EDGE, BASIN_LEVEL_CORE, shape));
+
+        heights[cell] = level - basin.depth * shape;
+      }
     }
   }
 }
@@ -112,9 +127,9 @@ function boundaryDistances(grid: WorldGrid, relief: Relief): (cell: number) => n
   };
 }
 
-function buildRelief(grid: WorldGrid, seed: number, shapeKind: IslandShapeKind) {
+function buildRelief(grid: WorldGrid, seed: number, layout: IslandLayout, shapeKind: IslandShapeKind) {
   const shape = createIslandShape(shapeKind, seed);
-  const relief = createRelief(seed, shape, grid.halfSize);
+  const relief = createRelief(seed, layout, shape, grid.halfSize);
   const coastDistance = new Float32Array(grid.cellCount);
   const desert = new Float64Array(grid.cellCount);
   const heights = new Float32Array(grid.cellCount);
@@ -163,7 +178,8 @@ export function generateWorld(
 
   onProgress({ island: null, stage: "relief" });
 
-  const { coastDistance, desert, dryness, heights, relief } = buildRelief(grid, seed, options.shape);
+  const layout = planIslandLayout(seed);
+  const { coastDistance, desert, dryness, heights, relief } = buildRelief(grid, seed, layout, options.shape);
 
   const talus = talusSlopes(heights, dryness);
 
@@ -184,7 +200,7 @@ export function generateWorld(
     createRandom(seed * 7 + 3),
     erosionPlan(grid, heights, dryness, options.erosionStrength)
   );
-  digLakeBasins(heights, grid, relief);
+  digLakeBasins(heights, grid, layout.basins);
   digRiverLakes(heights, {
     boundaryDistance: boundaryDistances(grid, relief),
     coastDistance,
@@ -203,7 +219,7 @@ export function generateWorld(
 
   onProgress({ island: { ...sketch, waterSurface: hydrology.waterSurface }, stage: "climate" });
 
-  const climate = buildClimate({
+  const climate = buildClimate(layout.climate, {
     coastDistance,
     desert,
     grid,

@@ -55,6 +55,14 @@ const STARTING_SPOTS: readonly Waypoint[] = [
   { x: 0.05, z: 0.5 },
   { x: 0.25, z: -0.2 },
   { x: -0.5, z: 0 },
+  { x: 0.45, z: 0.35 },
+  { x: 0.2, z: -0.55 },
+  { x: -0.3, z: -0.45 },
+  { x: 0.55, z: -0.15 },
+  { x: -0.15, z: 0.7 },
+  { x: 0.6, z: 0.55 },
+  { x: -0.6, z: -0.6 },
+  { x: 0.5, z: -0.6 },
 ];
 const HUNTER_NOTICE_DISTANCE = 18;
 const GLOWING_EMBER_INTENSITY = 0.35;
