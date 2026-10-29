@@ -4,6 +4,7 @@ import type { WorldMirror } from "../../game/world-mirror.ts";
 import { canonicalHeight, farVariantOf, footprintRadius, plantVariantCount } from "../../models/plants/plant-models.ts";
 import { isDistantLevel, type PlantDetailLevel } from "../../models/plants/tree-mesher.ts";
 import { grownIndexArray } from "../../shared/growth.ts";
+import { clamp } from "../../shared/math.ts";
 import type { CellRegion } from "../../world/change-tracking.ts";
 import { NO_PLANT, PlantState, type VegetationChannels } from "../../world/vegetation-store.ts";
 
@@ -143,6 +144,26 @@ export class VegetationChunks {
         this.#place(changed);
       }
     }
+  }
+
+  plantsNear(x: number, z: number, radius: number): number[] {
+    const { grid } = this.#mirror;
+
+    const last = this.chunksPerSide - 1;
+    const firstColumn = clamp(Math.floor(grid.columnAt(x - radius) / CHUNK_CELLS), 0, last);
+    const lastColumn = clamp(Math.floor(grid.columnAt(x + radius) / CHUNK_CELLS), 0, last);
+    const firstRow = clamp(Math.floor(grid.rowAt(z - radius) / CHUNK_CELLS), 0, last);
+    const lastRow = clamp(Math.floor(grid.rowAt(z + radius) / CHUNK_CELLS), 0, last);
+
+    const plants: number[] = [];
+
+    for (let row = firstRow; row <= lastRow; row += 1) {
+      for (let column = firstColumn; column <= lastColumn; column += 1) {
+        plants.push(...this.chunks[row * this.chunksPerSide + column].plants);
+      }
+    }
+
+    return plants;
   }
 
   heightsChanged(region: CellRegion): void {

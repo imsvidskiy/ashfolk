@@ -29,6 +29,7 @@ interface Candidate<Target> {
 
 export interface GrabScene {
   readonly frame: SimulationFrame;
+  readonly plantsNear: (x: number, z: number, radius: number) => readonly number[];
   readonly vegetation: Pick<VegetationBuffers, "count" | "height" | "species" | "state" | "x" | "z">;
 }
 
@@ -52,6 +53,20 @@ interface AgentLayout {
 
 const PEOPLE: AgentLayout = { fields: PersonField, kind: "person", lift: PERSON_CENTER_HEIGHT, stride: PERSON_STRIDE };
 const ANIMALS: AgentLayout = { fields: AnimalField, kind: "animal", lift: ANIMAL_CENTER_HEIGHT, stride: ANIMAL_STRIDE };
+
+function* everyPlant(count: number): Generator<number> {
+  for (let plant = 0; plant < count; plant += 1) {
+    yield plant;
+  }
+}
+
+function plantsToSearch(scene: GrabScene, ground: Vector3 | null, radius: number): Iterable<number> {
+  if (ground !== null) {
+    return scene.plantsNear(ground.x, ground.z, radius);
+  }
+
+  return everyPlant(scene.vegetation.count);
+}
 
 export class EntityPicker {
   readonly #camera: PerspectiveCamera;
@@ -90,14 +105,14 @@ export class EntityPicker {
     viewport: ViewportSize,
     ground: Vector3 | null
   ): GrabTarget | null {
-    const { frame, vegetation } = scene;
+    const { frame } = scene;
 
     const pointer = { ground, screen, viewport };
 
     return this.#nearest(ground, [
       ...this.#agents(frame.animals, frame.animalCount, ANIMALS, pointer),
       ...this.#agents(frame.people, frame.personCount, PEOPLE, pointer),
-      ...this.#grabbablePlants(vegetation, pointer),
+      ...this.#grabbablePlants(scene, pointer),
     ]);
   }
 
@@ -166,14 +181,15 @@ export class EntityPicker {
     return candidates;
   }
 
-  #grabbablePlants(vegetation: GrabScene["vegetation"], pointer: PointerPick): Candidate<GrabTarget>[] {
+  #grabbablePlants(scene: GrabScene, pointer: PointerPick): Candidate<GrabTarget>[] {
+    const { vegetation } = scene;
     const { ground } = pointer;
 
     const searchRadius = this.#plantSearchRadius(pointer);
 
     const candidates: Candidate<GrabTarget>[] = [];
 
-    for (let plant = 0; plant < vegetation.count; plant += 1) {
+    for (const plant of plantsToSearch(scene, ground, searchRadius)) {
       const x = vegetation.x[plant];
       const z = vegetation.z[plant];
 

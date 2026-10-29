@@ -56,13 +56,21 @@ function plantAt(species: number, x: number, z: number): VegetationBuffers {
   return vegetation;
 }
 
+function theOnePlant(): readonly number[] {
+  return [0];
+}
+
+function noPlants(): readonly number[] {
+  return [];
+}
+
 function grabAt(vegetation: VegetationBuffers, ...people: readonly (readonly [number, number])[]) {
   const camera = cameraLookingAt(0, 0);
 
   const ground = new GroundPicker(camera, flatGround, WORLD_HALF_SIZE).pick(CENTER, VIEWPORT);
 
   return new EntityPicker(camera, flatGround).pickGrabbable(
-    { frame: frameWithPeople(...people), vegetation },
+    { frame: frameWithPeople(...people), plantsNear: theOnePlant, vegetation },
     CENTER,
     VIEWPORT,
     ground
@@ -137,11 +145,20 @@ describe("entity picker", () => {
     expect(grabAt(plantAt(PlantSpecies.Oak, 300, 0))).toBeNull();
   });
 
+  it("looks only at the plants near the pointer", () => {
+    const camera = cameraLookingAt(0, 0);
+
+    const ground = new GroundPicker(camera, flatGround, WORLD_HALF_SIZE).pick(CENTER, VIEWPORT);
+    const scene = { frame: frameWithPeople(), plantsNear: noPlants, vegetation: plantAt(PlantSpecies.Oak, 0, -4) };
+
+    expect(new EntityPicker(camera, flatGround).pickGrabbable(scene, CENTER, VIEWPORT, ground)).toBeNull();
+  });
+
   it("reaches a tree a few pixels from the pointer in a far view", () => {
     const camera = farCamera();
 
     const ground = new GroundPicker(camera, flatGround, WORLD_HALF_SIZE).pick(CENTER, VIEWPORT);
-    const scene = { frame: frameWithPeople(), vegetation: plantAt(PlantSpecies.Oak, 80, 0) };
+    const scene = { frame: frameWithPeople(), plantsNear: theOnePlant, vegetation: plantAt(PlantSpecies.Oak, 80, 0) };
 
     expect(new EntityPicker(camera, flatGround).pickGrabbable(scene, CENTER, VIEWPORT, ground)).toEqual({
       id: 0,

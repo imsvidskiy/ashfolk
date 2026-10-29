@@ -145,6 +145,23 @@ describe("vegetation chunks", () => {
     expect(packedPlantCount(chunks)).toBe(alivePlantCount(mirror));
   });
 
+  it("finds plants by the chunks around a spot", () => {
+    const mirror = createVegetatedMirror();
+    const chunks = new VegetationChunks(mirror);
+    const { vegetation } = mirror;
+
+    const near = chunks.plantsNear(vegetation.x[0], vegetation.z[0], 1);
+
+    expect(near).toContain(0);
+    expect(near.length).toBeLessThan(alivePlantCount(mirror));
+    expect(
+      near.every((plant) => {
+        return chunkOf(chunks, plant) === chunkOf(chunks, 0);
+      })
+    ).toBe(true);
+    expect(chunks.plantsNear(0, 0, mirror.grid.worldSize)).toHaveLength(alivePlantCount(mirror));
+  });
+
   it("reports every bucket after a height change", () => {
     const chunks = new VegetationChunks(createVegetatedMirror());
 
