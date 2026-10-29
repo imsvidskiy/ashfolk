@@ -51,7 +51,11 @@ function runFor(simulation: Simulation, seconds: number): LavaView | null {
   let sent: LavaView | null = null;
 
   for (let elapsed = 0; elapsed < seconds; elapsed += 0.1) {
-    sent = simulation.advance(0.1).lava ?? sent;
+    const { lava } = simulation.advance(0.1);
+
+    if (lava !== null) {
+      sent = lava;
+    }
   }
 
   return sent;
