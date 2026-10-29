@@ -11,6 +11,8 @@ import {
 import { createRandom, type RandomSource } from "../shared/random.ts";
 
 export const LAYOUT_ARCHETYPES = ["rim", "spine", "twin", "crown", "lowland", "plateau"] as const;
+export const FARTHEST_BASIN = 0.46;
+export const BASIN_SEPARATION = 0.5;
 
 const RANGE_POINTS = 6;
 const RANGE_JITTER = 0.03;
@@ -19,8 +21,6 @@ const CREST_ROUNDING = 0.05;
 const SEGMENT_BLEND = 0.08;
 const RANGE_BLEND = 0.1;
 const BASIN_CANDIDATES = 24;
-export const FARTHEST_BASIN = 0.46;
-export const BASIN_SEPARATION = 0.5;
 const SURVEY_STEPS = 9;
 const DESERT_CANDIDATES = 3;
 const DESERT_SPREAD = 0.9;
@@ -40,7 +40,7 @@ interface MountainRange {
   readonly strength: number;
 }
 
-export interface Cone {
+interface Cone {
   readonly crater: number;
   readonly height: number;
   readonly radius: number;
@@ -48,14 +48,14 @@ export interface Cone {
   readonly z: number;
 }
 
-export interface Rise {
+interface Rise {
   readonly height: number;
   readonly spread: number;
   readonly x: number;
   readonly z: number;
 }
 
-export interface Shelf {
+interface Shelf {
   readonly directionX: number;
   readonly directionZ: number;
   readonly height: number;
@@ -572,15 +572,15 @@ function planBasins(random: RandomSource, landforms: Landforms): Basin[] {
 }
 
 function planDesert(random: RandomSource, landforms: Landforms, warmth: number, aridity: number): DesertPatch | null {
+  if (aridity < DRIEST_DESERTLESS) {
+    return null;
+  }
+
   const angles = Array.from({ length: DESERT_CANDIDATES }, (_, index) => {
     return warmth + (index - 1) * DESERT_SPREAD + random.between(-0.3, 0.3);
   });
   const distance = random.between(0.84, 0.98);
   const radius = lerp(0.48, 0.68, saturate((aridity - DRIEST_DESERTLESS) / (1 - DRIEST_DESERTLESS)));
-
-  if (aridity < DRIEST_DESERTLESS) {
-    return null;
-  }
 
   const lowest = angles.reduce(
     (best, angle) => {

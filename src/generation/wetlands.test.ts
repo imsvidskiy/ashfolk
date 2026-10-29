@@ -172,6 +172,7 @@ describe("wetlands", () => {
       })
     ).toBe(true);
   });
+
   it("matches the share over land only, leaving ocean cells out of the reference", () => {
     const landCells = grid.cellCount / 2;
     const coastDistance = Float32Array.from({ length: grid.cellCount }, (_, cell) => {

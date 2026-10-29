@@ -225,9 +225,13 @@ function distanceToWater(grid: WorldGrid, waterSurface: Float32Array, heights: F
   return distances;
 }
 
-function shadedFacing(profile: ClimateProfile, gradientX: number, gradientZ: number, slope: number): number {
-  const warmth = Math.hypot(profile.warmthX, profile.warmthZ);
-
+function shadedFacing(
+  profile: ClimateProfile,
+  warmth: number,
+  gradientX: number,
+  gradientZ: number,
+  slope: number
+): number {
   if (slope < 1e-4 || warmth === 0) {
     return 0;
   }
@@ -238,8 +242,10 @@ function shadedFacing(profile: ClimateProfile, gradientX: number, gradientZ: num
 }
 
 function measureSlopes(profile: ClimateProfile, grid: WorldGrid, heights: Float32Array, slopes: Float64Array): Slopes {
+  const warmth = Math.hypot(profile.warmthX, profile.warmthZ);
+
   const shaded = slopes.map((slope, cell) => {
-    return shadedFacing(profile, gradientXAt(heights, grid, cell), gradientZAt(heights, grid, cell), slope);
+    return shadedFacing(profile, warmth, gradientXAt(heights, grid, cell), gradientZAt(heights, grid, cell), slope);
   });
 
   return { shaded: Float32Array.from(shaded), slope: Float32Array.from(slopes) };

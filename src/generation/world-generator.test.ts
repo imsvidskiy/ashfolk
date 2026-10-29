@@ -1086,12 +1086,14 @@ function surveyIsland(generated: GeneratedWorld): IslandSurvey {
   let towardZ = 0;
 
   for (let cell = 0; cell < grid.cellCount; cell += 1) {
-    if (isOnIsland(terrain.coastDistance, cell)) {
-      const weight = Math.max(0, terrain.height[cell] - meanHeight);
-
-      towardX += weight * grid.cellCenterX(cell);
-      towardZ += weight * grid.cellCenterZ(cell);
+    if (!isOnIsland(terrain.coastDistance, cell)) {
+      continue;
     }
+
+    const weight = Math.max(0, terrain.height[cell] - meanHeight);
+
+    towardX += weight * grid.cellCenterX(cell);
+    towardZ += weight * grid.cellCenterZ(cell);
   }
 
   function shareOf(biomes: readonly number[]): number {
