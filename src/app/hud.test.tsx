@@ -3,6 +3,7 @@ import { page } from "vitest/browser";
 import { render } from "vitest-browser-react";
 import { useInterfaceStore } from "../features/interface/interface-store.ts";
 import { usePowerStore } from "../features/powers/power-store.ts";
+import { startTestEngine } from "../features/testing/engine-fixtures.ts";
 import { createTribe, showWorld } from "../features/testing/world-fixtures.ts";
 import { Hud } from "./hud.tsx";
 
@@ -123,5 +124,44 @@ describe("short hud", () => {
     await expect.element(screen.getByRole("button", { exact: true, name: "Menu" })).toBeVisible();
     await expect.element(screen.getByRole("navigation", { name: "Panels" })).not.toBeInTheDocument();
     expect(brokenIslands()).toEqual([]);
+  });
+});
+
+describe("filmed hud", () => {
+  it("hides the interface and the labels for a clean frame", async () => {
+    await page.viewport(1440, 900);
+
+    showWorld();
+
+    const { engine } = await startTestEngine();
+
+    const screen = await render(<Hud />);
+
+    await expect.element(screen.getByRole("navigation", { name: "Panels" })).toBeVisible();
+
+    engine.filming.set({ areMarkersHidden: true, isInterfaceHidden: true });
+
+    await expect.element(screen.getByRole("navigation", { name: "Panels" })).not.toBeInTheDocument();
+    await expect.element(screen.getByRole("list", { name: "Places" })).not.toBeInTheDocument();
+    await expect.element(screen.getByText("Interface hidden. Press H to show it.")).toBeVisible();
+    expect(shownIslands()).toHaveLength(1);
+  });
+
+  it("hides the journal sheet of a compact view, which sits outside the hud", async () => {
+    await page.viewport(390, 844);
+
+    showManyTribes();
+    useInterfaceStore.getState().openJournal("tribes");
+
+    const { engine } = await startTestEngine();
+
+    const screen = await render(<Hud />);
+
+    await expect.element(screen.getByRole("dialog", { name: "Journal" })).toBeVisible();
+
+    engine.filming.set({ isInterfaceHidden: true });
+
+    await expect.element(screen.getByRole("dialog", { name: "Journal" })).not.toBeInTheDocument();
+    await expect.element(screen.getByRole("button", { exact: true, name: "Menu" })).not.toBeInTheDocument();
   });
 });
