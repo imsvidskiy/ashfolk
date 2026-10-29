@@ -15,6 +15,24 @@ function connectSpy() {
   return { disconnect, selectHand, selectPower };
 }
 
+function clickWithRightButton(target: EventTarget, travel = 0): void {
+  target.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true, button: 2, clientX: 100, clientY: 100 }));
+  target.dispatchEvent(
+    new PointerEvent("pointerup", { bubbles: true, button: 2, clientX: 100 + travel, clientY: 100 })
+  );
+}
+
+function addCanvas(): HTMLCanvasElement {
+  const canvas = document.createElement("canvas");
+
+  document.body.append(canvas);
+  onTestFinished(() => {
+    canvas.remove();
+  });
+
+  return canvas;
+}
+
 function pressEscape(): void {
   window.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
 }
@@ -94,5 +112,33 @@ describe("connecting powers to the engine", () => {
 
     expect(usePowerStore.getState().isHandSelected).toBe(false);
     expect(selectHand).toHaveBeenLastCalledWith(false);
+  });
+
+  it("puts the power away on a right click over the world", () => {
+    connectSpy();
+
+    usePowerStore.getState().selectPower("rain");
+    clickWithRightButton(addCanvas());
+
+    expect(usePowerStore.getState().selectedPowerId).toBeNull();
+  });
+
+  it("puts the hand away on a right click over the world", () => {
+    connectSpy();
+
+    usePowerStore.getState().selectHand();
+    clickWithRightButton(addCanvas());
+
+    expect(usePowerStore.getState().isHandSelected).toBe(false);
+  });
+
+  it("keeps the power when the right button drags the view or clicks the interface", () => {
+    connectSpy();
+
+    usePowerStore.getState().selectPower("rain");
+    clickWithRightButton(addCanvas(), 40);
+    clickWithRightButton(document.body);
+
+    expect(usePowerStore.getState().selectedPowerId).toBe("rain");
   });
 });

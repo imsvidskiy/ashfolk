@@ -1,12 +1,13 @@
+import { ScrollArea } from "@base-ui/react/scroll-area";
 import { Toolbar } from "@base-ui/react/toolbar";
 import { Hand, MousePointer2 } from "lucide-react";
-import { type RefObject, useEffect, useRef, useState } from "react";
+import { type ReactNode, type RefObject, useEffect, useRef, useState } from "react";
 import { POWER_CATEGORIES, POWERS, type PowerCategory, type PowerId, powersInCategory } from "../../content/powers.ts";
 import { cn } from "../../design/cn.ts";
 import { GameIcon } from "../../design/game-icon.tsx";
 import type { GameIconName } from "../../design/game-icon-sources.ts";
 import { Island } from "../../design/island.tsx";
-import { FOCUS_RING, SEGMENT, SEGMENT_CHOSEN, SEGMENT_TRACK } from "../../design/styles.ts";
+import { FOCUS_RING } from "../../design/styles.ts";
 import { WithTooltip } from "../../design/tooltip.tsx";
 import { useGuideStore } from "../guide/guide-store.ts";
 import { suggestedPowerId } from "../guide/guide-tips.ts";
@@ -17,16 +18,28 @@ const SELECT_HINT = "Tap people, animals, buildings or land to see their details
 
 const HAND_HINT = "Pick up people, animals, trees and bushes and set them down elsewhere.";
 
-const TILE_CLASS = `grid size-10.5 shrink-0 snap-start place-items-center rounded-xl transition-[background-color,box-shadow,scale] duration-150 hover:bg-paper-hover active:scale-95 pointer-coarse:size-12 ${FOCUS_RING}`;
+const DIGIT_KEYS = ["Digit1", "Digit2", "Digit3", "Digit4", "Digit5", "Digit6", "Digit7", "Digit8", "Digit9"];
 
-const CHOSEN_TILE_CLASS = "bg-white shadow-segment ring-2 ring-dawn hover:bg-white";
+const TYPING_TAGS = new Set(["INPUT", "SELECT", "TEXTAREA"]);
+
+const CELL_CLASS = `grid size-11 shrink-0 snap-start place-items-center rounded-xl transition-[background-color,box-shadow,translate,scale] duration-150 hover:bg-paper-hover active:scale-95 motion-safe:hover:-translate-y-0.5 ${FOCUS_RING}`;
+
+const TOOL_CELL_CLASS = `${CELL_CLASS} text-ink-soft hover:text-ink`;
+
+const CHOSEN_CELL_CLASS = "bg-dawn-soft text-ink ring-1 ring-dawn hover:bg-dawn-soft";
 
 const SUGGESTED_CLASS = "ring-2 ring-dawn/60 motion-safe:animate-pulse";
 
+const TAB_CLASS = `pointer-events-auto relative flex shrink-0 items-center gap-1.5 rounded-t-xl border border-b-0 border-paper-edge px-3 font-medium text-xs transition-[color,background-color] duration-150 after:absolute after:inset-x-0 after:bottom-0 after:h-11 pointer-coarse:text-sm ${FOCUS_RING}`;
+
+const CHOSEN_TAB_CLASS = "h-10 bg-paper text-ink shadow-[inset_0_2px_0_var(--color-dawn)]";
+
+const RESTING_TAB_CLASS = "mb-px h-9 bg-canvas text-ink-soft hover:text-ink";
+
 const KIND_ICONS: Readonly<Record<PowerCategory, GameIconName>> = {
-  elements: POWER_ICONS.fire,
-  land: POWER_ICONS.raise,
-  life: POWER_ICONS.tribe,
+  elements: "sun",
+  land: "meadow",
+  life: "population",
 };
 
 interface KindChoice {
@@ -39,10 +52,29 @@ interface KindTabProps extends KindChoice {
   readonly name: string;
 }
 
+interface TileHintProps {
+  readonly description: string;
+  readonly hotkey?: string | undefined;
+  readonly name: string;
+}
+
+interface PowerTileProps {
+  readonly hotkey: string | undefined;
+  readonly powerId: PowerId;
+}
+
 function initialKind(): PowerCategory {
   const { selectedPowerId } = usePowerStore.getState();
 
   return selectedPowerId === null ? "elements" : POWERS[selectedPowerId].category;
+}
+
+function isTyping(target: EventTarget | null): boolean {
+  return target instanceof HTMLElement && (target.isContentEditable || TYPING_TAGS.has(target.tagName));
+}
+
+function hotkeyOf(index: number): string | undefined {
+  return index < DIGIT_KEYS.length ? String(index + 1) : undefined;
 }
 
 function useSuggestedPower(): PowerId | null {
@@ -114,6 +146,32 @@ function useKindTab({ chosenKind, kind, onKindChange }: KindChoice & { readonly 
   return { handleChoose, isChosen, isSuggested };
 }
 
+function useDigitHotkeys(kind: PowerCategory): void {
+  useEffect(() => {
+    const powers = powersInCategory(kind);
+
+    function handleKeyDown(event: KeyboardEvent): void {
+      if (event.altKey || event.ctrlKey || event.metaKey || event.repeat || isTyping(event.target)) {
+        return;
+      }
+
+      const powerId = powers[DIGIT_KEYS.indexOf(event.code)];
+
+      if (powerId === undefined) {
+        return;
+      }
+
+      usePowerStore.getState().selectPower(powerId);
+    }
+
+    window.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [kind]);
+}
+
 function useWheelScrollsSideways(rowReference: RefObject<HTMLDivElement | null>): void {
   useEffect(() => {
     const row = rowReference.current;
@@ -145,30 +203,37 @@ function useWheelScrollsSideways(rowReference: RefObject<HTMLDivElement | null>)
   }, [rowReference]);
 }
 
-function TileHint({ description, name }: { readonly description: string; readonly name: string }) {
+function TileHint({ description, hotkey, name }: TileHintProps) {
   return (
     <span className="flex flex-col gap-0.5">
-      <span className="font-semibold">{name}</span>
+      <span className="flex items-center justify-between gap-3">
+        <span className="font-semibold">{name}</span>
+
+        {hotkey === undefined ? null : (
+          <kbd className="text-2xs rounded-md bg-white/15 px-1.5 font-sans text-white/90">{hotkey}</kbd>
+        )}
+      </span>
 
       <span className="text-white/75">{description}</span>
     </span>
   );
 }
 
-function PowerTile({ powerId }: { readonly powerId: PowerId }) {
+function PowerTile({ hotkey, powerId }: PowerTileProps) {
   const { handleToggle, isSelected, isSuggested } = usePowerSelection(powerId);
 
   const power = POWERS[powerId];
 
   return (
-    <WithTooltip content={<TileHint description={power.description} name={power.name} />}>
+    <WithTooltip content={<TileHint description={power.description} hotkey={hotkey} name={power.name} />}>
       <Toolbar.Button
+        aria-keyshortcuts={hotkey}
         aria-label={power.name}
         aria-pressed={isSelected}
-        className={cn(TILE_CLASS, { [CHOSEN_TILE_CLASS]: isSelected, [SUGGESTED_CLASS]: isSuggested })}
+        className={cn(CELL_CLASS, { [CHOSEN_CELL_CLASS]: isSelected, [SUGGESTED_CLASS]: isSuggested })}
         onClick={handleToggle}
       >
-        <GameIcon name={POWER_ICONS[powerId]} size={34} />
+        <GameIcon name={POWER_ICONS[powerId]} size={30} />
       </Toolbar.Button>
     </WithTooltip>
   );
@@ -178,11 +243,12 @@ function SelectTile() {
   const { handleClear, isSelecting } = useClearPower();
 
   return (
-    <WithTooltip content={<TileHint description={SELECT_HINT} name="Select" />}>
+    <WithTooltip content={<TileHint description={SELECT_HINT} hotkey="Esc" name="Select" />}>
       <Toolbar.Button
+        aria-keyshortcuts="Escape"
         aria-label="Select"
         aria-pressed={isSelecting}
-        className={cn(TILE_CLASS, "text-ink-soft hover:text-ink", { [`${CHOSEN_TILE_CLASS} text-ink`]: isSelecting })}
+        className={cn(TOOL_CELL_CLASS, { [CHOSEN_CELL_CLASS]: isSelecting })}
         onClick={handleClear}
       >
         <MousePointer2 aria-hidden="true" size={22} strokeWidth={1.9} />
@@ -199,9 +265,7 @@ function HandTile() {
       <Toolbar.Button
         aria-label="Hand"
         aria-pressed={isHandSelected}
-        className={cn(TILE_CLASS, "text-ink-soft hover:text-ink", {
-          [`${CHOSEN_TILE_CLASS} text-ink`]: isHandSelected,
-        })}
+        className={cn(TOOL_CELL_CLASS, { [CHOSEN_CELL_CLASS]: isHandSelected })}
         onClick={handleSelect}
       >
         <Hand aria-hidden="true" size={22} strokeWidth={1.9} />
@@ -216,22 +280,21 @@ function KindTab({ chosenKind, kind, name, onKindChange }: KindTabProps) {
   return (
     <Toolbar.Button
       aria-pressed={isChosen}
-      className={cn(SEGMENT, "text-sm max-lg:aspect-square max-lg:px-0 lg:px-2.5 pointer-coarse:h-10", {
-        [SEGMENT_CHOSEN]: isChosen,
-        [SUGGESTED_CLASS]: isSuggested,
+      className={cn(TAB_CLASS, isChosen ? CHOSEN_TAB_CLASS : RESTING_TAB_CLASS, {
+        "text-dawn-strong motion-safe:animate-pulse": isSuggested,
       })}
       onClick={handleChoose}
     >
-      <GameIcon name={KIND_ICONS[kind]} size={22} />
+      <GameIcon name={KIND_ICONS[kind]} size={20} />
 
-      <span className="max-lg:sr-only">{name}</span>
+      {name}
     </Toolbar.Button>
   );
 }
 
 function KindTabs({ chosenKind, onKindChange }: KindChoice) {
   return (
-    <Toolbar.Group aria-label="Kinds" className={cn(SEGMENT_TRACK, "mr-1 shrink-0 p-1")}>
+    <Toolbar.Group aria-label="Kinds" className="relative z-1 -mb-px flex items-end gap-1">
       {POWER_CATEGORIES.map((entry) => {
         return (
           <KindTab
@@ -247,31 +310,45 @@ function KindTabs({ chosenKind, onKindChange }: KindChoice) {
   );
 }
 
-export function PowerDock({ className }: { readonly className?: string | undefined }) {
-  const [kind, setKind] = useState(initialKind);
+function PowerRow({ children }: { readonly children: ReactNode }) {
   const rowReference = useRef<HTMLDivElement>(null);
 
   useWheelScrollsSideways(rowReference);
 
   return (
-    <Island className={className}>
-      <Toolbar.Root
-        aria-label="Powers"
-        className="flex snap-x snap-mandatory scroll-px-1.5 scrollbar-none items-center gap-0.5 overflow-x-auto overscroll-x-contain p-1.5"
+    <ScrollArea.Root className="min-w-0 flex-1">
+      <ScrollArea.Viewport
+        className="scroll-fade-x flex snap-x snap-mandatory items-center gap-0.5 overscroll-x-contain p-0.5 outline-none"
         ref={rowReference}
       >
+        {children}
+      </ScrollArea.Viewport>
+    </ScrollArea.Root>
+  );
+}
+
+export function PowerDock({ className }: { readonly className?: string | undefined }) {
+  const [kind, setKind] = useState(initialKind);
+
+  useDigitHotkeys(kind);
+
+  return (
+    <Toolbar.Root aria-label="Powers" className={cn("flex min-w-0 flex-col", className)}>
+      <KindTabs chosenKind={kind} onKindChange={setKind} />
+
+      <Island className="flex items-center gap-0.5 rounded-tl-none p-1 pl-1.5">
         <SelectTile />
 
         <HandTile />
 
-        <Toolbar.Separator className="bg-ink/15 mx-1 h-7 w-px shrink-0" />
+        <Toolbar.Separator className="bg-ink/12 mx-1 h-7 w-px shrink-0" />
 
-        <KindTabs chosenKind={kind} onKindChange={setKind} />
-
-        {powersInCategory(kind).map((powerId) => {
-          return <PowerTile key={powerId} powerId={powerId} />;
-        })}
-      </Toolbar.Root>
-    </Island>
+        <PowerRow>
+          {powersInCategory(kind).map((powerId, index) => {
+            return <PowerTile hotkey={hotkeyOf(index)} key={powerId} powerId={powerId} />;
+          })}
+        </PowerRow>
+      </Island>
+    </Toolbar.Root>
   );
 }
