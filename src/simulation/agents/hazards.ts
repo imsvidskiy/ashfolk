@@ -6,6 +6,9 @@ import type { Waypoint } from "./navigation.ts";
 const VISIBLE_FIRE = 0.08;
 const FIRE_NEAR_CAMP = 0.2;
 const CAMP_WATCH_DIRECTIONS = 24;
+const CAMP_WATCH_NEAREST = 60;
+const CAMP_WATCH_SPACING = 90;
+const CAMP_WATCH_RINGS = 3;
 
 export interface DangerZone {
   radius: number;
@@ -63,7 +66,7 @@ export class HazardMap {
   isFireAround(x: number, z: number): boolean {
     for (let direction = 0; direction < CAMP_WATCH_DIRECTIONS; direction += 1) {
       const angle = (direction / CAMP_WATCH_DIRECTIONS) * FULL_TURN;
-      const distance = 60 + (direction % 3) * 90;
+      const distance = CAMP_WATCH_NEAREST + (direction % CAMP_WATCH_RINGS) * CAMP_WATCH_SPACING;
 
       if (this.#isBurningAt(x + Math.cos(angle) * distance, z + Math.sin(angle) * distance)) {
         return true;
