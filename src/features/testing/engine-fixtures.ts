@@ -95,6 +95,7 @@ export async function startTestEngine(options: TestEngineOptions = {}): Promise<
 
   const engine: EngineHandle = {
     camera,
+    canvas: document.createElement("canvas"),
     clearSelection,
     focusOn,
     followSelection,

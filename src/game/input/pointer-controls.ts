@@ -4,7 +4,7 @@ import type { GroundPicker, ScreenPoint } from "./ground-picker.ts";
 
 const MOUSE_PRIMARY = 0;
 const TOUCH_HOLD_MILLISECONDS = 140;
-const TAP_TOLERANCE = 6;
+export const TAP_TOLERANCE = 6;
 const ORBIT_YAW_PER_PIXEL = 0.005;
 const ORBIT_PITCH_PER_PIXEL = 0.004;
 const WHEEL_ZOOM_RATE = 0.0015;

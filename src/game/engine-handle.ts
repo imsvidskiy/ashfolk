@@ -14,6 +14,7 @@ interface EngineCamera {
 
 export interface EngineHandle {
   readonly camera: EngineCamera;
+  readonly canvas: HTMLCanvasElement;
   readonly clearSelection: () => void;
   readonly focusOn: (x: number, z: number, distance?: number) => void;
   readonly followSelection: () => void;

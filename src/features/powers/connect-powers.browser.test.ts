@@ -4,15 +4,34 @@ import type { PowerSelection } from "../../game/tools/power-tool.ts";
 import { connectPowers } from "./connect-powers.ts";
 import { usePowerStore } from "./power-store.ts";
 
+function addCanvas(): HTMLCanvasElement {
+  const canvas = document.createElement("canvas");
+
+  document.body.append(canvas);
+  onTestFinished(() => {
+    canvas.remove();
+  });
+
+  return canvas;
+}
+
 function connectSpy() {
+  const canvas = addCanvas();
   const selectHand = vi.fn<(isSelected: boolean) => void>();
   const selectPower = vi.fn<(selection: PowerSelection | null) => void>();
 
-  const disconnect = connectPowers({ selectHand, selectPower });
+  const disconnect = connectPowers({ canvas, selectHand, selectPower });
 
   onTestFinished(disconnect);
 
-  return { disconnect, selectHand, selectPower };
+  return { canvas, disconnect, selectHand, selectPower };
+}
+
+function clickWithRightButton(target: EventTarget, travel = 0): void {
+  target.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true, button: 2, clientX: 100, clientY: 100 }));
+  target.dispatchEvent(
+    new PointerEvent("pointerup", { bubbles: true, button: 2, clientX: 100 + travel, clientY: 100 })
+  );
 }
 
 function pressEscape(): void {
@@ -62,11 +81,12 @@ describe("connecting powers to the engine", () => {
   });
 
   it("stops listening after disconnecting", () => {
-    const { disconnect, selectPower } = connectSpy();
+    const { canvas, disconnect, selectPower } = connectSpy();
 
     disconnect();
     usePowerStore.getState().selectPower("fire");
     pressEscape();
+    clickWithRightButton(canvas);
 
     expect(selectPower).toHaveBeenCalledOnce();
     expect(usePowerStore.getState().selectedPowerId).toBe("fire");
@@ -94,5 +114,34 @@ describe("connecting powers to the engine", () => {
 
     expect(usePowerStore.getState().isHandSelected).toBe(false);
     expect(selectHand).toHaveBeenLastCalledWith(false);
+  });
+
+  it("puts the power away on a right click over the world", () => {
+    const { canvas } = connectSpy();
+
+    usePowerStore.getState().selectPower("rain");
+    clickWithRightButton(canvas);
+
+    expect(usePowerStore.getState().selectedPowerId).toBeNull();
+  });
+
+  it("puts the hand away on a right click over the world", () => {
+    const { canvas } = connectSpy();
+
+    usePowerStore.getState().selectHand();
+    clickWithRightButton(canvas);
+
+    expect(usePowerStore.getState().isHandSelected).toBe(false);
+  });
+
+  it("keeps the power when the right button drags the view or clicks the interface", () => {
+    const { canvas } = connectSpy();
+
+    usePowerStore.getState().selectPower("rain");
+    clickWithRightButton(canvas, 40);
+    clickWithRightButton(document.body);
+    clickWithRightButton(addCanvas());
+
+    expect(usePowerStore.getState().selectedPowerId).toBe("rain");
   });
 });

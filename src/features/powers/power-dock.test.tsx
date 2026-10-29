@@ -22,7 +22,7 @@ const LIFE_POWERS = powersInCategory("life").map((powerId) => {
 });
 
 describe("power dock", () => {
-  it("shows Select, Hand, the kinds and the powers of the chosen kind", async () => {
+  it("shows the kinds as tabs above Select, Hand and the powers of the chosen kind", async () => {
     const screen = await render(<PowerDock />);
 
     const row = screen.getByRole("toolbar", { name: "Powers" });
@@ -36,7 +36,7 @@ describe("power dock", () => {
         return label === null ? button.textContent : label;
       });
 
-    expect(names).toEqual(["Select", "Hand", "Elements", "Land", "Life", ...ELEMENT_POWERS]);
+    expect(names).toEqual(["Elements", "Land", "Life", "Select", "Hand", ...ELEMENT_POWERS]);
     await expect.element(kinds.getByRole("button", { name: "Elements" })).toHaveAttribute("aria-pressed", "true");
   });
 
@@ -76,16 +76,86 @@ describe("power dock", () => {
       .toHaveAttribute("aria-pressed", "true");
   });
 
-  it("shows icons alone and names each power in its tooltip", async () => {
+  it("shows icons alone and names each power with its key in its tooltip", async () => {
     const screen = await render(<PowerDock />);
 
     const rain = screen.getByRole("button", { exact: true, name: "Rain" });
 
     expect(rain.element().textContent).toBe("");
+    await expect.element(rain).toHaveAttribute("aria-keyshortcuts", "3");
 
     await rain.hover();
 
     await expect.element(screen.getByText(POWERS.rain.description)).toBeVisible();
+    await expect.element(screen.getByText("3", { exact: true })).toBeVisible();
+  });
+
+  it("selects the powers of the chosen kind with the number keys", async () => {
+    const screen = await render(<PowerDock />);
+
+    await userEvent.keyboard("3");
+
+    expect(usePowerStore.getState().selectedPowerId).toBe("rain");
+
+    await screen.getByRole("group", { name: "Kinds" }).getByRole("button", { name: "Land" }).click();
+    await userEvent.keyboard("1");
+
+    expect(usePowerStore.getState().selectedPowerId).toBe("raise");
+
+    await userEvent.keyboard("9");
+
+    expect(usePowerStore.getState().selectedPowerId).toBe("raise");
+  });
+
+  it("leaves the number keys alone while typing", async () => {
+    const screen = await render(
+      <>
+        <input aria-label="Seed" />
+
+        <p contentEditable suppressContentEditableWarning>
+          Tribe name
+        </p>
+
+        <PowerDock />
+      </>
+    );
+
+    await screen.getByRole("textbox", { name: "Seed" }).click();
+    await userEvent.keyboard("2");
+
+    expect(usePowerStore.getState().selectedPowerId).toBeNull();
+
+    await screen.getByText("Tribe name").click();
+    await userEvent.keyboard("2");
+
+    expect(usePowerStore.getState().selectedPowerId).toBeNull();
+  });
+
+  it("leaves the number keys alone while a dialog is open", async () => {
+    const screen = await render(
+      <>
+        <div aria-label="Settings" role="dialog">
+          <button type="button">Close</button>
+        </div>
+
+        <PowerDock />
+      </>
+    );
+
+    screen.getByRole("button", { name: "Close" }).element().focus();
+    await userEvent.keyboard("2");
+
+    expect(usePowerStore.getState().selectedPowerId).toBeNull();
+  });
+
+  it("leaves the number keys to the browser with a modifier held", async () => {
+    await render(<PowerDock />);
+
+    await userEvent.keyboard("{Control>}3{/Control}");
+    await userEvent.keyboard("{Meta>}1{/Meta}");
+    await userEvent.keyboard("{Alt>}2{/Alt}");
+
+    expect(usePowerStore.getState().selectedPowerId).toBeNull();
   });
 
   it("moves between the tiles with the arrow keys", async () => {
@@ -100,11 +170,12 @@ describe("power dock", () => {
 
     await userEvent.keyboard("{ArrowRight}");
 
-    await expect.element(screen.getByRole("button", { name: "Elements" })).toHaveFocus();
-
-    await userEvent.keyboard("{ArrowRight}{ArrowRight}{ArrowRight}");
-
     await expect.element(screen.getByRole("button", { exact: true, name: "Fire" })).toHaveFocus();
+
+    select.element().focus();
+    await userEvent.keyboard("{ArrowLeft}");
+
+    await expect.element(screen.getByRole("button", { exact: true, name: "Life" })).toHaveFocus();
   });
 
   it("selects a power and puts it away when selected again", async () => {
