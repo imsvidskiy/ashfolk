@@ -95,7 +95,9 @@ export class PointerControls {
   readonly #pointers = new Map<number, TrackedPointer>();
   readonly #tap: TapHandler;
   readonly #tools: readonly ToolGestures[];
-  readonly #viewAtHover = new Matrix4();
+  readonly #viewAtPick = new Matrix4();
+  #carriedX = Number.NaN;
+  #carriedY = Number.NaN;
   #gesture: Gesture = { kind: "idle" };
   #holdTimer: number | null = null;
   #hoverScreen: ScreenPoint | null = null;
@@ -181,7 +183,7 @@ export class PointerControls {
     const carrying = this.#carrying();
 
     if (carrying !== null) {
-      this.#continueTool(carrying.tool, carrying.holder);
+      this.#keepCarrying(carrying);
 
       return;
     }
@@ -380,6 +382,19 @@ export class PointerControls {
     }
   }
 
+  #keepCarrying({ holder, tool }: Carrying): void {
+    const view = this.#camera.camera.matrixWorld;
+
+    if (holder.x === this.#carriedX && holder.y === this.#carriedY && view.equals(this.#viewAtPick)) {
+      return;
+    }
+
+    this.#carriedX = holder.x;
+    this.#carriedY = holder.y;
+    this.#viewAtPick.copy(view);
+    this.#continueTool(tool, holder);
+  }
+
   #continuePinch(gesture: Extract<Gesture, { kind: "pinch" }>): void {
     const pinch = measurePinch(this.#pointers);
 
@@ -405,6 +420,7 @@ export class PointerControls {
 
     this.#pointers.delete(event.pointerId);
     this.#pickedScreen = null;
+    this.#carriedX = Number.NaN;
 
     if (pointer === undefined) {
       return;
@@ -507,13 +523,13 @@ export class PointerControls {
       return;
     }
 
-    if (screen === this.#pickedScreen && tool === this.#hoverTool && view.equals(this.#viewAtHover)) {
+    if (screen === this.#pickedScreen && tool === this.#hoverTool && view.equals(this.#viewAtPick)) {
       return;
     }
 
     this.#pickedScreen = screen;
     this.#hoverTool = tool;
-    this.#viewAtHover.copy(view);
+    this.#viewAtPick.copy(view);
     tool.hover(this.#pick(screen.x, screen.y), screen);
   }
 
