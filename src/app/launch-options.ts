@@ -5,6 +5,7 @@ import { readWorldName, worldNameFor } from "../features/new-world/world-names.t
 import type { CameraState } from "../game/camera/god-camera.ts";
 import { QUALITY_LEVELS, type QualityLevel } from "../rendering/render-quality.ts";
 import { ISLAND_SHAPES, type IslandShapeKind } from "../world/island-shape.ts";
+import { ISLAND_SIZES, type IslandSizeKind } from "../world/island-size.ts";
 import { storedQuality } from "./preferences.ts";
 
 const WORLD_PARAMETER = "world";
@@ -27,6 +28,7 @@ const launchSchema = z.object({
   quality: z.enum(QUALITY_LEVELS).optional(),
   seed: z.string().transform(readSeed).pipe(z.number()).optional(),
   shape: z.enum(ISLAND_SHAPES).optional(),
+  size: z.enum(ISLAND_SIZES).optional(),
 });
 
 const worldIdSchema = z.string().regex(/^[\w-]{1,64}$/u);
@@ -39,6 +41,7 @@ export interface LaunchOptions {
   readonly quality: QualityLevel;
   readonly seed: number;
   readonly shape: IslandShapeKind;
+  readonly size: IslandSizeKind;
 }
 
 type LaunchParameters = z.output<typeof launchSchema>;
@@ -67,11 +70,12 @@ function toLaunchOptions(parameters: LaunchParameters): LaunchOptions {
     quality = defaultQuality(),
     seed = randomSeed(),
     shape = "round",
+    size = "normal",
   } = parameters;
 
   const { name = worldNameFor(seed) } = parameters;
 
-  return { camera, hours, isPaused: paused === "1", name, quality, seed, shape };
+  return { camera, hours, isPaused: paused === "1", name, quality, seed, shape, size };
 }
 
 function withoutInvalid(parameters: Record<string, string>, issues: readonly ParameterIssue[]): Record<string, string> {

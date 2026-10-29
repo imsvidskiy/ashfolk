@@ -8,7 +8,7 @@ import { isQualityLevel, QUALITY_LEVELS, type QualityLevel } from "../../renderi
 import { useGuideStore } from "../guide/guide-store.ts";
 import { useInterfaceStore } from "../interface/interface-store.ts";
 import { useWorldDraft } from "../new-world/use-world-draft.ts";
-import { NameField, SeedField, ShapeChoice } from "../new-world/world-fields.tsx";
+import { NameField, SeedField, ShapeChoice, SizeChoice } from "../new-world/world-fields.tsx";
 import { SavesGroup } from "../saves/saves-group.tsx";
 import { useLeaveWorld } from "../saves/use-leave-world.ts";
 import { GROUP_CLASS, GroupHeading, SettingsGroup } from "./settings-group.tsx";
@@ -147,6 +147,8 @@ function NewWorld() {
       <NameField onChange={draft.handleNameChange} onRoll={draft.handleNameRoll} value={draft.nameText} />
 
       <ShapeChoice onChange={draft.handleShapeChange} value={draft.shape} />
+
+      <SizeChoice onChange={draft.handleSizeChange} value={draft.size} />
 
       <div className="flex items-center gap-2">
         <SeedField

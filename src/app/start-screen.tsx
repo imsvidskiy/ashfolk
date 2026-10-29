@@ -4,7 +4,7 @@ import { IconButton, TextButton } from "../design/buttons.tsx";
 import { Island } from "../design/island.tsx";
 import { Logo } from "../design/logo.tsx";
 import { useWorldDraft } from "../features/new-world/use-world-draft.ts";
-import { NameField, SeedField, ShapeChoice } from "../features/new-world/world-fields.tsx";
+import { NameField, SeedField, ShapeChoice, SizeChoice } from "../features/new-world/world-fields.tsx";
 import { ProjectLinks } from "../features/project/project-links.tsx";
 import { SavedWorldList } from "../features/saves/saved-world-list.tsx";
 import { useSavesStore } from "../features/saves/saves-store.ts";
@@ -100,6 +100,8 @@ function NewWorldForm() {
       <NameField onChange={draft.handleNameChange} onRoll={draft.handleNameRoll} value={draft.nameText} />
 
       <ShapeChoice onChange={draft.handleShapeChange} value={draft.shape} />
+
+      <SizeChoice onChange={draft.handleSizeChange} value={draft.size} />
 
       <SeedField onChange={draft.handleSeedChange} onRoll={draft.handleSeedRoll} value={draft.seedText} />
 

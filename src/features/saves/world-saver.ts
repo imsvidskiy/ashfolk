@@ -1,5 +1,6 @@
 import type { GameSession } from "../../game/game-session.ts";
 import { SAVE_VERSION } from "../../simulation/saved-world.ts";
+import { islandSizeOf } from "../../world/island-size.ts";
 import { writeSavedWorld } from "./save-database.ts";
 
 const BUSY_RETRIES = 6;
@@ -96,6 +97,7 @@ export class WorldSaver {
       savedAt,
       seed: state.request.seed,
       shape: state.request.options.shape,
+      size: islandSizeOf(state.request.options.dimensions),
       summary: state.summary,
       version: SAVE_VERSION,
     };

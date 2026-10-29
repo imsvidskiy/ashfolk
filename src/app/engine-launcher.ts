@@ -4,6 +4,7 @@ import type { GameEngine, WorldSource } from "../game/game-engine.ts";
 import type { GameSession } from "../game/game-session.ts";
 import { DEFAULT_GENERATION_OPTIONS, type GenerationProgress } from "../generation/generation-options.ts";
 import { toError } from "../shared/errors.ts";
+import { islandDimensions } from "../world/island-size.ts";
 import type { LaunchOptions } from "./launch-options.ts";
 
 export type EngineStatus =
@@ -36,7 +37,10 @@ async function worldSourceFor(launch: LaunchOptions, worldId: string): Promise<W
   if (saved === null) {
     return {
       kind: "new",
-      request: { options: { ...DEFAULT_GENERATION_OPTIONS, shape: launch.shape }, seed: launch.seed },
+      request: {
+        options: { ...DEFAULT_GENERATION_OPTIONS, dimensions: islandDimensions(launch.size), shape: launch.shape },
+        seed: launch.seed,
+      },
     };
   }
 

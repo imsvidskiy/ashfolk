@@ -20,6 +20,7 @@ describe("launch options", () => {
       quality: "high",
       seed: 7,
       shape: "round",
+      size: "normal",
     });
   });
 
@@ -28,6 +29,18 @@ describe("launch options", () => {
 
     expect(options.name).toBe("Old Ford");
     expect(options.shape).toBe("square");
+  });
+
+  it("reads the island size from the address", () => {
+    expect(readLaunchOptions("?seed=7&size=small").size).toBe("small");
+    expect(readLaunchOptions("?seed=7&size=large").size).toBe("large");
+  });
+
+  it("grows a normal island when the address names no size or an unknown one", () => {
+    silenceWarnings();
+
+    expect(readLaunchOptions("?seed=7").size).toBe("normal");
+    expect(readLaunchOptions("?seed=7&size=huge").size).toBe("normal");
   });
 
   it("reads a world name from the address as the new-world form does", () => {
