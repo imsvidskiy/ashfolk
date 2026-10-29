@@ -21,6 +21,7 @@ const CURTAIN_START = Math.PI * 1.04;
 const CURTAIN_END = Math.PI * 1.96;
 const CURTAIN_THICKNESS = 0.03;
 const CURTAIN_BOTTOM = 1.37;
+const SHELL_BOTTOM = 1.555;
 const BEARD_TUCK = 0.02;
 
 const BEARD_SECTIONS: readonly LoftSection[] = [
@@ -44,7 +45,6 @@ const FULL_BEARD_SECTIONS: readonly LoftSection[] = [
 const SIDE_COVERAGE = hairlineCoverage(1.75, 1.585);
 
 interface ShellOptions {
-  readonly bottom: number;
   readonly coverage: (vertex: ShapeVertex) => number;
   readonly offset: number;
   readonly roughness: number;
@@ -100,17 +100,17 @@ function grown(section: LoftSection, offset: number): LoftSection {
 }
 
 function headShell(detail: HumanDetail, options: ShellOptions): Shape {
-  const { bottom, coverage, offset, roughness } = options;
+  const { coverage, offset, roughness } = options;
 
-  const bottomSection = sectionAt(HEAD_PROFILE, bottom + 0.006);
+  const bottomSection = sectionAt(HEAD_PROFILE, SHELL_BOTTOM + 0.006);
 
   const { centerZ = 0 } = bottomSection;
 
   const sections: LoftSection[] = [
-    { centerZ, radiusX: 0, radiusZ: 0, y: bottom },
+    { centerZ, radiusX: 0, radiusZ: 0, y: SHELL_BOTTOM },
     grown(bottomSection, offset),
     ...HEAD_PROFILE.filter((section) => {
-      return section.y > bottom + 0.012;
+      return section.y > SHELL_BOTTOM + 0.012;
     }).map((section) => {
       return grown(section, offset);
     }),
@@ -158,7 +158,7 @@ function hairlineCoverage(front: number, side: number): (vertex: ShapeVertex) =>
 }
 
 function capShell(detail: HumanDetail, offset: number, front = 1.688, side = 1.585): Shape {
-  return headShell(detail, { bottom: 1.555, coverage: hairlineCoverage(front, side), offset, roughness: 0.004 });
+  return headShell(detail, { coverage: hairlineCoverage(front, side), offset, roughness: 0.004 });
 }
 
 export function addShortHair(builder: MeshBuilder, detail: HumanDetail): void {
@@ -167,7 +167,6 @@ export function addShortHair(builder: MeshBuilder, detail: HumanDetail): void {
 
 export function addWildHair(builder: MeshBuilder, detail: HumanDetail): void {
   const shell = headShell(detail, {
-    bottom: 1.555,
     coverage: hairlineCoverage(1.672, 1.57),
     offset: 0.026,
     roughness: 0.022,
@@ -184,7 +183,7 @@ function ringCoverage(vertex: ShapeVertex): number {
 }
 
 export function addFringeHair(builder: MeshBuilder, detail: HumanDetail): void {
-  const shell = headShell(detail, { bottom: 1.555, coverage: ringCoverage, offset: 0.01, roughness: 0.006 });
+  const shell = headShell(detail, { coverage: ringCoverage, offset: 0.01, roughness: 0.006 });
 
   builder.add(shell, { style: HAIR });
 }

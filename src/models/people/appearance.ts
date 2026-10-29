@@ -237,9 +237,9 @@ function beardStyle(random: RandomSource, ageGroup: AgeGroup, isFemale: boolean)
     { value: "short", weight: 0.4 },
     { value: "full", weight: 0.24 },
   ]);
-  const growsFull = random.chance(0.4);
+  const isBeardFull = random.chance(0.4);
 
-  if (ageGroup === "elder" && beard === "short" && growsFull) {
+  if (ageGroup === "elder" && beard === "short" && isBeardFull) {
     return "full";
   }
 
@@ -272,13 +272,13 @@ function outfit(random: RandomSource, ageGroup: AgeGroup, isFemale: boolean): Ou
 function accessories(random: RandomSource, ageGroup: AgeGroup): Set<Accessory> {
   const chosen = new Set<Accessory>();
   const adultFactor = ageGroup === "child" ? 0.4 : 1;
-  const wearsFeather = random.chance(0.4);
-  const wearsHeadband = random.chance(0.36 * adultFactor);
+  const hasFeather = random.chance(0.4);
+  const hasHeadband = random.chance(0.36 * adultFactor);
 
-  if (wearsHeadband) {
+  if (hasHeadband) {
     chosen.add("headband");
 
-    if (wearsFeather) {
+    if (hasFeather) {
       chosen.add("feather");
     }
   }
