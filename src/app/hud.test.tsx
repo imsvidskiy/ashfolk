@@ -146,4 +146,22 @@ describe("filmed hud", () => {
     await expect.element(screen.getByText("Interface hidden. Press H to show it.")).toBeVisible();
     expect(shownIslands()).toHaveLength(1);
   });
+
+  it("hides the journal sheet of a compact view, which sits outside the hud", async () => {
+    await page.viewport(390, 844);
+
+    showManyTribes();
+    useInterfaceStore.getState().openJournal("tribes");
+
+    const { engine } = await startTestEngine();
+
+    const screen = await render(<Hud />);
+
+    await expect.element(screen.getByRole("dialog", { name: "Journal" })).toBeVisible();
+
+    engine.filming.set({ isInterfaceHidden: true });
+
+    await expect.element(screen.getByRole("dialog", { name: "Journal" })).not.toBeInTheDocument();
+    await expect.element(screen.getByRole("button", { exact: true, name: "Menu" })).not.toBeInTheDocument();
+  });
 });

@@ -81,6 +81,10 @@ function CompactHud() {
   );
 }
 
+function HudPanels({ isCompact }: { readonly isCompact: boolean }) {
+  return isCompact ? <CompactHud /> : <WideHud />;
+}
+
 function HudLayout() {
   const isCompact = useIsCompact();
   const { areMarkersHidden, isInterfaceHidden } = useFilming();
@@ -89,7 +93,7 @@ function HudLayout() {
     <>
       {areMarkersHidden ? null : <WorldLabels />}
 
-      <div className={isInterfaceHidden ? "hidden" : "contents"}>{isCompact ? <CompactHud /> : <WideHud />}</div>
+      {isInterfaceHidden ? null : <HudPanels isCompact={isCompact} />}
 
       <SettingsDialog />
 
