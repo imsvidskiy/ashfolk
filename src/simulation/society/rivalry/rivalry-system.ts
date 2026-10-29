@@ -801,9 +801,7 @@ export class RivalrySystem implements Battleground {
   }
 
   #advanceRaid(raid: Raid, context: SocietyContext): void {
-    const raiders = livingRaiders(raid, (id) => {
-      return context.people.findPerson(id);
-    }).filter((raider) => {
+    const raiders = livingRaiders(context.people, raid).filter((raider) => {
       return hasJoinedRaid(raider, raid);
     });
     const attacker = context.people.findTribe(raid.attackerId);

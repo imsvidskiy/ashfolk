@@ -2,13 +2,15 @@ import { BUILDINGS, type BuildingRole, isFlammable } from "../../../content/buil
 import type { Waypoint } from "../../agents/navigation.ts";
 import { type Building, isComplete } from "../buildings.ts";
 import { isChild, isElder, NEED_SECONDS, type Person } from "../person.ts";
+import type { SocietySystem } from "../society.ts";
 import type { Stock } from "../stock.ts";
 import type { Tribe } from "../tribe.ts";
 import { goodsPhrases } from "./provisions.ts";
 
 export const MARCH_SPEED = 4.2;
-export const RATION_RELIEF = 0.55;
 
+const RATION_RELIEF = 0.55;
+const RATION_HUNGER = 0.6;
 const RAID_OVERHEAD_SECONDS = 160;
 const LISTED_GOODS = 3;
 const TORCHED_ROLES: readonly BuildingRole[] = ["enclosure", "craft"];
@@ -61,6 +63,16 @@ export function rationsFor(distance: number, hungerRate: number): number {
   return Math.ceil(((seconds / NEED_SECONDS) * hungerRate) / RATION_RELIEF);
 }
 
+export function eatRation(person: Person, rations: number): number {
+  if (person.hunger < RATION_HUNGER || rations <= 0) {
+    return rations;
+  }
+
+  person.hunger = Math.max(0, person.hunger - RATION_RELIEF);
+
+  return rations - 1;
+}
+
 function partySize(ableCount: number): number {
   if (ableCount < SMALLEST_PARTY) {
     return 0;
@@ -97,11 +109,11 @@ export function chooseAim(isAvengingBlood: boolean, canBurn: boolean, bitterness
   return "plunder";
 }
 
-export function livingRaiders(raid: Raid, findPerson: (id: number) => Person | null): Person[] {
+export function livingRaiders(people: SocietySystem, raid: Raid): Person[] {
   const living: Person[] = [];
 
   for (const id of raid.warriorIds) {
-    const person = findPerson(id);
+    const person = people.findPerson(id);
 
     if (person?.isAlive === true) {
       living.push(person);
