@@ -109,4 +109,27 @@ describe("people view", () => {
     expect(highLevel[humanPartIndex("drawnBow")]?.visible).toBe(true);
     expect(highLevel[humanPartIndex("quiver")]?.visible).toBe(true);
   });
+
+  it("rings the hovered person where the hand draws them, and stops once nobody is hovered", () => {
+    const mirror = createPopulatedMirror();
+    const input = inputFrom(mirror, 30);
+    const id = mirror.frame.people[PersonField.Id];
+    const held = {
+      id,
+      isPlaceable: true,
+      kind: "person" as const,
+      x: mirror.frame.people[PersonField.X] + 3,
+      z: mirror.frame.people[PersonField.Z] - 2,
+    };
+
+    input.hand.update(held, 1 / 60);
+
+    const people = drawPeople({ ...input, highlighted: { id, kind: "person" } });
+
+    expect(people.hoveredSpot).toEqual({ x: held.x, z: held.z });
+
+    people.update(input);
+
+    expect(people.hoveredSpot).toBeNull();
+  });
 });
