@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://playdawnfolk.com/sitemap.xml
+Sitemap: https://ashfolk.com/sitemap.xml

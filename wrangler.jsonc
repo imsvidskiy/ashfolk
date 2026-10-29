@@ -7,6 +7,8 @@
   "workers_dev": true,
   "preview_urls": false,
   "routes": [
+    { "custom_domain": true, "pattern": "ashfolk.com" },
+    { "custom_domain": true, "pattern": "www.ashfolk.com" },
     { "custom_domain": true, "pattern": "playdawnfolk.com" },
     { "custom_domain": true, "pattern": "www.playdawnfolk.com" }
   ],
