@@ -439,7 +439,9 @@ export class PointerControls {
     const { holder, tool } = carrying;
 
     if (pointer !== holder) {
-      this.#gesture = { kind: "tool", tool };
+      const pinch = measurePinch(this.#pointers);
+
+      this.#gesture = pinch === null ? { kind: "tool", tool } : { ...pinch, carrying, kind: "pinch" };
 
       return;
     }

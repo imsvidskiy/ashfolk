@@ -353,6 +353,28 @@ describe("pointer controls", () => {
     expect(rig.tool.end).not.toHaveBeenCalled();
   });
 
+  it("keeps the holding finger in charge when a third finger comes and goes during a pinch", async () => {
+    const rig = createRig();
+
+    touch(rig, "pointerdown", 1, 195, 420);
+    await wait(HOLD_MILLISECONDS);
+    touch(rig, "pointerdown", 2, 260, 520);
+    touch(rig, "pointerdown", 3, 120, 600);
+    touch(rig, "pointerup", 3, 120, 600);
+
+    const moves = rig.tool.move.mock.calls.length;
+
+    touch(rig, "pointermove", 2, 300, 560);
+    touch(rig, "pointerup", 2, 300, 560);
+
+    expect(rig.tool.move).toHaveBeenCalledTimes(moves);
+    expect(rig.tool.end).not.toHaveBeenCalled();
+
+    touch(rig, "pointerup", 1, 195, 420);
+
+    expect(rig.tool.end).toHaveBeenCalledTimes(1);
+  });
+
   it("carries to the ground under the still pointer as the camera zooms", () => {
     const rig = createRig();
 
