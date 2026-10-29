@@ -17,21 +17,21 @@ export const SCENES: readonly Scene[] = [
   { name: "far-square", query: "seed=7&shape=square&quality=high&paused=1&hours=11&camera=0,0,1800,0.8,0" },
   {
     name: "markers-over-forest",
-    query: "seed=7&shape=round&quality=high&paused=1&hours=11&camera=-1050,640,140,0.45,2.6",
+    query: "seed=7&shape=round&quality=high&paused=1&hours=11&camera=824,-408,140,0.45,0.13",
   },
   {
     name: "island-edge",
     query: "seed=7&shape=round&quality=high&paused=1&hours=19&camera=2769.5,856.7,80,0.12,2.52",
   },
-  { name: "cave-mouth", query: "seed=7&shape=round&quality=high&paused=1&hours=11&camera=-415,-585,40,0.6,0" },
+  { name: "cave-mouth", query: "seed=7&shape=round&quality=high&paused=1&hours=11&camera=143.5,-1772.4,40,0.6,2.62" },
   {
     name: "cave-wide-river",
-    query: "seed=7&shape=round&quality=high&paused=1&hours=11&camera=-1050,-1990,55,0.7,-2.37",
+    query: "seed=7&shape=round&quality=high&paused=1&hours=11&camera=1272.9,-1442.8,55,0.7,2.37",
   },
   {
-    cast: { parameters: { intensity: 60, radius: 25 }, powerId: "fire", x: -1050, z: 640 },
+    cast: { parameters: { intensity: 60, radius: 25 }, powerId: "fire", x: -1899, z: 1786 },
     name: "smoke-over-forest",
-    query: "seed=7&shape=round&quality=high&hours=11&camera=-1050,640,160,0.5,2.6",
+    query: "seed=7&shape=round&quality=high&hours=11&camera=-1899,1786,160,0.5,-2.45",
     seconds: 25,
   },
 ];

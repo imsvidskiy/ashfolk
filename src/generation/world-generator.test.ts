@@ -23,6 +23,18 @@ const JUNCTION_CELLS = 1.5;
 const RIVER_SAMPLE_STEP = 5;
 const STRAIGHT_RUN = 150;
 const STRAIGHT_DEVIATION = 3;
+const VARIETY_DIMENSIONS = { cellSize: 50, cellsPerSide: 128 };
+const VARIETY_SEEDS = Array.from({ length: 16 }, (_, index) => {
+  return index + 1;
+});
+const CAMP_SLOPE = 0.22;
+const CAMP_COAST_MARGIN = 120;
+const BIOME_GROUPS = {
+  cold: [Biome.Alpine, Biome.Glacier, Biome.Tundra],
+  desert: [Biome.Desert, Biome.Mesa],
+  forest: [Biome.Forest, Biome.Taiga],
+  swamp: [Biome.Swamp],
+} as const;
 
 let world: GeneratedWorld;
 let squareWorld: GeneratedWorld;
@@ -36,6 +48,13 @@ interface SwampSurvey {
   patches: number;
   poolCells: number;
   swampCells: number;
+}
+
+interface IslandSurvey {
+  readonly flatShare: number;
+  readonly highGroundAngle: number;
+  readonly rivers: number;
+  readonly shares: Readonly<Record<keyof typeof BIOME_GROUPS, number>>;
 }
 
 interface PointBounds {
@@ -674,6 +693,71 @@ function distanceToWaterfall(generated: GeneratedWorld, grid: WorldGrid, cell: n
   );
 }
 
+function countOf(counts: ReadonlyMap<number, number>, biome: number): number {
+  const count = counts.get(biome);
+
+  return count === undefined ? 0 : count;
+}
+
+function surveyIsland(generated: GeneratedWorld): IslandSurvey {
+  const { terrain } = generated;
+
+  const grid = new WorldGrid(generated.dimensions);
+  const counts = new Map<number, number>();
+  let landCells = 0;
+  let flatCells = 0;
+  let heightSum = 0;
+
+  for (let cell = 0; cell < grid.cellCount; cell += 1) {
+    if (!isOnIsland(terrain.coastDistance, cell)) {
+      continue;
+    }
+
+    landCells += 1;
+    heightSum += terrain.height[cell];
+    counts.set(terrain.biome[cell], countOf(counts, terrain.biome[cell]) + 1);
+
+    const isDry = !hasWater(terrain.waterSurface[cell], terrain.height[cell]) && terrain.biome[cell] !== Biome.Swamp;
+
+    if (isDry && terrain.coastDistance[cell] > CAMP_COAST_MARGIN && slopeAt(terrain.height, grid, cell) < CAMP_SLOPE) {
+      flatCells += 1;
+    }
+  }
+
+  const meanHeight = heightSum / landCells;
+  let towardX = 0;
+  let towardZ = 0;
+
+  for (let cell = 0; cell < grid.cellCount; cell += 1) {
+    if (isOnIsland(terrain.coastDistance, cell)) {
+      const weight = Math.max(0, terrain.height[cell] - meanHeight);
+
+      towardX += weight * grid.cellCenterX(cell);
+      towardZ += weight * grid.cellCenterZ(cell);
+    }
+  }
+
+  function shareOf(biomes: readonly number[]): number {
+    return (
+      biomes.reduce((total, biome) => {
+        return total + countOf(counts, biome);
+      }, 0) / landCells
+    );
+  }
+
+  return {
+    flatShare: flatCells / landCells,
+    highGroundAngle: Math.atan2(towardZ, towardX),
+    rivers: generated.water.rivers.length,
+    shares: {
+      cold: shareOf(BIOME_GROUPS.cold),
+      desert: shareOf(BIOME_GROUPS.desert),
+      forest: shareOf(BIOME_GROUPS.forest),
+      swamp: shareOf(BIOME_GROUPS.swamp),
+    },
+  };
+}
+
 beforeAll(() => {
   world = testWorld(7);
   squareWorld = testWorld(7, "square");
@@ -1133,7 +1217,7 @@ describe("full-size island rim", () => {
 
   beforeAll(() => {
     fullSize = generateWorld(7);
-    fullSquare = generateWorld(7, { ...DEFAULT_GENERATION_OPTIONS, shape: "square" });
+    fullSquare = generateWorld(3, { ...DEFAULT_GENERATION_OPTIONS, shape: "square" });
   }, 60_000);
 
   it("meets the square cliff at a moderate height without steps that could open gaps", () => {
@@ -1228,5 +1312,71 @@ describe("full-size island rim", () => {
 
     expect(shareAbove(slopes, STEEP)).toBeLessThan(0.03);
     expect(shareAbove(slopes, CLIFF)).toBeLessThan(0.0005);
+  });
+});
+
+describe("islands across seeds", () => {
+  const options = { dimensions: VARIETY_DIMENSIONS, erosionStrength: 1 };
+  const surveys: IslandSurvey[] = [];
+
+  beforeAll(() => {
+    for (const seed of VARIETY_SEEDS) {
+      surveys.push(surveyIsland(generateWorld(seed, { ...options, shape: "round" })));
+    }
+
+    for (const seed of VARIETY_SEEDS.slice(0, 6)) {
+      surveys.push(surveyIsland(generateWorld(seed, { ...options, shape: "square" })));
+    }
+  }, 60_000);
+
+  it("turns the highest ground toward most points of the compass", () => {
+    const octants = new Set(
+      surveys.map((survey) => {
+        return (Math.round(survey.highGroundAngle / (Math.PI / 4)) + 8) % 8;
+      })
+    );
+
+    expect(octants.size).toBeGreaterThanOrEqual(6);
+  });
+
+  it("mixes the biomes differently, within bounds", () => {
+    const forests = surveys.map((survey) => {
+      return survey.shares.forest;
+    });
+    const colds = surveys.map((survey) => {
+      return survey.shares.cold;
+    });
+    const deserts = surveys.map((survey) => {
+      return survey.shares.desert;
+    });
+
+    expect(Math.max(...forests) - Math.min(...forests)).toBeGreaterThan(0.15);
+    expect(Math.max(...colds) - Math.min(...colds)).toBeGreaterThan(0.03);
+    expect(
+      deserts.filter((share) => {
+        return share < 0.005;
+      }).length
+    ).toBeGreaterThanOrEqual(2);
+    expect(
+      deserts.filter((share) => {
+        return share > 0.08;
+      }).length
+    ).toBeGreaterThanOrEqual(2);
+
+    for (const { shares } of surveys) {
+      expect(shares.forest).toBeGreaterThan(0.3);
+      expect(shares.forest).toBeLessThan(0.85);
+      expect(shares.desert).toBeLessThan(0.2);
+      expect(shares.cold).toBeLessThan(0.12);
+      expect(shares.swamp).toBeGreaterThan(0.001);
+      expect(shares.swamp).toBeLessThan(0.07);
+    }
+  });
+
+  it("leaves every island enough flat land and rivers", () => {
+    for (const survey of surveys) {
+      expect(survey.flatShare).toBeGreaterThan(0.06);
+      expect(survey.rivers).toBeGreaterThanOrEqual(15);
+    }
   });
 });

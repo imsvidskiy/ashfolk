@@ -3,11 +3,19 @@ import { Ground, type GroundIndex } from "../content/grounds.ts";
 import { saturate } from "../shared/math.ts";
 import { createNoiseSampler } from "../shared/noise.ts";
 import { createRandom } from "../shared/random.ts";
-import { gradientZAt, slopeAt } from "../world/footing.ts";
+import { gradientXAt, gradientZAt, slopeAt } from "../world/footing.ts";
 import { hasWater } from "../world/water.ts";
 import { ORTHOGONAL_STEPS, type WorldGrid } from "../world/world-grid.ts";
-import { islandPointAt } from "./relief.ts";
-import { findPools, findSmallAreas, isWetland, measureWetness, type WetlandInputs } from "./wetlands.ts";
+import type { ClimateProfile } from "./island-layout.ts";
+import { type IslandPoint, islandPointAt } from "./relief.ts";
+import {
+  findPools,
+  findSmallAreas,
+  isWetland,
+  matchWetlandShare,
+  measureWetness,
+  type WetlandInputs,
+} from "./wetlands.ts";
 
 const MAXIMUM_WATER_DISTANCE = 64;
 const GLACIER_TEMPERATURE = -2.4;
@@ -63,7 +71,7 @@ interface CellClimate {
 }
 
 interface Slopes {
-  north: Float32Array;
+  shaded: Float32Array;
   slope: Float32Array;
 }
 
@@ -72,8 +80,10 @@ interface DrainedLand {
   ground: Uint8Array;
 }
 
-function baseTemperature(height: number, southness: number, desert: number): number {
-  return 9.6 - (6.5 * (height - 200)) / 1000 + 5 * southness + 3.5 * desert;
+function baseTemperature(profile: ClimateProfile, height: number, point: IslandPoint, desert: number): number {
+  const warmth = profile.warmthX * point.x + profile.warmthZ * point.z;
+
+  return 9.6 + profile.temperatureOffset - (6.5 * (height - 200)) / 1000 + warmth + 3.5 * desert;
 }
 
 function classifyColdOrSteep(cell: CellClimate): BiomeIndex | null {
@@ -203,20 +213,24 @@ function distanceToWater(grid: WorldGrid, waterSurface: Float32Array, heights: F
   return distances;
 }
 
-function northFacing(gradientZ: number, slope: number): number {
-  if (slope < 1e-4) {
+function shadedFacing(profile: ClimateProfile, gradientX: number, gradientZ: number, slope: number): number {
+  const warmth = Math.hypot(profile.warmthX, profile.warmthZ);
+
+  if (slope < 1e-4 || warmth === 0) {
     return 0;
   }
 
-  return (gradientZ / slope) * Math.min(1, slope * 3);
+  const uphillTowardWarmth = (gradientX * profile.warmthX + gradientZ * profile.warmthZ) / warmth;
+
+  return (uphillTowardWarmth / slope) * Math.min(1, slope * 3);
 }
 
-function measureSlopes(grid: WorldGrid, heights: Float32Array, slopes: Float64Array): Slopes {
-  const north = slopes.map((slope, cell) => {
-    return northFacing(gradientZAt(heights, grid, cell), slope);
+function measureSlopes(profile: ClimateProfile, grid: WorldGrid, heights: Float32Array, slopes: Float64Array): Slopes {
+  const shaded = slopes.map((slope, cell) => {
+    return shadedFacing(profile, gradientXAt(heights, grid, cell), gradientZAt(heights, grid, cell), slope);
   });
 
-  return { north: Float32Array.from(north), slope: Float32Array.from(slopes) };
+  return { shaded: Float32Array.from(shaded), slope: Float32Array.from(slopes) };
 }
 
 function riverBankWidth(strength: number): number {
@@ -310,7 +324,7 @@ function groundFor(biome: BiomeIndex, cell: CellClimate, waterLevel: number): Gr
   return BIOME_GROUND[biome];
 }
 
-export function buildClimate(inputs: WetlandInputs): ClimateResult {
+export function buildClimate(profile: ClimateProfile, inputs: WetlandInputs): ClimateResult {
   const { grid, heights, waterSurface } = inputs;
 
   const noise = createNoiseSampler(createRandom(inputs.seed * 13 + 5));
@@ -318,7 +332,7 @@ export function buildClimate(inputs: WetlandInputs): ClimateResult {
   const exactSlopes = Float64Array.from({ length: grid.cellCount }, (_, cell) => {
     return slopeAt(heights, grid, cell);
   });
-  const slopes = measureSlopes(grid, heights, exactSlopes);
+  const slopes = measureSlopes(profile, grid, heights, exactSlopes);
   const riverBanks = findRiverBanks(inputs, slopes.slope);
   const wetness = measureWetness(inputs, exactSlopes);
   const drained = new Uint8Array(grid.cellCount);
@@ -331,11 +345,13 @@ export function buildClimate(inputs: WetlandInputs): ClimateResult {
     variation: new Float32Array(grid.cellCount),
   };
 
+  matchWetlandShare(wetness, inputs.coastDistance, profile.wetlandShare);
+
   for (let row = 0; row < grid.cellsPerSide; row += 1) {
     for (let column = 0; column < grid.cellsPerSide; column += 1) {
       const point = islandPointAt(grid, column, row);
       const cell = grid.index(column, row);
-      const north = slopes.north[cell];
+      const shaded = slopes.shaded[cell];
       const slope = slopes.slope[cell];
 
       const height = heights[cell];
@@ -343,9 +359,12 @@ export function buildClimate(inputs: WetlandInputs): ClimateResult {
       const moistureNoise = 0.28 * noise.fractal(point.x * 1.3 + 11, point.z * 1.3 - 7, { octaves: 4 });
       const waterInfluence = 0.36 * Math.exp(-waterDistance[cell] / 13);
 
-      const temperature = baseTemperature(height, point.z, desert);
+      const temperature = baseTemperature(profile, height, point, desert);
       const isWater = hasWater(waterSurface[cell], height);
-      const moisture = saturate(0.5 + moistureNoise + waterInfluence + 0.14 * north - 0.8 * desert - 0.05 * point.z);
+      const warmSide = profile.warmthX * point.x + profile.warmthZ * point.z;
+      const moisture = saturate(
+        0.5 + profile.moistureOffset + moistureNoise + waterInfluence + 0.14 * shaded - 0.8 * desert - 0.01 * warmSide
+      );
 
       const isNearShore =
         !isWater &&

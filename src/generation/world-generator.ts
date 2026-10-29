@@ -29,6 +29,7 @@ import {
   type IslandSketch,
 } from "./generation-options.ts";
 import { computeHydrology } from "./hydrology.ts";
+import { type IslandLayout, planIslandLayout } from "./island-layout.ts";
 import { digRiverLakes, fillSinks } from "./lake-basins.ts";
 import { planMonuments } from "./monuments.ts";
 import { createRelief, islandPointAt, type Relief } from "./relief.ts";
@@ -112,9 +113,9 @@ function boundaryDistances(grid: WorldGrid, relief: Relief): (cell: number) => n
   };
 }
 
-function buildRelief(grid: WorldGrid, seed: number, shapeKind: IslandShapeKind) {
+function buildRelief(grid: WorldGrid, seed: number, layout: IslandLayout, shapeKind: IslandShapeKind) {
   const shape = createIslandShape(shapeKind, seed);
-  const relief = createRelief(seed, shape, grid.halfSize);
+  const relief = createRelief(seed, layout, shape, grid.halfSize);
   const coastDistance = new Float32Array(grid.cellCount);
   const desert = new Float64Array(grid.cellCount);
   const heights = new Float32Array(grid.cellCount);
@@ -163,7 +164,8 @@ export function generateWorld(
 
   onProgress({ island: null, stage: "relief" });
 
-  const { coastDistance, desert, dryness, heights, relief } = buildRelief(grid, seed, options.shape);
+  const layout = planIslandLayout(seed);
+  const { coastDistance, desert, dryness, heights, relief } = buildRelief(grid, seed, layout, options.shape);
 
   const talus = talusSlopes(heights, dryness);
 
@@ -203,7 +205,7 @@ export function generateWorld(
 
   onProgress({ island: { ...sketch, waterSurface: hydrology.waterSurface }, stage: "climate" });
 
-  const climate = buildClimate({
+  const climate = buildClimate(layout.climate, {
     coastDistance,
     desert,
     grid,

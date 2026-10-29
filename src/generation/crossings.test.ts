@@ -86,7 +86,7 @@ function samplesAlong(crossing: Crossing): { x: number; z: number }[] {
 
 beforeAll(() => {
   worlds.set("round", generateWorld(7));
-  worlds.set("square", generateWorld(3, { ...DEFAULT_GENERATION_OPTIONS, shape: "square" }));
+  worlds.set("square", generateWorld(4, { ...DEFAULT_GENERATION_OPTIONS, shape: "square" }));
 }, 120_000);
 
 describe.each(["round", "square"] as const)("crossings on a %s island", (shape) => {

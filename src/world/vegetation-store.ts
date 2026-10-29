@@ -369,7 +369,7 @@ export class VegetationStore implements VegetationChannels {
         for (let index = this.#firstInCell[cell]; index !== NO_PLANT; index = this.#nextInCell[index]) {
           const isTree = this.state[index] === PlantState.Alive && isTreeSpecies(this.species[index]);
 
-          if (isTree && Math.hypot(this.x[index] - x, this.z[index] - z) < reach) {
+          if (isTree && Math.hypot(this.x[index] - Math.fround(x), this.z[index] - Math.fround(z)) < reach) {
             return true;
           }
         }

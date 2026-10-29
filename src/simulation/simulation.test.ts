@@ -610,3 +610,17 @@ describe.each(["round", "square"] as const)("a long day on a %s island", (shape)
     ).toEqual([]);
   });
 });
+
+describe("arrival on islands of every layout", () => {
+  it("settles all the first tribes whatever the island's layout", { timeout: 60_000 }, () => {
+    for (let seed = 1; seed <= 12; seed += 1) {
+      const simulation = new Simulation(
+        generateWorld(seed, { dimensions: { cellSize: 50, cellsPerSide: 128 }, erosionStrength: 1, shape: "round" })
+      );
+
+      simulation.populate();
+
+      expect(simulation.society.tribes()).toHaveLength(3);
+    }
+  });
+});

@@ -3,7 +3,7 @@ import { slopeAt } from "../world/footing.ts";
 import { landEverywhere } from "../world/testing/terrain-fixtures.ts";
 import { NO_WATER } from "../world/water.ts";
 import { WorldGrid } from "../world/world-grid.ts";
-import { findPools, findSmallAreas, isWetland, measureWetness } from "./wetlands.ts";
+import { findPools, findSmallAreas, isWetland, matchWetlandShare, measureWetness } from "./wetlands.ts";
 
 const grid = new WorldGrid({ cellSize: 10, cellsPerSide: 96 });
 const LAKE_RADIUS = 120;
@@ -144,5 +144,27 @@ describe("wetlands", () => {
       expect(row).toBeGreaterThan(20);
       expect(row).toBeLessThan(49);
     }
+  });
+
+  it("bends the wetness so the wetland covers the island's share, keeping the wettest ground wettest", () => {
+    const wetness = Float32Array.from({ length: grid.cellCount }, (_, cell) => {
+      return (0.6 * (cell % 97)) / 100;
+    });
+    const before = Float32Array.from(wetness);
+
+    matchWetlandShare(wetness, landEverywhere(grid.cellCount), 0.2);
+
+    const wetCells = wetness.filter((value) => {
+      return isWetland(value);
+    }).length;
+    const wettest = before.indexOf(Math.max(...before));
+
+    expect(wetCells / grid.cellCount).toBeCloseTo(0.2, 1);
+    expect(wetness[wettest]).toBe(Math.max(...wetness));
+    expect(
+      wetness.every((value, cell) => {
+        return value <= 1 && (value === 0) === (before[cell] === 0);
+      })
+    ).toBe(true);
   });
 });
