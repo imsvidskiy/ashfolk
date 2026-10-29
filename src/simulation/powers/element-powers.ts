@@ -28,6 +28,12 @@ function strikeDistance(strike: number, scatter: number, random: RandomSource): 
   return random.next() * scatter;
 }
 
+function weatherFalloff(distance: number, radius: number): number {
+  const relativeDistance = distance / radius;
+
+  return 1 - relativeDistance * relativeDistance;
+}
+
 export function firePower(
   target: PowerTarget,
   parameters: PowerParameters<"fire">,
@@ -79,9 +85,7 @@ export function rainPower(
   const soaking = target.seconds * RAIN_PER_SECOND * intensity * rules.water.rainStrength;
 
   for (const { cell, distance } of cellsInArea(world, { ...target, radius: parameters.radius })) {
-    const relativeDistance = distance / parameters.radius;
-
-    const falloff = 1 - relativeDistance * relativeDistance;
+    const falloff = weatherFalloff(distance, parameters.radius);
 
     world.fields.wetness[cell] = Math.min(1, world.fields.wetness[cell] + soaking * falloff);
     fire.douse(cell, soaking * 2 * falloff);
@@ -107,9 +111,7 @@ export function snowPower(
       continue;
     }
 
-    const relativeDistance = distance / parameters.radius;
-
-    const falloff = 1 - relativeDistance * relativeDistance;
+    const falloff = weatherFalloff(distance, parameters.radius);
 
     world.fields.snow[cell] = Math.min(SNOW_CAPACITY, world.fields.snow[cell] + snowfall * falloff);
     fire.douse(cell, snowfall * 3 * falloff);
