@@ -93,13 +93,7 @@ function WeatherSettings({ weather }: { readonly weather: WeatherView }) {
   return (
     <>
       <SettingsGroup description="Pick the weather or let the seasons decide." title="Sky">
-        <ChoiceField
-          description="Pick the weather or let the seasons decide."
-          label="Weather"
-          onChange={handleWeatherChange}
-          options={WEATHER_OPTIONS}
-          value={choice}
-        />
+        <ChoiceField label="Weather" onChange={handleWeatherChange} options={WEATHER_OPTIONS} value={choice} />
 
         <RangeField
           description="Makes the whole island warmer or colder."

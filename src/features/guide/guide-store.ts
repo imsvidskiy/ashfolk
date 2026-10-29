@@ -29,18 +29,18 @@ export const useGuideStore = create<GuideStore>()(
     (set) => {
       return {
         dismiss: () => {
-          return set((state) => {
+          set((state) => {
             return { progress: dismissTip(state.progress) };
           });
         },
         progress: FRESH_GUIDE,
         record: (event) => {
-          return set((state) => {
+          set((state) => {
             return { progress: applyGuideEvent(state.progress, event) };
           });
         },
         setTipsShown: (areShown) => {
-          return set({ progress: areShown ? FRESH_GUIDE : { ...FRESH_GUIDE, isOff: true } });
+          set({ progress: areShown ? FRESH_GUIDE : { ...FRESH_GUIDE, isOff: true } });
         },
       };
     },

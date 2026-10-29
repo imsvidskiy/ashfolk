@@ -2,7 +2,7 @@ import { Lightbulb } from "lucide-react";
 import { TextButton } from "../../design/buttons.tsx";
 import { GameIcon } from "../../design/game-icon.tsx";
 import { Island } from "../../design/island.tsx";
-import { POWER_ICONS } from "../powers/power-icons.tsx";
+import { POWER_ICONS } from "../powers/power-icons.ts";
 import { useGuideStore } from "./guide-store.ts";
 import { currentTip, GUIDE_TIPS, type GuideTip } from "./guide-tips.ts";
 

@@ -19,7 +19,7 @@ import { WithTooltip } from "../../design/tooltip.tsx";
 import { isTypingTarget } from "../../game/input/keyboard-controls.ts";
 import { useGuideStore } from "../guide/guide-store.ts";
 import { suggestedPowerId } from "../guide/guide-tips.ts";
-import { POWER_ICONS } from "./power-icons.tsx";
+import { POWER_ICONS } from "./power-icons.ts";
 import { usePowerStore } from "./power-store.ts";
 
 const SELECT_HINT = "Tap people, animals, buildings or land to see their details.";
@@ -135,11 +135,7 @@ function useHand() {
     return state.selectHand;
   });
 
-  function handleSelect(): void {
-    selectHand();
-  }
-
-  return { handleSelect, isHandSelected };
+  return { handleSelect: selectHand, isHandSelected };
 }
 
 function useKindTab({ chosenKind, kind, onKindChange }: KindChoice & { readonly kind: PowerCategory }) {

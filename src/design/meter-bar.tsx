@@ -16,7 +16,7 @@ interface MeterBarProps {
   readonly label: string;
   readonly tone: MeterTone;
   readonly value: number;
-  readonly valueText?: string;
+  readonly valueText?: string | undefined;
 }
 
 export function MeterBar({ label, tone, value, valueText }: MeterBarProps) {
