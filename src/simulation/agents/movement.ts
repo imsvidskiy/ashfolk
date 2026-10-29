@@ -130,11 +130,7 @@ export function setDestination(
 }
 
 function planRoute(mover: Mover, destination: Waypoint, navigation: NavigationGrid, mayPlanRoute: boolean): Waypoint[] {
-  if (!mayPlanRoute) {
-    return [{ x: destination.x, z: destination.z }];
-  }
-
-  const route = navigation.findPath(mover, destination);
+  const route = mayPlanRoute ? navigation.findPath(mover, destination) : null;
 
   if (route === null) {
     return [{ x: destination.x, z: destination.z }];
