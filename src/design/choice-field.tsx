@@ -22,6 +22,12 @@ interface ChoiceFieldProps {
   readonly value: string;
 }
 
+function optionOf(options: readonly ChoiceOption[], value: string): ChoiceOption | undefined {
+  return options.find((option) => {
+    return option.value === value;
+  });
+}
+
 function SegmentOption({ option }: { readonly option: ChoiceOption }) {
   return (
     <Toggle className={cn(SEGMENT, "flex-1")} value={option.value}>
@@ -60,12 +66,6 @@ function SegmentedChoice({ label, onChange, options, value }: ChoiceFieldProps) 
       })}
     </ToggleGroup>
   );
-}
-
-function optionOf(options: readonly ChoiceOption[], value: string): ChoiceOption | undefined {
-  return options.find((option) => {
-    return option.value === value;
-  });
 }
 
 function ListOption({ option }: { readonly option: ChoiceOption }) {
