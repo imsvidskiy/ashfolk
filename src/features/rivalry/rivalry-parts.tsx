@@ -1,7 +1,7 @@
 import { Badge } from "../../design/badge.tsx";
 import type { Stance } from "../../simulation/society/rivalry/relations.ts";
 import type { RelationView } from "../../simulation/society/rivalry/rivalry-system.ts";
-import { relationNote, STANCE_LOOKS } from "./stance-looks.ts";
+import { relationNote, STANCE_LOOKS } from "./rivalry-labels.ts";
 
 export function StanceBadge({ stance }: { readonly stance: Stance }) {
   const look = STANCE_LOOKS[stance];

@@ -6,8 +6,9 @@ import type { RaidView, RelationView } from "../../simulation/society/rivalry/ri
 import { useShowSpot } from "../inspector/use-focus-camera.ts";
 import { TribeDot } from "../tribes/tribe-dot.tsx";
 import { useWorldStore } from "../world/world-store.ts";
+import { RAID_PHASE_LABELS } from "./rivalry-labels.ts";
 import { RelationNote, StanceBadge } from "./rivalry-parts.tsx";
-import { byStance, RAID_PHASE_LABELS } from "./stance-looks.ts";
+import { byStance } from "./rivalry-queries.ts";
 
 const QUIET_ISLAND = "Every tribe keeps to itself for now. Rivalries grow where lands and hunting grounds meet.";
 
