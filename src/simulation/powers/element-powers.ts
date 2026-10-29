@@ -222,12 +222,12 @@ export function volcanoPower(
 
   const cell = world.grid.cellAt(target.x, target.z);
 
-  if (cell < 0 || !world.isOnIsland(cell) || world.isWater(cell)) {
-    return refused("A volcano needs dry land");
+  if (!world.isOnIsland(cell) || world.isWater(cell)) {
+    return refused("A volcano needs dry land.");
   }
 
   if (services.volcanoes.isCrowding(target.x, target.z, parameters.radius)) {
-    return refused("Another volcano is too close");
+    return refused("Another volcano is too close.");
   }
 
   services.volcanoes.rumble(
