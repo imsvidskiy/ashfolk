@@ -1,6 +1,6 @@
 import { type MonumentPiece, PIECE_FORMS, type PieceForm } from "../../content/monuments.ts";
 import { PlantSpecies } from "../../content/plants.ts";
-import { FULL_TURN, lerp } from "../../shared/math.ts";
+import { FULL_TURN, HALF_TURN, lerp } from "../../shared/math.ts";
 import { createRandom, type RandomSource } from "../../shared/random.ts";
 import { MaterialSlot } from "../materials.ts";
 import { MeshBuilder } from "../mesh/mesh-builder.ts";
@@ -33,7 +33,6 @@ const HEAD_SEGMENTS: Readonly<Record<PlantDetailLevel, number>> = { far: 6, high
 const DRUM_SEGMENTS: Readonly<Record<PlantDetailLevel, number>> = { far: 5, high: 24, low: 6, medium: 12 };
 const DRESSED_DETAIL = 2;
 const FLUTES = 12;
-const HALF_TURN = Math.PI;
 const QUARTER_TURN = Math.PI / 2;
 const WEATHERED_STONE: StoneLook = { lichen: 0.24, moss: 0.3, slot: MaterialSlot.Stone };
 const CAIRN_STONE: StoneLook = { lichen: 0.26, moss: 0.14, slot: MaterialSlot.Stone };

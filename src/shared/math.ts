@@ -1,4 +1,5 @@
 export const FULL_TURN = Math.PI * 2;
+export const HALF_TURN = Math.PI;
 
 export function clamp(value: number, minimum: number, maximum: number): number {
   return Math.min(Math.max(value, minimum), maximum);
@@ -27,9 +28,9 @@ export function smoothstep(edgeStart: number, edgeEnd: number, value: number): n
 }
 
 export function wrapAngle(angle: number): number {
-  const wrapped = (((angle + Math.PI) % FULL_TURN) + FULL_TURN) % FULL_TURN;
+  const wrapped = (((angle + HALF_TURN) % FULL_TURN) + FULL_TURN) % FULL_TURN;
 
-  return wrapped - Math.PI;
+  return wrapped - HALF_TURN;
 }
 
 export function fractionalPart(value: number): number {
