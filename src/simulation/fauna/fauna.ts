@@ -427,7 +427,7 @@ export class FaunaSystem {
     }
 
     this.#breed(tick);
-    this.#removeRemains(tick.seconds);
+    this.#removeRemains();
   }
 
   #addAnimal(herd: Herd, x: number, z: number, random: RandomSource): Animal {
@@ -858,9 +858,9 @@ export class FaunaSystem {
     return true;
   }
 
-  #removeRemains(seconds: number): void {
+  #removeRemains(): void {
     const hasExpired = this.#animals.some((animal) => {
-      return !animal.isAlive && animal.deathSeconds + seconds > CORPSE_SECONDS;
+      return !animal.isAlive && animal.deathSeconds > CORPSE_SECONDS;
     });
 
     if (!hasExpired) {
