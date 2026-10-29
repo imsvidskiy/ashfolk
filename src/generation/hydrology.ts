@@ -137,6 +137,7 @@ interface ChannelTargets {
   heights: Float32Array;
   lakeIds: Int32Array;
   riverStrength: Uint8Array;
+  sideCuts: Float32Array;
   threshold: number;
   uncarvedHeights: Float32Array;
   waterSurface: Float32Array;
@@ -646,10 +647,6 @@ export function chainFlows(network: DrainageNetwork, chains: readonly RiverChain
 function bankGroundAt(land: RiverLand, x: number, z: number): number {
   const { basins, coastDistance, grid, heights } = land;
 
-  if (!grid.contains(grid.columnAt(x), grid.rowAt(z))) {
-    return Number.NaN;
-  }
-
   const cell = grid.cellAt(x, z);
 
   if (!isOnIsland(coastDistance, cell) || basins.lakeIds[cell] !== NO_CELL) {
@@ -976,7 +973,7 @@ function carveCell(
   const cut = sideCut(distanceFromCenter, point, uncarvedHeight);
 
   if (distanceFromCenter > channelReach) {
-    targets.heights[cell] = Math.min(targets.heights[cell], cut);
+    targets.sideCuts[cell] = Math.min(targets.sideCuts[cell], cut);
 
     return;
   }
@@ -1190,6 +1187,47 @@ function findWaterfalls(rivers: readonly River[]): Waterfall[] {
   return waterfalls;
 }
 
+function highestWaterBeside(targets: ChannelTargets, cell: number, isStandingOnly: boolean): number {
+  const { grid, heights, riverStrength, waterSurface } = targets;
+
+  const column = grid.columnOf(cell);
+  const row = grid.rowOf(cell);
+
+  let highest = Number.NEGATIVE_INFINITY;
+
+  for (const offset of NEIGHBOR_OFFSETS) {
+    const neighbor = grid.neighborIndex(column, row, offset);
+
+    if (neighbor < 0 || (isStandingOnly && riverStrength[neighbor] > 0)) {
+      continue;
+    }
+
+    if (hasWater(waterSurface[neighbor], heights[neighbor])) {
+      highest = Math.max(highest, waterSurface[neighbor]);
+    }
+  }
+
+  return highest;
+}
+
+function applySideCuts(targets: ChannelTargets): void {
+  const { heights, sideCuts, waterSurface } = targets;
+
+  for (let cell = 0; cell < sideCuts.length; cell += 1) {
+    const cut = sideCuts[cell];
+
+    if (cut === Number.POSITIVE_INFINITY) {
+      continue;
+    }
+
+    const floor = hasWater(waterSurface[cell], heights[cell])
+      ? Number.NEGATIVE_INFINITY
+      : highestWaterBeside(targets, cell, false);
+
+    heights[cell] = Math.min(heights[cell], Math.max(cut, floor));
+  }
+}
+
 function isDryLand(targets: ChannelTargets, cell: number): boolean {
   return isOnIsland(targets.coastDistance, cell) && !hasWater(targets.waterSurface[cell], targets.heights[cell]);
 }
@@ -1313,9 +1351,13 @@ function lowerBanks(targets: ChannelTargets): void {
   for (let cell = 0; cell < lowering.cuts.length; cell += 1) {
     const cut = lowering.cuts[cell];
 
-    if (cut > 0) {
-      heights[cell] = Math.min(heights[cell], Math.max(uncarvedHeights[cell] - cut, lowering.floors[cell]));
+    if (cut <= 0) {
+      continue;
     }
+
+    const floor = Math.max(lowering.floors[cell], highestWaterBeside(targets, cell, true));
+
+    heights[cell] = Math.min(heights[cell], Math.max(uncarvedHeights[cell] - cut, floor));
   }
 }
 
@@ -1367,6 +1409,7 @@ export function computeHydrology(
     heights,
     lakeIds,
     riverStrength,
+    sideCuts: new Float32Array(grid.cellCount).fill(Number.POSITIVE_INFINITY),
     threshold: riverThreshold,
     uncarvedHeights: Float32Array.from(heights),
     waterSurface,
@@ -1384,6 +1427,7 @@ export function computeHydrology(
     }
   }
 
+  applySideCuts(targets);
   keepRiversDescending(targets, rivers);
   dropShallowWater(heights, waterSurface, riverStrength);
   lowerBanks(targets);
