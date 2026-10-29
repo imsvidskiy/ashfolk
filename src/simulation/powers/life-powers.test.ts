@@ -72,6 +72,18 @@ describe("life", () => {
     expect(totalFood(tribe.stock)).toBeGreaterThan(foodBefore);
   });
 
+  it("explains when abundance finds no bush and no tribe", () => {
+    const simulation = createPowerSimulation();
+
+    for (const cell of simulation.world.grid.cellsInRadius(0, 0, 200)) {
+      simulation.world.vegetation.clearCell(cell, true);
+    }
+
+    simulation.usePower("abundance", 0, 0, { radius: 120 });
+
+    expect(simulation.takeNotices()).toEqual(["There is nothing nearby to bless."]);
+  });
+
   it("inspiration brings the next discovery closer", () => {
     const simulation = createPowerSimulation();
 

@@ -63,16 +63,21 @@ export const ibexPower = herdPower("ibex", "Ibex need dry land they can stand on
 export const harePower = herdPower("hare", "Hares need dry land away from water.");
 export const wolfPower = herdPower("wolf", "Wolves need flat, dry land.");
 
-function ripenBushes(services: PowerServices, x: number, z: number, radius: number): void {
+function ripenBushes(services: PowerServices, x: number, z: number, radius: number): boolean {
   const { vegetation } = services.world;
+
+  let hasBushes = false;
 
   for (const { cell } of cellsInArea(services.world, { radius, x, z })) {
     for (let plant = vegetation.firstPlantInCell(cell); plant !== NO_PLANT; plant = vegetation.nextPlantInCell(plant)) {
       if (plantSpeciesDefinition(vegetation.species[plant]).givesBerries) {
         vegetation.setFruit(plant, 1);
+        hasBushes = true;
       }
     }
   }
+
+  return hasBushes;
 }
 
 export function abundancePower(
@@ -80,10 +85,14 @@ export function abundancePower(
   parameters: PowerParameters<"abundance">,
   services: PowerServices
 ): PowerOutcome {
-  ripenBushes(services, target.x, target.z, parameters.radius);
-  services.effects.add({ kind: "blessing", radius: parameters.radius, style: "abundance", x: target.x, z: target.z });
-
+  const hasBushes = ripenBushes(services, target.x, target.z, parameters.radius);
   const tribe = services.people.nearestTribe(target.x, target.z, parameters.radius + ABUNDANCE_REACH);
+
+  if (!hasBushes && tribe === null) {
+    return refused("There is nothing nearby to bless.");
+  }
+
+  services.effects.add({ kind: "blessing", radius: parameters.radius, style: "abundance", x: target.x, z: target.z });
 
   if (tribe === null) {
     return APPLIED;
