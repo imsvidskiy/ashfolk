@@ -44,7 +44,7 @@ import {
   stanceFor,
 } from "./relations.ts";
 import { isBusy } from "./responses.ts";
-import { capitalized, raidSummary, stanceNews, theTribe } from "./stories.ts";
+import { envoyText, fallText, mourningText, raidLaunchText, raidSummary, stanceNews, truceText } from "./stories.ts";
 import type { Battleground } from "./strikes.ts";
 import { type Claim, claimOf } from "./territory.ts";
 
@@ -175,18 +175,6 @@ function recordFall(victim: Person, raid: Raid | null): void {
   }
 
   raid.fallenDefenders.push(victim.name);
-}
-
-function fallText(victim: Person, victimTribe: Tribe, slayerTribe: Tribe, raid: Raid | null): string {
-  if (raid?.warriorIds.includes(victim.id) === true) {
-    return `${victim.name} of ${theTribe(victimTribe.name)} fell raiding ${theTribe(slayerTribe.name)}`;
-  }
-
-  if (raid !== null) {
-    return `${victim.name} of ${theTribe(victimTribe.name)} fell to the raiders of ${theTribe(slayerTribe.name)}`;
-  }
-
-  return `${victim.name} of ${theTribe(victimTribe.name)} was slain by ${theTribe(slayerTribe.name)}`;
 }
 
 function untilDay(dates: ReadonlyMap<number, number>, tribeId: number): number {
@@ -355,7 +343,7 @@ export class RivalrySystem implements Battleground {
     this.#makePeace(relation, context);
     this.#chronicle.record({
       category: "peace",
-      text: capitalized(`${theTribe(guest.name)} brought gifts to ${theTribe(host.name)}, and they made peace`),
+      text: envoyText(guest, host),
       tribeId: guest.id,
       x: host.campX,
       z: host.campZ,
@@ -423,9 +411,7 @@ export class RivalrySystem implements Battleground {
 
     this.#chronicle.record({
       category: "raid",
-      text: capitalized(
-        `${theTribe(attacker.name)} sent ${warriors.length} warriors against ${theTribe(defender.name)}`
-      ),
+      text: raidLaunchText(attacker, defender, warriors.length),
       tribeId: attacker.id,
       x: attacker.campX,
       z: attacker.campZ,
@@ -690,7 +676,7 @@ export class RivalrySystem implements Battleground {
     this.#mourningUntil.set(tribe.id, day + MOURNING_DAYS);
     this.#chronicle.record({
       category: "death",
-      text: capitalized(`${theTribe(tribe.name)} mourned ${fallen.join(" and ")}`),
+      text: mourningText(tribe, fallen),
       tribeId: tribe.id,
       x: tribe.campX,
       z: tribe.campZ,
@@ -735,7 +721,7 @@ export class RivalrySystem implements Battleground {
       this.#makePeace(relation, context);
       this.#chronicle.record({
         category: "peace",
-        text: capitalized(`${theTribe(seeker.name)} and ${theTribe(host.name)} agreed to a truce`),
+        text: truceText(seeker, host),
         tribeId: seeker.id,
         x: (seeker.campX + host.campX) / 2,
         z: (seeker.campZ + host.campZ) / 2,

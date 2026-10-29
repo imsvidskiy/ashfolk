@@ -1,5 +1,6 @@
 import { RESOURCE_KINDS, RESOURCES } from "../../../content/resources.ts";
 import type { ChronicleCategory, ChronicleRecord } from "../../chronicle.ts";
+import type { Person } from "../person.ts";
 import { type Stock, totalFood } from "../stock.ts";
 import type { Tribe } from "../tribe.ts";
 import type { Raid } from "./raids.ts";
@@ -110,6 +111,34 @@ export function raidSummary(raid: Raid, attacker: string, defender: string): str
   }
 
   return capitalized(`${theTribe(attacker)} raided ${theTribe(defender)}: ${outcomes.join(", ")}${losses}`);
+}
+
+export function fallText(victim: Person, victimTribe: Tribe, slayerTribe: Tribe, raid: Raid | null): string {
+  if (raid?.warriorIds.includes(victim.id) === true) {
+    return `${victim.name} of ${theTribe(victimTribe.name)} fell raiding ${theTribe(slayerTribe.name)}`;
+  }
+
+  if (raid !== null) {
+    return `${victim.name} of ${theTribe(victimTribe.name)} fell to the raiders of ${theTribe(slayerTribe.name)}`;
+  }
+
+  return `${victim.name} of ${theTribe(victimTribe.name)} was slain by ${theTribe(slayerTribe.name)}`;
+}
+
+export function mourningText(tribe: Tribe, fallen: readonly string[]): string {
+  return capitalized(`${theTribe(tribe.name)} mourned ${listed(fallen)}`);
+}
+
+export function envoyText(guest: Tribe, host: Tribe): string {
+  return capitalized(`${theTribe(guest.name)} brought gifts to ${theTribe(host.name)}, and they made peace`);
+}
+
+export function raidLaunchText(attacker: Tribe, defender: Tribe, warriorCount: number): string {
+  return capitalized(`${theTribe(attacker.name)} sent ${warriorCount} warriors against ${theTribe(defender.name)}`);
+}
+
+export function truceText(seeker: Tribe, host: Tribe): string {
+  return capitalized(`${theTribe(seeker.name)} and ${theTribe(host.name)} agreed to a truce`);
 }
 
 function stanceStory(relation: Relation, previous: Stance, pair: string): StanceStory | null {
