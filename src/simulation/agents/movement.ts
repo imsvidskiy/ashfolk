@@ -182,7 +182,7 @@ export function moveAlong(
   navigation: NavigationGrid
 ): boolean {
   if (mover.hop !== null) {
-    continueHop(mover, seconds);
+    continueHop(mover, mover.hop, seconds);
 
     return false;
   }
@@ -394,7 +394,7 @@ function startHop(mover: Mover, heading: number, attempt: StepAttempt, world: Wo
   }
 
   mover.hop = hop;
-  continueHop(mover, attempt.seconds);
+  continueHop(mover, hop, attempt.seconds);
 
   return true;
 }
