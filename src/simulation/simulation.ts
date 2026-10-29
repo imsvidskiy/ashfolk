@@ -11,7 +11,8 @@ import { type DangerZone, HazardMap } from "./agents/hazards.ts";
 import type { Mover } from "./agents/movement.ts";
 import { NavigationGrid, type Waypoint } from "./agents/navigation.ts";
 import { Chronicle, type ChronicleSnapshot } from "./chronicle.ts";
-import { type CommandOf, readCommand, type Selection, type SimulationCommandType } from "./commands.ts";
+import { runCommand } from "./command-handlers.ts";
+import { readCommand, type Selection } from "./commands.ts";
 import { EffectLog } from "./effects.ts";
 import { type FaunaSnapshot, FaunaSystem, type FaunaThreats } from "./fauna/fauna.ts";
 import type { InitialWorld, SimulationFrame, WaterUpdate } from "./frame.ts";
@@ -112,86 +113,6 @@ interface Grab {
 interface ScheduledTask {
   remainingSeconds: number;
   run: () => void;
-}
-
-type CommandHandlers = {
-  readonly [Type in SimulationCommandType]: (simulation: Simulation, command: CommandOf<Type>) => void;
-};
-
-const COMMAND_HANDLERS: CommandHandlers = {
-  beginStroke: (simulation, command) => {
-    return simulation.beginStroke(command.powerId, command.x, command.z, command.parameters);
-  },
-  cancelGrab: (simulation) => {
-    return simulation.cancelGrab();
-  },
-  carry: (simulation, command) => {
-    return simulation.carry(command.x, command.z);
-  },
-  drop: (simulation) => {
-    return simulation.drop();
-  },
-  endStroke: (simulation) => {
-    return simulation.endStroke();
-  },
-  grab: (simulation, command) => {
-    return simulation.grab(command.target);
-  },
-  moveStroke: (simulation, command) => {
-    return simulation.moveStroke(command.x, command.z);
-  },
-  setDaySeconds: (simulation, command) => {
-    simulation.calendar.daySeconds = command.seconds;
-  },
-  setDaysPerSeason: (simulation, command) => {
-    simulation.calendar.setDaysPerSeason(command.days);
-  },
-  setHours: (simulation, command) => {
-    simulation.calendar.setHours(command.hours);
-  },
-  setPaused: (simulation, command) => {
-    simulation.setPaused(command.isPaused);
-  },
-  setSeason: (simulation, command) => {
-    simulation.calendar.setSeason(command.season);
-  },
-  setSelection: (simulation, command) => {
-    simulation.setSelection(command.selection);
-  },
-  setSpeed: (simulation, command) => {
-    simulation.setSpeed(command.speed);
-  },
-  setTemperatureOffset: (simulation, command) => {
-    simulation.weather.setUserTemperatureOffset(command.offset);
-  },
-  setTimeFrozen: (simulation, command) => {
-    simulation.calendar.isTimeFrozen = command.isFrozen;
-  },
-  setViewFocus: (simulation, command) => {
-    simulation.setViewFocus(command.x, command.z);
-  },
-  setWeather: (simulation, command) => {
-    simulation.setWeather(command.weather);
-  },
-  setWind: (simulation, command) => {
-    simulation.weather.setWind(command.direction, command.speed, simulation.rules.storms.windStrength);
-  },
-  setWorldRules: (simulation, command) => {
-    simulation.setRules(readWorldRules(command.rules));
-  },
-  usePower: (simulation, command) => {
-    simulation.usePower(command.powerId, command.x, command.z, command.parameters);
-  },
-};
-
-function runCommand<Type extends SimulationCommandType>(
-  simulation: Simulation,
-  type: Type,
-  command: CommandOf<Type>
-): void {
-  const handler: CommandHandlers[Type] = COMMAND_HANDLERS[type];
-
-  handler(simulation, command);
 }
 
 function incidentMessage(kind: BuildingIncidentKind, tribe: Tribe | null): string {
