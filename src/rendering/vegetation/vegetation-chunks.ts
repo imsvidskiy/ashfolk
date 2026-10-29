@@ -155,7 +155,7 @@ export class VegetationChunks {
     const firstRow = clamp(Math.floor(grid.rowAt(z - radius) / CHUNK_CELLS), 0, last);
     const lastRow = clamp(Math.floor(grid.rowAt(z + radius) / CHUNK_CELLS), 0, last);
 
-    const plants: number[] = [];
+    const plants: number[] = this.#heldPlant === NO_PLANT ? [] : [this.#heldPlant];
 
     for (let row = firstRow; row <= lastRow; row += 1) {
       for (let column = firstColumn; column <= lastColumn; column += 1) {

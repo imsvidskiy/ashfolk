@@ -162,6 +162,17 @@ describe("vegetation chunks", () => {
     expect(chunks.plantsNear(0, 0, mirror.grid.worldSize)).toHaveLength(alivePlantCount(mirror));
   });
 
+  it("finds a held plant that the chunks leave out", () => {
+    const mirror = createVegetatedMirror();
+    const chunks = new VegetationChunks(mirror);
+    const { vegetation } = mirror;
+
+    chunks.hold(0);
+
+    expect(chunkOf(chunks, 0)).toBe(-1);
+    expect(chunks.plantsNear(vegetation.x[0], vegetation.z[0], 1)).toContain(0);
+  });
+
   it("reports every bucket after a height change", () => {
     const chunks = new VegetationChunks(createVegetatedMirror());
 
