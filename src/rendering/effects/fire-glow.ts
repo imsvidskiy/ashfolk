@@ -1,7 +1,8 @@
 import { float, texture, vec3 } from "three/tsl";
-import { ClampToEdgeWrapping, DataTexture, LinearFilter, type Node, RedFormat, UnsignedByteType } from "three/webgpu";
+import { type DataTexture, type Node, RedFormat } from "three/webgpu";
 import type { LavaView, SimulationFrame } from "../../simulation/frame.ts";
 import type { WorldGrid } from "../../world/world-grid.ts";
+import { byteTexture } from "../data-textures.ts";
 import { mapCoordinatesNode } from "../terrain/height-sampling.ts";
 
 const CELLS_PER_TEXEL = 4;
@@ -58,12 +59,7 @@ export class FireGlow {
     this.#accumulated = new Float32Array(resolution * resolution);
     this.#data = new Uint8Array(resolution * resolution);
     this.#scratch = new Float32Array(resolution * resolution);
-    this.texture = new DataTexture(this.#data, resolution, resolution, RedFormat, UnsignedByteType);
-    this.texture.minFilter = LinearFilter;
-    this.texture.magFilter = LinearFilter;
-    this.texture.wrapS = ClampToEdgeWrapping;
-    this.texture.wrapT = ClampToEdgeWrapping;
-    this.texture.needsUpdate = true;
+    this.texture = byteTexture(this.#data, resolution, RedFormat);
   }
 
   update(frame: BurningCells): void {
