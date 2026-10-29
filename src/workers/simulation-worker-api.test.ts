@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import { DEFAULT_WORLD_REQUEST, type WorldRequest } from "../generation/generation-options.ts";
 import { ignore } from "../shared/ignore.ts";
 import type { InitialWorld } from "../simulation/frame.ts";
+import type { SavedWorldState } from "../simulation/saved-world.ts";
 import { Simulation } from "../simulation/simulation.ts";
 import { createVegetatedWorld } from "../simulation/testing/test-world.ts";
 import { createSimulationWorkerApi, type SimulationWorkerApi } from "./simulation-worker-api.ts";
@@ -11,8 +12,21 @@ interface WorldSender {
   createWorld: (request: WorldRequest) => InitialWorld;
 }
 
+const TEST_DIMENSIONS = { cellSize: 10, cellsPerSide: 64 };
+
 function createTestSimulation(): Simulation {
-  return new Simulation(createVegetatedWorld({ dimensions: { cellSize: 10, cellsPerSide: 64 } }));
+  return new Simulation(createVegetatedWorld({ dimensions: TEST_DIMENSIONS }));
+}
+
+function createRaisedSimulation(): Simulation {
+  return new Simulation(
+    createVegetatedWorld({
+      dimensions: TEST_DIMENSIONS,
+      heightAt: () => {
+        return 140;
+      },
+    })
+  );
 }
 
 describe("creating the world", () => {
@@ -56,11 +70,7 @@ describe("saving the world", () => {
     return createSimulationWorkerApi(createTestSimulation, createTestSimulation);
   }
 
-  it("saves nothing before a world exists", () => {
-    expect(createApi().saveWorld()).toBeNull();
-  });
-
-  it("continues a saved world where it left off", () => {
+  function savedWorld(): SavedWorldState {
     const api = createApi();
 
     api.createWorld(DEFAULT_WORLD_REQUEST, ignore);
@@ -72,12 +82,43 @@ describe("saving the world", () => {
       throw new Error("The world was busy");
     }
 
+    return saved;
+  }
+
+  it("saves nothing before a world exists", () => {
+    expect(createApi().saveWorld()).toBeNull();
+  });
+
+  it("continues a saved world where it left off", () => {
+    const saved = savedWorld();
+
     expect(saved.summary.population).toBeGreaterThan(0);
 
-    const loaded = createApi().loadWorld(saved, ignore);
+    const { hasLandChanged, world } = createApi().loadWorld(saved, ignore);
 
-    expect(loaded.frame.tick).toBe(saved.simulation.tick);
-    expect(loaded.frame.tribes).toHaveLength(saved.summary.tribeCount);
+    expect(world.frame.tick).toBe(saved.simulation.tick);
+    expect(world.frame.tribes).toHaveLength(saved.summary.tribeCount);
+    expect(hasLandChanged).toBe(false);
+  });
+
+  it("saves the fingerprint of the generated land", () => {
+    expect(savedWorld().generationFingerprint).toBe(createTestSimulation().world.generationFingerprint);
+  });
+
+  it("warns when the seed now grows different land", () => {
+    const loaded = createSimulationWorkerApi(createTestSimulation, createRaisedSimulation).loadWorld(
+      savedWorld(),
+      ignore
+    );
+
+    expect(loaded.hasLandChanged).toBe(true);
+    expect(loaded.world.frame.personCount).toBeGreaterThan(0);
+  });
+
+  it("loads a save made before fingerprints", () => {
+    const { generationFingerprint: _, ...older } = savedWorld();
+
+    expect(createApi().loadWorld(older, ignore).hasLandChanged).toBe(false);
   });
 
   it("refuses a damaged save", () => {

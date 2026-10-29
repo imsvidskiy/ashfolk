@@ -3,12 +3,16 @@ import { ERAS } from "../content/eras.ts";
 import { PlantSpecies } from "../content/plants.ts";
 import type { WorldRequest } from "../generation/generation-options.ts";
 import { ISLAND_SHAPES } from "../world/island-shape.ts";
+import type { InitialWorld } from "./frame.ts";
 import type { Simulation, SimulationSnapshot } from "./simulation.ts";
+import type { WorldState } from "./world/world-state.ts";
 
 export const SAVE_VERSION = 1;
 
 const LARGEST_CELLS_PER_SIDE = 4096;
 const MISSING_SPECIES = -1;
+const FEWEST_TELLING_RIVER_POINTS = 50;
+const SHARE_OF_RIVER_ON_WATER = 0.9;
 const SPECIES_BY_NAME = new Map<string, number>(Object.entries(PlantSpecies));
 
 export const PLANT_SPECIES_NAMES: readonly string[] = [...SPECIES_BY_NAME.keys()].sort((first, second) => {
@@ -110,6 +114,7 @@ const simulationSnapshotSchema = z.custom<SimulationSnapshot>((value) => {
 }, "The saved world is damaged");
 
 export const savedWorldStateSchema = z.object({
+  generationFingerprint: z.number().int().nullable().default(null),
   plantSpecies: z.array(z.string()).default(() => {
     return [...OLDER_SAVE_PLANT_SPECIES];
   }),
@@ -122,11 +127,17 @@ export const savedWorldStateSchema = z.object({
 export type WorldSummary = z.output<typeof worldSummarySchema>;
 
 export interface SavedWorldState {
+  generationFingerprint: number | null;
   plantSpecies: readonly string[];
   request: WorldRequest;
   simulation: SimulationSnapshot;
   summary: WorldSummary;
   version: number;
+}
+
+export interface LoadedWorld {
+  hasLandChanged: boolean;
+  world: InitialWorld;
 }
 
 function speciesNamed(name: string): number {
@@ -137,6 +148,33 @@ function speciesNamed(name: string): number {
   }
 
   return species;
+}
+
+function doRiversFollowTerrain(world: WorldState): boolean {
+  let pointCount = 0;
+  let pointsOnWater = 0;
+
+  for (const river of world.water.rivers) {
+    for (const point of river.points) {
+      const cell = world.grid.cellAt(point.x, point.z);
+
+      if (cell < 0) {
+        continue;
+      }
+
+      pointCount += 1;
+
+      if (world.isWater(cell) || world.terrain.riverStrength[cell] > 0) {
+        pointsOnWater += 1;
+      }
+    }
+  }
+
+  if (pointCount < FEWEST_TELLING_RIVER_POINTS) {
+    return true;
+  }
+
+  return pointsOnWater >= SHARE_OF_RIVER_ON_WATER * pointCount;
 }
 
 export function restoreSavedWorld(simulation: Simulation, state: SavedWorldState): void {
@@ -184,6 +222,14 @@ export function restoreSavedWorld(simulation: Simulation, state: SavedWorldState
   for (const plant of missing) {
     simulation.world.removePlant(plant);
   }
+}
+
+export function hasLandChanged(simulation: Simulation, state: SavedWorldState): boolean {
+  if (state.generationFingerprint !== null) {
+    return state.generationFingerprint !== simulation.world.generationFingerprint;
+  }
+
+  return !doRiversFollowTerrain(simulation.world);
 }
 
 export function summarizeWorld(simulation: Simulation): WorldSummary {

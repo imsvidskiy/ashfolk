@@ -7,6 +7,8 @@ import { type SavedWorldIdentity, type SaveOutcome, WorldSaver } from "./world-s
 const AUTOSAVE_MILLISECONDS = 60_000;
 
 interface SavesStore {
+  readonly acceptedLand: GameSession | null;
+  readonly acceptLand: (session: GameSession) => void;
   readonly hasFailed: boolean;
   readonly isSaving: boolean;
   readonly lastSavedAt: number | null;
@@ -19,6 +21,10 @@ interface SavesStore {
 
 export const useSavesStore = create<SavesStore>()((set, get) => {
   return {
+    acceptedLand: null,
+    acceptLand: (session) => {
+      set({ acceptedLand: session });
+    },
     hasFailed: false,
     isSaving: false,
     lastSavedAt: null,
@@ -48,6 +54,18 @@ export const useSavesStore = create<SavesStore>()((set, get) => {
     worlds: [],
   };
 });
+
+export function useIsLandChangePending(session: GameSession | null): boolean {
+  const acceptedLand = useSavesStore((state) => {
+    return state.acceptedLand;
+  });
+
+  if (session === null) {
+    return false;
+  }
+
+  return session.hasLandChanged && acceptedLand !== session;
+}
 
 export function saveBeforeLeaving(leave: () => void): void {
   const { saver } = useSavesStore.getState();

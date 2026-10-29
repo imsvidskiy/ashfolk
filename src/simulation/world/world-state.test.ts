@@ -212,4 +212,13 @@ describe("world state", () => {
     expect(world.occupancy[bank]).toBe(NO_BUILDING);
     expect(world.crossingAt(0, 0.5)).toBeNull();
   });
+
+  it("keeps the fingerprint of the generated land after the land changes", () => {
+    const world = createTestWorld();
+    const fingerprint = world.generationFingerprint;
+
+    world.setHeight(0, 900);
+
+    expect(world.generationFingerprint).toBe(fingerprint);
+  });
 });

@@ -1,14 +1,13 @@
 import { lerp, smoothstep } from "../shared/math.ts";
-import { hasWater, POND_SHORE_SLOPE, pondEdgeReach, type Spring } from "../world/water.ts";
+import { hasWater, POND_SHORE_SLOPE, pondEdgeReach, pondOutlineExtent, type Spring } from "../world/water.ts";
 import type { WorldGrid } from "../world/world-grid.ts";
 
 const DEEPEST_POND = 4.5;
 const STRAND_HEIGHT = 0.2;
 const STRAND_WIDTH = 15;
 const BEACH_WIDTH = 12;
-const DEEPEST_SHORE_CUT = 10;
+const DEEPEST_SHORE_CUT = 12;
 const WET_REACH = 0.75;
-const OUTLINE_MARGIN = 1.2;
 const SHORE_CELLS = 0.5;
 const LOWEST_RIM = 1.5;
 const RIM_CELLS = 1;
@@ -39,7 +38,7 @@ function highestCuttableRise(reach: number): number {
 export function pondFits(grid: WorldGrid, heights: Float32Array, pond: Spring): boolean {
   const shoreReach = grid.cellSize * SHORE_CELLS;
 
-  for (const cell of grid.cellsInRadius(pond.x, pond.z, pond.radius * OUTLINE_MARGIN + shoreReach)) {
+  for (const cell of grid.cellsInRadius(pond.x, pond.z, pondOutlineExtent(pond) + shoreReach)) {
     const x = grid.cellCenterX(cell);
     const z = grid.cellCenterZ(cell);
 
@@ -57,6 +56,18 @@ export function pondFits(grid: WorldGrid, heights: Float32Array, pond: Spring): 
   }
 
   return true;
+}
+
+export function pondCut(grid: WorldGrid, heights: Float32Array, pond: Spring): number {
+  let cut = 0;
+
+  for (const cell of grid.cellsInRadius(pond.x, pond.z, pondOutlineExtent(pond))) {
+    if (pondEdgeReach(pond, grid.cellCenterX(cell), grid.cellCenterZ(cell)) > 0) {
+      cut += Math.max(0, heights[cell] - pond.level);
+    }
+  }
+
+  return cut;
 }
 
 export function isRiverWater(targets: PondTargets, cell: number): boolean {
@@ -94,7 +105,7 @@ function shapeShore(targets: PondTargets, pond: Spring, cell: number, reach: num
 }
 
 export function pondShoreReach(pond: Spring): number {
-  return pond.radius * OUTLINE_MARGIN + STRAND_WIDTH + BEACH_WIDTH;
+  return pondOutlineExtent(pond) + STRAND_WIDTH + BEACH_WIDTH;
 }
 
 export function carvePond(targets: PondTargets, pond: Spring): void {

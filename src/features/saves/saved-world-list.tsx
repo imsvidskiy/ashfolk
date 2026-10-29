@@ -1,4 +1,4 @@
-import { Trash2 } from "lucide-react";
+import { Trash2, TriangleAlert } from "lucide-react";
 import { useState } from "react";
 import { useLaunchStore } from "../../app/launch-store.ts";
 import { IconButton, TextButton } from "../../design/buttons.tsx";
@@ -22,6 +22,10 @@ function worldDetails(world: SavedWorldListing, now: number): string {
 
   if (!world.isLoadable || world.summary === null) {
     return `Saved by another version of Dawnfolk · ${savedAt}`;
+  }
+
+  if (world.hasLandChanged) {
+    return `The land has changed · ${savedAt}`;
   }
 
   return `${describePeople(world.summary.population)} · ${savedAt}`;
@@ -91,7 +95,11 @@ function SavedWorldRow({ now, world }: SavedWorldRowProps) {
         <span className="flex min-w-0 flex-1 flex-col gap-0.5">
           <span className="text-ink truncate text-sm font-medium">{world.name}</span>
 
-          <span className="text-ink-soft truncate text-xs">{worldDetails(world, now)}</span>
+          <span className="text-ink-soft flex min-w-0 items-center gap-1 text-xs">
+            {world.hasLandChanged ? <TriangleAlert aria-hidden="true" className="shrink-0" size={12} /> : null}
+
+            <span className="truncate">{worldDetails(world, now)}</span>
+          </span>
         </span>
       </button>
 

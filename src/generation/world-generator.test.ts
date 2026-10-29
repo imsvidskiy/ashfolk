@@ -7,9 +7,21 @@ import { admitsWildPlant, slopeAt } from "../world/footing.ts";
 import { ISLAND_SHAPES, type IslandShapeKind } from "../world/island-shape.ts";
 import type { TerrainData } from "../world/terrain-data.ts";
 import { sampleHeight } from "../world/terrain-sampling.ts";
-import { hasWater, NO_WATER, type River, type RiverPoint, SPRING_KINDS } from "../world/water.ts";
+import {
+  hasWater,
+  NO_WATER,
+  pondEdgeReach,
+  pondOutlineExtent,
+  pondOutlineRadius,
+  type River,
+  type RiverPoint,
+  SPRING_KINDS,
+  type Spring,
+} from "../world/water.ts";
 import { NEIGHBOR_OFFSETS, WorldGrid } from "../world/world-grid.ts";
 import { DEFAULT_GENERATION_OPTIONS, type GenerationProgress, type IslandSketch } from "./generation-options.ts";
+import { pondShoreReach } from "./ponds.ts";
+import { SOURCE_REACH } from "./river-spacing.ts";
 import { type GeneratedWorld, generateWorld } from "./world-generator.ts";
 
 const TEST_DIMENSIONS = { cellSize: 40, cellsPerSide: 128 };
@@ -20,9 +32,15 @@ const CLIFF = Math.tan((55 * Math.PI) / 180);
 const SMALLEST_RIVER_GAP = 35;
 const CONFLUENCE_REACH = 100;
 const JUNCTION_CELLS = 1.5;
+const TRUNK_LAKE_CELLS = 1.5;
+const SMOOTHING_SLACK = 10;
+const LAKE_REACH = 20;
 const RIVER_SAMPLE_STEP = 5;
 const STRAIGHT_RUN = 150;
 const STRAIGHT_DEVIATION = 3;
+const OUTLINE_SAMPLES = 64;
+const SMALLEST_MEAN_POND_AREA = 1500;
+const LEAST_MEAN_OUTLINE_SPREAD = 1.5;
 
 let world: GeneratedWorld;
 let squareWorld: GeneratedWorld;
@@ -454,6 +472,134 @@ function isFedByLake(generated: GeneratedWorld, grid: WorldGrid, river: River): 
   });
 }
 
+function isTrunkFedByLake(generated: GeneratedWorld, grid: WorldGrid, river: River): boolean {
+  const [head] = riverPathCells(grid, river);
+
+  return grid
+    .cellsInRadius(grid.cellCenterX(head), grid.cellCenterZ(head), grid.cellSize * TRUNK_LAKE_CELLS)
+    .some((cell) => {
+      return isLakeWater(generated.terrain, cell);
+    });
+}
+
+function pondsOf(generated: GeneratedWorld): Spring[] {
+  return generated.water.springs.filter((spring) => {
+    return spring.kind === "pond";
+  });
+}
+
+function outlineSpread(pond: Spring): number {
+  const radii = Array.from({ length: OUTLINE_SAMPLES }, (_, sample) => {
+    return pondOutlineRadius(pond, (sample / OUTLINE_SAMPLES) * Math.PI * 2);
+  });
+
+  return Math.max(...radii) / Math.min(...radii);
+}
+
+function pondWaterCells(generated: GeneratedWorld, grid: WorldGrid, pond: Spring): number[] {
+  const { terrain } = generated;
+
+  return grid.cellsInRadius(pond.x, pond.z, pondOutlineExtent(pond)).filter((cell) => {
+    return (
+      hasWater(terrain.waterSurface[cell], terrain.height[cell]) &&
+      terrain.riverStrength[cell] === 0 &&
+      Math.abs(terrain.waterSurface[cell] - pond.level) < 0.05
+    );
+  });
+}
+
+function meanOf(values: readonly number[]): number {
+  return (
+    values.reduce((sum, value) => {
+      return sum + value;
+    }, 0) / values.length
+  );
+}
+
+function ownRiverFaults(pond: Spring, river: River): string[] {
+  const leaving = river.points.findIndex((point) => {
+    return pondEdgeReach(pond, point.x, point.z) < -point.width / 2;
+  });
+
+  if (leaving < 0) {
+    return [];
+  }
+
+  const turnsBack = river.points.slice(leaving).some((point) => {
+    return pondEdgeReach(pond, point.x, point.z) > -point.width / 2;
+  });
+
+  return turnsBack ? [`river ${river.id} turns back into its own pond`] : [];
+}
+
+function pondShoreFaults(generated: GeneratedWorld, grid: WorldGrid, pond: Spring): string[] {
+  const { terrain } = generated;
+
+  const faults: string[] = [];
+
+  if (sampleHeight(terrain.coastDistance, grid, pond.x, pond.z) < pondShoreReach(pond)) {
+    faults.push(`the pond of river ${pond.river} reaches the coast`);
+  }
+
+  const isNearLake = grid.cellsInRadius(pond.x, pond.z, pondOutlineExtent(pond)).some((cell) => {
+    return isLakeWater(terrain, cell) && Math.abs(terrain.waterSurface[cell] - pond.level) >= 0.05;
+  });
+
+  if (isNearLake) {
+    faults.push(`the pond of river ${pond.river} runs into a lake`);
+  }
+
+  return faults;
+}
+
+function pondFaults(generated: GeneratedWorld): string[] {
+  const grid = new WorldGrid(generated.dimensions);
+  const ponds = pondsOf(generated);
+  const faults: string[] = [];
+
+  for (const pond of ponds) {
+    const [head] = generated.water.rivers[pond.river].points;
+
+    if (pondEdgeReach(pond, head.x, head.z) <= 0) {
+      faults.push(`the pond of river ${pond.river} does not hold its river head`);
+    }
+
+    faults.push(...pondShoreFaults(generated, grid, pond));
+
+    for (const river of generated.water.rivers) {
+      if (river.id === pond.river) {
+        faults.push(...ownRiverFaults(pond, river));
+
+        continue;
+      }
+
+      const isInside = river.points.some((point) => {
+        return pondEdgeReach(pond, point.x, point.z) > 0;
+      });
+
+      if (isInside) {
+        faults.push(`the pond of river ${pond.river} swallows river ${river.id}`);
+      }
+    }
+
+    for (const other of generated.water.springs) {
+      if (other.kind !== "pond" && pondEdgeReach(pond, other.x, other.z) > -other.radius) {
+        faults.push(`the pond of river ${pond.river} covers the cave of river ${other.river}`);
+      }
+
+      if (
+        other.kind === "pond" &&
+        other !== pond &&
+        Math.hypot(other.x - pond.x, other.z - pond.z) < pondShoreReach(pond) + pondShoreReach(other)
+      ) {
+        faults.push(`the ponds of rivers ${pond.river} and ${other.river} run together`);
+      }
+    }
+  }
+
+  return faults;
+}
+
 function headFaults(generated: GeneratedWorld): string[] {
   const grid = new WorldGrid(generated.dimensions);
   const faults: string[] = [];
@@ -663,6 +809,80 @@ function straightRiverShare(generated: GeneratedWorld): number {
   return straight / total;
 }
 
+function alongToNearest(river: River, target: RiverPoint): { along: number; distance: number } {
+  let along = 0;
+  let best = { along: 0, distance: Number.POSITIVE_INFINITY };
+
+  for (const [index, point] of river.points.entries()) {
+    const previous = river.points[Math.max(0, index - 1)];
+
+    along += Math.hypot(point.x - previous.x, point.z - previous.z);
+
+    const distance = Math.hypot(point.x - target.x, point.z - target.z);
+
+    if (distance < best.distance) {
+      best = { along, distance };
+    }
+  }
+
+  return best;
+}
+
+function joinsNearSources(generated: GeneratedWorld): string[] {
+  const { cellSize } = generated.dimensions;
+  const { rivers } = generated.water;
+
+  const grid = new WorldGrid(generated.dimensions);
+  const trunks = rivers.filter((river) => {
+    return !isTrunkFedByLake(generated, grid, river);
+  });
+  const faults: string[] = [];
+
+  for (const tributary of rivers) {
+    const end = riverEnd(tributary);
+
+    for (const main of trunks) {
+      if (main === tributary) {
+        continue;
+      }
+
+      const nearest = alongToNearest(main, end);
+
+      if (nearest.distance < cellSize * JUNCTION_CELLS && nearest.along < SOURCE_REACH - SMOOTHING_SLACK) {
+        faults.push(`river ${tributary.id} joins river ${main.id} ${Math.round(nearest.along)} m below its source`);
+      }
+    }
+  }
+
+  return faults;
+}
+
+function endsAwayFromWater(generated: GeneratedWorld): string[] {
+  const { cellSize } = generated.dimensions;
+  const { rivers } = generated.water;
+
+  const grid = new WorldGrid(generated.dimensions);
+
+  return rivers
+    .filter((river) => {
+      const end = riverEnd(river);
+
+      const joins = rivers.some((other) => {
+        return other !== river && joinsRiver(river, other, cellSize * JUNCTION_CELLS);
+      });
+      const reachesLake = grid.cellsInRadius(end.x, end.z, LAKE_REACH).some((cell) => {
+        return isLakeWater(generated.terrain, cell);
+      });
+
+      return !(river.reachesEdge || joins || reachesLake);
+    })
+    .map((river) => {
+      const end = riverEnd(river);
+
+      return `river ${river.id} ends at ${Math.round(end.x)}, ${Math.round(end.z)}`;
+    });
+}
+
 function distanceToWaterfall(generated: GeneratedWorld, grid: WorldGrid, cell: number): number {
   const x = grid.cellCenterX(cell);
   const z = grid.cellCenterZ(cell);
@@ -800,9 +1020,7 @@ describe("world generation", () => {
 
   it("digs ponds as still water at the level of the river head and keeps plants off every spring", () => {
     const grid = new WorldGrid(TEST_DIMENSIONS);
-    const ponds = world.water.springs.filter((spring) => {
-      return spring.kind === "pond";
-    });
+    const ponds = pondsOf(world);
 
     expect(ponds.length).toBeGreaterThan(0);
 
@@ -1201,6 +1419,33 @@ describe("full-size island rim", () => {
     }
   });
 
+  it("digs spring ponds larger than before and of varied shapes on both shapes", () => {
+    for (const generated of [fullSize, fullSquare]) {
+      const grid = new WorldGrid(generated.dimensions);
+      const ponds = pondsOf(generated);
+
+      const areas = ponds.map((pond) => {
+        return pondWaterCells(generated, grid, pond).length * grid.cellSize * grid.cellSize;
+      });
+
+      expect(ponds.length).toBeGreaterThan(5);
+      expect(meanOf(areas)).toBeGreaterThan(SMALLEST_MEAN_POND_AREA);
+      expect(meanOf(ponds.map(outlineSpread))).toBeGreaterThan(LEAST_MEAN_OUTLINE_SPREAD);
+      expect(
+        new Set(
+          ponds.map((pond) => {
+            return outlineSpread(pond).toFixed(2);
+          })
+        ).size
+      ).toBeGreaterThan(ponds.length / 2);
+    }
+  });
+
+  it("keeps each spring pond at its river head, inland and clear of rivers, caves and other ponds", () => {
+    expect(pondFaults(fullSize)).toEqual([]);
+    expect(pondFaults(fullSquare)).toEqual([]);
+  });
+
   it("keeps every plant of the full island off water and off ground too steep for it", () => {
     expect(misplacedPlants(fullSize)).toEqual([]);
     expect(misplacedPlants(fullSquare)).toEqual([]);
@@ -1228,5 +1473,30 @@ describe("full-size island rim", () => {
 
     expect(shareAbove(slopes, STEEP)).toBeLessThan(0.03);
     expect(shareAbove(slopes, CLIFF)).toBeLessThan(0.0005);
+  });
+});
+
+describe("full-size river joins", () => {
+  let worlds: GeneratedWorld[];
+
+  beforeAll(() => {
+    worlds = [
+      generateWorld(10),
+      generateWorld(11),
+      generateWorld(3, { ...DEFAULT_GENERATION_OPTIONS, shape: "square" }),
+      generateWorld(8, { ...DEFAULT_GENERATION_OPTIONS, shape: "square" }),
+    ];
+  }, 180_000);
+
+  it("joins no river into another just below its cave or pond on several seeds and both shapes", () => {
+    for (const generated of worlds) {
+      expect(joinsNearSources(generated)).toEqual([]);
+    }
+  });
+
+  it("ends every river in water: past the coast, in a lake or in another river", () => {
+    for (const generated of worlds) {
+      expect(endsAwayFromWater(generated)).toEqual([]);
+    }
   });
 });

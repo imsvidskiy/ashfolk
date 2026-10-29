@@ -5,7 +5,7 @@ import {
 } from "../../generation/generation-options.ts";
 import type { SimulationCommand } from "../../simulation/commands.ts";
 import type { InitialWorld, SimulationFrame } from "../../simulation/frame.ts";
-import type { SavedWorldState } from "../../simulation/saved-world.ts";
+import type { LoadedWorld, SavedWorldState } from "../../simulation/saved-world.ts";
 import type { Simulation } from "../../simulation/simulation.ts";
 import { createSimulationWorkerApi, type SimulationWorkerApi } from "../../workers/simulation-worker-api.ts";
 import { GameSession } from "../game-session.ts";
@@ -39,7 +39,7 @@ export class LocalSimulationConnection implements SimulationConnection {
     });
   }
 
-  loadWorld(saved: SavedWorldState, onProgress: (progress: GenerationProgress) => void): Promise<InitialWorld> {
+  loadWorld(saved: SavedWorldState, onProgress: (progress: GenerationProgress) => void): Promise<LoadedWorld> {
     this.#commands.splice(0);
 
     return settle(() => {
