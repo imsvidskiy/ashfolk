@@ -12,6 +12,7 @@ const SHORE_CELLS = 0.5;
 const LOWEST_RIM = 1.5;
 const RIM_CELLS = 1;
 const OUTLET_SECTOR = 0.7;
+const BANK_CELLS = 1.5;
 
 interface PondTargets {
   readonly grid: WorldGrid;
@@ -90,7 +91,7 @@ function fillPondCell(targets: PondTargets, pond: Spring, cell: number, reach: n
 }
 
 function shapeShore(targets: PondTargets, pond: Spring, cell: number, reach: number): void {
-  const { heights, uncarvedHeights } = targets;
+  const { grid, heights, riverStrength, uncarvedHeights } = targets;
 
   if (isRiverWater(targets, cell)) {
     return;
@@ -102,6 +103,10 @@ function shapeShore(targets: PondTargets, pond: Spring, cell: number, reach: num
   const deepest = uncarvedHeights[cell] - DEEPEST_SHORE_CUT * (1 - rise);
 
   heights[cell] = Math.min(heights[cell], Math.max(beach, deepest));
+
+  if (reach > -grid.cellSize * BANK_CELLS && riverStrength[cell] === 0) {
+    heights[cell] = Math.max(heights[cell], pond.level + STRAND_HEIGHT);
+  }
 }
 
 export function pondShoreReach(pond: Spring): number {

@@ -1400,8 +1400,8 @@ export function computeHydrology(
   const land: RiverLand = { basins, coastDistance, grid, heights };
 
   const chains = spaceRiverChains(land, traceRiverChains(basins.network, lakeIds, riverThreshold));
-  const rivers = buildRivers(land, chains);
-  const springs = placeSprings({ coastDistance, grid, heights, lakeIds, riverThreshold }, rivers);
+  const springs = placeSprings({ coastDistance, grid, heights, lakeIds, riverThreshold }, buildRivers(land, chains));
+  const { rivers } = springs;
   const targets: ChannelTargets = {
     coastDistance,
     grid,

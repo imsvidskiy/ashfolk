@@ -3,6 +3,7 @@ import { landEverywhere, shapeTerrain } from "../world/testing/terrain-fixtures.
 import { hasWater, type River, type RiverPoint } from "../world/water.ts";
 import { NEIGHBOR_OFFSETS, WorldGrid } from "../world/world-grid.ts";
 import { chainFlows, computeHydrology, DEFAULT_HYDROLOGY, NO_CELL } from "./hydrology.ts";
+import { pondShoreReach } from "./ponds.ts";
 
 const VALLEY_FLOOR_HALF_WIDTH = 10;
 const GENTLE_WALLS = 0.6;
@@ -173,13 +174,20 @@ describe("river carving", () => {
     }
   });
 
-  it("lowers steep valley walls by at most ten meters and never notches them", () => {
-    const { carved, grid, uncarved } = carveValley(STEEP_WALLS);
+  it("lowers steep valley walls beside the river by at most ten meters and never notches them", () => {
+    const { carved, grid, result, uncarved } = carveValley(STEEP_WALLS);
 
     let deepestWallCut = 0;
 
     for (let cell = 0; cell < grid.cellCount; cell += 1) {
-      if (Math.abs(grid.cellCenterX(cell)) > VALLEY_FLOOR_HALF_WIDTH) {
+      const isPondShore = result.features.springs.some((spring) => {
+        return (
+          spring.kind === "pond" &&
+          Math.hypot(grid.cellCenterX(cell) - spring.x, grid.cellCenterZ(cell) - spring.z) < pondShoreReach(spring)
+        );
+      });
+
+      if (Math.abs(grid.cellCenterX(cell)) > VALLEY_FLOOR_HALF_WIDTH && !isPondShore) {
         deepestWallCut = Math.max(deepestWallCut, uncarved[cell] - carved[cell]);
       }
     }
