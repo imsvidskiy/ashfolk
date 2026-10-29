@@ -2,9 +2,10 @@ import { Matrix4, type Vector3 } from "three/webgpu";
 import type { GodCamera } from "../camera/god-camera.ts";
 import type { GroundPicker, ScreenPoint } from "./ground-picker.ts";
 
+export const TAP_TOLERANCE = 6;
+
 const MOUSE_PRIMARY = 0;
 const TOUCH_HOLD_MILLISECONDS = 140;
-export const TAP_TOLERANCE = 6;
 const ORBIT_YAW_PER_PIXEL = 0.005;
 const ORBIT_PITCH_PER_PIXEL = 0.004;
 const WHEEL_ZOOM_RATE = 0.0015;
