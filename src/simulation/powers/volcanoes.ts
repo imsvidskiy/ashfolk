@@ -126,12 +126,11 @@ function toppleTrees(volcano: Volcano, seconds: number, services: PowerServices)
   const { vegetation } = world;
 
   for (const { cell, distance } of cellsInArea(world, volcano)) {
-    if (
-      !(
-        vegetation.hasPlantsInCell(cell) &&
-        random.chance(TOPPLING_PER_SECOND * seconds * (1 - distance / volcano.radius))
-      )
-    ) {
+    if (!vegetation.hasPlantsInCell(cell)) {
+      continue;
+    }
+
+    if (!random.chance(TOPPLING_PER_SECOND * seconds * (1 - distance / volcano.radius))) {
       continue;
     }
 
