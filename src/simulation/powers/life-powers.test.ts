@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { plantSpeciesDefinition } from "../../content/plants.ts";
 import { TECHNOLOGIES } from "../../content/technologies.ts";
 import { totalFood } from "../society/stock.ts";
 import { createPowerSimulation } from "../testing/test-powers.ts";
@@ -70,6 +71,51 @@ describe("life", () => {
     simulation.usePower("abundance", tribe.campX, tribe.campZ, {});
 
     expect(totalFood(tribe.stock)).toBeGreaterThan(foodBefore);
+  });
+
+  it("abundance ripens bushes with no tribe nearby", () => {
+    const simulation = createPowerSimulation();
+
+    const { grid, vegetation } = simulation.world;
+    const bushes = grid.cellsInRadius(0, 0, 100).flatMap((cell) => {
+      return vegetation.plantsInCell(cell).filter((plant) => {
+        return plantSpeciesDefinition(vegetation.species[plant]).givesBerries;
+      });
+    });
+
+    for (const bush of bushes) {
+      vegetation.setFruit(bush, 0);
+    }
+
+    simulation.usePower("abundance", 0, 0, { radius: 120 });
+
+    expect(bushes.length).toBeGreaterThan(0);
+    expect(
+      bushes.every((bush) => {
+        return vegetation.fruit[bush] === 1;
+      })
+    ).toBe(true);
+    expect(simulation.society.tribes()).toEqual([]);
+    expect(simulation.takeNotices()).toEqual([]);
+  });
+
+  it("abundance feeds a tribe whose bushes are gone", () => {
+    const simulation = createPowerSimulation();
+
+    simulation.usePower("tribe", 0, 0, { people: 4 });
+
+    const [tribe] = simulation.society.tribes();
+
+    for (const cell of simulation.world.grid.cellsInRadius(tribe.campX, tribe.campZ, 200)) {
+      simulation.world.vegetation.clearCell(cell, true);
+    }
+
+    const foodBefore = totalFood(tribe.stock);
+
+    simulation.usePower("abundance", tribe.campX, tribe.campZ, { radius: 120 });
+
+    expect(totalFood(tribe.stock)).toBeGreaterThan(foodBefore);
+    expect(simulation.takeNotices()).toEqual([]);
   });
 
   it("explains when abundance finds no bush and no tribe", () => {

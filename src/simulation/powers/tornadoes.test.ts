@@ -147,12 +147,20 @@ describe("tornadoes", () => {
     expect(hut.burningSeconds).toBe(0);
   });
 
-  it("refuses to touch down off the island", () => {
+  it("refuses to touch down past the coast or off the map", () => {
     const simulation = createPowerSimulation();
 
-    simulation.usePower("tornado", 2000, 0, { lifetime: 5, strength: 100 });
+    const { grid, terrain } = simulation.world;
 
-    expect(simulation.takeNotices()).toEqual(["A tornado has to touch down on the island."]);
+    terrain.coastDistance[grid.cellAt(-300, 0)] = -5;
+
+    simulation.usePower("tornado", -300, 0, { lifetime: 5, strength: 100 });
+    simulation.usePower("tornado", grid.worldSize * 2, 0, { lifetime: 5, strength: 100 });
+
+    expect(simulation.takeNotices()).toEqual([
+      "A tornado has to touch down on the island.",
+      "A tornado has to touch down on the island.",
+    ]);
     expect(simulation.advance(0).effects).toEqual([]);
   });
 });
