@@ -245,18 +245,8 @@ function connectorCells(grid: WorldGrid, from: number, to: number, direction: { 
   return cells;
 }
 
-function runsBesideTrunk(spacing: Spacing, cell: number, to: number): boolean {
-  const { grid, owners } = spacing;
-
-  return (
-    nearestRiver(spacing, cell, SMALLEST_SPACING, (other) => {
-      return owners[other] === owners[to] && grid.distanceBetween(other, to) > JUNCTION_APPROACH;
-    }) !== null
-  );
-}
-
 function isConnectorClear(spacing: Spacing, connector: readonly number[], from: number, to: number): boolean {
-  const { basins, coastDistance, heights, owners } = spacing;
+  const { basins, coastDistance, grid, heights, owners } = spacing;
 
   const drop = heights[from] - heights[to];
 
@@ -268,8 +258,9 @@ function isConnectorClear(spacing: Spacing, connector: readonly number[], from: 
       basins.lakeIds[cell] === NO_CELL &&
       isOnIsland(coastDistance, cell) &&
       heights[cell] <= expected + CAPTURE_BUMP &&
-      !hasRiverWithin(spacing, cell, SMALLEST_SPACING, owners[to]) &&
-      !runsBesideTrunk(spacing, cell, to)
+      nearestRiver(spacing, cell, SMALLEST_SPACING, (other) => {
+        return owners[other] !== owners[to] || grid.distanceBetween(other, to) > JUNCTION_APPROACH;
+      }) === null
     );
   });
 }

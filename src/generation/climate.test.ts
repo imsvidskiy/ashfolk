@@ -99,6 +99,14 @@ describe("bare rock", () => {
     }
   });
 
+  it("keeps the mesa cliff fixed in the desert", () => {
+    for (const temperature of [0, 3, 6, 9, 15]) {
+      for (const strength of strengths) {
+        expect(bareRockSlope(temperature, strength, 1)).toBe(0.9);
+      }
+    }
+  });
+
   it("rises gradually toward the tree line", () => {
     const slopes = [8, 6, 5, 4, 3, 2, 1].map((temperature) => {
       return bareRockSlope(temperature, 0, 0);

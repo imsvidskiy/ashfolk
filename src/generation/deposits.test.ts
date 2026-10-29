@@ -1,13 +1,39 @@
 import { beforeAll, describe, expect, it } from "vitest";
 import { DEPOSIT_KINDS, DEPOSITS } from "../content/deposits.ts";
+import { Ground } from "../content/grounds.ts";
 import { isTreeSpecies } from "../content/plants.ts";
 import type { Deposit } from "../world/deposits.ts";
 import { slopeAt } from "../world/footing.ts";
+import type { TerrainData } from "../world/terrain-data.ts";
 import { isWaterCell } from "../world/terrain-sampling.ts";
+import { createTerrainData, shapeTerrain } from "../world/testing/terrain-fixtures.ts";
 import { WorldGrid } from "../world/world-grid.ts";
+import { planDeposits } from "./deposits.ts";
 import { type GeneratedWorld, generateWorld } from "./world-generator.ts";
 
 const DIMENSIONS = { cellSize: 10, cellsPerSide: 384 };
+const HILLSIDE_DIMENSIONS = { cellSize: 10, cellsPerSide: 128 };
+const OPEN_EDGE = -250;
+const FOREST_VEIN_CELLS = 6;
+
+function forestedHillside(grid: WorldGrid, isOpen: (x: number, z: number) => boolean): TerrainData {
+  const terrain = createTerrainData(HILLSIDE_DIMENSIONS);
+
+  terrain.height = shapeTerrain(grid, (_, z) => {
+    return 400 + 0.3 * z;
+  });
+  terrain.ground = Uint8Array.from({ length: grid.cellCount }, (_, cell) => {
+    return isOpen(grid.cellCenterX(cell), grid.cellCenterZ(cell)) ? Ground.Meadow : Ground.Forest;
+  });
+
+  return terrain;
+}
+
+function oresOf(deposits: readonly Deposit[]): Deposit[] {
+  return deposits.filter((deposit) => {
+    return deposit.kind !== "clay";
+  });
+}
 
 describe("ore and clay deposits", () => {
   const grid = new WorldGrid(DIMENSIONS);
@@ -95,6 +121,42 @@ describe("ore and clay deposits", () => {
 
     for (const tree of trees) {
       expect(veins.has(grid.cellAt(vegetation.x[tree], vegetation.z[tree]))).toBe(false);
+    }
+  });
+});
+
+describe("ore deposits in forest", () => {
+  const grid = new WorldGrid(HILLSIDE_DIMENSIONS);
+
+  it("keep only a few forest cells in each vein", () => {
+    const terrain = forestedHillside(grid, () => {
+      return false;
+    });
+
+    const ores = oresOf(planDeposits(grid, terrain, 7, new Uint8Array(grid.cellCount)));
+
+    expect(ores.length).toBeGreaterThan(0);
+
+    for (const ore of ores) {
+      const forested = ore.cells.filter((cell) => {
+        return terrain.ground[cell] === Ground.Forest;
+      });
+
+      expect(forested.length).toBeLessThanOrEqual(FOREST_VEIN_CELLS);
+    }
+  });
+
+  it("center their veins on open ground when the hills have enough of it", () => {
+    const terrain = forestedHillside(grid, (x, z) => {
+      return x < OPEN_EDGE && z > 0;
+    });
+
+    const ores = oresOf(planDeposits(grid, terrain, 7, new Uint8Array(grid.cellCount)));
+
+    expect(ores.length).toBeGreaterThan(0);
+
+    for (const ore of ores) {
+      expect(terrain.ground[grid.cellAt(ore.x, ore.z)]).toBe(Ground.Meadow);
     }
   });
 });

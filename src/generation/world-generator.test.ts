@@ -37,6 +37,7 @@ const JUNCTION_CELLS = 1.5;
 const TRUNK_LAKE_CELLS = 1.5;
 const SMOOTHING_SLACK = 10;
 const LAKE_REACH = 20;
+const NO_LAKE = -1;
 const RIVER_SAMPLE_STEP = 5;
 const FLOAT_SLACK = 1e-3;
 const INLAND_REACH = 60;
@@ -801,15 +802,57 @@ function squaredDistanceToBounds(point: RiverPoint, bounds: PointBounds): number
   return offsetX * offsetX + offsetZ * offsetZ;
 }
 
-function isAtLake(generated: GeneratedWorld, point: RiverPoint): boolean {
+function lakeCellsNear(generated: GeneratedWorld, point: RiverPoint): number[] {
   const grid = new WorldGrid(generated.dimensions);
 
-  return grid.cellsInRadius(point.x, point.z, LAKE_REACH).some((cell) => {
+  return grid.cellsInRadius(point.x, point.z, LAKE_REACH).filter((cell) => {
     return isLakeWater(generated.terrain, cell);
   });
 }
 
-function lakeCrossingsOf(generated: GeneratedWorld, first: River, second: River): RiverPoint[] {
+function isAtLake(generated: GeneratedWorld, point: RiverPoint): boolean {
+  return lakeCellsNear(generated, point).length > 0;
+}
+
+function labelLakes(generated: GeneratedWorld): Int32Array {
+  const grid = new WorldGrid(generated.dimensions);
+  const labels = new Int32Array(grid.cellCount).fill(NO_LAKE);
+
+  for (let start = 0; start < grid.cellCount; start += 1) {
+    if (labels[start] !== NO_LAKE || !isLakeWater(generated.terrain, start)) {
+      continue;
+    }
+
+    const stack = [start];
+
+    labels[start] = start;
+
+    for (let cell = stack.pop(); cell !== undefined; cell = stack.pop()) {
+      for (const neighbor of cellsAround(grid, cell, 1, grid.cellSize)) {
+        if (labels[neighbor] === NO_LAKE && isLakeWater(generated.terrain, neighbor)) {
+          labels[neighbor] = start;
+          stack.push(neighbor);
+        }
+      }
+    }
+  }
+
+  return labels;
+}
+
+function sharesLake(generated: GeneratedWorld, lakes: Int32Array, first: RiverPoint, second: RiverPoint): boolean {
+  const firstLakes = new Set(
+    lakeCellsNear(generated, first).map((cell) => {
+      return lakes[cell];
+    })
+  );
+
+  return lakeCellsNear(generated, second).some((cell) => {
+    return firstLakes.has(lakes[cell]);
+  });
+}
+
+function lakeCrossingsOf(generated: GeneratedWorld, lakes: Int32Array, first: River, second: River): RiverPoint[] {
   const crossings: RiverPoint[] = [];
 
   for (const [inflow, outflow] of [
@@ -819,7 +862,7 @@ function lakeCrossingsOf(generated: GeneratedWorld, first: River, second: River)
     const [source] = outflow.points;
     const mouth = riverEnd(inflow);
 
-    if (source !== undefined && isAtLake(generated, mouth) && isAtLake(generated, source)) {
+    if (source !== undefined && sharesLake(generated, lakes, mouth, source)) {
       crossings.push(mouth, source);
     }
   }
@@ -831,13 +874,15 @@ function closestDistinctRivers(generated: GeneratedWorld): number {
   const { cellSize } = generated.dimensions;
   const { rivers } = generated.water;
 
+  const lakes = labelLakes(generated);
+
   let closestSquared = Number.POSITIVE_INFINITY;
 
   for (const [index, first] of rivers.entries()) {
     for (const second of rivers.slice(index + 1)) {
       const confluences = [
         ...confluencesOf(rivers, first, second, cellSize * JUNCTION_CELLS),
-        ...lakeCrossingsOf(generated, first, second),
+        ...lakeCrossingsOf(generated, lakes, first, second),
       ];
 
       function isApart(point: RiverPoint): boolean {
@@ -985,8 +1030,6 @@ function endsAwayFromWater(generated: GeneratedWorld): string[] {
   const { cellSize } = generated.dimensions;
   const { rivers } = generated.water;
 
-  const grid = new WorldGrid(generated.dimensions);
-
   return rivers
     .filter((river) => {
       const end = riverEnd(river);
@@ -994,11 +1037,8 @@ function endsAwayFromWater(generated: GeneratedWorld): string[] {
       const joins = rivers.some((other) => {
         return other !== river && joinsRiver(river, other, cellSize * JUNCTION_CELLS);
       });
-      const reachesLake = grid.cellsInRadius(end.x, end.z, LAKE_REACH).some((cell) => {
-        return isLakeWater(generated.terrain, cell);
-      });
 
-      return !(river.reachesEdge || joins || reachesLake);
+      return !(river.reachesEdge || joins || isAtLake(generated, end));
     })
     .map((river) => {
       const end = riverEnd(river);

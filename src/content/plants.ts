@@ -80,7 +80,7 @@ export const PLANT_SPECIES: readonly PlantSpeciesDefinition[] = [
     index: PlantSpecies.Oak,
     name: "Oak",
     radiusPerMeter: 0.047,
-    steepestSlope: 0.65,
+    steepestSlope: 1,
     wood: 4,
   },
   {
@@ -91,7 +91,7 @@ export const PLANT_SPECIES: readonly PlantSpeciesDefinition[] = [
     index: PlantSpecies.Birch,
     name: "Birch",
     radiusPerMeter: 0.021,
-    steepestSlope: 0.7,
+    steepestSlope: 1,
     wood: 2,
   },
   {
@@ -113,7 +113,7 @@ export const PLANT_SPECIES: readonly PlantSpeciesDefinition[] = [
     index: PlantSpecies.Maple,
     name: "Maple",
     radiusPerMeter: 0.038,
-    steepestSlope: 0.65,
+    steepestSlope: 1,
     wood: 3,
   },
   {
