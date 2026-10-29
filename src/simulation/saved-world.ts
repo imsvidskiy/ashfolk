@@ -239,12 +239,11 @@ export function summarizeWorld(simulation: Simulation): WorldSummary {
   const eraIndex = tribes.reduce((highest, tribe) => {
     return Math.max(highest, tribe.eraIndex);
   }, 0);
-  const era = ERAS[eraIndex];
 
   return {
     day: calendar.day,
     eraIndex,
-    eraName: era === undefined ? "" : era.name,
+    eraName: ERAS[eraIndex].name,
     population: simulation.society.population,
     seasonName: calendar.seasonName,
     tribeCount: tribes.length,
