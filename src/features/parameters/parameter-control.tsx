@@ -1,13 +1,20 @@
 import type { ParameterField } from "../../content/parameters.ts";
 import type { ParameterValue } from "../../content/powers.ts";
-import { ChoiceField } from "../../design/choice-field.tsx";
+import { ChoiceField, type ChoiceOption } from "../../design/choice-field.tsx";
 import { formatParameterValue } from "../../design/format.ts";
+import { GameIcon } from "../../design/game-icon.tsx";
+import type { GameIconName } from "../../design/game-icon-sources.ts";
 import { RangeField } from "../../design/range-field.tsx";
 import { ToggleField } from "../../design/toggle-field.tsx";
+
+const OPTION_ICON_SIZE = 20;
+
+type OptionIcons = Readonly<Record<string, GameIconName>>;
 
 interface ParameterControlProps {
   readonly field: ParameterField;
   readonly onChange: (key: string, value: ParameterValue) => void;
+  readonly optionIcons?: OptionIcons | undefined;
   readonly value: ParameterValue | undefined;
 }
 
@@ -35,13 +42,29 @@ function stringOr(value: ParameterValue | undefined, fallback: string): string {
   return fallback;
 }
 
+function withIcons(options: readonly ChoiceOption[], icons: OptionIcons | undefined): readonly ChoiceOption[] {
+  if (icons === undefined) {
+    return options;
+  }
+
+  return options.map((option) => {
+    const icon = icons[option.value];
+
+    if (icon === undefined) {
+      return option;
+    }
+
+    return { ...option, icon: <GameIcon name={icon} size={OPTION_ICON_SIZE} /> };
+  });
+}
+
 function useParameterChange(key: string, onChange: ParameterControlProps["onChange"]) {
   return (next: ParameterValue) => {
     onChange(key, next);
   };
 }
 
-export function ParameterControl({ field, onChange, value }: ParameterControlProps) {
+export function ParameterControl({ field, onChange, optionIcons, value }: ParameterControlProps) {
   const { metadata } = field;
 
   const handleChange = useParameterChange(field.key, onChange);
@@ -53,7 +76,7 @@ export function ParameterControl({ field, onChange, value }: ParameterControlPro
           description={metadata.description}
           label={metadata.label}
           onChange={handleChange}
-          options={metadata.options}
+          options={withIcons(metadata.options, optionIcons)}
           value={stringOr(value, metadata.defaultValue)}
         />
       );
