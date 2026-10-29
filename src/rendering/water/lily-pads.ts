@@ -1,14 +1,11 @@
 import {
   attribute,
   cameraPosition,
-  cos,
   distance,
-  Fn,
   float,
   mix,
   positionGeometry,
   select,
-  sin,
   smoothstep,
   textureLoad,
   transformNormalToView,
@@ -27,6 +24,7 @@ import {
 import type { WorldMirror } from "../../game/world-mirror.ts";
 import { FULL_TURN, smoothstep as smoothstepNumber } from "../../shared/math.ts";
 import type { WorldGrid } from "../../world/world-grid.ts";
+import { rotateAroundUp } from "../node-helpers.ts";
 import { markOutlined } from "../outlines.ts";
 import { POOL_BANK, poolReachNode } from "../terrain/bog-pools.ts";
 import { cellAtNode, coarseGroundOffsetNode, sampleHeightNode } from "../terrain/height-sampling.ts";
@@ -175,17 +173,8 @@ function createLilyMaterial(
   const growth = isFlower ? FLOWER_SCALE : 1;
 
   const scale = size.mul(growth).mul(shown).mul(fade).mul(season).mul(float(1).sub(frozen));
-  const local = positionGeometry.mul(scale);
-  const cosine = cos(turn);
-  const sine = sin(turn);
 
-  material.positionNode = Fn(() => {
-    return vec3(
-      point.x.add(local.x.mul(cosine)).add(local.z.mul(sine)),
-      level.add(local.y),
-      point.y.add(local.z.mul(cosine)).sub(local.x.mul(sine))
-    );
-  })();
+  material.positionNode = vec3(point.x, level, point.y).add(rotateAroundUp(positionGeometry.mul(scale), turn));
 
   const tint = smoothstep(0.2, 1, positionGeometry.xz.length()).mul(0.4);
   const petal = select(lily.w.lessThan(0), PINK_PETAL, WHITE_PETAL);
