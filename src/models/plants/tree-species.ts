@@ -3,7 +3,7 @@ import { PlantSpecies, type PlantSpeciesIndex } from "../../content/plants.ts";
 import { FULL_TURN, lerp } from "../../shared/math.ts";
 import type { RandomSource } from "../../shared/random.ts";
 import { pointAlong, type TubePoint } from "../mesh/shapes.ts";
-import { addBlob, addLimb, addTrunk, createGrowth, finish, type Growth, rooted } from "./tree-growth.ts";
+import { addBlob, addLimb, addTrunk, BLOB_TINT, createGrowth, finish, type Growth, rooted } from "./tree-growth.ts";
 import {
   endedBelow,
   type Foliage,
@@ -274,7 +274,7 @@ function willow(seed: number): TreeStructure {
       kind: "blob",
       radius: crownRadius,
       squash: 0.8,
-      tint: jitter(random, 0.12),
+      tint: jitter(random, BLOB_TINT),
     });
   }
 

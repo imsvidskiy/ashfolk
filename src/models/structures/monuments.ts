@@ -2,7 +2,7 @@ import { type MonumentPiece, PIECE_FORMS, type PieceForm } from "../../content/m
 import { PlantSpecies } from "../../content/plants.ts";
 import { FULL_TURN, lerp } from "../../shared/math.ts";
 import { createRandom, type RandomSource } from "../../shared/random.ts";
-import { MaterialSlot, type MaterialSlotIndex } from "../materials.ts";
+import { MaterialSlot } from "../materials.ts";
 import { MeshBuilder } from "../mesh/mesh-builder.ts";
 import type { MeshData } from "../mesh/mesh-data.ts";
 import { deformShape, facetShape, type Shape } from "../mesh/shape.ts";
@@ -129,9 +129,9 @@ const LOW_CAIRN: readonly CairnRing[] = [
   { radius: 0, stones: 1, y: 0.95 },
 ];
 
-function addPlain(context: MonumentContext, shape: Shape, placement: TransformOptions, slot: MaterialSlotIndex): void {
+function addBasalt(context: MonumentContext, shape: Shape, placement: TransformOptions): void {
   context.builder.add(shape, {
-    style: { shade: groundShade(context.height), slot },
+    style: { shade: groundShade(context.height), slot: MaterialSlot.Basalt },
     transform: transformOf(placement),
   });
 }
@@ -360,15 +360,13 @@ function addHead(context: MonumentContext, placement: TransformOptions): void {
     );
 
     for (const side of [-1, 1]) {
-      addPlain(
-        carving,
-        box(0.5, 0.24, 0.2),
-        { position: [side * 0.48, 3.08, faceDepth(3.08) - 0.05], rotation: [0, side * 0.2, 0] },
-        MaterialSlot.Basalt
-      );
+      addBasalt(carving, box(0.5, 0.24, 0.2), {
+        position: [side * 0.48, 3.08, faceDepth(3.08) - 0.05],
+        rotation: [0, side * 0.2, 0],
+      });
     }
 
-    addPlain(carving, box(0.7, 0.07, 0.12), { position: [0, 1.36, faceDepth(1.36) + 0.02] }, MaterialSlot.Basalt);
+    addBasalt(carving, box(0.7, 0.07, 0.12), { position: [0, 1.36, faceDepth(1.36) + 0.02] });
   }
 
   builder.addMesh(head.build(), { transform: transformOf(placement) });

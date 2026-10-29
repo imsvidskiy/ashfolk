@@ -6,7 +6,7 @@ import { triangleCount } from "../mesh/mesh-data.ts";
 import { outermostHit } from "../mesh/surface-probe.ts";
 import { highestOpenEdge, meshProblems } from "../testing/mesh-checks.ts";
 import { loosePieces, TOUCHING } from "../testing/mesh-connectivity.ts";
-import { widestReach } from "../testing/structure-checks.ts";
+import { orderProblems, widestReach } from "../testing/structure-checks.ts";
 import { buildBuildingModel, buildingScale, SINGLE_MODEL_KINDS, type SingleModelKind } from "./building-models.ts";
 import { GLOW_PART } from "./structure-parts.ts";
 
@@ -49,15 +49,7 @@ describe.each(SINGLE_MODEL_KINDS)("%s model", (kind) => {
   });
 
   test("rises in stages from the ground while it is built", () => {
-    const orders = [...high.channels.buildOrder];
-
-    expect(Math.min(...orders)).toBeLessThan(0.3);
-    expect(Math.max(...orders)).toBeGreaterThan(0.85);
-    expect(
-      orders.every((order) => {
-        return order >= 0 && order <= 1;
-      })
-    ).toBe(true);
+    expect(orderProblems(high)).toEqual([]);
     expect(high.bounds.minimum[1]).toBeGreaterThan(-0.1);
   });
 });
@@ -73,7 +65,7 @@ describe("building details", () => {
     expect(buildBuildingModel("campfire", "high").channels.part).toContain(GLOW_PART);
   });
 
-  it.each(["high", "low"] as const)("shows the %s tent door in front of the cover", (level) => {
+  it.each(LEVELS)("shows the %s tent door in front of the cover", (level) => {
     const tent = buildBuildingModel("tent", level);
 
     const hit = outermostHit(tent, new Vector3(0, 0.5, 0), new Vector3(0, 0, 1));

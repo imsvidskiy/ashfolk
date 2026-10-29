@@ -55,6 +55,10 @@ interface AnimalAppearanceInput {
   readonly youth: number;
 }
 
+function coatColor(random: RandomSource, palette: readonly number[], darkest: number, brightest: number): number {
+  return scaleColor(colorFromPalette(palette, random.next()), random.between(darkest, brightest));
+}
+
 function youthScale(youth: number): number {
   return lerp(1, 0.42, youth);
 }
@@ -67,7 +71,7 @@ function antlerChoice(random: RandomSource, youth: number): Pick<AnimalAppearanc
 }
 
 function deerAppearance(random: RandomSource, youth: number): AnimalAppearance {
-  const coat = scaleColor(colorFromPalette(DEER_COATS, random.next()), random.between(0.92, 1.08));
+  const coat = coatColor(random, DEER_COATS, 0.92, 1.08);
   const size = random.between(0.9, 1.12) * youthScale(youth);
 
   return {
@@ -83,7 +87,7 @@ function deerAppearance(random: RandomSource, youth: number): AnimalAppearance {
 }
 
 function mammothAppearance(random: RandomSource, youth: number): AnimalAppearance {
-  const coat = scaleColor(colorFromPalette(MAMMOTH_COATS, random.next()), random.between(0.9, 1.1));
+  const coat = coatColor(random, MAMMOTH_COATS, 0.9, 1.1);
   const size = random.between(0.9, 1.1) * youthScale(youth);
 
   return {
@@ -98,7 +102,7 @@ function mammothAppearance(random: RandomSource, youth: number): AnimalAppearanc
 }
 
 function ibexAppearance(random: RandomSource, youth: number): AnimalAppearance {
-  const coat = scaleColor(colorFromPalette(IBEX_COATS, random.next()), random.between(0.92, 1.08));
+  const coat = coatColor(random, IBEX_COATS, 0.92, 1.08);
   const isBuck = random.chance(0.45);
   const size = random.between(0.9, 1.1) * youthScale(youth);
 
@@ -114,7 +118,7 @@ function ibexAppearance(random: RandomSource, youth: number): AnimalAppearance {
 }
 
 function hareAppearance(random: RandomSource, youth: number): AnimalAppearance {
-  const coat = scaleColor(colorFromPalette(HARE_COATS, random.next()), random.between(0.92, 1.08));
+  const coat = coatColor(random, HARE_COATS, 0.92, 1.08);
   const size = HARE_STATURE * random.between(0.92, 1.08) * youthScale(youth);
 
   return {
@@ -132,7 +136,7 @@ function wolfCoat(random: RandomSource): number {
     return WOLF_BLACK;
   }
 
-  return scaleColor(colorFromPalette(WOLF_COATS, random.next()), random.between(0.9, 1.1));
+  return coatColor(random, WOLF_COATS, 0.9, 1.1);
 }
 
 function wolfAppearance(random: RandomSource, youth: number): AnimalAppearance {

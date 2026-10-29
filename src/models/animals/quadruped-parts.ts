@@ -1,12 +1,14 @@
 import { type Matrix4, Vector3 } from "three";
-import { alongPath, type DetailSteps, segmentsUpTo } from "../level-of-detail.ts";
+import { alongPath, alongTube, type DetailSteps, segmentsUpTo } from "../level-of-detail.ts";
 import { MaterialSlot } from "../materials.ts";
 import type { MeshBuilder, SurfacePoint, VertexStyle } from "../mesh/mesh-builder.ts";
-import type { Shape } from "../mesh/shape.ts";
-import { sphere, type TubePoint, tube } from "../mesh/shapes.ts";
+import { curveBodySections } from "../mesh/path-curves.ts";
+import { type Shape, transformShape } from "../mesh/shape.ts";
+import { type BodySection, lengthwiseLoft, sphere, type TubePoint, tube } from "../mesh/shapes.ts";
 import { outermostHit, surfaceTransform } from "../mesh/surface-probe.ts";
 import { combine, SIDES, sideMirror, type TransformOptions, type Triple, transformOf } from "../mesh/transforms.ts";
 import { rigidStyle } from "../rig/skin-weights.ts";
+import type { AnimalDetail } from "./animal-detail.ts";
 import { legStyle } from "./quadruped-rigging.ts";
 import { LEG_ENDS, type LegEnd, QuadrupedBone, type QuadrupedFrame } from "./quadruped-skeleton.ts";
 
@@ -38,7 +40,7 @@ interface FaceOptions {
 interface EarOptions {
   readonly placement: TransformOptions;
   readonly seam: number;
-  readonly shape: Matrix4;
+  readonly stretch: Matrix4;
 }
 
 export function legPath(x: number, points: readonly LegPoint[]): TubePoint[] {
@@ -66,6 +68,16 @@ export function addLegs(builder: MeshBuilder, options: LegOptions): void {
       });
     }
   }
+}
+
+export function bodyShape(sections: readonly BodySection[], detail: AnimalDetail): Shape {
+  return lengthwiseLoft(curveBodySections(sections, detail.curveSteps), detail.segments + 2);
+}
+
+export function muzzleShape(points: readonly TubePoint[], detail: AnimalDetail, narrowing: number): Shape {
+  const muzzle = tube(alongTube(points, detail), { hasEndCap: false, radialSegments: detail.segments });
+
+  return transformShape(muzzle, transformOf({ scale: [narrowing, 1, 1] }));
 }
 
 export function hoofBelow(height: number): (point: SurfacePoint) => number {
@@ -109,12 +121,12 @@ export function addMuzzleFace(builder: MeshBuilder, head: Shape, detail: DetailS
 }
 
 export function addEllipsoidEars(builder: MeshBuilder, detail: DetailSteps, options: EarOptions): void {
-  const { placement, seam, shape } = options;
+  const { placement, seam, stretch } = options;
 
   const ear = sphere(1, segmentsUpTo(detail, 6), 4);
   const style = { ...rigidStyle(QuadrupedBone.Head), slot: MaterialSlot.Coat };
 
   for (const side of SIDES) {
-    builder.add(ear, { seam, style, transform: combine(sideMirror(side), transformOf(placement), shape) });
+    builder.add(ear, { seam, style, transform: combine(sideMirror(side), transformOf(placement), stretch) });
   }
 }

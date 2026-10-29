@@ -6,12 +6,16 @@ export interface DetailSteps {
   readonly hasSmallParts: boolean;
 }
 
+function mostSegments(detail: DetailSteps): number {
+  return detail.hasSmallParts ? 8 : 4;
+}
+
 export function segmentsAtLeast(detail: DetailSteps, least: number, segments: number): number {
-  return Math.max(Math.min(least, detail.hasSmallParts ? 8 : 4), segments);
+  return Math.max(Math.min(least, mostSegments(detail)), segments);
 }
 
 export function segmentsUpTo(detail: DetailSteps, segments: number): number {
-  return Math.min(segments, detail.hasSmallParts ? 8 : 4);
+  return Math.min(segments, mostSegments(detail));
 }
 
 export function thinned<Point>(points: readonly Point[]): Point[] {

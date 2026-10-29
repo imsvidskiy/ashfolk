@@ -1,5 +1,5 @@
 import { FULL_TURN } from "../../shared/math.ts";
-import type { MaterialSlotIndex } from "../materials.ts";
+import { MaterialSlot, type MaterialSlotIndex } from "../materials.ts";
 import type { VertexStyle } from "../mesh/mesh-builder.ts";
 import { facetShape, type Shape, transformShape } from "../mesh/shape.ts";
 import { type Triple, transformOf } from "../mesh/transforms.ts";
@@ -13,7 +13,6 @@ const STREAK_STRETCH = 2.6;
 export interface OreLook {
   readonly ore: MaterialSlotIndex;
   readonly richness: number;
-  readonly rock: MaterialSlotIndex;
 }
 
 interface OreChunk {
@@ -95,7 +94,7 @@ export function addStreakedRock(context: StructureContext, shape: Shape, look: O
     facetsWhere(faceted, (triangle) => {
       return !streaks[triangle];
     }),
-    { style: { ...style, slot: look.rock } }
+    { style: { ...style, slot: MaterialSlot.Stone } }
   );
 }
 

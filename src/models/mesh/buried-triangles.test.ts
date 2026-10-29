@@ -5,8 +5,6 @@ import { type MeshData, mergeMeshes, triangleCount } from "./mesh-data.ts";
 import { card, icosphere, sphere } from "./shapes.ts";
 import { transformOf } from "./transforms.ts";
 
-const MARGIN = 0.01;
-
 function ball(radius: number, position: readonly [number, number, number] = [0, 0, 0]): MeshData {
   const builder = new MeshBuilder();
 
@@ -43,7 +41,7 @@ describe("buried triangles", () => {
   });
 
   it("drops a shape that sits wholly inside another", () => {
-    const hidden = withoutBuriedTriangles(ball(0.3, [0.1, 0, 0]), [ball(1)], MARGIN);
+    const hidden = withoutBuriedTriangles(ball(0.3, [0.1, 0, 0]), [ball(1)]);
 
     expect(triangleCount(hidden)).toBe(0);
   });
@@ -51,7 +49,7 @@ describe("buried triangles", () => {
   it("keeps the part of a shape that pokes out of another", () => {
     const poking = ball(0.5, [1, 0, 0]);
 
-    const kept = withoutBuriedTriangles(poking, [ball(1)], MARGIN);
+    const kept = withoutBuriedTriangles(poking, [ball(1)]);
 
     expect(triangleCount(kept)).toBeGreaterThan(0);
     expect(triangleCount(kept)).toBeLessThan(triangleCount(poking));
@@ -61,7 +59,7 @@ describe("buried triangles", () => {
   it("keeps every triangle when the cover is not a closed solid", () => {
     const inside = ball(0.3, [0, 0.5, 0]);
 
-    expect(withoutBuriedTriangles(inside, [flatCard()], MARGIN)).toBe(inside);
+    expect(withoutBuriedTriangles(inside, [flatCard()])).toBe(inside);
   });
 
   it("splits a mesh into its separate shells", () => {

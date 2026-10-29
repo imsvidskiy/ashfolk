@@ -7,6 +7,7 @@ const RAY_DIRECTIONS: readonly Triple[] = [
 ];
 
 const PARALLEL_LIMIT = 1e-14;
+const BURIED_MARGIN = 0.01;
 const CORNERS = 3;
 const TRIANGLE_STRIDE = 12;
 const CLOSED_SOLIDS = new WeakMap<MeshData, boolean>();
@@ -14,7 +15,6 @@ const PACKED_SOLIDS = new WeakMap<MeshData, readonly Float64Array[]>();
 
 interface BuriedTest {
   readonly buried: readonly Uint8Array[];
-  readonly margin: number;
   readonly mesh: MeshData;
   readonly solids: readonly MeshData[];
 }
@@ -161,14 +161,14 @@ function isDeepInside(solid: MeshData, points: readonly Triple[]): boolean {
   });
 }
 
-function buriedVertices(mesh: MeshData, solid: MeshData, margin: number): Uint8Array {
+function buriedVertices(mesh: MeshData, solid: MeshData): Uint8Array {
   return Uint8Array.from({ length: vertexCount(mesh) }, (_, vertex) => {
-    return isDeepInside(solid, [liftedVertex(mesh, vertex, 0), liftedVertex(mesh, vertex, margin)]) ? 1 : 0;
+    return isDeepInside(solid, [liftedVertex(mesh, vertex, 0), liftedVertex(mesh, vertex, BURIED_MARGIN)]) ? 1 : 0;
   });
 }
 
 function isBuried(test: BuriedTest, triangle: number): boolean {
-  const { buried, margin, mesh, solids } = test;
+  const { buried, mesh, solids } = test;
 
   const vertices = [0, 1, 2].map((corner) => {
     return mesh.indices[triangle * CORNERS + corner];
@@ -191,7 +191,7 @@ function isBuried(test: BuriedTest, triangle: number): boolean {
       ),
       middleOf(
         vertices.map((vertex) => {
-          return liftedVertex(mesh, vertex, margin);
+          return liftedVertex(mesh, vertex, BURIED_MARGIN);
         })
       ),
     ]);
@@ -301,9 +301,11 @@ export function shellsOf(mesh: MeshData): MeshData[] {
 
     if (shell === undefined) {
       shells.set(root, new Set([triangle]));
-    } else {
-      shell.add(triangle);
+
+      continue;
     }
+
+    shell.add(triangle);
   }
 
   return [...shells.values()].map((triangles) => {
@@ -328,14 +330,14 @@ function isClosedSolid(solid: MeshData): boolean {
     return known;
   }
 
-  const closed = isClosed(solid);
+  const isSolid = isClosed(solid);
 
-  CLOSED_SOLIDS.set(solid, closed);
+  CLOSED_SOLIDS.set(solid, isSolid);
 
-  return closed;
+  return isSolid;
 }
 
-export function withoutBuriedTriangles(mesh: MeshData, solids: readonly MeshData[], margin: number): MeshData {
+export function withoutBuriedTriangles(mesh: MeshData, solids: readonly MeshData[]): MeshData {
   const nearSolids = solids.filter((solid) => {
     return overlaps(mesh, solid) && isClosedSolid(solid);
   });
@@ -346,9 +348,8 @@ export function withoutBuriedTriangles(mesh: MeshData, solids: readonly MeshData
 
   const test: BuriedTest = {
     buried: nearSolids.map((solid) => {
-      return buriedVertices(mesh, solid, margin);
+      return buriedVertices(mesh, solid);
     }),
-    margin,
     mesh,
     solids: nearSolids,
   };
@@ -358,14 +359,13 @@ export function withoutBuriedTriangles(mesh: MeshData, solids: readonly MeshData
   });
 }
 
-export function withoutBuriedOverlaps(shells: readonly MeshData[], margin: number): MeshData[] {
+export function withoutBuriedOverlaps(shells: readonly MeshData[]): MeshData[] {
   return shells.map((shell, index) => {
     return withoutBuriedTriangles(
       shell,
       shells.filter((_other, otherIndex) => {
         return otherIndex !== index;
-      }),
-      margin
+      })
     );
   });
 }
