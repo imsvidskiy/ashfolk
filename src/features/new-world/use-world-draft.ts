@@ -1,6 +1,7 @@
 import { type ChangeEvent, type FormEvent, useState } from "react";
 import type { WorldChoice } from "../../app/launch-store.ts";
 import { isIslandShapeKind } from "../../world/island-shape.ts";
+import { isIslandSizeKind } from "../../world/island-size.ts";
 import { randomSeed, readSeed } from "./seeds.ts";
 import { readWorldName, worldNameFor } from "./world-names.ts";
 
@@ -8,10 +9,11 @@ export function useWorldDraft(initial: WorldChoice, onCreate: (choice: WorldChoi
   const [nameText, setNameText] = useState(initial.name);
   const [seedText, setSeedText] = useState(String(initial.seed));
   const [shape, setShape] = useState(initial.shape);
+  const [size, setSize] = useState(initial.size);
 
   const name = readWorldName(nameText);
   const seed = readSeed(seedText);
-  const choice: WorldChoice | null = name === null || seed === null ? null : { name, seed, shape };
+  const choice: WorldChoice | null = name === null || seed === null ? null : { name, seed, shape, size };
 
   function handleNameChange(event: ChangeEvent<HTMLInputElement>): void {
     setNameText(event.target.value);
@@ -35,6 +37,12 @@ export function useWorldDraft(initial: WorldChoice, onCreate: (choice: WorldChoi
     }
   }
 
+  function handleSizeChange(value: string): void {
+    if (isIslandSizeKind(value)) {
+      setSize(value);
+    }
+  }
+
   function handleSubmit(event: FormEvent<HTMLFormElement>): void {
     event.preventDefault();
 
@@ -50,9 +58,11 @@ export function useWorldDraft(initial: WorldChoice, onCreate: (choice: WorldChoi
     handleSeedChange,
     handleSeedRoll,
     handleShapeChange,
+    handleSizeChange,
     handleSubmit,
     nameText,
     seedText,
     shape,
+    size,
   };
 }

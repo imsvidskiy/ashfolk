@@ -64,8 +64,8 @@ function coastOf(outline: IslandOutline): readonly CoastPoint[] {
   return outline.coast;
 }
 
-function squareMirror(): WorldMirror {
-  const world = createVegetatedWorld({ dimensions: { cellSize: 10, cellsPerSide: CELLS_PER_SIDE } });
+function squareMirror(cellsPerSide = CELLS_PER_SIDE): WorldMirror {
+  const world = createVegetatedWorld({ dimensions: { cellSize: 10, cellsPerSide } });
 
   return new WorldMirror(new Simulation(world).initialWorld(), 0);
 }
@@ -91,6 +91,21 @@ describe("island base geometry", () => {
 
     expect(rim).toHaveLength(edges.size);
     expect(new Set(rim)).toEqual(edges);
+  });
+
+  it("hangs the underside tip deeper under a larger island", () => {
+    for (const [cellsPerSide, depth] of [
+      [CELLS_PER_SIDE, 1650],
+      [768, 1650 * 1.2],
+    ] as const) {
+      const mirror = squareMirror(cellsPerSide);
+      const outline = new IslandOutline(mirror);
+      const plinth = islandPlinthHeight(mirror, outline);
+
+      const positions = buildIslandBaseGeometry(mirror, outline, plinth).underside.getAttribute("position");
+
+      expect(positions.getY(positions.count - 1)).toBeCloseTo(plinth - depth * 1.12, 2);
+    }
   });
 
   it("tops the round cliff along the outline the terrain is cut by", () => {

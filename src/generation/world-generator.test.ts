@@ -5,6 +5,7 @@ import { isTreeSpecies, plantSpeciesDefinition, TREE_SPACING } from "../content/
 import { isOnIsland } from "../world/coast.ts";
 import { admitsWildPlant, slopeAt } from "../world/footing.ts";
 import { ISLAND_SHAPES, type IslandShapeKind } from "../world/island-shape.ts";
+import { islandDimensions } from "../world/island-size.ts";
 import type { TerrainData } from "../world/terrain-data.ts";
 import { sampleHeight } from "../world/terrain-sampling.ts";
 import {
@@ -19,6 +20,7 @@ import {
   type Spring,
 } from "../world/water.ts";
 import { NEIGHBOR_OFFSETS, WorldGrid } from "../world/world-grid.ts";
+import { generationFingerprint } from "./generation-fingerprint.ts";
 import { DEFAULT_GENERATION_OPTIONS, type GenerationProgress, type IslandSketch } from "./generation-options.ts";
 import { pondShoreReach } from "./ponds.ts";
 import { SOURCE_REACH } from "./river-spacing.ts";
@@ -1820,4 +1822,69 @@ describe("full-size river joins", () => {
       expect(quantile(added, 0.99)).toBeLessThan(0.65);
     }
   });
+});
+
+describe("small and large islands", () => {
+  let small: GeneratedWorld;
+  let large: GeneratedWorld;
+  let largeSquare: GeneratedWorld;
+
+  beforeAll(() => {
+    small = generateWorld(7, { ...DEFAULT_GENERATION_OPTIONS, dimensions: islandDimensions("small") });
+    large = generateWorld(1, { ...DEFAULT_GENERATION_OPTIONS, dimensions: islandDimensions("large") });
+    largeSquare = generateWorld(2, {
+      ...DEFAULT_GENERATION_OPTIONS,
+      dimensions: islandDimensions("large"),
+      shape: "square",
+    });
+  }, 180_000);
+
+  it("grows each island on its own grid", () => {
+    expect(small.dimensions).toEqual(islandDimensions("small"));
+    expect(small.terrain.height).toHaveLength(512 * 512);
+    expect(large.terrain.height).toHaveLength(768 * 768);
+  });
+
+  it("ends every river in water and keeps it falling to its mouth", () => {
+    for (const generated of [small, large, largeSquare]) {
+      expect(endsAwayFromWater(generated)).toEqual([]);
+      expect(riverFaults(generated)).toEqual([]);
+      expect(mouthFaults(generated)).toEqual([]);
+    }
+  });
+
+  it("leaves flat land, rivers and lakes, more of them on the larger island", () => {
+    const smallSurvey = surveyIsland(small);
+    const largeSurvey = surveyIsland(large);
+
+    for (const survey of [smallSurvey, largeSurvey, surveyIsland(largeSquare)]) {
+      expect(survey.flatShare).toBeGreaterThan(0.06);
+      expect(survey.lakes).toBeGreaterThanOrEqual(1);
+      expect(survey.rivers).toBeGreaterThanOrEqual(8);
+    }
+
+    expect(largeSurvey.rivers).toBeGreaterThan(smallSurvey.rivers);
+  });
+
+  it("plants as densely on the large island as on the small one", () => {
+    const densities = [small, large].map((generated) => {
+      const landCells = generated.terrain.coastDistance.filter((distance) => {
+        return distance > 0;
+      }).length;
+
+      return generated.vegetation.count / landCells;
+    });
+
+    const [smallDensity = 0, largeDensity = 0] = densities;
+
+    expect(largeDensity / smallDensity).toBeGreaterThan(0.75);
+    expect(largeDensity / smallDensity).toBeLessThan(1.33);
+    expect(large.vegetation.count).toBeGreaterThan(small.vegetation.count);
+  });
+
+  it("grows the same small island from the same seed", () => {
+    const again = generateWorld(7, { ...DEFAULT_GENERATION_OPTIONS, dimensions: islandDimensions("small") });
+
+    expect(generationFingerprint(again)).toBe(generationFingerprint(small));
+  }, 60_000);
 });

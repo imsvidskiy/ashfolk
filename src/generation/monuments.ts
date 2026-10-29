@@ -13,6 +13,7 @@ import { clamp, FULL_TURN, lerp } from "../shared/math.ts";
 import { createRandom, type RandomSource } from "../shared/random.ts";
 import { hasRoomFromCoast } from "../world/coast.ts";
 import { canStandOn, slopeAt } from "../world/footing.ts";
+import { countForArea } from "../world/island-size.ts";
 import type { Monument } from "../world/monuments.ts";
 import type { TerrainData } from "../world/terrain-data.ts";
 import { isWaterCell, sampleHeight } from "../world/terrain-sampling.ts";
@@ -20,9 +21,9 @@ import type { PlantPlacement } from "../world/vegetation-store.ts";
 import type { WorldGrid } from "../world/world-grid.ts";
 import { INITIAL_PLANT_DAY } from "./vegetation.ts";
 
-const CANDIDATES = 160;
+const NORMAL_CANDIDATES = 160;
 const EXTRA_KINDS: readonly MonumentKind[] = ["stoneCircle", "menhirRow", "cairn", "dolmen"];
-const EXTRA_MONUMENTS = 2;
+const NORMAL_EXTRA_MONUMENTS = 2;
 const RIM_MARGIN = 160;
 const SPACING = 520;
 const DRY_REACH = 40;
@@ -71,6 +72,7 @@ interface PlacedPiece {
 }
 
 interface Planner {
+  readonly candidates: number;
   readonly grid: WorldGrid;
   readonly placed: Monument[];
   readonly terrain: TerrainData;
@@ -442,7 +444,7 @@ function bestSite(planner: Planner, kind: MonumentKind, layout: Layout, random: 
 
   let best: Choice | null = null;
 
-  for (let candidate = 0; candidate < CANDIDATES; candidate += 1) {
+  for (let candidate = 0; candidate < planner.candidates; candidate += 1) {
     const site: Site = { angle: random.next() * FULL_TURN, x: random.signed() * limit, z: random.signed() * limit };
     const choice = judge(planner, kind, layout, site);
 
@@ -468,10 +470,10 @@ function unusedName(names: readonly string[], first: number, used: ReadonlySet<s
 
 export function planMonuments(grid: WorldGrid, terrain: TerrainData, seed: number): MonumentPlan {
   const random = createRandom(seed * 17 + 9);
-  const planner: Planner = { grid, placed: [], terrain };
+  const planner: Planner = { candidates: countForArea(grid, NORMAL_CANDIDATES), grid, placed: [], terrain };
   const pieces: PlantPlacement[] = [];
 
-  const extras = Array.from({ length: EXTRA_MONUMENTS }, () => {
+  const extras = Array.from({ length: countForArea(grid, NORMAL_EXTRA_MONUMENTS) }, () => {
     return random.pick(EXTRA_KINDS);
   });
   const namesUsed = new Set<string>();

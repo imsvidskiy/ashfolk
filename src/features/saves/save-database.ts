@@ -8,6 +8,7 @@ import {
   worldSummarySchema,
 } from "../../simulation/saved-world.ts";
 import { ISLAND_SHAPES, type IslandShapeKind } from "../../world/island-shape.ts";
+import { ISLAND_SIZES, type IslandSizeKind } from "../../world/island-size.ts";
 import { CHRONICLE_ICONS } from "../journal/chronicle-icons.ts";
 
 const DATABASE_NAME = "dawnfolk";
@@ -22,6 +23,7 @@ const listingSchema = z.object({
   savedAt: z.number().catch(0),
   seed: z.number().catch(1),
   shape: z.enum(ISLAND_SHAPES).catch("round"),
+  size: z.enum(ISLAND_SIZES).catch("normal"),
   summary: worldSummarySchema.nullable().catch(null),
   version: z.number().catch(0),
 });
@@ -34,6 +36,7 @@ const recordSchema = z.object({
   savedAt: z.number(),
   seed: z.number(),
   shape: z.enum(ISLAND_SHAPES),
+  size: z.enum(ISLAND_SIZES).default("normal"),
   summary: worldSummarySchema,
   version: z.literal(SAVE_VERSION),
 });
@@ -70,6 +73,7 @@ export interface SavedWorldRecord {
   readonly savedAt: number;
   readonly seed: number;
   readonly shape: IslandShapeKind;
+  readonly size: IslandSizeKind;
   readonly summary: WorldSummary;
   readonly version: number;
 }
@@ -82,6 +86,7 @@ export interface SavedWorldListing {
   readonly savedAt: number;
   readonly seed: number;
   readonly shape: IslandShapeKind;
+  readonly size: IslandSizeKind;
   readonly summary: WorldSummary | null;
 }
 
@@ -173,7 +178,7 @@ function readListing(value: unknown): SavedWorldListing | null {
     return null;
   }
 
-  const { id, isLandChanged, name, savedAt, seed, shape, summary, version } = result.data;
+  const { id, isLandChanged, name, savedAt, seed, shape, size, summary, version } = result.data;
 
   return {
     hasLandChanged: isLandChanged,
@@ -183,6 +188,7 @@ function readListing(value: unknown): SavedWorldListing | null {
     savedAt,
     seed,
     shape,
+    size,
     summary,
   };
 }

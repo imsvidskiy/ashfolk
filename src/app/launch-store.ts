@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import type { IslandShapeKind } from "../world/island-shape.ts";
+import type { IslandSizeKind } from "../world/island-size.ts";
 import {
   choosesWorld,
   createWorldId,
@@ -9,12 +10,13 @@ import {
   withWorldId,
 } from "./launch-options.ts";
 
-type LaunchChanges = Partial<Pick<LaunchOptions, "name" | "quality" | "seed" | "shape">>;
+type LaunchChanges = Partial<Pick<LaunchOptions, "name" | "quality" | "seed" | "shape" | "size">>;
 
 export interface WorldChoice {
   readonly name: string;
   readonly seed: number;
   readonly shape: IslandShapeKind;
+  readonly size: IslandSizeKind;
 }
 
 interface LaunchStore {
@@ -67,6 +69,7 @@ function rememberInAddress(launch: LaunchOptions, worldId: string): void {
     quality: launch.quality,
     seed: String(launch.seed),
     shape: launch.shape,
+    size: launch.size,
     world: worldId,
   });
 

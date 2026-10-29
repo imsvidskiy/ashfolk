@@ -1,9 +1,10 @@
 import { clamp } from "../shared/math.ts";
 import { type RandomSource, shuffle } from "../shared/random.ts";
+import { countForArea } from "../world/island-size.ts";
 import type { WorldGrid } from "../world/world-grid.ts";
 import { analyzeDrainage, DEFAULT_HYDROLOGY, type DrainageBasins, NO_CELL } from "./hydrology.ts";
 
-const LAKE_COUNT = 3;
+const NORMAL_LAKE_COUNT = 3;
 const SMALLEST_FEED = 1.2;
 const LARGEST_FEED = 30;
 const STEEPEST_RIVER = 0.09;
@@ -95,9 +96,10 @@ function chooseSites(heights: Float32Array, basins: DrainageBasins, siting: Lake
     };
   });
   const sites: LakeSite[] = [];
+  const lakeCount = countForArea(grid, NORMAL_LAKE_COUNT);
 
   for (const cell of shuffle(siting.random, feedingCells(basins, siting))) {
-    if (sites.length >= LAKE_COUNT) {
+    if (sites.length >= lakeCount) {
       break;
     }
 

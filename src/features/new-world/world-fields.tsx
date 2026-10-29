@@ -5,11 +5,18 @@ import { ChoiceField, type ChoiceOption } from "../../design/choice-field.tsx";
 import { cn } from "../../design/cn.ts";
 import { FIELD_SURFACE } from "../../design/styles.ts";
 import type { IslandShapeKind } from "../../world/island-shape.ts";
+import type { IslandSizeKind } from "../../world/island-size.ts";
 import { LONGEST_WORLD_NAME } from "./world-names.ts";
 
 const SHAPE_OPTIONS: readonly ChoiceOption[] = [
   { icon: <Circle aria-hidden="true" size={14} />, label: "Round", value: "round" },
   { icon: <Square aria-hidden="true" size={14} />, label: "Square", value: "square" },
+];
+
+const SIZE_OPTIONS: readonly ChoiceOption[] = [
+  { label: "Small", value: "small" },
+  { label: "Normal", value: "normal" },
+  { label: "Large", value: "large" },
 ];
 
 const FIELD = cn(FIELD_SURFACE, "focus-within:ring-dawn flex min-w-0 flex-1 items-center gap-2 focus-within:ring-2");
@@ -24,6 +31,11 @@ interface RolledFieldProps {
 interface ShapeChoiceProps {
   readonly onChange: (value: string) => void;
   readonly value: IslandShapeKind;
+}
+
+interface SizeChoiceProps {
+  readonly onChange: (value: string) => void;
+  readonly value: IslandSizeKind;
 }
 
 export function NameField({ onChange, onRoll, value }: RolledFieldProps) {
@@ -73,6 +85,18 @@ export function ShapeChoice({ onChange, value }: ShapeChoiceProps) {
       label="Shape"
       onChange={onChange}
       options={SHAPE_OPTIONS}
+      value={value}
+    />
+  );
+}
+
+export function SizeChoice({ onChange, value }: SizeChoiceProps) {
+  return (
+    <ChoiceField
+      description="A small island grows fast. A large one has more rivers and lakes, but is slower on phones."
+      label="Size"
+      onChange={onChange}
+      options={SIZE_OPTIONS}
       value={value}
     />
   );
