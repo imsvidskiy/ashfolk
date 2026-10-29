@@ -493,6 +493,12 @@ export class VolcanoSystem {
     this.#lavaUpdate = this.#lava();
   }
 
+  isCrowding(x: number, z: number, radius: number): boolean {
+    return this.#volcanoes.some((volcano) => {
+      return Math.hypot(volcano.x - x, volcano.z - z) < volcano.radius + radius;
+    });
+  }
+
   rumble(eruption: Eruption, services: PowerServices): void {
     this.#volcanoes.push(createVolcano(eruption));
     services.effects.add({
