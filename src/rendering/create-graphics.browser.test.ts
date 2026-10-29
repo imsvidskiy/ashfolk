@@ -1,4 +1,4 @@
-import { WebGPUBackend } from "three/webgpu";
+import { WebGPUBackend, WebGPURenderer } from "three/webgpu";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ignore } from "../shared/ignore.ts";
 import { createGraphics, type Graphics, webGPUDevice } from "./create-graphics.ts";
@@ -49,6 +49,26 @@ describe("graphics", () => {
     renderer.onDeviceLost({ api: "WebGPU", message: "Unknown reason", originalEvent: null, reason: "unknown" });
 
     await expect(lost).resolves.toBeUndefined();
-    expect(console.error).toHaveBeenCalledWith("The graphics device was lost (unknown): Unknown reason");
+    expect(Reflect.get(renderer, "_isDeviceLost")).toBe(true);
+    expect(console.error).toHaveBeenCalledWith(expect.stringContaining("Unknown reason"));
+  });
+
+  it("has no WebGPU device on the WebGL2 backend", async () => {
+    const renderer = new WebGPURenderer({ forceWebGL: true });
+
+    try {
+      await renderer.init();
+
+      expect(webGPUDevice(renderer)).toBeNull();
+    } finally {
+      renderer.dispose();
+    }
+  });
+
+  it("refuses to fall back to WebGL2 without WebGPU", async () => {
+    vi.spyOn(console, "warn").mockImplementation(ignore);
+    vi.spyOn(navigator, "gpu", "get").mockReturnValue(undefined as unknown as GPU);
+
+    await expect(startGraphics()).rejects.toThrow("can't run the island's WebGPU graphics");
   });
 });

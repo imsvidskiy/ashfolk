@@ -41,8 +41,10 @@ export async function createGraphics(canvas: HTMLCanvasElement, quality: RenderQ
   });
 
   const lost = new Promise<void>((resolve) => {
+    const onDeviceLost = renderer.onDeviceLost.bind(renderer);
+
     renderer.onDeviceLost = (info) => {
-      console.error(`The graphics device was lost (${info.reason ?? "unknown"}): ${info.message}`);
+      onDeviceLost(info);
       resolve();
     };
   });
