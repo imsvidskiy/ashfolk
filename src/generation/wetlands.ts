@@ -3,6 +3,7 @@ import { createNoiseSampler } from "../shared/noise.ts";
 import { createRandom } from "../shared/random.ts";
 import { hasWater, type River, type RiverPoint } from "../world/water.ts";
 import { ORTHOGONAL_STEPS, type WorldGrid } from "../world/world-grid.ts";
+import { boxBlur } from "./box-blur.ts";
 
 const UNREACHED = -1;
 const LAKE_REACH = 420;
@@ -194,49 +195,6 @@ function shoreWetness(reach: WaterReach, height: number, cell: number, highestRi
   const lowness = 1 - smoothstep(highestRise * 0.45, highestRise, height - reach.level[cell]);
 
   return nearness * lowness;
-}
-
-function boxBlur(grid: WorldGrid, values: Float32Array, radius: number): Float32Array {
-  const size = grid.cellsPerSide;
-  const across = new Float32Array(values.length);
-  const result = new Float32Array(values.length);
-
-  function blurLine(source: Float32Array, target: Float32Array, first: number, stride: number): void {
-    let sum = 0;
-    let count = 0;
-
-    for (let index = 0; index < Math.min(radius, size); index += 1) {
-      sum += source[first + index * stride];
-      count += 1;
-    }
-
-    for (let index = 0; index < size; index += 1) {
-      const entering = index + radius;
-      const leaving = index - radius - 1;
-
-      if (entering < size) {
-        sum += source[first + entering * stride];
-        count += 1;
-      }
-
-      if (leaving >= 0) {
-        sum -= source[first + leaving * stride];
-        count -= 1;
-      }
-
-      target[first + index * stride] = sum / count;
-    }
-  }
-
-  for (let row = 0; row < size; row += 1) {
-    blurLine(values, across, row * size, 1);
-  }
-
-  for (let column = 0; column < size; column += 1) {
-    blurLine(across, result, column, size);
-  }
-
-  return result;
 }
 
 function basinDepths(inputs: WetlandInputs): Float32Array {

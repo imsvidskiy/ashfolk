@@ -10,6 +10,7 @@ import type { TerrainData } from "../world/terrain-data.ts";
 import { sampleHeight } from "../world/terrain-sampling.ts";
 import {
   hasWater,
+  type Lake,
   NO_WATER,
   pondEdgeReach,
   pondOutlineExtent,
@@ -63,7 +64,10 @@ const BIOME_GROUPS = {
 const OUTLINE_SAMPLES = 64;
 const LEAST_MEAN_OUTLINE_SPREAD = 1.5;
 const LAKE_SHORE_REACH = 100;
-const HIGHEST_LAKE_SHORE = 25;
+const HIGHEST_LAKE_SHORE = 30;
+const OUTLET_REACH_PER_CELL = 12;
+const OUTLET_LEVEL_SLACK = 1.5;
+const RIVER_COUNT_SLACK = 1;
 const LEAST_MEDIAN_POND_ACROSS = 52;
 const LEAST_UPPER_QUARTILE_POND_ACROSS = 65;
 const SMALL_LAKE_ACROSS = 90;
@@ -1890,6 +1894,47 @@ describe("islands across seeds", () => {
       expect(survey.flatShare).toBeGreaterThan(0.06);
       expect(survey.rivers).toBeGreaterThanOrEqual(15);
       expect(survey.lakes).toBeGreaterThanOrEqual(1);
+    }
+  });
+});
+
+describe("full-size lake outlets", () => {
+  const riversOnMain = new Map([
+    [7, 30],
+    [10, 32],
+  ]);
+  let worlds: [GeneratedWorld, number][];
+
+  beforeAll(() => {
+    worlds = [...riversOnMain].map(([seed, count]) => {
+      return [generateWorld(seed), count];
+    });
+  }, 120_000);
+
+  function leavesLake(lake: Lake, point: RiverPoint): boolean {
+    const reach = Math.sqrt(lake.cellCount) * OUTLET_REACH_PER_CELL;
+
+    return (
+      Math.hypot(point.x - lake.centerX, point.z - lake.centerZ) < reach &&
+      Math.abs(point.surface - lake.level) < OUTLET_LEVEL_SLACK
+    );
+  }
+
+  it("keeps about as many rivers as before the shores were eased on seeds 7 and 10", () => {
+    for (const [generated, count] of worlds) {
+      expect(Math.abs(generated.water.rivers.length - count)).toBeLessThanOrEqual(RIVER_COUNT_SLACK);
+    }
+  });
+
+  it("sends a river out of every lake on seeds 7 and 10", () => {
+    for (const [generated] of worlds) {
+      const closed = generated.water.lakes.filter((lake) => {
+        return !generated.water.rivers.some((river) => {
+          return leavesLake(lake, river.points[0]);
+        });
+      });
+
+      expect(closed).toEqual([]);
     }
   });
 });

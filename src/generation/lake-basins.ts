@@ -4,6 +4,7 @@ import { type RandomSource, shuffle } from "../shared/random.ts";
 import { isOnIsland } from "../world/coast.ts";
 import { countForArea } from "../world/island-size.ts";
 import { NEIGHBOR_OFFSETS, type WorldGrid } from "../world/world-grid.ts";
+import { boxBlur } from "./box-blur.ts";
 import { analyzeDrainage, DEFAULT_HYDROLOGY, type DrainageBasins, NO_CELL } from "./hydrology.ts";
 
 const NORMAL_LAKE_COUNT = 3;
@@ -22,7 +23,14 @@ const SHORE_BAND = 150;
 const GENTLE_SHORE_SLOPE = 0.12;
 const STEEPEST_SHORE_SLOPE = 0.85;
 const GENTLE_SHORE_WIDTH = 40;
-const SHORE_STEEPENING_WIDTH = 240;
+const SHORE_STEEPENING_WIDTH = 120;
+const FAR_SLOPE = 0.95;
+const FAR_SLOPE_START = 150;
+const FAR_SLOPE_END = 300;
+const SMOOTHING_RADIUS = 20;
+const SMOOTHING_PASSES = 2;
+const FULL_SMOOTHING_CUT = 4;
+const SMOOTHING_DEPTH = 1;
 
 export interface LakeSiting {
   readonly boundaryDistance: (cell: number) => number;
@@ -145,11 +153,13 @@ function digBasin(heights: Float32Array, grid: WorldGrid, site: LakeSite, random
 }
 
 function shoreSlopeAt(distance: number): number {
-  return lerp(
+  const nearSlope = lerp(
     GENTLE_SHORE_SLOPE,
     STEEPEST_SHORE_SLOPE,
     smoothstep(GENTLE_SHORE_WIDTH, SHORE_STEEPENING_WIDTH, distance)
   );
+
+  return lerp(nearSlope, FAR_SLOPE, smoothstep(FAR_SLOPE_START, FAR_SLOPE_END, distance));
 }
 
 function rimFallAt(distance: number): number {
@@ -193,12 +203,16 @@ function measureShoreCut(heights: Float32Array, grid: WorldGrid, basins: Drainag
     return level;
   });
 
+  const isSettled = new Uint8Array(grid.cellCount);
+
   while (heap.size > 0) {
     const cell = heap.pop();
 
-    if (!canCutPast(heights, cut, cell)) {
+    if (isSettled[cell] === 1 || !canCutPast(heights, cut, cell)) {
       continue;
     }
+
+    isSettled[cell] = 1;
 
     const column = grid.columnOf(cell);
     const row = grid.rowOf(cell);
@@ -270,20 +284,47 @@ function measureRimFloors(grid: WorldGrid, basins: DrainageBasins, ceilings: Flo
   return floors;
 }
 
+function smoothCuts(grid: WorldGrid, heights: Float32Array, uneased: Float32Array, distances: Float32Array): void {
+  const radius = Math.max(1, Math.round(SMOOTHING_RADIUS / grid.cellSize));
+  let smooth: Float32Array = heights;
+
+  for (let pass = 0; pass < SMOOTHING_PASSES; pass += 1) {
+    smooth = boxBlur(grid, smooth, radius);
+  }
+
+  for (let cell = 0; cell < grid.cellCount; cell += 1) {
+    const cut = uneased[cell] - heights[cell];
+
+    if (cut > 0 && distances[cell] > SHORE_STEEPENING_WIDTH) {
+      const smoothed = lerp(heights[cell], smooth[cell], Math.min(1, cut / FULL_SMOOTHING_CUT));
+
+      heights[cell] = clamp(
+        smoothed,
+        heights[cell] - SMOOTHING_DEPTH,
+        Math.min(uneased[cell], heights[cell] + SMOOTHING_DEPTH)
+      );
+    }
+  }
+}
+
 export function easeLakeShores(
   heights: Float32Array,
   grid: WorldGrid,
   coastDistance: Float32Array,
   basins: DrainageBasins
 ): void {
-  const { ceilings } = measureShoreCut(heights, grid, basins);
+  const { ceilings, distances } = measureShoreCut(heights, grid, basins);
   const floors = measureRimFloors(grid, basins, ceilings);
+
+  const uneased = Float32Array.from(heights);
 
   for (let cell = 0; cell < grid.cellCount; cell += 1) {
     if (basins.lakeIds[cell] === NO_CELL && isOnIsland(coastDistance, cell)) {
       heights[cell] = Math.min(heights[cell], Math.max(ceilings[cell], floors[cell]));
     }
   }
+
+  smoothCuts(grid, heights, uneased, distances);
 }
 
 export function digRiverLakes(heights: Float32Array, siting: LakeSiting): void {

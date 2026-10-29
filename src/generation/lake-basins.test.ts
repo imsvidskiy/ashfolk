@@ -22,6 +22,7 @@ const TERRACE_LAKE_SPREAD = 2 * 50 * 50;
 const GENTLE_SHORE_SLOPE = 0.12;
 const GENTLE_SHORE_WIDTH = 40;
 const SLOPE_TOLERANCE = 0.01;
+const STEEPEST_RAMP_SLOPE = 0.6;
 const REACH_OF_EASING = 400;
 
 function gentleValley(): Float32Array {
@@ -191,8 +192,16 @@ describe("lake shore easing", () => {
       return grid.index(grid.columnAt(CLIFF_START - grid.cellSize + step * grid.cellSize), row);
     });
 
+    const slopes = slopesAlong(eased, cliff);
+
     expect(Math.max(...slopesAlong(uneased, cliff))).toBeGreaterThan(1);
-    expect(Math.max(...slopesAlong(eased, cliff))).toBeLessThan(2 * GENTLE_SHORE_SLOPE);
+    expect(slopes[0]).toBeLessThan(2 * GENTLE_SHORE_SLOPE);
+    expect(Math.max(...slopes)).toBeLessThan(STEEPEST_RAMP_SLOPE);
+    expect(slopes).toEqual(
+      [...slopes].sort((first, second) => {
+        return first - second;
+      })
+    );
   });
 
   it("only lowers land near a lake and leaves the lake, the sea and far land alone", () => {
