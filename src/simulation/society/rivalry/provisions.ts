@@ -52,21 +52,3 @@ export function totalGoods(stock: Stock): number {
     return total + stock[kind];
   }, 0);
 }
-
-export function goodsPhrases(stock: Stock): string[] {
-  const phrases: string[] = [];
-
-  const food = totalFood(stock);
-
-  if (food >= 1) {
-    phrases.push(`${Math.round(food)} food`);
-  }
-
-  for (const kind of RESOURCE_KINDS) {
-    if (RESOURCES[kind].group !== "food" && stock[kind] >= 1) {
-      phrases.push(`${Math.round(stock[kind])} ${RESOURCES[kind].name.toLowerCase()}`);
-    }
-  }
-
-  return phrases;
-}

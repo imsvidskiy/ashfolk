@@ -24,16 +24,13 @@ import { RaidJob } from "./raid-job.ts";
 import { advancePhase, enterPhase, RALLY_DISTANCE } from "./raid-phases.ts";
 import {
   burnableBuilding,
-  capitalized,
   chooseAim,
   chooseWarriors,
   livingRaiders,
   type Raid,
   type RaidAim,
   type RaidPhase,
-  raidSummary,
   rationsFor,
-  theTribe,
 } from "./raids.ts";
 import {
   aggrieve,
@@ -47,7 +44,7 @@ import {
   stanceFor,
 } from "./relations.ts";
 import { isBusy } from "./responses.ts";
-import { stanceNews } from "./stance-news.ts";
+import { capitalized, raidSummary, stanceNews, theTribe } from "./stories.ts";
 import type { Battleground } from "./strikes.ts";
 import { type Claim, claimOf } from "./territory.ts";
 
