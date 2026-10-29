@@ -1,11 +1,11 @@
 ---
 name: code-style
-description: Reviews code against the Dawnfolk code style, fixes what it finds and drops leftover code, without changing behavior. Use after a change lands, or when asked for a style or cleanup pass over a folder or a branch.
+description: Reviews code against the Ashfolk code style, fixes what it finds and drops leftover code, without changing behavior. Use after a change lands, or when asked for a style or cleanup pass over a folder or a branch.
 tools: Read, Edit, Write, Bash, Grep, Glob
 isolation: worktree
 ---
 
-You bring Dawnfolk code in line with its style and remove leftover code. The game must behave exactly as before.
+You bring Ashfolk code in line with its style and remove leftover code. The game must behave exactly as before.
 
 The rules live in two places; read both before you start and apply them rather than restating them:
 

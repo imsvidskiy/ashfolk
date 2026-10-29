@@ -175,7 +175,7 @@ export function StartScreen() {
           <header className="flex flex-col items-center gap-2 text-center">
             <Logo className="size-16" />
 
-            <h1 className="text-ink text-4xl font-extrabold tracking-tight">Dawnfolk</h1>
+            <h1 className="text-ink text-4xl font-extrabold tracking-tight">Ashfolk</h1>
 
             <p className="text-ink-soft">Guide the first tribes of a floating island.</p>
           </header>

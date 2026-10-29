@@ -60,7 +60,7 @@ export function ProjectLinks({ className, hasPrivacy = true }: ProjectLinksProps
 
   return (
     <nav aria-label="Project" className={cn("flex flex-wrap items-center justify-center gap-1", className)}>
-      <ExternalLink href={REPOSITORY_ADDRESS} label="Dawnfolk on GitHub">
+      <ExternalLink href={REPOSITORY_ADDRESS} label="Ashfolk on GitHub">
         <GitHubMark />
         GitHub
         <StarCount />
@@ -69,7 +69,7 @@ export function ProjectLinks({ className, hasPrivacy = true }: ProjectLinksProps
       <ExternalLink
         className="bg-dawn/15 text-dawn-strong hover:bg-dawn/25 hover:text-dawn-strong"
         href={SPONSOR_ADDRESS}
-        label="Sponsor Dawnfolk"
+        label="Sponsor Ashfolk"
       >
         <Heart aria-hidden="true" className="fill-dawn/25" size={16} />
         Sponsor

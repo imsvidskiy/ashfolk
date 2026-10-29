@@ -1,4 +1,4 @@
-# Dawnfolk
+# Ashfolk
 
 A god game about the first tribes on a floating island, in TypeScript with three.js and React. The
 [README](README.md#architecture) has the code map, and [CONTRIBUTING.md](CONTRIBUTING.md) has the code style,
@@ -16,7 +16,7 @@ bun run test       # unit tests in Node, browser tests in Chromium
 - Run all four before you push. Browser tests need Chromium; [Scripts and checks](CONTRIBUTING.md#scripts-and-checks)
   shows how to point them at a system one.
 - Run one area with `bunx vitest run --project unit src/generation`.
-- Merging to `main` deploys playdawnfolk.com. Leave merges and [releases](CONTRIBUTING.md#releases) to a person
+- Merging to `main` deploys ashfolk.com. Leave merges and [releases](CONTRIBUTING.md#releases) to a person
   unless they ask.
 
 ## Seeing a change
@@ -31,8 +31,8 @@ bun run test       # unit tests in Node, browser tests in Chromium
   that only shows by eye.
 - Playwright's own headless Chromium uses SwiftShader and renders in software, so colors and some WebGPU paths differ.
   Say which browser you used.
-- In development the engine is on `window.dawnfolk`: `session.frame` holds the tribes, weather and calendar, `camera`
-  the view, and `powers` the active tool.
+- In development the engine is on `window.ashfolk`, with `window.dawnfolk` as an alias for old scripts:
+  `session.frame` holds the tribes, weather and calendar, `camera` the view, and `powers` the active tool.
 
 ## Shipping a change
 
@@ -66,5 +66,7 @@ bun run test       # unit tests in Node, browser tests in Chromium
 - Panels are islands from `design/island.tsx`: solid paper, no glass or blur. Islands in one row have the same height.
 - Saves store technology ids, plant species names and snapshot fields. Renaming one breaks old saves unless loading
   maps it.
+- The game was called Dawnfolk. The `dawnfolk.*` localStorage keys and the `dawnfolk` IndexedDB database keep that
+  name, because players' settings and worlds live under it. Don't rename them.
 - Several agents may share this checkout. Work in your own `git worktree`, stage only your own files, and remove only
   the worktrees and branches you created.

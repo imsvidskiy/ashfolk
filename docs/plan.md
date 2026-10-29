@@ -1,6 +1,6 @@
 # Architecture plan
 
-This plan restructures Dawnfolk so that a new power, hazard, grabbable kind or page is one folder and a few typed
+This plan restructures Ashfolk so that a new power, hazard, grabbable kind or page is one folder and a few typed
 registry entries, and so that elements meet through declared properties instead of hand-written calls between
 features. It keeps the rules in [AGENTS.md](../AGENTS.md#rules-that-are-easy-to-miss): the engine never imports
 React, the simulation never imports rendering, generation and the simulation stay deterministic, commands are
@@ -162,7 +162,7 @@ things meet through the cells they stand on.
 
 **ECS libraries.** bitECS 0.4 lets components be any shape, typed arrays included. Koota (0.6.6, active) uses
 structure-of-arrays traits with React bindings. Miniplex stores plain objects and has been quiet since July 2023.
-Becsy has no multithreading yet. All of them model entities; Dawnfolk's heavy data is a grid of up to millions of
+Becsy has no multithreading yet. All of them model entities; Ashfolk's heavy data is a grid of up to millions of
 cells, already in typed arrays. We take the ideas (data-only definitions, systems in a fixed order, properties as
 data) and keep our stores.
 

@@ -13,7 +13,7 @@ test.describe("the start screen", () => {
     await page.getByRole("button", { name: "Grow the island" }).click();
 
     await expect(page).toHaveURL(SQUARE_WORLD_ADDRESS);
-    await expect(page).toHaveTitle("Old Ford · Dawnfolk");
+    await expect(page).toHaveTitle("Old Ford · Ashfolk");
     await expect(page.getByRole("status")).toBeHidden({ timeout: WORLD_RISING_TIMEOUT });
     await expect(page.getByRole("toolbar", { name: "Powers" })).toBeVisible();
   });

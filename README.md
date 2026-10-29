@@ -2,7 +2,7 @@
   <img src=".github/logo.svg" alt="" width="96" height="96">
 </p>
 
-<h1 align="center">Dawnfolk</h1>
+<h1 align="center">Ashfolk</h1>
 
 <p align="center">A god game about the first tribes on a floating island</p>
 
@@ -32,7 +32,7 @@
 </p>
 
 <p align="center">
-  <a href="https://playdawnfolk.com">Play</a> ·
+  <a href="https://ashfolk.com">Play</a> ·
   <a href="#features">Features</a> ·
   <a href="#getting-started">Getting started</a> ·
   <a href="#architecture">Architecture</a> ·
@@ -98,7 +98,7 @@ The simulation runs in a Web Worker. The renderer and the HUD read its frames an
 
 ## Sponsor
 
-Dawnfolk is free and open source. If you enjoy it, you can support its development on
+Ashfolk is free and open source. If you enjoy it, you can support its development on
 [GitHub Sponsors](https://github.com/sponsors/imsvidskiy).
 
 ## Star history
@@ -107,7 +107,7 @@ Dawnfolk is free and open source. If you enjoy it, you can support its developme
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/chart?repos=imsvidskiy/dawnfolk&type=date&theme=dark&legend=top-left" />
     <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/chart?repos=imsvidskiy/dawnfolk&type=date&legend=top-left" />
-    <img alt="Star history of Dawnfolk" src="https://api.star-history.com/chart?repos=imsvidskiy/dawnfolk&type=date&legend=top-left" />
+    <img alt="Star history of Ashfolk" src="https://api.star-history.com/chart?repos=imsvidskiy/dawnfolk&type=date&legend=top-left" />
   </picture>
 </a>
 

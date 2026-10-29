@@ -14,11 +14,11 @@ describe("project links", () => {
     const screen = await render(<ProjectLinks />);
 
     await expect
-      .element(screen.getByRole("link", { name: "Dawnfolk on GitHub" }))
+      .element(screen.getByRole("link", { name: "Ashfolk on GitHub" }))
       .toHaveAttribute("href", "https://github.com/imsvidskiy/dawnfolk");
     await expect.element(screen.getByText("1.2K")).toBeVisible();
     await expect
-      .element(screen.getByRole("link", { name: "Sponsor Dawnfolk" }))
+      .element(screen.getByRole("link", { name: "Sponsor Ashfolk" }))
       .toHaveAttribute("href", "https://github.com/sponsors/imsvidskiy");
     await expect.element(screen.getByRole("link", { name: "Privacy" })).toHaveAttribute("href", "/privacy/");
   });
@@ -26,6 +26,6 @@ describe("project links", () => {
   it("leaves the stars out when GitHub does not answer", async () => {
     const screen = await render(<ProjectLinks />);
 
-    await expect.element(screen.getByRole("link", { name: "Dawnfolk on GitHub" })).not.toHaveTextContent("K");
+    await expect.element(screen.getByRole("link", { name: "Ashfolk on GitHub" })).not.toHaveTextContent("K");
   });
 });

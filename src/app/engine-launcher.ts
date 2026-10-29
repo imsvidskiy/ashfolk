@@ -148,6 +148,7 @@ export class EngineLauncher {
     applyLaunchTime(engine, launch);
 
     if (import.meta.env.DEV) {
+      Reflect.set(window, "ashfolk", engine);
       Reflect.set(window, "dawnfolk", engine);
     }
 
@@ -174,7 +175,7 @@ export class EngineLauncher {
   }
 
   #fail(error: unknown): void {
-    console.error("Dawnfolk could not start", error);
+    console.error("Ashfolk could not start", error);
 
     if (this.#state === "canceled") {
       return;
