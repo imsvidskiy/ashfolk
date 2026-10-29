@@ -12,6 +12,11 @@ const CELESTIAL_DISTANCE = 6000;
 const SHADOW_DEPTH_SPAN = 3000;
 const SHADOW_DEPTH_BIAS = 0.05;
 const SHADOW_REACH_STEPS_PER_OCTAVE = 4;
+const NEAREST_SHADOW_REACH = 120;
+const FARTHEST_SHADOW_REACH = 2600;
+const FARTHEST_FILMED_SHADOW_REACH = 8000;
+const SHADOW_REACH_SHARE_OF_DISTANCE = 0.9;
+const FILMED_DEPTH_SHARE_OF_REACH = 1.5;
 const WORLD_UP = new Vector3(0, 1, 0);
 const SKY_CLOUD_DRIFT = 0.000_02;
 const SEA_CLOUD_DRIFT = 0.000_004;
@@ -33,6 +38,7 @@ interface AtmosphereState {
 
 interface AtmosphereOptions {
   readonly cloudSeaAltitude: number;
+  readonly islandHalfSize: number;
   readonly shadowMapSize: number;
 }
 
@@ -55,21 +61,24 @@ export class Atmosphere {
   readonly #hemisphere: HemisphereLight;
   readonly #fogColor = uniform(new Color(0xcf_e2_f0));
   readonly #heightFog = new HeightFog();
+  readonly #islandReach: number;
   readonly #lightDirection = new Vector3(0, 1, 0);
   readonly #shadowFocus = new Vector3();
   readonly #shadowRight = new Vector3();
   readonly #shadowUp = new Vector3();
   readonly #sky = new SkyDome();
   #daylight = 1;
+  #hasFarShadows: boolean;
   #palette: SkyPalette = skyPaletteAt(1, 0, 0);
 
   constructor(scene: Scene, options: AtmosphereOptions) {
     this.#cloudSea = new CloudSea(options.cloudSeaAltitude);
+    this.#islandReach = options.islandHalfSize * Math.SQRT2;
+    this.#hasFarShadows = false;
 
     this.sun = new DirectionalLight(0xff_ff_ff, 3);
     this.sun.castShadow = true;
     this.sun.shadow.mapSize.set(options.shadowMapSize, options.shadowMapSize);
-    this.sun.shadow.bias = -SHADOW_DEPTH_BIAS / (SHADOW_DEPTH_SPAN * 2);
     this.sun.shadow.camera.layers.enable(SHADOW_ONLY_LAYER);
 
     this.#hemisphere = new HemisphereLight(0xb6_d2_ee, 0x7a_72_5a, 1.2);
@@ -85,6 +94,11 @@ export class Atmosphere {
 
   get palette(): SkyPalette {
     return this.#palette;
+  }
+
+  setShadows(mapSize: number, hasFarShadows: boolean): void {
+    this.sun.shadow.mapSize.set(mapSize, mapSize);
+    this.#hasFarShadows = hasFarShadows;
   }
 
   update(state: AtmosphereState, eye: Vector3, focus: Vector3, viewDistance: number, realSeconds: number): void {
@@ -161,21 +175,38 @@ export class Atmosphere {
   }
 
   #placeSun(focus: Vector3, viewDistance: number): void {
-    const reach = quantizedReach(clamp(viewDistance * 0.9, 120, 2600));
+    const reach = quantizedReach(this.#shadowReach(focus, viewDistance));
+    const depthSpan = this.#hasFarShadows
+      ? Math.max(SHADOW_DEPTH_SPAN, reach * FILMED_DEPTH_SHARE_OF_REACH)
+      : SHADOW_DEPTH_SPAN;
+    const lightDistance = Math.max(CELESTIAL_DISTANCE, depthSpan * 2);
     const texelSize = (reach * 2) / this.sun.shadow.mapSize.x;
     const shadow = this.sun.shadow.camera;
     const anchor = this.#shadowAnchor(focus, texelSize);
 
-    this.sun.position.copy(anchor).addScaledVector(this.#lightDirection, CELESTIAL_DISTANCE);
+    this.sun.position.copy(anchor).addScaledVector(this.#lightDirection, lightDistance);
     this.sun.target.position.copy(anchor);
     shadow.left = -reach;
     shadow.right = reach;
     shadow.top = reach;
     shadow.bottom = -reach;
-    shadow.near = CELESTIAL_DISTANCE - SHADOW_DEPTH_SPAN;
-    shadow.far = CELESTIAL_DISTANCE + SHADOW_DEPTH_SPAN;
+    shadow.near = lightDistance - depthSpan;
+    shadow.far = lightDistance + depthSpan;
     shadow.updateProjectionMatrix();
+    this.sun.shadow.bias = -SHADOW_DEPTH_BIAS / (depthSpan * 2);
     this.sun.shadow.normalBias = Math.max(LEAST_NORMAL_BIAS, texelSize * TEXELS_OF_NORMAL_BIAS);
+  }
+
+  #shadowReach(focus: Vector3, viewDistance: number): number {
+    const reach = viewDistance * SHADOW_REACH_SHARE_OF_DISTANCE;
+
+    if (!this.#hasFarShadows) {
+      return clamp(reach, NEAREST_SHADOW_REACH, FARTHEST_SHADOW_REACH);
+    }
+
+    const islandReach = this.#islandReach + Math.hypot(focus.x, focus.z);
+
+    return clamp(Math.max(reach, islandReach), NEAREST_SHADOW_REACH, FARTHEST_FILMED_SHADOW_REACH);
   }
 
   #shadowAnchor(focus: Vector3, texelSize: number): Vector3 {

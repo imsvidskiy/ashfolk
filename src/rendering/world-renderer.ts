@@ -10,6 +10,7 @@ import type { AgentViewInput } from "./agents/agent-view-input.ts";
 import { AnimalView } from "./agents/animal-view.ts";
 import { PeopleView } from "./agents/people-view.ts";
 import { Atmosphere } from "./atmosphere/atmosphere.ts";
+import { largestTextureSize } from "./create-graphics.ts";
 import { CameraAxes } from "./effects/billboards.ts";
 import { EffectView } from "./effects/effect-view.ts";
 import { FireGlow } from "./effects/fire-glow.ts";
@@ -23,6 +24,7 @@ import {
   WeatherParticles,
 } from "./effects/weather-particles.ts";
 import { HandMotion } from "./hand-motion.ts";
+import { filmedQuality, type RenderFilming } from "./render-filming.ts";
 import { createRenderOutput, type RenderOutput } from "./render-output.ts";
 import type { RenderQuality } from "./render-quality.ts";
 import { BuildingView } from "./structures/building-view.ts";
@@ -107,7 +109,7 @@ export class WorldRenderer {
   readonly #output: RenderOutput;
   readonly #people: PeopleView;
   readonly #plinth: number;
-  readonly #quality: RenderQuality;
+  readonly #baseQuality: RenderQuality;
   readonly #renderer: WebGPURenderer;
   readonly #ringCenter = new Vector3();
   readonly #selectionRing: GroundRing;
@@ -123,9 +125,11 @@ export class WorldRenderer {
   readonly #waterfalls = new WaterfallView();
   readonly #weather: WeatherParticles;
   #highlighted: GrabTarget | null = null;
+  #quality: RenderQuality;
 
   constructor({ camera, mirror, onShake, quality, renderer }: WorldRendererOptions) {
     this.#mirror = mirror;
+    this.#baseQuality = quality;
     this.#quality = quality;
     this.#renderer = renderer;
     this.#changes = new WorldChangeReader(mirror);
@@ -174,6 +178,7 @@ export class WorldRenderer {
 
     this.#atmosphere = new Atmosphere(this.scene, {
       cloudSeaAltitude: this.#plinth - CLOUD_SEA_DEPTH,
+      islandHalfSize: mirror.grid.halfSize,
       shadowMapSize: quality.shadowMapSize,
     });
 
@@ -214,6 +219,13 @@ export class WorldRenderer {
 
   setOutlinesShown(areShown: boolean): void {
     this.#output.setOutlinesShown(areShown);
+  }
+
+  setFilming(filming: RenderFilming): void {
+    this.#quality = filmedQuality(this.#baseQuality, filming, largestTextureSize(this.#renderer));
+    this.#atmosphere.setShadows(this.#quality.shadowMapSize, filming.hasFarShadows);
+    this.#vegetation.setReach(filming);
+    this.#markers.setHidden(filming.areMarkersHidden);
   }
 
   render(view: RenderView): void {

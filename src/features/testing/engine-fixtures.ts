@@ -3,6 +3,7 @@ import { type Mock, type MockInstance, vi } from "vitest";
 import { useEngineStore } from "../../app/engine-store.ts";
 import type { CameraState } from "../../game/camera/god-camera.ts";
 import type { EngineHandle } from "../../game/engine-handle.ts";
+import { Filming } from "../../game/filming.ts";
 import type { GameSession } from "../../game/game-session.ts";
 import type { LabelPlacement } from "../../game/label-projector.ts";
 import type { Landmark } from "../../game/landmarks.ts";
@@ -97,6 +98,7 @@ export async function startTestEngine(options: TestEngineOptions = {}): Promise<
     camera,
     canvas: document.createElement("canvas"),
     clearSelection,
+    filming: new Filming(),
     focusOn,
     followSelection,
     get landmarks() {

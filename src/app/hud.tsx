@@ -1,6 +1,8 @@
 import { cn } from "../design/cn.ts";
 import { Island } from "../design/island.tsx";
 import { useIsCompact } from "../design/use-media-query.ts";
+import { FilmingHint } from "../features/filming/filming-hint.tsx";
+import { useFilming } from "../features/filming/use-filming.ts";
 import { GuideCard } from "../features/guide/guide-card.tsx";
 import { CompactTopBar, PanelBar, StatusCard } from "../features/interface/top-bar.tsx";
 import { JournalSheet } from "../features/journal/journal-sheet.tsx";
@@ -81,16 +83,19 @@ function CompactHud() {
 
 function HudLayout() {
   const isCompact = useIsCompact();
+  const { areMarkersHidden, isInterfaceHidden } = useFilming();
 
   return (
     <>
-      <WorldLabels />
+      {areMarkersHidden ? null : <WorldLabels />}
 
-      {isCompact ? <CompactHud /> : <WideHud />}
+      <div className={isInterfaceHidden ? "hidden" : "contents"}>{isCompact ? <CompactHud /> : <WideHud />}</div>
 
       <SettingsDialog />
 
       <LandChangedDialog />
+
+      {import.meta.env.DEV ? <FilmingHint /> : null}
     </>
   );
 }

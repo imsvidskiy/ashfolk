@@ -18,15 +18,22 @@ const CLEAR_SKY = {
 const HOUR_STEP = 0.001;
 const MOONLIGHT = 0.7;
 const ANKLE_HEIGHT = 0.085;
+const FAR_VIEW = 2500;
 
 function createAtmosphere(): Atmosphere {
-  return new Atmosphere(new Scene(), { cloudSeaAltitude: -200, shadowMapSize: 1024 });
+  return new Atmosphere(new Scene(), { cloudSeaAltitude: -200, islandHalfSize: 2560, shadowMapSize: 1024 });
 }
 
 function lightAt(atmosphere: Atmosphere, hours: number): number {
   atmosphere.update({ ...CLEAR_SKY, hours }, new Vector3(0, 600, 500), new Vector3(), 800, 0);
 
   return atmosphere.sun.intensity;
+}
+
+function shadowReachAt(atmosphere: Atmosphere, focus: Vector3, viewDistance: number): number {
+  atmosphere.update(CLEAR_SKY, new Vector3(0, 600, 500), focus, viewDistance, 0);
+
+  return atmosphere.sun.shadow.camera.right;
 }
 
 function largestStep(atmosphere: Atmosphere, fromHours: number, toHours: number): number {
@@ -69,6 +76,32 @@ describe("atmosphere", () => {
 
     const { bias, camera } = atmosphere.sun.shadow;
 
+    expect(Math.abs(bias) * (camera.far - camera.near)).toBeLessThan(ANKLE_HEIGHT);
+  });
+
+  it("follows the view distance with its shadow reach until filming widens it", () => {
+    const atmosphere = createAtmosphere();
+
+    const near = shadowReachAt(atmosphere, new Vector3(), FAR_VIEW);
+
+    atmosphere.setShadows(4096, true);
+
+    const filmed = shadowReachAt(atmosphere, new Vector3(1000, 0, 0), FAR_VIEW);
+
+    expect(near).toBeLessThan(FAR_VIEW);
+    expect(filmed).toBeGreaterThan(2560 * Math.SQRT2 + 1000);
+  });
+
+  it("keeps filmed shadows attached to the feet", () => {
+    const atmosphere = createAtmosphere();
+
+    atmosphere.setShadows(8192, true);
+    atmosphere.update(CLEAR_SKY, new Vector3(0, 20, 25), new Vector3(), 30, 0);
+
+    const { bias, camera, mapSize } = atmosphere.sun.shadow;
+
+    expect(mapSize.x).toBe(8192);
+    expect(camera.near).toBeGreaterThan(0);
     expect(Math.abs(bias) * (camera.far - camera.near)).toBeLessThan(ANKLE_HEIGHT);
   });
 });

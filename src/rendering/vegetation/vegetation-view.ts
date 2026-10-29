@@ -6,6 +6,7 @@ import {
   type InstancedBufferGeometry,
   type MeshStandardNodeMaterial,
   type PerspectiveCamera,
+  Vector2,
   Vector3,
 } from "three/webgpu";
 import { PLANT_SPECIES, PlantSpecies } from "../../content/plants.ts";
@@ -21,6 +22,7 @@ import { geometryFromMeshData, InstanceBatch, toInstancedGeometry } from "../ins
 import { SHADOW_ONLY_LAYER } from "../shadow-only-layer.ts";
 import type { TerrainTextures } from "../terrain/terrain-textures.ts";
 import { HIDDEN_LEVEL } from "../view-input.ts";
+import { BURN_DETAIL_FADE } from "./plant-burning.ts";
 import { createPlantMaterial, PlantWeather, SpeciesLook } from "./plant-material.ts";
 import { foliageLook } from "./plant-palette.ts";
 import {
@@ -35,7 +37,9 @@ import {
 } from "./vegetation-chunks.ts";
 
 const LEVEL_DISTANCES: readonly number[] = [160, 600, 1600, 4200];
+const FAR_LEVEL_DISTANCES: readonly number[] = [160, 600, 1600, Number.POSITIVE_INFINITY];
 const SHADOW_LEVEL_COUNT = 2;
+const FAR_BURN_DETAIL_FADE = { end: 24_000, start: 16_000 } as const;
 const NEAREST_LEVEL = 0;
 const SHADOW_PROXY_LEVEL = 1;
 
@@ -45,6 +49,11 @@ const PLANT_FIELDS = [
   { name: "plantPlacement", size: 4 },
   { name: "plantLook", size: 4 },
 ] as const;
+
+export interface PlantReach {
+  readonly hasFarPlants: boolean;
+  readonly hasFarShadows: boolean;
+}
 
 interface PlantModel {
   readonly buckets: readonly number[];
@@ -95,22 +104,33 @@ function shadowFrustumOf(sun: DirectionalLight): Frustum {
   return sun.shadow.getFrustum();
 }
 
-function castsShadowAt(chunk: VegetationChunk, level: number, shadowFrustum: Frustum): boolean {
-  if (level === HIDDEN_LEVEL || level >= SHADOW_LEVEL_COUNT) {
+function castsShadowAt(
+  chunk: VegetationChunk,
+  level: number,
+  shadowFrustum: Frustum,
+  shadowLevelCount: number
+): boolean {
+  if (level === HIDDEN_LEVEL || level >= shadowLevelCount) {
     return false;
   }
 
   return shadowFrustum.intersectsBox(chunk.bounds);
 }
 
-function chunkLevelOf(chunk: VegetationChunk, camera: PerspectiveCamera, frustum: Frustum, detail: number): number {
+function chunkLevelOf(
+  chunk: VegetationChunk,
+  camera: PerspectiveCamera,
+  frustum: Frustum,
+  detail: number,
+  levelDistances: readonly number[]
+): number {
   if (chunk.plants.size === 0 || !frustum.intersectsBox(chunk.bounds)) {
     return HIDDEN_LEVEL;
   }
 
   const distance = chunk.bounds.distanceToPoint(camera.position);
 
-  return LEVEL_DISTANCES.findIndex((limit) => {
+  return levelDistances.findIndex((limit) => {
     return distance < limit * detail;
   });
 }
@@ -151,6 +171,7 @@ export class VegetationView {
   readonly #changedBuckets: readonly Set<number>[];
   readonly #chunkLevels: Int8Array;
   readonly #chunkShadows: Uint8Array;
+  readonly #detailFade = uniform(new Vector2(BURN_DETAIL_FADE.start, BURN_DETAIL_FADE.end));
   readonly #heldBatches = new Map<number, InstanceBatch>();
   readonly #heldInstance = new Float32Array(FLOATS_PER_PLANT);
   readonly #highlight = uniform(new Vector3());
@@ -158,6 +179,8 @@ export class VegetationView {
   readonly #mirror: WorldMirror;
   readonly #shadowProxies: readonly PlantBatch[];
   #heldBatch: InstanceBatch | null = null;
+  #levelDistances = LEVEL_DISTANCES;
+  #shadowLevelCount = SHADOW_LEVEL_COUNT;
   #shouldRefillAll = true;
 
   constructor(mirror: WorldMirror, textures: TerrainTextures, glow: FireGlow) {
@@ -183,6 +206,7 @@ export class VegetationView {
           hasTiers: species === PlantSpecies.Spruce,
           middle: crownMiddle(models[0], species),
         },
+        detailFade: this.#detailFade,
         glow,
         grid: mirror.grid,
         highlight: this.#highlight,
@@ -267,6 +291,22 @@ export class VegetationView {
     this.#heldBatch = batch;
   }
 
+  setReach({ hasFarPlants, hasFarShadows }: PlantReach): void {
+    const fade = hasFarPlants ? FAR_BURN_DETAIL_FADE : BURN_DETAIL_FADE;
+
+    this.#levelDistances = hasFarPlants ? FAR_LEVEL_DISTANCES : LEVEL_DISTANCES;
+    this.#shadowLevelCount = hasFarShadows ? LEVEL_DISTANCES.length : SHADOW_LEVEL_COUNT;
+    this.#detailFade.value.set(fade.start, fade.end);
+
+    for (const [levelIndex, batches] of this.#batches.entries()) {
+      for (const { batch } of batches) {
+        batch.mesh.castShadow = this.#castsShadowAtLevel(levelIndex);
+      }
+    }
+
+    this.#shouldRefillAll = true;
+  }
+
   update(camera: PerspectiveCamera, frustum: Frustum, sun: DirectionalLight, detail: number, season: number): void {
     this.#paintSeason(season);
 
@@ -297,7 +337,7 @@ export class VegetationView {
     const batch = new InstanceBatch(geometry, material, PLANT_FIELDS, 64);
     const counts: BatchCounts = { drawn: 0, shadowed: 0 };
 
-    batch.mesh.castShadow = levelIndex !== NEAREST_LEVEL && levelIndex < SHADOW_LEVEL_COUNT;
+    batch.mesh.castShadow = this.#castsShadowAtLevel(levelIndex);
     batch.mesh.receiveShadow = true;
     batch.mesh.onBeforeShadow = () => {
       geometry.instanceCount = counts.shadowed;
@@ -322,6 +362,10 @@ export class VegetationView {
     this.group.add(batch.mesh);
 
     return { batch, buckets, counts: { drawn: 0, shadowed: 0 } };
+  }
+
+  #castsShadowAtLevel(levelIndex: number): boolean {
+    return levelIndex !== NEAREST_LEVEL && levelIndex < this.#shadowLevelCount;
   }
 
   #heldBatchFor(bucket: number): InstanceBatch {
@@ -365,8 +409,8 @@ export class VegetationView {
     const shadowFrustum = shadowFrustumOf(sun);
 
     for (const [index, chunk] of this.chunks.chunks.entries()) {
-      const level = chunkLevelOf(chunk, camera, frustum, detail);
-      const castsShadow = castsShadowAt(chunk, level, shadowFrustum) ? 1 : 0;
+      const level = chunkLevelOf(chunk, camera, frustum, detail, this.#levelDistances);
+      const castsShadow = castsShadowAt(chunk, level, shadowFrustum, this.#shadowLevelCount) ? 1 : 0;
       const previous = this.#chunkLevels[index];
 
       if (level !== previous) {

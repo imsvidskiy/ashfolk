@@ -11,11 +11,13 @@ const LONGEST_MEASURED_FRAME_MILLISECONDS = 250;
 export class ResolutionGovernor {
   readonly #maximumPixelRatio: number;
   #averageFrameMilliseconds = SMOOTH_FRAME_MILLISECONDS;
+  #isHeld: boolean;
   #scale = 1;
   #millisecondsSinceChange = 0;
 
   constructor(maximumPixelRatio: number) {
     this.#maximumPixelRatio = maximumPixelRatio;
+    this.#isHeld = false;
   }
 
   pixelRatio(devicePixelRatio: number): number {
@@ -24,8 +26,16 @@ export class ResolutionGovernor {
     return Math.min(sharpest, Math.max(LOWEST_PIXEL_RATIO, sharpest * this.#scale));
   }
 
+  hold(isHeld: boolean): void {
+    this.#isHeld = isHeld;
+
+    if (isHeld) {
+      this.#change(1);
+    }
+  }
+
   record(elapsed: number, hasFocus: boolean): boolean {
-    if (!hasFocus || elapsed <= 0 || elapsed > LONGEST_MEASURED_FRAME_MILLISECONDS) {
+    if (this.#isHeld || !hasFocus || elapsed <= 0 || elapsed > LONGEST_MEASURED_FRAME_MILLISECONDS) {
       return false;
     }
 
