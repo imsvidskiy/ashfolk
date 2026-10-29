@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
+import { createRandom } from "../shared/random.ts";
 import { type ErodedRidgedOptions, GradientNoise, type NoiseGradient } from "./gradient-noise.ts";
-import { createRandom } from "./random.ts";
 
 const STEP = 1e-4;
 
