@@ -68,6 +68,19 @@ const FORD_SHALLOWING = 0.92;
 const FORD_RIPPLES = 0.45;
 const OUTLET_FLOW = 0.02;
 const CAVE_DARKNESS = 0.85;
+const NO_LOWER_WATER = 1e6;
+const BESIDE_OFFSETS = [vec2(1, 0), vec2(-1, 0), vec2(0, 1), vec2(0, -1)];
+const DIAGONAL_OFFSETS = [vec2(1, 1), vec2(-1, -1), vec2(1, -1), vec2(-1, 1)];
+const WINDOW_OFFSETS = [
+  [1, 0],
+  [-1, 0],
+  [0, 1],
+  [0, -1],
+  [1, 1],
+  [-1, -1],
+  [1, -1],
+  [-1, 1],
+] as const;
 
 function shoreWobble(depth: Node<"float">, viewDistance: Node<"float">): Node<"float"> {
   const point = positionWorld.xz;
@@ -161,36 +174,56 @@ export function createWaterMaterial(
   const isCenter = attribute("quadCenter", "float").greaterThan(0.5);
   const cell = clamp(attribute("origin", "vec2").add(attribute("cell", "vec2")), vec2(0, 0), vec2(last, last));
 
-  function clampedCell(base: Node<"vec2">, offsetX: number, offsetZ: number): Node<"ivec2"> {
-    return ivec2(clamp(base.add(vec2(offsetX, offsetZ)), vec2(0, 0), vec2(last, last)));
+  function levelAt(base: Node<"vec2">, offset: Node<"vec2">): Node<"float"> {
+    const level = textureLoad(textures.water, ivec2(clamp(base.add(offset), vec2(0, 0), vec2(last, last)))).x;
+
+    return select(level.greaterThan(PRESENT_LEVEL), level, float(NO_LOWER_WATER));
+  }
+
+  function lowestAround(base: Node<"vec2">, offsets: readonly Node<"vec2">[]): Node<"float"> {
+    return offsets.reduce<Node<"float">>((lowest, offset) => {
+      return min(lowest, levelAt(base, offset));
+    }, float(NO_LOWER_WATER));
+  }
+
+  function lowestNearby(vertex: Node<"vec2">): Node<"float"> {
+    const lowest = float(NO_LOWER_WATER).toVar();
+    const spans = [float(1), step.mul(0.5), step];
+
+    for (const span of spans) {
+      for (const [columnOffset, rowOffset] of WINDOW_OFFSETS) {
+        lowest.assign(min(lowest, levelAt(vertex, vec2(columnOffset, rowOffset).mul(span))));
+      }
+    }
+
+    return lowest;
   }
 
   function vertexLevel(vertex: Node<"vec2">): Node<"float"> {
-    function levelAt(offsetX: number, offsetZ: number): Node<"float"> {
-      return textureLoad(textures.water, clampedCell(vertex, offsetX, offsetZ)).x;
-    }
-
-    const ownCell = clampedCell(vertex, 0, 0);
+    const ownCell = ivec2(vertex);
     const own = textureLoad(textures.water, ownCell).x;
-    const besideLevel = max(max(levelAt(1, 0), levelAt(-1, 0)), max(levelAt(0, 1), levelAt(0, -1)));
-    const diagonalLevel = max(max(levelAt(1, 1), levelAt(-1, -1)), max(levelAt(1, -1), levelAt(-1, 1)));
     const ground = textureLoad(textures.height, ownCell).x;
     const reach = textureLoad(textures.shore, ownCell).w;
 
-    const neighborLevel = max(besideLevel, diagonalLevel);
-    const isOwnWater = own.greaterThan(PRESENT_LEVEL);
     const isCoarseShore = step.greaterThan(1.5).and(reach.lessThanEqual(step.add(COARSE_REACH_MARGIN)));
-    const isNearWater = neighborLevel.greaterThan(PRESENT_LEVEL);
-    const bankLevel = min(
-      select(besideLevel.greaterThan(PRESENT_LEVEL), besideLevel, neighborLevel),
-      ground.sub(BANK_SINK)
-    );
+    const level = ground.sub(HIDDEN_DEPTH).toVar();
 
-    return select(
-      isOwnWater,
-      own,
-      select(isCoarseShore, ground.add(COARSE_LIFT), select(isNearWater, bankLevel, ground.sub(HIDDEN_DEPTH)))
-    );
+    If(own.greaterThan(PRESENT_LEVEL), () => {
+      level.assign(own);
+    })
+      .ElseIf(isCoarseShore, () => {
+        level.assign(min(ground, lowestNearby(vertex)).add(COARSE_LIFT));
+      })
+      .Else(() => {
+        const beside = lowestAround(vertex, BESIDE_OFFSETS);
+        const nearest = select(beside.lessThan(NO_LOWER_WATER), beside, lowestAround(vertex, DIAGONAL_OFFSETS));
+
+        If(nearest.lessThan(NO_LOWER_WATER), () => {
+          level.assign(min(nearest, ground.sub(BANK_SINK)));
+        });
+      });
+
+    return level;
   }
 
   function cornerOf(column: number, row: number): Node<"vec2"> {

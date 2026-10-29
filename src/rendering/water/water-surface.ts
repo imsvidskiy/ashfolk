@@ -24,20 +24,24 @@ function levelAt(terrain: SampledTerrain, grid: WorldGrid, column: number, row: 
   return terrain.waterSurface[grid.index(clamp(column, 0, last), clamp(row, 0, last))];
 }
 
-function highestLevel(
+function lowestLevel(
   terrain: SampledTerrain,
   grid: WorldGrid,
   column: number,
   row: number,
   offsets: readonly (readonly [number, number])[]
 ): number {
-  let highest = Number.NEGATIVE_INFINITY;
+  let lowest = Number.POSITIVE_INFINITY;
 
   for (const [columnOffset, rowOffset] of offsets) {
-    highest = Math.max(highest, levelAt(terrain, grid, column + columnOffset, row + rowOffset));
+    const level = levelAt(terrain, grid, column + columnOffset, row + rowOffset);
+
+    if (level > PRESENT_LEVEL) {
+      lowest = Math.min(lowest, level);
+    }
   }
 
-  return highest;
+  return lowest;
 }
 
 export function waterVertexLevel(terrain: SampledTerrain, grid: WorldGrid, column: number, row: number): number {
@@ -47,16 +51,14 @@ export function waterVertexLevel(terrain: SampledTerrain, grid: WorldGrid, colum
     return own;
   }
 
-  const beside = highestLevel(terrain, grid, column, row, BESIDE);
-  const nearest = Math.max(beside, highestLevel(terrain, grid, column, row, DIAGONAL));
+  const beside = lowestLevel(terrain, grid, column, row, BESIDE);
+  const nearest = Number.isFinite(beside) ? beside : lowestLevel(terrain, grid, column, row, DIAGONAL);
 
-  if (nearest <= PRESENT_LEVEL) {
+  if (!Number.isFinite(nearest)) {
     return NO_WATER;
   }
 
-  const ground = terrain.height[grid.index(column, row)];
-
-  return Math.min(beside > PRESENT_LEVEL ? beside : nearest, ground - BANK_SINK);
+  return Math.min(nearest, terrain.height[grid.index(column, row)] - BANK_SINK);
 }
 
 export function sampleWaterSurface(terrain: SampledTerrain, grid: WorldGrid, x: number, z: number): number {

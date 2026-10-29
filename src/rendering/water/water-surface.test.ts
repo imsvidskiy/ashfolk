@@ -7,6 +7,7 @@ import { sampleWaterSurface, waterVertexLevel } from "./water-surface.ts";
 const grid = new WorldGrid({ cellSize: 10, cellsPerSide: 8 });
 const RIVER_ROW = 3;
 const LEVEL = 100;
+const STEP_UP = 6;
 
 function createTerrain(bankHeight: number) {
   const height = new Float32Array(grid.cellCount).fill(bankHeight);
@@ -33,6 +34,17 @@ describe("waterVertexLevel", () => {
     const terrain = createTerrain(LEVEL + 3);
 
     expect(waterVertexLevel(terrain, grid, 2, RIVER_ROW - 1)).toBe(LEVEL);
+  });
+
+  it("keeps a bank between two steps of a river at the lower step instead of lifting it up the slope", () => {
+    const terrain = createTerrain(LEVEL + 12);
+    const upstream = grid.index(1, RIVER_ROW - 1);
+
+    terrain.height[upstream] = LEVEL + STEP_UP - 1;
+    terrain.waterSurface[upstream] = LEVEL + STEP_UP;
+
+    expect(waterVertexLevel(terrain, grid, 2, RIVER_ROW - 1)).toBe(LEVEL);
+    expect(sampleWaterSurface(terrain, grid, grid.centerX(2), grid.centerZ(RIVER_ROW) - 5)).toBeCloseTo(LEVEL);
   });
 });
 
