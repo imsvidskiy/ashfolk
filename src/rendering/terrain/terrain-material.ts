@@ -56,6 +56,7 @@ const STRATA_CONTRAST = 0.035;
 const STRATA_BEND = 6;
 const STRATA_WOBBLE = 1.5;
 const STRATA_LENSES = vec3(0.035, 0.12, 0.035);
+const STRATA_THRESHOLD = 0.001;
 const VEGETATED_ROCK_LIFT = 0.1;
 const STEEP_FACE_SHADE = 0.82;
 const EMBER_THRESHOLD = 0.004;
@@ -247,6 +248,23 @@ function fordGround(ground: Node<"vec3">, marks: Node<"vec2">, rock: Node<"float
   })();
 }
 
+function rockStrata(layer: Node<"float">, strataFade: Node<"float">, rock: Node<"float">): Node<"float"> {
+  return Fn(() => {
+    const strata = float(1).toVar();
+
+    If(rock.mul(strataFade).greaterThan(STRATA_THRESHOLD), () => {
+      const bands = sin(layer)
+        .mul(0.6)
+        .add(sin(layer.mul(2.37).add(1.7)).mul(0.4));
+      const lenses = smoothstep(0.05, 0.45, mx_noise_float(positionWorld.mul(STRATA_LENSES)));
+
+      strata.assign(bands.mul(lenses).mul(strataFade.mul(STRATA_CONTRAST)).add(1));
+    });
+
+    return strata;
+  })();
+}
+
 export function createTerrainMaterial({
   glow,
   grid,
@@ -274,11 +292,6 @@ export function createTerrainMaterial({
   const groundSample = texture(textures.groundAlbedo.texture, mapCoordinates);
   const albedo = groundSample.rgb;
   const layer = positionWorld.y.mul(STRATA_FREQUENCY).add(broad.mul(STRATA_BEND)).add(patches.mul(STRATA_WOBBLE));
-  const bands = sin(layer)
-    .mul(0.6)
-    .add(sin(layer.mul(2.37).add(1.7)).mul(0.4));
-  const lenses = smoothstep(0.05, 0.45, mx_noise_float(positionWorld.mul(STRATA_LENSES)));
-  const strata = bands.mul(lenses).mul(strataFade.mul(STRATA_CONTRAST)).add(1);
 
   const depth = underwaterDepth(textures, grid);
   const snowCover = smoothstep(0.08, 0.42, surface.r);
@@ -294,16 +307,16 @@ export function createTerrainMaterial({
     smoothstep(GRAY_STONE - 0.1, GRAY_STONE, albedo.b.div(max(albedo.g, 0.001)))
   );
   const faceShade = mix(float(1), float(STEEP_FACE_SHADE), smoothstep(0.3, 0.7, steepness));
-  const rockColor = mix(STONE, albedo.mul(0.85), max(redStone, darkStone))
-    .mul(strata)
-    .mul(broad.mul(0.06).add(patches.mul(0.04)).add(1))
-    .mul(faceShade);
 
   const vegetated = smoothstep(0.08, 0.3, groundSample.a.add(patches.mul(0.1)).add(fine.mul(0.05)));
   const rockStart = mix(float(0.24), float(0.16), snowCover).add(vegetated.mul(VEGETATED_ROCK_LIFT));
   const rockBand = mix(float(0.07), float(0.14), snowCover);
   const edgeGrain = fine.mul(float(0.025).mul(float(1).sub(snowCover)));
   const rock = smoothstep(rockStart, rockStart.add(rockBand), steepness.add(broad.mul(0.07)).add(edgeGrain));
+  const rockColor = mix(STONE, albedo.mul(0.85), max(redStone, darkStone))
+    .mul(rockStrata(layer, strataFade, rock))
+    .mul(broad.mul(0.06).add(patches.mul(0.04)).add(1))
+    .mul(faceShade);
   const ground = mix(mottled, rockColor, rock);
 
   const marsh = marshAt(textures, grid, patches.mul(0.35).add(fine.mul(0.15)).add(0.5));
