@@ -299,27 +299,27 @@ export function measureWetness(inputs: WetlandInputs, slopes: Float64Array): Flo
 }
 
 export function matchWetlandShare(wetness: Float32Array, coastDistance: Float32Array, share: number): void {
-  const wet: number[] = [];
+  const wet = new Float32Array(wetness.length);
 
   let landCells = 0;
+  let wetCells = 0;
 
-  for (const [cell, value] of wetness.entries()) {
+  for (let cell = 0; cell < wetness.length; cell += 1) {
     if (coastDistance[cell] <= 0) {
       continue;
     }
 
     landCells += 1;
 
-    if (value > 0) {
-      wet.push(value);
+    if (wetness[cell] > 0) {
+      wet[wetCells] = wetness[cell];
+      wetCells += 1;
     }
   }
 
-  wet.sort((first, second) => {
-    return second - first;
-  });
-
-  const reference = wet[Math.floor(share * landCells)];
+  const ascending = wet.subarray(0, wetCells).sort();
+  const rank = Math.floor(share * landCells);
+  const reference = rank < wetCells ? ascending[wetCells - 1 - rank] : undefined;
   const exponent = reference === undefined ? GENTLEST_WETNESS_CURVE : Math.log(WETLAND_THRESHOLD) / Math.log(reference);
   const clamped = clamp(exponent, GENTLEST_WETNESS_CURVE, STEEPEST_WETNESS_CURVE);
 
