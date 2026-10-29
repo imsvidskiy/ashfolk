@@ -53,6 +53,9 @@ const DARK_STONE = 0.04;
 const GRAY_STONE = 0.82;
 const STRATA_FREQUENCY = 0.45;
 const STRATA_CONTRAST = 0.035;
+const STRATA_BEND = 6;
+const STRATA_WOBBLE = 1.5;
+const STRATA_LENSES = vec3(0.035, 0.12, 0.035);
 const STEEP_FACE_SHADE = 0.82;
 const EMBER_THRESHOLD = 0.004;
 const TRODDEN_EARTH = vec3(0.3, 0.22, 0.14);
@@ -268,9 +271,12 @@ export function createTerrainMaterial({
 
   const surface = texture(textures.surface, mapCoordinates);
   const albedo = texture(textures.groundAlbedo.texture, mapCoordinates).rgb;
-  const strata = sin(positionWorld.y.mul(STRATA_FREQUENCY).add(broad.mul(2)))
-    .mul(strataFade.mul(STRATA_CONTRAST))
-    .add(1);
+  const layer = positionWorld.y.mul(STRATA_FREQUENCY).add(broad.mul(STRATA_BEND)).add(patches.mul(STRATA_WOBBLE));
+  const bands = sin(layer)
+    .mul(0.6)
+    .add(sin(layer.mul(2.37).add(1.7)).mul(0.4));
+  const lenses = smoothstep(0.05, 0.45, mx_noise_float(positionWorld.mul(STRATA_LENSES)));
+  const strata = bands.mul(lenses).mul(strataFade.mul(STRATA_CONTRAST)).add(1);
 
   const depth = underwaterDepth(textures, grid);
   const snowCover = smoothstep(0.08, 0.42, surface.r);
