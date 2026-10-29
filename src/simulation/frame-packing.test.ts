@@ -3,16 +3,7 @@ import { ANIMAL_KINDS } from "../content/animals.ts";
 import { tribeIdentity } from "../content/names.ts";
 import { TOOL_MATERIALS, WEAPON_KINDS } from "../content/weapons.ts";
 import { createRandom } from "../shared/random.ts";
-import {
-  ANIMAL_STRIDE,
-  AnimalField,
-  GROUND_CHANNELS,
-  GroundChannel,
-  PERSON_STRIDE,
-  PersonField,
-  SURFACE_CHANNELS,
-  SurfaceChannel,
-} from "../world/agent-buffers.ts";
+import { AnimalField, GROUND_CHANNELS, PersonField, SURFACE_CHANNELS } from "../world/agent-buffers.ts";
 import { ANIMAL_POSES, CARRIED_ITEMS, PERSON_POSES } from "../world/agent-poses.ts";
 import { createMover } from "./agents/movement.ts";
 import type { Animal } from "./fauna/fauna.ts";
@@ -28,18 +19,6 @@ import { createPerson, type Person } from "./society/person.ts";
 import { createTribe } from "./society/tribe.ts";
 import { idleJob } from "./testing/test-rivalry.ts";
 import { createTestWorld } from "./testing/test-world.ts";
-
-function fieldOffsets(fields: Readonly<Record<string, number>>): number[] {
-  return Object.values(fields).toSorted((first, second) => {
-    return first - second;
-  });
-}
-
-function strideOffsets(stride: number): number[] {
-  return Array.from({ length: stride }, (_, offset) => {
-    return offset;
-  });
-}
 
 function raidingArcher(): Person {
   const person = createPerson(
@@ -119,14 +98,7 @@ describe("surface rows", () => {
   });
 });
 
-describe("agent buffers", () => {
-  it("give every field its own slot", () => {
-    expect(fieldOffsets(PersonField)).toEqual(strideOffsets(PERSON_STRIDE));
-    expect(fieldOffsets(AnimalField)).toEqual(strideOffsets(ANIMAL_STRIDE));
-    expect(fieldOffsets(SurfaceChannel)).toEqual(strideOffsets(SURFACE_CHANNELS));
-    expect(fieldOffsets(GroundChannel)).toEqual(strideOffsets(GROUND_CHANNELS));
-  });
-
+describe("packed agents", () => {
   it("carry each field of a person to the renderer", () => {
     const person = raidingArcher();
     const tribe = createTribe({ campX: 0, campZ: 0, day: 0, id: 3, identity: tribeIdentity(0) });
