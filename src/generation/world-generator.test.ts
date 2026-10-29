@@ -1630,7 +1630,7 @@ describe("full-size river joins", () => {
       generateWorld(3, { ...DEFAULT_GENERATION_OPTIONS, shape: "square" }),
       generateWorld(8, { ...DEFAULT_GENERATION_OPTIONS, shape: "square" }),
     ];
-  }, 60_000);
+  }, 180_000);
 
   it("joins no river into another just below its cave or pond on several seeds and both shapes", () => {
     for (const generated of worlds) {

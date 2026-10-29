@@ -1,7 +1,7 @@
 import { clamp, lerp, smoothstep } from "../shared/math.ts";
-import type { GrabbableKind, GrabTarget, HeldView } from "../simulation/hand/grab-target.ts";
-import { HELD_LIFT } from "./view-input.ts";
+import { type GrabbableKind, type GrabTarget, type HeldView, isTarget } from "../simulation/hand/grab-target.ts";
 
+export const HELD_LIFT = 4;
 export const LIFT_SECONDS = 0.38;
 export const FALL_SHARE = 0.62;
 export const BOUNCE_HEIGHT = 0.45;
@@ -15,6 +15,7 @@ const TILT_DAMPING = 8;
 const DROP_SECONDS = 0.42;
 const RETURN_METERS_PER_SECOND = 120;
 const LONGEST_RETURN_SECONDS = 0.9;
+const LONGEST_SETTLE_SECONDS = DROP_SECONDS + LONGEST_RETURN_SECONDS;
 const ARC_PER_METER = 0.12;
 const HIGHEST_ARC = 8;
 const UNKNOWN_DURATION = 0;
@@ -45,10 +46,6 @@ export function landing(progress: number, fromLift: number): number {
   const hop = clamp((progress - FALL_SHARE) / (1 - FALL_SHARE), 0, 1);
 
   return BOUNCE_HEIGHT * 4 * hop * (1 - hop);
-}
-
-function isSame(subject: GrabTarget | null, kind: GrabbableKind, id: number): boolean {
-  return subject !== null && subject.kind === kind && subject.id === id;
 }
 
 export class HandMotion {
@@ -90,7 +87,7 @@ export class HandMotion {
   }
 
   poseOf(kind: GrabbableKind, id: number, restX: number, restZ: number): HandPose | null {
-    if (!isSame(this.#subject, kind, id)) {
+    if (!isTarget(this.#subject, kind, id)) {
       return null;
     }
 
@@ -102,7 +99,7 @@ export class HandMotion {
   }
 
   #carry(held: HeldView, seconds: number): void {
-    if (this.#phase !== "carried" || !isSame(this.#subject, held.kind, held.id)) {
+    if (this.#phase !== "carried" || !isTarget(this.#subject, held.kind, held.id)) {
       this.#pickUp(held);
 
       return;
@@ -129,7 +126,7 @@ export class HandMotion {
   }
 
   #pickUp(held: HeldView): void {
-    const isRegrab = isSame(this.#subject, held.kind, held.id);
+    const isRegrab = isTarget(this.#subject, held.kind, held.id);
 
     this.#subject = { id: held.id, kind: held.kind };
     this.#phase = "carried";
@@ -168,10 +165,9 @@ export class HandMotion {
     this.#seconds += seconds;
     this.#swing(0, 0, seconds);
 
-    const longest = DROP_SECONDS + LONGEST_RETURN_SECONDS;
     const isKnownAndDone = this.#duration !== UNKNOWN_DURATION && this.#seconds >= this.#duration;
 
-    if (isKnownAndDone || this.#seconds >= longest) {
+    if (isKnownAndDone || this.#seconds >= LONGEST_SETTLE_SECONDS) {
       this.#subject = null;
     }
   }

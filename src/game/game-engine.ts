@@ -387,8 +387,18 @@ export class GameEngine implements EngineHandle {
     this.session.send({ selection, type: "setSelection" });
   }
 
-  #pickGrabbable(point: Vector3, screen: ScreenPoint): GrabTarget | null {
-    return this.#entityPicker.pickGrabbable(this.session.mirror, screen, this.#viewport, point);
+  #pickGrabbable(point: Vector3 | null, screen: ScreenPoint): GrabTarget | null {
+    const { frame, vegetation } = this.session.mirror;
+
+    const scene = {
+      frame,
+      plantsNear: (spots: readonly GroundPoint[], radius: number) => {
+        return this.#world.plantsNear(spots, radius);
+      },
+      vegetation,
+    };
+
+    return this.#entityPicker.pickGrabbable(scene, screen, this.#viewport, point);
   }
 
   #resize(): void {

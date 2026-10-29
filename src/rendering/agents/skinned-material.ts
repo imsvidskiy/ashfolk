@@ -19,7 +19,7 @@ import {
 } from "three/tsl";
 import { MeshStandardNodeMaterial, type Node } from "three/webgpu";
 import { SLOT_COLOR_TABLE } from "../../models/materials.ts";
-import { highlightGlow } from "../highlight.ts";
+import { brightenHighlighted } from "../highlight.ts";
 import { rotateAroundUp, slotColorTable } from "../node-helpers.ts";
 import { markOutlined } from "../outlines.ts";
 import type { AgentPalette } from "./agent-palette.ts";
@@ -82,10 +82,9 @@ export function createSkinnedMaterial(palette: AgentPalette, layout: PaletteLayo
 
   const color = select(colorIndex.greaterThanEqual(0), paletteColor, slotColors.element(slot));
 
-  material.colorNode = varying(color.mul(shade), "agentColor");
-  material.emissiveNode = highlightGlow(
-    varying(float(1).sub(step(0.5, rowNumber.sub(palette.highlightRow).abs())), "agentHighlight")
-  );
+  const highlighted = varying(float(1).sub(step(0.5, rowNumber.sub(palette.highlightRow).abs())), "agentHighlight");
+
+  material.colorNode = brightenHighlighted(varying(color.mul(shade), "agentColor"), highlighted);
   material.roughnessNode = float(0.82);
 
   markOutlined(material);

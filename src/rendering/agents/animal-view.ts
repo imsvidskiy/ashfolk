@@ -1,5 +1,6 @@
 import { Color, Group, type MeshStandardNodeMaterial, Sphere, Vector3 } from "three/webgpu";
 import { ANIMAL_KINDS, type AnimalKind } from "../../content/animals.ts";
+import type { GroundPoint } from "../../game/camera/god-camera.ts";
 import { type AnimalAppearance, animalAppearance } from "../../models/animals/animal-appearance.ts";
 import {
   ANIMAL_SPECIES,
@@ -15,6 +16,7 @@ import { Pose } from "../../models/rig/pose.ts";
 import { SkeletonPoser } from "../../models/rig/skeleton-poser.ts";
 import { measureStride } from "../../models/rig/stride.ts";
 import { smoothstep } from "../../shared/math.ts";
+import { isTarget } from "../../simulation/hand/grab-target.ts";
 import { ANIMAL_STRIDE, AnimalField } from "../../world/agent-buffers.ts";
 import { ANIMAL_POSES, type AnimalPose } from "../../world/agent-poses.ts";
 import { HIDDEN_LEVEL } from "../view-input.ts";
@@ -26,7 +28,6 @@ import {
   farthestFigure,
   forgetUnseen,
   holdFigure,
-  isHighlightedAgent,
   type LevelDistances,
   liftOf,
   NO_SELECTION,
@@ -147,6 +148,7 @@ export class AnimalView {
   readonly #previousPose = new Pose(MAMMOTH_BONE_COUNT);
   readonly #seen = new Set<number>();
   readonly #visuals = new Map<number, AnimalVisual>();
+  #hoveredSpot: GroundPoint | null = null;
   #selectedId = NO_SELECTION;
 
   constructor() {
@@ -161,11 +163,16 @@ export class AnimalView {
     };
   }
 
+  get hoveredSpot(): GroundPoint | null {
+    return this.#hoveredSpot;
+  }
+
   update(input: AgentViewInput): void {
     const { frame } = input.mirror;
 
     this.#seen.clear();
     this.#palette.highlightRow.value = NO_ROW;
+    this.#hoveredSpot = null;
     this.#selectedId = selectedAgentId(frame.inspection, "animal");
 
     for (const kind of ANIMAL_KINDS) {
@@ -229,6 +236,11 @@ export class AnimalView {
     const x = pose === null ? restX : pose.x;
     const z = pose === null ? restZ : pose.z;
     const y = standingHeight(input.mirror, x, z, WADING_DEPTH) + liftOf(pose);
+    const isHighlighted = isTarget(input.highlighted, "animal", id);
+
+    if (isHighlighted) {
+      this.#hoveredSpot = { x, z };
+    }
 
     this.#bounds.center.set(x, y + ANIMAL_BOUNDING_LIFT, z);
 
@@ -248,7 +260,7 @@ export class AnimalView {
     this.#palette.ensureRows(row + 1);
     this.#writePose(visual, kindView, row);
     this.#palette.lean(row, slopeLean(input.mirror, x, z, visual.motion.heading, LEAN_REACH));
-    holdFigure(this.#palette, row, visual.motion.heading, pose, isHighlightedAgent(input.highlighted, "animal", id));
+    holdFigure(this.#palette, row, visual.motion.heading, pose, isHighlighted);
     this.#palette.writeRoot(row, x, y, z, visual.motion.heading);
 
     for (const [index, color] of visual.colors.entries()) {

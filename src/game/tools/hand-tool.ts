@@ -6,7 +6,7 @@ import type { ToolGestures } from "../input/pointer-controls.ts";
 
 type CommandSink = (command: SimulationCommand) => void;
 
-type GrabPicker = (point: Vector3, screen: ScreenPoint) => GrabTarget | null;
+type GrabPicker = (point: Vector3 | null, screen: ScreenPoint) => GrabTarget | null;
 
 type HandState = "holding" | "idle" | "putAway";
 
@@ -62,12 +62,12 @@ export class HandTool implements ToolGestures {
   }
 
   hover(point: Vector3 | null, screen: ScreenPoint | null): void {
-    const canPick = this.#state === "idle" && point !== null && screen !== null;
+    const canPick = this.#state === "idle" && screen !== null;
 
     this.#hovered = canPick ? this.#pick(point, screen) : null;
   }
 
-  canBegin(point: Vector3, screen: ScreenPoint): boolean {
+  canBegin(point: Vector3 | null, screen: ScreenPoint): boolean {
     this.#target = this.isActive() ? this.#pick(point, screen) : null;
 
     return this.#target !== null;
