@@ -105,7 +105,9 @@ function shapeShore(targets: PondTargets, pond: Spring, cell: number, reach: num
   heights[cell] = Math.min(heights[cell], Math.max(beach, deepest));
 
   if (reach > -grid.cellSize * BANK_CELLS && riverStrength[cell] === 0) {
-    heights[cell] = Math.max(heights[cell], pond.level + STRAND_HEIGHT);
+    const bank = Math.min(pond.level, uncarvedHeights[cell] + LOWEST_RIM) + STRAND_HEIGHT;
+
+    heights[cell] = Math.max(heights[cell], bank);
   }
 }
 
