@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { TECHNOLOGIES } from "../../content/technologies.ts";
 import { totalFood } from "../society/stock.ts";
 import { createPowerSimulation } from "../testing/test-powers.ts";
 import { floodCells, livingCount } from "../testing/test-world.ts";
@@ -12,13 +13,29 @@ describe("life", () => {
     expect(simulation.society.population).toBe(5);
   });
 
-  it("brings herds of deer and mammoths", () => {
+  it("explains when a tribe has no dry land to settle on", () => {
+    const simulation = createPowerSimulation();
+
+    const { world } = simulation;
+
+    floodCells(world, world.grid.cellsInRadius(0, 0, 200), 1.2);
+    simulation.navigation.rebuild();
+    simulation.usePower("tribe", 0, 0, {});
+
+    expect(simulation.society.population).toBe(0);
+    expect(simulation.takeNotices()).toEqual(["People need flat, dry land away from fire to settle here."]);
+  });
+
+  it("brings herds of every kind", () => {
     const simulation = createPowerSimulation();
 
     simulation.usePower("deer", 0, 0, { herdSize: 4 });
     simulation.usePower("mammoth", 100, 0, { herdSize: 2 });
+    simulation.usePower("wolf", -100, 0, { herdSize: 3 });
+    simulation.usePower("ibex", 0, 100, { herdSize: 2 });
 
-    expect(livingCount(simulation.fauna)).toBe(6);
+    expect(livingCount(simulation.fauna)).toBe(11);
+    expect(simulation.takeNotices()).toEqual([]);
   });
 
   it("brings hares only to dry ground away from the water", () => {
@@ -66,6 +83,30 @@ describe("life", () => {
     simulation.advance(0.1);
 
     expect(tribe.technologies.has("fire")).toBe(true);
+  });
+
+  it("explains when inspiration finds no tribe", () => {
+    const simulation = createPowerSimulation();
+
+    simulation.usePower("inspiration", 0, 0, {});
+
+    expect(simulation.takeNotices()).toEqual(["There is no tribe nearby to inspire."]);
+  });
+
+  it("explains when the tribe already knows everything", () => {
+    const simulation = createPowerSimulation();
+
+    simulation.usePower("tribe", 0, 0, { people: 4 });
+
+    const [tribe] = simulation.society.tribes();
+
+    for (const technology of TECHNOLOGIES) {
+      tribe.technologies.add(technology.id);
+    }
+
+    simulation.usePower("inspiration", tribe.campX, tribe.campZ, {});
+
+    expect(simulation.takeNotices()).toEqual([`${tribe.name} already knows everything there is to know.`]);
   });
 
   it("healing restores everyone in the circle", () => {
