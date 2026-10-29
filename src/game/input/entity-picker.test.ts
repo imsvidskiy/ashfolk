@@ -1,6 +1,7 @@
 import { PerspectiveCamera, Vector3 } from "three/webgpu";
 import { describe, expect, it } from "vitest";
 import { PlantSpecies } from "../../content/plants.ts";
+import { FIGURE_SCALE } from "../../models/people/human-proportions.ts";
 import type { Selection } from "../../simulation/commands.ts";
 import type { SimulationFrame } from "../../simulation/frame.ts";
 import type { GrabTarget } from "../../simulation/hand/grab-target.ts";
@@ -15,6 +16,8 @@ import { GroundPicker, type HeightField, type ScreenPoint } from "./ground-picke
 import { normalizedToPixels, projectToNormalized } from "./screen-projection.ts";
 
 const WORLD_HALF_SIZE = 2000;
+const WIDE_WORLD_HALF_SIZE = 4000;
+const MINIMUM_PITCH = 0.08;
 const EMPTY_FRAME = new Simulation(
   createVegetatedWorld({ dimensions: { cellSize: 10, cellsPerSide: 32 } })
 ).initialWorld().frame;
@@ -101,13 +104,73 @@ function screenOf(camera: PerspectiveCamera, x: number, y: number, z: number): S
   return normalizedToPixels(normalized, VIEWPORT);
 }
 
-function grabFromLowCamera(vegetation: VegetationBuffers, screen: ScreenPoint): GrabTarget | null {
+function grabFromLowCamera(
+  vegetation: VegetationBuffers,
+  screen: ScreenPoint,
+  ...people: readonly (readonly [number, number])[]
+): GrabTarget | null {
   const camera = lowCamera();
 
   const ground = new GroundPicker(camera, flatGround, WORLD_HALF_SIZE).pick(screen, VIEWPORT);
-  const scene = { frame: frameWithPeople(), plantsNear: everyPlant, vegetation };
+  const scene = { frame: frameWithPeople(...people), plantsNear: everyPlant, vegetation };
 
   return new EntityPicker(camera, flatGround).pickGrabbable(scene, screen, VIEWPORT, ground);
+}
+
+function besidePersonBehindOak(pixels: number): ScreenPoint {
+  const person = screenOf(lowCamera(), 0, 0.9 * FIGURE_SCALE, -20);
+
+  return { x: person.x + pixels, y: person.y };
+}
+
+function plantsNearSpots(vegetation: VegetationBuffers) {
+  return (spots: readonly GroundPoint[], radius: number): readonly number[] => {
+    const isNear = spots.some((spot) => {
+      return Math.max(Math.abs(spot.x - vegetation.x[0]), Math.abs(spot.z - vegetation.z[0])) <= radius;
+    });
+
+    return isNear ? [0] : [];
+  };
+}
+
+function horizonCamera(): PerspectiveCamera {
+  const camera = new PerspectiveCamera(45, VIEWPORT.width / VIEWPORT.height, 1, 40_000);
+
+  camera.position.set(0, 20, 3000);
+  camera.lookAt(0, 20 - Math.tan(MINIMUM_PITCH) * 100, 2900);
+  camera.updateMatrixWorld();
+
+  return camera;
+}
+
+function crestHeight(x: number, z: number): number {
+  return Math.abs(x) < 500 && Math.abs(z + 500) < 20 ? 80 : 0;
+}
+
+function wallHeight(_x: number, z: number): number {
+  return Math.abs(z) < 2 ? 10 : 0;
+}
+
+function cameraAt(x: number, y: number, z: number, target: GroundPoint & { readonly y: number }): PerspectiveCamera {
+  const camera = new PerspectiveCamera(45, VIEWPORT.width / VIEWPORT.height, 1, 40_000);
+
+  camera.position.set(x, y, z);
+  camera.lookAt(target.x, target.y, target.z);
+  camera.updateMatrixWorld();
+
+  return camera;
+}
+
+function grabOver(
+  heightAt: HeightField,
+  camera: PerspectiveCamera,
+  vegetation: VegetationBuffers,
+  screen: ScreenPoint
+) {
+  const ground = new GroundPicker(camera, heightAt, WIDE_WORLD_HALF_SIZE).pick(screen, VIEWPORT);
+  const scene = { frame: frameWithPeople(), plantsNear: plantsNearSpots(vegetation), vegetation };
+
+  return new EntityPicker(camera, heightAt).pickGrabbable(scene, screen, VIEWPORT, ground);
 }
 
 function noPlants(): readonly number[] {
@@ -190,6 +253,53 @@ describe("entity picker", () => {
     expect(grabAt(plantAt(PlantSpecies.Oak, 0, -4), [0, 0])).toEqual({ id: 1, kind: "person" });
   });
 
+  it("grabs a crown in front of a person beside the pointer", () => {
+    expect(grabFromLowCamera(plantAt(PlantSpecies.Oak, 0, 0), besidePersonBehindOak(18), [0, -20])).toEqual({
+      id: 0,
+      kind: "plant",
+    });
+  });
+
+  it("grabs a person right under the pointer before a crown in front of them", () => {
+    expect(grabFromLowCamera(plantAt(PlantSpecies.Oak, 0, 0), besidePersonBehindOak(6), [0, -20])).toEqual({
+      id: 1,
+      kind: "person",
+    });
+  });
+
+  it("reaches a tree under the pointer near the horizon in a low view", () => {
+    const camera = horizonCamera();
+    const vegetation = plantAt(PlantSpecies.Oak, 0, 0);
+    const screen = screenOf(camera, 0, 1, 0);
+    const ground = new GroundPicker(camera, flatGround, WIDE_WORLD_HALF_SIZE).pick(screen, VIEWPORT);
+    const scene = { frame: frameWithPeople(), plantsNear: plantsNearSpots(vegetation), vegetation };
+
+    expect(ground?.distanceTo(camera.position)).toBeGreaterThan(2600);
+    expect(new EntityPicker(camera, flatGround).pickGrabbable(scene, screen, VIEWPORT, ground)).toEqual({
+      id: 0,
+      kind: "plant",
+    });
+  });
+
+  it("reaches a tree on a crest that stands above both the camera's ground and the pointer's", () => {
+    const camera = cameraAt(0, 120, 0, { x: 0, y: 95, z: -500 });
+    const vegetation = plantAt(PlantSpecies.Oak, 0, -500);
+
+    vegetation.height[0] = 20;
+
+    expect(grabOver(crestHeight, camera, vegetation, screenOf(camera, 0, 95, -500))).toEqual({
+      id: 0,
+      kind: "plant",
+    });
+  });
+
+  it("ignores a tree the ray reaches only after passing through the ground", () => {
+    const camera = lowCamera();
+    const vegetation = plantAt(PlantSpecies.Oak, 0, -8);
+
+    expect(grabOver(wallHeight, camera, vegetation, screenOf(camera, 0, 9, 2))).toBeNull();
+  });
+
   it("leaves stones and faraway trees alone", () => {
     expect(grabAt(plantAt(PlantSpecies.Boulder, 0, 0))).toBeNull();
     expect(grabAt(plantAt(PlantSpecies.Oak, 300, 0))).toBeNull();
@@ -231,6 +341,19 @@ describe("entity picker", () => {
     const scene = { frame: frameWithPeople(), plantsNear: everyPlant, vegetation };
 
     const screen = screenOf(camera, 0, 11, 0);
+
+    expect(new EntityPicker(camera, flatGround).pickGrabbable(scene, screen, VIEWPORT, null)).toEqual({
+      id: 0,
+      kind: "plant",
+    });
+  });
+
+  it("picks a crown past the coast in a far view, where the pointer finds no ground", () => {
+    const camera = farCamera();
+    const vegetation = plantAt(PlantSpecies.Oak, 0, -2000);
+    const scene = { frame: frameWithPeople(), plantsNear: plantsNearSpots(vegetation), vegetation };
+
+    const screen = screenOf(camera, 0, 6, -2000);
 
     expect(new EntityPicker(camera, flatGround).pickGrabbable(scene, screen, VIEWPORT, null)).toEqual({
       id: 0,

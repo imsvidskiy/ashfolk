@@ -401,6 +401,31 @@ describe("pointer controls", () => {
     expect(rig.tool.end).toHaveBeenCalledTimes(1);
   });
 
+  it("moves a still carry once, again on a new frame, and again when grabbed afresh at the same pixel", () => {
+    const rig = createRig();
+
+    mouse(rig, "pointerdown", 100, 300);
+    rig.tool.move.mockClear();
+    rig.controls.update();
+    rig.controls.update();
+    rig.controls.update();
+
+    expect(rig.tool.move).toHaveBeenCalledTimes(1);
+
+    rig.controls.rehover();
+    rig.controls.update();
+
+    expect(rig.tool.move).toHaveBeenCalledTimes(2);
+
+    mouse(rig, "pointerup", 100, 300);
+    mouse(rig, "pointerdown", 100, 300);
+    rig.controls.update();
+
+    expect(rig.tool.move).toHaveBeenCalledTimes(3);
+
+    mouse(rig, "pointerup", 100, 300);
+  });
+
   it("leaves taps to the tool while one is selected", () => {
     const rig = createRig(isNeverTrue);
 

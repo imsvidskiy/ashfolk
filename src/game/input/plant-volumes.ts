@@ -2,6 +2,7 @@ import type { Ray } from "three/webgpu";
 import { PLANT_SPECIES, type PlantSpeciesIndex } from "../../content/plants.ts";
 import { buildPlantVariants, canonicalHeight } from "../../models/plants/plant-models.ts";
 import { clamp } from "../../shared/math.ts";
+import { isGrabbablePlant } from "../../simulation/hand/grab-target.ts";
 
 const BANDS = 20;
 const CROWN_SHARE_OF_WIDEST = 0.45;
@@ -79,6 +80,14 @@ export function plantVolume(species: number): PlantVolume {
   measured.set(species, volume);
 
   return volume;
+}
+
+export function measureGrabbablePlants(): void {
+  for (const { index } of PLANT_SPECIES) {
+    if (isGrabbablePlant(index)) {
+      plantVolume(index);
+    }
+  }
 }
 
 function nearestAhead(first: number, second: number): number | null {

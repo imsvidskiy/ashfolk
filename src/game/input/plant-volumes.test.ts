@@ -37,6 +37,9 @@ describe("plant volumes", () => {
     const low = plantHitDistance(sideways(4), spruce, 0);
     const high = plantHitDistance(sideways(17), spruce, 0);
 
+    expect(low).not.toBeNull();
+    expect(high).not.toBeNull();
     expect(low ?? 0).toBeLessThan(high ?? 0);
+    expect(plantHitDistance(sideways(spruce.height * 1.25), spruce, 0)).toBeNull();
   });
 });
