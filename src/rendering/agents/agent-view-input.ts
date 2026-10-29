@@ -1,5 +1,5 @@
 import type { WorldMirror } from "../../game/world-mirror.ts";
-import type { GrabbableKind, GrabTarget } from "../../simulation/hand/grab-target.ts";
+import type { GrabTarget } from "../../simulation/hand/grab-target.ts";
 import type { Inspection } from "../../simulation/inspection.ts";
 import { footingOn } from "../../world/crossings.ts";
 import type { HandMotion, HandPose } from "../hand-motion.ts";
@@ -18,6 +18,11 @@ export interface AgentViewInput extends ViewInput {
   readonly markers: AgentMarkers;
   readonly realSeconds: number;
   readonly secondsSinceTick: number;
+}
+
+export interface AgentSpot {
+  readonly x: number;
+  readonly z: number;
 }
 
 export interface LevelDistances {
@@ -72,10 +77,6 @@ export function holdFigure(
   if (isHighlighted) {
     palette.highlightRow.value = row;
   }
-}
-
-export function isHighlightedAgent(highlighted: GrabTarget | null, kind: GrabbableKind, id: number): boolean {
-  return highlighted !== null && highlighted.kind === kind && highlighted.id === id;
 }
 
 export function forgetUnseen<Visual>(visuals: Map<number, Visual>, seen: ReadonlySet<number>): void {

@@ -1,5 +1,5 @@
 import { clamp, lerp, smoothstep } from "../shared/math.ts";
-import type { GrabbableKind, GrabTarget, HeldView } from "../simulation/hand/grab-target.ts";
+import { type GrabbableKind, type GrabTarget, type HeldView, isTarget } from "../simulation/hand/grab-target.ts";
 import { HELD_LIFT } from "./view-input.ts";
 
 export const LIFT_SECONDS = 0.38;
@@ -47,10 +47,6 @@ export function landing(progress: number, fromLift: number): number {
   return BOUNCE_HEIGHT * 4 * hop * (1 - hop);
 }
 
-function isSame(subject: GrabTarget | null, kind: GrabbableKind, id: number): boolean {
-  return subject !== null && subject.kind === kind && subject.id === id;
-}
-
 export class HandMotion {
   #duration = UNKNOWN_DURATION;
   #fromLift = 0;
@@ -90,7 +86,7 @@ export class HandMotion {
   }
 
   poseOf(kind: GrabbableKind, id: number, restX: number, restZ: number): HandPose | null {
-    if (!isSame(this.#subject, kind, id)) {
+    if (!isTarget(this.#subject, kind, id)) {
       return null;
     }
 
@@ -102,7 +98,7 @@ export class HandMotion {
   }
 
   #carry(held: HeldView, seconds: number): void {
-    if (this.#phase !== "carried" || !isSame(this.#subject, held.kind, held.id)) {
+    if (this.#phase !== "carried" || !isTarget(this.#subject, held.kind, held.id)) {
       this.#pickUp(held);
 
       return;
@@ -129,7 +125,7 @@ export class HandMotion {
   }
 
   #pickUp(held: HeldView): void {
-    const isRegrab = isSame(this.#subject, held.kind, held.id);
+    const isRegrab = isTarget(this.#subject, held.kind, held.id);
 
     this.#subject = { id: held.id, kind: held.kind };
     this.#phase = "carried";
