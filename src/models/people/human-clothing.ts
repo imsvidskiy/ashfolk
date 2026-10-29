@@ -6,7 +6,7 @@ import { type LoftSection, loft, panel, sphere, torus, tube } from "../mesh/shap
 import { combine, transformOf } from "../mesh/transforms.ts";
 import { triangleWave } from "../rig/curves.ts";
 import { FOOT_SECTIONS, footTransform, forEachSide } from "./human-anatomy.ts";
-import { type HumanDetail, trimSegments } from "./human-detail.ts";
+import { type HumanDetail, trimmedRing, trimSegments } from "./human-detail.ts";
 import { FLEXIBLE_TORSO_STYLE, legStyle, skirtStyle } from "./human-rigging.ts";
 
 const WAIST_LINE = 0.95;
@@ -153,7 +153,7 @@ function garmentStyle(followsLegs: number, hemLine = 0.55): VertexStyle {
 function addBelt(builder: MeshBuilder, detail: HumanDetail, belt: Belt): void {
   const { depthRatio, radius, y } = belt;
 
-  builder.add(torus(radius, 0.012, trimSegments(detail, 14), trimSegments(detail, 4)), {
+  builder.add(trimmedRing(detail, radius, 0.012, 14), {
     style: { ...FLEXIBLE_TORSO_STYLE, slot: MaterialSlot.Accent },
     transform: transformOf({ position: [0, y, -0.004], scale: [1, 1, depthRatio] }),
   });

@@ -77,7 +77,7 @@ function basketShape(detail: HumanDetail): Shape {
       { radius: 0.092, y: 0.065 },
       { radius: 0, y: 0.055 },
     ],
-    Math.max(7, detail.limbSegments + 3)
+    detail.limbSegments + 3
   );
 }
 

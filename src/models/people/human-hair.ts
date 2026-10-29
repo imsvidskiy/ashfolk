@@ -5,12 +5,12 @@ import { alongPath, segmentsAtLeast } from "../level-of-detail.ts";
 import { MaterialSlot } from "../materials.ts";
 import type { MeshBuilder } from "../mesh/mesh-builder.ts";
 import { deformShape, type Shape, type ShapeVertex } from "../mesh/shape.ts";
-import { type LoftSection, loft, panel, sphere, type TubePoint, torus, tube } from "../mesh/shapes.ts";
+import { type LoftSection, loft, panel, sphere, type TubePoint, tube } from "../mesh/shapes.ts";
 import { combine, transformOf } from "../mesh/transforms.ts";
 import { triangleWave } from "../rig/curves.ts";
 import { rigidStyle } from "../rig/skin-weights.ts";
 import { forEachSide, HEAD_AXIS_Z, HEAD_CROWN, HEAD_SECTIONS } from "./human-anatomy.ts";
-import { type HumanDetail, trimSegments } from "./human-detail.ts";
+import { type HumanDetail, trimmedRing } from "./human-detail.ts";
 import { headToChestStyle } from "./human-rigging.ts";
 import { HumanBone } from "./human-skeleton.ts";
 
@@ -264,7 +264,7 @@ export function addBraids(builder: MeshBuilder, detail: HumanDetail): void {
       style,
       transform: mirror,
     });
-    builder.add(torus(0.016, 0.006, trimSegments(detail, 8), trimSegments(detail, 4)), {
+    builder.add(trimmedRing(detail, 0.016, 0.006, 8), {
       style: { ...style, slot: MaterialSlot.Accent },
       transform: combine(mirror, transformOf({ position: [0.12, 1.325, 0.088], rotation: [0.3, 0, 0] })),
     });
@@ -311,7 +311,7 @@ export function addPonytail(builder: MeshBuilder, detail: HumanDetail): void {
     ),
     { style: { ...headToChestStyle(1.62, 1.46), slot: MaterialSlot.Hair } }
   );
-  builder.add(torus(0.03, 0.007, trimSegments(detail, 8), trimSegments(detail, 4)), {
+  builder.add(trimmedRing(detail, 0.03, 0.007, 8), {
     style: { ...rigidStyle(HumanBone.Head), slot: MaterialSlot.Accent },
     transform: transformOf({ position: [0, 1.672, -0.112], rotation: [1.2, 0, 0] }),
   });
