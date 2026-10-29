@@ -7,7 +7,7 @@ import { gradientXAt, gradientZAt, slopeAt } from "../world/footing.ts";
 import { hasWater } from "../world/water.ts";
 import { ORTHOGONAL_STEPS, type WorldGrid } from "../world/world-grid.ts";
 import type { ClimateProfile } from "./island-layout.ts";
-import { type IslandPoint, islandPointAt } from "./relief.ts";
+import { islandPointAt } from "./relief.ts";
 import {
   findPools,
   findSmallAreas,
@@ -92,12 +92,10 @@ export function altitudeChill(height: number): number {
   return LAPSE_PER_METER * height + summitChill(height);
 }
 
-function baseTemperature(profile: ClimateProfile, height: number, point: IslandPoint, desert: number): number {
-  const warmth = profile.warmthX * point.x + profile.warmthZ * point.z;
-
+function baseTemperature(profile: ClimateProfile, height: number, warmSide: number, desert: number): number {
   const summit = summitChill(height);
 
-  return 9.6 + profile.temperatureOffset - LAPSE_PER_METER * (height - 200) - summit + warmth + 3.5 * desert;
+  return 9.6 + profile.temperatureOffset - LAPSE_PER_METER * (height - 200) - summit + warmSide + 3.5 * desert;
 }
 
 function classifyColdOrSteep(cell: CellClimate): BiomeIndex | null {
@@ -373,9 +371,9 @@ export function buildClimate(profile: ClimateProfile, inputs: WetlandInputs): Cl
       const moistureNoise = 0.28 * noise.fractal(point.x * 1.3 + 11, point.z * 1.3 - 7, { octaves: 4 });
       const waterInfluence = 0.36 * Math.exp(-waterDistance[cell] / 13);
 
-      const temperature = baseTemperature(profile, height, point, desert);
-      const isWater = hasWater(waterSurface[cell], height);
       const warmSide = profile.warmthX * point.x + profile.warmthZ * point.z;
+      const temperature = baseTemperature(profile, height, warmSide, desert);
+      const isWater = hasWater(waterSurface[cell], height);
       const moisture = saturate(
         0.5 + profile.moistureOffset + moistureNoise + waterInfluence + 0.14 * shaded - 0.8 * desert - 0.01 * warmSide
       );
