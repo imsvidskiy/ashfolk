@@ -9,6 +9,7 @@ import type { EngineStatus } from "./engine-launcher.ts";
 import { useEngineStore } from "./engine-store.ts";
 import { IslandSketchView } from "./island-sketch-view.tsx";
 import { useLaunchStore } from "./launch-store.ts";
+import { reloadPage } from "./reload-page.ts";
 
 const CAPTION_GLOW = "[text-shadow:0_0_12px_rgb(255_255_255/0.9),0_0_2px_rgb(255_255_255/0.9)]";
 
@@ -108,9 +109,7 @@ function useReloadAfterSave(saved: Promise<unknown>) {
 
   function handleReload(): void {
     setIsReloading(true);
-    saved.finally(() => {
-      window.location.reload();
-    });
+    saved.then(reloadPage, reloadPage);
   }
 
   return { handleReload, isReloading };

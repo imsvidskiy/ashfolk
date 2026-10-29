@@ -5,7 +5,6 @@ import type { GameEngine, WorldSource } from "../game/game-engine.ts";
 import type { GameSession } from "../game/game-session.ts";
 import { DEFAULT_GENERATION_OPTIONS, type GenerationProgress } from "../generation/generation-options.ts";
 import { toError } from "../shared/errors.ts";
-import { ignore } from "../shared/ignore.ts";
 import type { LaunchOptions } from "./launch-options.ts";
 
 export type EngineStatus =
@@ -30,6 +29,24 @@ export function reportStop(session: GameSession, onStatus: EngineStatusListener)
     if (status.kind === "failed") {
       onStatus({ kind: "stopped", message: status.error.message });
     }
+  });
+}
+
+export function reportGraphicsLost(
+  engine: Pick<GameEngine, "graphicsLost" | "stop">,
+  isCurrent: () => boolean,
+  onStatus: EngineStatusListener
+): void {
+  engine.graphicsLost.then(() => {
+    if (!isCurrent()) {
+      return;
+    }
+
+    engine.stop();
+
+    const saved = useSavesStore.getState().saveNow();
+
+    onStatus({ kind: "graphicsLost", saved });
   });
 }
 
@@ -135,21 +152,13 @@ export class EngineLauncher {
       this.#onStatus(status);
     });
     this.#onStatus({ engine, kind: "ready" });
-    engine.graphicsLost.then(() => {
-      this.#loseGraphics(engine);
-    }, ignore);
-  }
-
-  #loseGraphics(engine: GameEngine): void {
-    if (this.#engine !== engine) {
-      return;
-    }
-
-    engine.stop();
-
-    const saved = useSavesStore.getState().saveNow();
-
-    this.#onStatus({ kind: "graphicsLost", saved });
+    reportGraphicsLost(
+      engine,
+      () => {
+        return this.#engine === engine;
+      },
+      this.#onStatus
+    );
   }
 
   #reportProgress(progress: GenerationProgress): void {
