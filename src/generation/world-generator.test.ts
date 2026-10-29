@@ -37,7 +37,7 @@ const JUNCTION_CELLS = 1.5;
 const TRUNK_LAKE_CELLS = 1.5;
 const SMOOTHING_SLACK = 10;
 const LAKE_REACH = 20;
-const NO_LAKE = -1;
+const NO_PATCH = -1;
 const RIVER_SAMPLE_STEP = 5;
 const FLOAT_SLACK = 1e-3;
 const INLAND_REACH = 60;
@@ -814,12 +814,11 @@ function isAtLake(generated: GeneratedWorld, point: RiverPoint): boolean {
   return lakeCellsNear(generated, point).length > 0;
 }
 
-function labelLakes(generated: GeneratedWorld): Int32Array {
-  const grid = new WorldGrid(generated.dimensions);
-  const labels = new Int32Array(grid.cellCount).fill(NO_LAKE);
+function labelPatches(grid: WorldGrid, isInside: (cell: number) => boolean): Int32Array {
+  const labels = new Int32Array(grid.cellCount).fill(NO_PATCH);
 
   for (let start = 0; start < grid.cellCount; start += 1) {
-    if (labels[start] !== NO_LAKE || !isLakeWater(generated.terrain, start)) {
+    if (labels[start] !== NO_PATCH || !isInside(start)) {
       continue;
     }
 
@@ -829,7 +828,7 @@ function labelLakes(generated: GeneratedWorld): Int32Array {
 
     for (let cell = stack.pop(); cell !== undefined; cell = stack.pop()) {
       for (const neighbor of cellsAround(grid, cell, 1, grid.cellSize)) {
-        if (labels[neighbor] === NO_LAKE && isLakeWater(generated.terrain, neighbor)) {
+        if (labels[neighbor] === NO_PATCH && isInside(neighbor)) {
           labels[neighbor] = start;
           stack.push(neighbor);
         }
@@ -838,6 +837,12 @@ function labelLakes(generated: GeneratedWorld): Int32Array {
   }
 
   return labels;
+}
+
+function labelLakes(generated: GeneratedWorld): Int32Array {
+  return labelPatches(new WorldGrid(generated.dimensions), (cell) => {
+    return isLakeWater(generated.terrain, cell);
+  });
 }
 
 function sharesLake(generated: GeneratedWorld, lakes: Int32Array, first: RiverPoint, second: RiverPoint): boolean {
@@ -1299,35 +1304,20 @@ function lowRockMask(generated: GeneratedWorld): Uint8Array {
 }
 
 function largestPatch(grid: WorldGrid, mask: Uint8Array): number {
-  const seen = new Uint8Array(mask.length);
+  const labels = labelPatches(grid, (cell) => {
+    return mask[cell] === 1;
+  });
+  const sizes = new Int32Array(labels.length);
 
-  let largest = 0;
-
-  for (let start = 0; start < mask.length; start += 1) {
-    if (mask[start] === 0 || seen[start] === 1) {
-      continue;
+  for (const label of labels) {
+    if (label !== NO_PATCH) {
+      sizes[label] += 1;
     }
-
-    const stack = [start];
-    let size = 0;
-
-    seen[start] = 1;
-
-    for (let cell = stack.pop(); cell !== undefined; cell = stack.pop()) {
-      size += 1;
-
-      for (const neighbor of cellsAround(grid, cell, 1, grid.cellSize)) {
-        if (mask[neighbor] === 1 && seen[neighbor] === 0) {
-          seen[neighbor] = 1;
-          stack.push(neighbor);
-        }
-      }
-    }
-
-    largest = Math.max(largest, size);
   }
 
-  return largest;
+  return sizes.reduce((largest, size) => {
+    return Math.max(largest, size);
+  }, 0);
 }
 
 function slopeAutocorrelation(generated: GeneratedWorld, lags: number): number[] {
@@ -1852,8 +1842,8 @@ describe("full-size island rim", () => {
   it("breaks rock well below the tree line into small outcrops", () => {
     const grid = new WorldGrid(fullSize.dimensions);
     const mask = lowRockMask(fullSize);
-    const rockCells = mask.reduce((total, isRock) => {
-      return total + isRock;
+    const rockCells = mask.reduce((total, value) => {
+      return total + value;
     }, 0);
 
     expect(rockCells / grid.cellCount).toBeLessThan(0.02);

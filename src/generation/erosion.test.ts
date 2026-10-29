@@ -59,10 +59,8 @@ describe("thermal relaxation", () => {
     expect(steepestSlope(heights, size)).toBeLessThan(0.81);
     expect(sumOf(heights)).toBeCloseTo(before, -1);
   });
-});
 
-describe("thermal relaxation of a steep face", () => {
-  it("lowers it to an even slope instead of a staircase", () => {
+  it("lowers a steep face to an even slope instead of a staircase", () => {
     const size = 64;
     const heights = Float32Array.from({ length: size * size }, (_, cell) => {
       const column = cell % size;
