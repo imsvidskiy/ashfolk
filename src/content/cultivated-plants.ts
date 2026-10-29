@@ -52,7 +52,7 @@ export const CULTIVATED_PLANT_SPECIES: readonly PlantSpeciesDefinition[] = [
     index: CultivatedSpecies.Raspberry,
     name: "Raspberry canes",
     radiusPerMeter: 0.5,
-    steepestSlope: 0.85,
+    steepestSlope: 1.05,
     wood: 0,
   },
   {
@@ -63,7 +63,7 @@ export const CULTIVATED_PLANT_SPECIES: readonly PlantSpeciesDefinition[] = [
     index: CultivatedSpecies.Blueberry,
     name: "Blueberry",
     radiusPerMeter: 1,
-    steepestSlope: 0.9,
+    steepestSlope: 1.05,
     wood: 0,
   },
   {
@@ -74,7 +74,7 @@ export const CULTIVATED_PLANT_SPECIES: readonly PlantSpeciesDefinition[] = [
     index: CultivatedSpecies.Currant,
     name: "Currant bush",
     radiusPerMeter: 0.6,
-    steepestSlope: 0.85,
+    steepestSlope: 1.05,
     wood: 0,
   },
 ];

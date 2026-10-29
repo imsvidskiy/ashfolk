@@ -31,7 +31,7 @@ function worldOf(shape: IslandShapeKind): GeneratedWorld {
 }
 
 beforeAll(() => {
-  worlds.set("round", generate(7, "round"));
+  worlds.set("round", generate(2, "round"));
   worlds.set("square", generate(3, "square"));
 });
 

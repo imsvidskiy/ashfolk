@@ -37,6 +37,7 @@ const JUNCTION_CELLS = 1.5;
 const TRUNK_LAKE_CELLS = 1.5;
 const SMOOTHING_SLACK = 10;
 const LAKE_REACH = 20;
+const NO_PATCH = -1;
 const RIVER_SAMPLE_STEP = 5;
 const FLOAT_SLACK = 1e-3;
 const INLAND_REACH = 60;
@@ -53,6 +54,11 @@ const VARIETY_SEEDS = Array.from({ length: 16 }, (_, index) => {
   return index + 1;
 });
 const CAMP_SLOPE = 0.22;
+const WELL_BELOW_TREE_LINE = 4.6;
+const CLIFF_SLOPE = 0.86;
+const STEEP_SLOPE = 0.9;
+const TERRACE_WINDOW = 24;
+const TERRACE_STEEPNESS = 0.6;
 const CAMP_COAST_MARGIN = 120;
 const BIOME_GROUPS = {
   cold: [Biome.Alpine, Biome.Glacier, Biome.Tundra],
@@ -90,6 +96,13 @@ interface IslandSurvey {
   readonly lakes: number;
   readonly rivers: number;
   readonly shares: Readonly<Record<keyof typeof BIOME_GROUPS, number>>;
+}
+
+interface RockSurvey {
+  readonly gentleLowRock: number;
+  readonly rockShare: number;
+  readonly steepLowCells: number;
+  readonly steepLowRock: number;
 }
 
 interface PointBounds {
@@ -789,15 +802,93 @@ function squaredDistanceToBounds(point: RiverPoint, bounds: PointBounds): number
   return offsetX * offsetX + offsetZ * offsetZ;
 }
 
+function lakeCellsNear(generated: GeneratedWorld, point: RiverPoint): number[] {
+  const grid = new WorldGrid(generated.dimensions);
+
+  return grid.cellsInRadius(point.x, point.z, LAKE_REACH).filter((cell) => {
+    return isLakeWater(generated.terrain, cell);
+  });
+}
+
+function isAtLake(generated: GeneratedWorld, point: RiverPoint): boolean {
+  return lakeCellsNear(generated, point).length > 0;
+}
+
+function labelPatches(grid: WorldGrid, isInside: (cell: number) => boolean): Int32Array {
+  const labels = new Int32Array(grid.cellCount).fill(NO_PATCH);
+
+  for (let start = 0; start < grid.cellCount; start += 1) {
+    if (labels[start] !== NO_PATCH || !isInside(start)) {
+      continue;
+    }
+
+    const stack = [start];
+
+    labels[start] = start;
+
+    for (let cell = stack.pop(); cell !== undefined; cell = stack.pop()) {
+      for (const neighbor of cellsAround(grid, cell, 1, grid.cellSize)) {
+        if (labels[neighbor] === NO_PATCH && isInside(neighbor)) {
+          labels[neighbor] = start;
+          stack.push(neighbor);
+        }
+      }
+    }
+  }
+
+  return labels;
+}
+
+function labelLakes(generated: GeneratedWorld): Int32Array {
+  return labelPatches(new WorldGrid(generated.dimensions), (cell) => {
+    return isLakeWater(generated.terrain, cell);
+  });
+}
+
+function sharesLake(generated: GeneratedWorld, lakes: Int32Array, first: RiverPoint, second: RiverPoint): boolean {
+  const firstLakes = new Set(
+    lakeCellsNear(generated, first).map((cell) => {
+      return lakes[cell];
+    })
+  );
+
+  return lakeCellsNear(generated, second).some((cell) => {
+    return firstLakes.has(lakes[cell]);
+  });
+}
+
+function lakeCrossingsOf(generated: GeneratedWorld, lakes: Int32Array, first: River, second: River): RiverPoint[] {
+  const crossings: RiverPoint[] = [];
+
+  for (const [inflow, outflow] of [
+    [first, second],
+    [second, first],
+  ] as const) {
+    const [source] = outflow.points;
+    const mouth = riverEnd(inflow);
+
+    if (source !== undefined && sharesLake(generated, lakes, mouth, source)) {
+      crossings.push(mouth, source);
+    }
+  }
+
+  return crossings;
+}
+
 function closestDistinctRivers(generated: GeneratedWorld): number {
   const { cellSize } = generated.dimensions;
   const { rivers } = generated.water;
+
+  const lakes = labelLakes(generated);
 
   let closestSquared = Number.POSITIVE_INFINITY;
 
   for (const [index, first] of rivers.entries()) {
     for (const second of rivers.slice(index + 1)) {
-      const confluences = confluencesOf(rivers, first, second, cellSize * JUNCTION_CELLS);
+      const confluences = [
+        ...confluencesOf(rivers, first, second, cellSize * JUNCTION_CELLS),
+        ...lakeCrossingsOf(generated, lakes, first, second),
+      ];
 
       function isApart(point: RiverPoint): boolean {
         return confluences.every((confluence) => {
@@ -944,8 +1035,6 @@ function endsAwayFromWater(generated: GeneratedWorld): string[] {
   const { cellSize } = generated.dimensions;
   const { rivers } = generated.water;
 
-  const grid = new WorldGrid(generated.dimensions);
-
   return rivers
     .filter((river) => {
       const end = riverEnd(river);
@@ -953,11 +1042,8 @@ function endsAwayFromWater(generated: GeneratedWorld): string[] {
       const joins = rivers.some((other) => {
         return other !== river && joinsRiver(river, other, cellSize * JUNCTION_CELLS);
       });
-      const reachesLake = grid.cellsInRadius(end.x, end.z, LAKE_REACH).some((cell) => {
-        return isLakeWater(generated.terrain, cell);
-      });
 
-      return !(river.reachesEdge || joins || reachesLake);
+      return !(river.reachesEdge || joins || isAtLake(generated, end));
     })
     .map((river) => {
       const end = riverEnd(river);
@@ -1171,6 +1257,126 @@ function surveyIsland(generated: GeneratedWorld): IslandSurvey {
       swamp: shareOf(BIOME_GROUPS.swamp),
     },
   };
+}
+
+function surveyRock(generated: GeneratedWorld): RockSurvey {
+  const { terrain } = generated;
+
+  const grid = new WorldGrid(generated.dimensions);
+
+  let landCells = 0;
+  let rockCells = 0;
+  let gentleLowRock = 0;
+  let steepLowCells = 0;
+  let steepLowRock = 0;
+
+  for (let cell = 0; cell < grid.cellCount; cell += 1) {
+    if (!isOnIsland(terrain.coastDistance, cell) || hasWater(terrain.waterSurface[cell], terrain.height[cell])) {
+      continue;
+    }
+
+    const isRock = terrain.biome[cell] === Biome.Alpine;
+    const isWellBelowTreeLine = terrain.baseTemperature[cell] > WELL_BELOW_TREE_LINE;
+    const slope = slopeAt(terrain.height, grid, cell);
+
+    landCells += 1;
+    rockCells += isRock ? 1 : 0;
+
+    if (isWellBelowTreeLine && isRock && slope <= CLIFF_SLOPE) {
+      gentleLowRock += 1;
+    }
+
+    if (isWellBelowTreeLine && slope > STEEP_SLOPE) {
+      steepLowCells += 1;
+      steepLowRock += isRock ? 1 : 0;
+    }
+  }
+
+  return { gentleLowRock, rockShare: rockCells / landCells, steepLowCells, steepLowRock };
+}
+
+function lowRockMask(generated: GeneratedWorld): Uint8Array {
+  const { terrain } = generated;
+
+  return terrain.biome.map((biome, cell) => {
+    return biome === Biome.Alpine && terrain.baseTemperature[cell] > WELL_BELOW_TREE_LINE ? 1 : 0;
+  });
+}
+
+function largestPatch(grid: WorldGrid, mask: Uint8Array): number {
+  const labels = labelPatches(grid, (cell) => {
+    return mask[cell] === 1;
+  });
+  const sizes = new Int32Array(labels.length);
+
+  for (const label of labels) {
+    if (label !== NO_PATCH) {
+      sizes[label] += 1;
+    }
+  }
+
+  return sizes.reduce((largest, size) => {
+    return Math.max(largest, size);
+  }, 0);
+}
+
+function slopeAutocorrelation(generated: GeneratedWorld, lags: number): number[] {
+  const { height } = generated.terrain;
+
+  const grid = new WorldGrid(generated.dimensions);
+  const size = grid.cellsPerSide;
+  const sums = new Array<number>(lags + 1).fill(0);
+
+  let windows = 0;
+
+  for (let row = 0; row < size; row += 1) {
+    for (let column = 0; column + TERRACE_WINDOW < size; column += TERRACE_WINDOW / 2) {
+      const steps = Array.from({ length: TERRACE_WINDOW }, (_, offset) => {
+        const cell = grid.index(column + offset, row);
+
+        return (height[cell + 1] - height[cell]) / grid.cellSize;
+      });
+
+      if (
+        steps.some((step) => {
+          return Math.abs(step) < TERRACE_STEEPNESS;
+        })
+      ) {
+        continue;
+      }
+
+      const mean =
+        steps.reduce((total, step) => {
+          return total + step;
+        }, 0) / steps.length;
+      const residuals = steps.map((step) => {
+        return step - mean;
+      });
+      const variance = residuals.reduce((total, residual) => {
+        return total + residual * residual;
+      }, 0);
+
+      if (variance < 1e-6) {
+        continue;
+      }
+
+      for (let lag = 0; lag <= lags; lag += 1) {
+        let product = 0;
+
+        for (let index = 0; index + lag < residuals.length; index += 1) {
+          product += residuals[index] * residuals[index + lag];
+        }
+
+        sums[lag] += product / variance;
+      }
+
+      windows += 1;
+    }
+  }
+
+  return sums.map((sum) => {
+    return sum / windows;
+  });
 }
 
 beforeAll(() => {
@@ -1633,6 +1839,27 @@ describe("full-size island rim", () => {
     fullSquare = generateWorld(1, { ...DEFAULT_GENERATION_OPTIONS, shape: "square" });
   }, 60_000);
 
+  it("breaks rock well below the tree line into small outcrops", () => {
+    const grid = new WorldGrid(fullSize.dimensions);
+    const mask = lowRockMask(fullSize);
+    const rockCells = mask.reduce((total, value) => {
+      return total + value;
+    }, 0);
+
+    expect(rockCells / grid.cellCount).toBeLessThan(0.02);
+    expect(largestPatch(grid, mask)).toBeLessThan(4500);
+  });
+
+  it("leaves no periodic terraces on steep slopes", () => {
+    const correlation = slopeAutocorrelation(fullSize, 4);
+
+    expect(correlation[1]).toBeGreaterThan(0.6);
+
+    for (let lag = 2; lag < correlation.length; lag += 1) {
+      expect(correlation[lag]).toBeLessThan(correlation[lag - 1]);
+    }
+  });
+
   it("meets the square cliff at a moderate height without steps that could open gaps", () => {
     const grid = new WorldGrid(fullSquare.dimensions);
 
@@ -1785,10 +2012,14 @@ describe("full-size island rim", () => {
 describe("islands across seeds", () => {
   const options = { dimensions: VARIETY_DIMENSIONS, erosionStrength: 1 };
   const surveys: IslandSurvey[] = [];
+  const rocks: RockSurvey[] = [];
 
   beforeAll(() => {
     for (const seed of VARIETY_SEEDS) {
-      surveys.push(surveyIsland(generateWorld(seed, { ...options, shape: "round" })));
+      const generated = generateWorld(seed, { ...options, shape: "round" });
+
+      surveys.push(surveyIsland(generated));
+      rocks.push(surveyRock(generated));
     }
 
     for (const seed of VARIETY_SEEDS.slice(0, 6)) {
@@ -1838,6 +2069,38 @@ describe("islands across seeds", () => {
       expect(shares.swamp).toBeGreaterThan(0.001);
       expect(shares.swamp).toBeLessThan(0.07);
     }
+  });
+
+  it("bares rock well below the tree line only on cliffs", () => {
+    for (const rock of rocks) {
+      expect(rock.gentleLowRock).toBe(0);
+    }
+  });
+
+  it("keeps most steep slopes below the tree line wooded, with rock in outcrops", () => {
+    const steepCells = rocks.reduce((total, rock) => {
+      return total + rock.steepLowCells;
+    }, 0);
+    const steepRock = rocks.reduce((total, rock) => {
+      return total + rock.steepLowRock;
+    }, 0);
+
+    expect(steepRock / steepCells).toBeGreaterThan(0.05);
+    expect(steepRock / steepCells).toBeLessThan(0.45);
+  });
+
+  it("keeps bare rock to a modest share of the land", () => {
+    const shares = rocks.map((rock) => {
+      return rock.rockShare;
+    });
+    const mean =
+      shares.reduce((total, share) => {
+        return total + share;
+      }, 0) / shares.length;
+
+    expect(mean).toBeGreaterThan(0.03);
+    expect(mean).toBeLessThan(0.08);
+    expect(Math.max(...shares)).toBeLessThan(0.13);
   });
 
   it("leaves every island enough flat land, rivers and a lake", () => {
