@@ -5,9 +5,9 @@ import { FULL_TURN, lerp } from "../../shared/math.ts";
 import { MaterialSlot } from "../materials.ts";
 import { type MeshData, mergeMeshes } from "../mesh/mesh-data.ts";
 import { BERRY_BUSH_HEIGHTS, meshBerryBush } from "./berry-bushes.ts";
-import { type FruitLook, fruitDetail, fruitMeshes, ROUND_FRUIT } from "./orchard-fruit.ts";
+import { type FruitLook, fruitMeshes, ROUND_FRUIT } from "./orchard-fruit.ts";
 import { addBlob, addLimb, addTrunk, createGrowth, finish } from "./tree-growth.ts";
-import { BROADLEAF_LOOK, meshTree, type PlantDetailLevel } from "./tree-mesher.ts";
+import { BROADLEAF_LOOK, isDistantLevel, meshTree, type PlantDetailLevel } from "./tree-mesher.ts";
 import { type FoliageBlob, GOLDEN_ANGLE, jitter, type TreeStructure, tipOf, toVector } from "./tree-structure.ts";
 
 const FRUIT_TREE_HEIGHTS = {
@@ -234,9 +234,7 @@ function meshFruitTree(species: FruitTreeSpecies, seed: number, level: PlantDeta
   const structure = FRUIT_TREE_GENERATORS[species](seed);
   const tree = meshTree(structure, BROADLEAF_LOOK, level);
 
-  const detail = fruitDetail(level);
-
-  if (detail === null) {
+  if (isDistantLevel(level)) {
     return tree;
   }
 
@@ -249,7 +247,7 @@ function meshFruitTree(species: FruitTreeSpecies, seed: number, level: PlantDeta
     });
 
   const fruit = fruitMeshes(tree, {
-    detail,
+    detail: level,
     height: structure.height,
     hosts,
     look: FRUIT_LOOKS[species],

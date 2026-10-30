@@ -9,13 +9,11 @@ import { lathe, sphere } from "../mesh/shapes.ts";
 import { outermostHit } from "../mesh/surface-probe.ts";
 import { transformOf } from "../mesh/transforms.ts";
 import { BERRY_PART } from "./berries.ts";
-import { FOLIAGE_FLUTTER, type PlantDetailLevel, plantSway } from "./tree-mesher.ts";
+import { FOLIAGE_FLUTTER, type NearLevel, plantSway } from "./tree-mesher.ts";
 
 const HANGING_STEP = 1.45;
 const FRUIT_SINK = 0.4;
 const PEAR_CENTER = 0.72;
-
-export type FruitDetail = Exclude<PlantDetailLevel, "far" | "low">;
 
 type FruitShape = "pear" | "round";
 
@@ -28,14 +26,14 @@ export const ROUND_FRUIT: Tessellation = { rings: 3, segments: 5 };
 export const DISTANT_BERRY: Tessellation = { rings: 2, segments: 4 };
 
 export interface FruitLook {
-  readonly counts: Readonly<Record<FruitDetail, number>>;
+  readonly counts: Readonly<Record<NearLevel, number>>;
   readonly hanging: number;
   readonly highest: number;
   readonly lowest: number;
   readonly radius: number;
   readonly shape: FruitShape;
   readonly slot: MaterialSlotIndex;
-  readonly tessellation: Readonly<Record<FruitDetail, Tessellation>>;
+  readonly tessellation: Readonly<Record<NearLevel, Tessellation>>;
 }
 
 interface FruitHost {
@@ -44,14 +42,14 @@ interface FruitHost {
 }
 
 export interface FruitPlacement {
-  readonly detail: FruitDetail;
+  readonly detail: NearLevel;
   readonly height: number;
   readonly hosts: readonly FruitHost[];
   readonly look: FruitLook;
   readonly seed: number;
 }
 
-function fruitShape(look: FruitLook, detail: FruitDetail): Shape {
+function fruitShape(look: FruitLook, detail: NearLevel): Shape {
   const { rings, segments } = look.tessellation[detail];
 
   if (look.shape === "round") {
@@ -127,12 +125,4 @@ export function fruitMeshes(plant: MeshData, placement: FruitPlacement): MeshDat
   }
 
   return fruits;
-}
-
-export function fruitDetail(level: PlantDetailLevel): FruitDetail | null {
-  if (level === "high" || level === "medium") {
-    return level;
-  }
-
-  return null;
 }

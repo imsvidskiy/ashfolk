@@ -58,7 +58,7 @@ export type PlantDetailLevel = "far" | "high" | "low" | "medium";
 
 type DistantLevel = "far" | "low";
 
-type NearLevel = Exclude<PlantDetailLevel, DistantLevel>;
+export type NearLevel = Exclude<PlantDetailLevel, DistantLevel>;
 
 export interface TreeLook {
   readonly bark: MaterialSlotIndex;

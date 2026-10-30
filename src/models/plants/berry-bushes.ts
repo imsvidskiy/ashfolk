@@ -12,9 +12,16 @@ import { type MeshData, mergeMeshes } from "../mesh/mesh-data.ts";
 import type { Shape } from "../mesh/shape.ts";
 import { blob, icosphere, pointAlong, type TubePoint, tube } from "../mesh/shapes.ts";
 import { transformOf } from "../mesh/transforms.ts";
-import { DISTANT_BERRY, type FruitLook, fruitDetail, fruitMeshes, ROUND_FRUIT } from "./orchard-fruit.ts";
+import { DISTANT_BERRY, type FruitLook, fruitMeshes, ROUND_FRUIT } from "./orchard-fruit.ts";
 import { BLOB_TINT, createGrowth, type Growth } from "./tree-growth.ts";
-import { BROADLEAF_LOOK, foliageStyle, type PlantDetailLevel, plantSway } from "./tree-mesher.ts";
+import {
+  BROADLEAF_LOOK,
+  foliageStyle,
+  isDistantLevel,
+  type NearLevel,
+  type PlantDetailLevel,
+  plantSway,
+} from "./tree-mesher.ts";
 import { GOLDEN_ANGLE, growBranch, jitter, tiltedDirection, tipOf, toVector } from "./tree-structure.ts";
 
 export const BERRY_BUSH_HEIGHTS = {
@@ -226,7 +233,7 @@ function stemStyle(structure: BushStructure): VertexStyle {
   };
 }
 
-function leafShape(leaf: BushLeaf, level: PlantDetailLevel): Shape {
+function leafShape(leaf: BushLeaf, level: NearLevel): Shape {
   if (level !== "high") {
     return icosphere(leaf.radius, 0);
   }
@@ -276,7 +283,7 @@ function distantBush(structure: BushStructure): MeshData {
   return builder.build();
 }
 
-function stemPoints(stem: readonly TubePoint[], level: PlantDetailLevel): TubePoint[] {
+function stemPoints(stem: readonly TubePoint[], level: NearLevel): TubePoint[] {
   if (level === "high") {
     return stem.map((point) => {
       return { ...point, radius: point.radius * STEM_WIDENING };
@@ -286,7 +293,7 @@ function stemPoints(stem: readonly TubePoint[], level: PlantDetailLevel): TubePo
   return thinned(stem);
 }
 
-function bushStems(structure: BushStructure, level: PlantDetailLevel): MeshData {
+function bushStems(structure: BushStructure, level: NearLevel): MeshData {
   const builder = new MeshBuilder();
   const style = stemStyle(structure);
 
@@ -297,7 +304,7 @@ function bushStems(structure: BushStructure, level: PlantDetailLevel): MeshData 
   return builder.build();
 }
 
-function bushLeaf(structure: BushStructure, leaf: BushLeaf, level: PlantDetailLevel): MeshData {
+function bushLeaf(structure: BushStructure, leaf: BushLeaf, level: NearLevel): MeshData {
   const builder = new MeshBuilder();
 
   builder.add(leafShape(leaf, level), {
@@ -317,9 +324,7 @@ function othersThan<Item>(items: readonly Item[], skipped: number): Item[] {
 export function meshBerryBush(species: BerryBushSpecies, seed: number, level: PlantDetailLevel): MeshData {
   const structure = BUSH_GENERATORS[species](seed);
 
-  const detail = fruitDetail(level);
-
-  if (detail === null) {
+  if (isDistantLevel(level)) {
     return distantBush(structure);
   }
 
@@ -329,7 +334,7 @@ export function meshBerryBush(species: BerryBushSpecies, seed: number, level: Pl
   });
 
   const berries = fruitMeshes(mergeMeshes([stems, ...leaves]), {
-    detail,
+    detail: level,
     height: structure.height,
     hosts: structure.leaves,
     look: BERRY_LOOKS[species],

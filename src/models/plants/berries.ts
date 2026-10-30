@@ -8,7 +8,7 @@ import type { Shape } from "../mesh/shape.ts";
 import { icosphere, sphere } from "../mesh/shapes.ts";
 import { outermostHit } from "../mesh/surface-probe.ts";
 import { transformOf } from "../mesh/transforms.ts";
-import { FOLIAGE_FLUTTER, type PlantDetailLevel, plantSway, type TreeLook } from "./tree-mesher.ts";
+import { FOLIAGE_FLUTTER, type NearLevel, plantSway, type TreeLook } from "./tree-mesher.ts";
 import { GOLDEN_ANGLE, perpendicularBasis, type TreeStructure } from "./tree-structure.ts";
 
 export const BERRY_PART = 1;
@@ -21,7 +21,7 @@ const LONGEST_REACH = CLUSTER_SPREAD * 2.5;
 const BERRY_LIFT = 0.35;
 const HIGHEST_CLUSTER = 0.9;
 const LOWEST_CLUSTER = -0.05;
-const CLUSTER_COUNTS: Readonly<Record<PlantDetailLevel, number>> = { far: 0, high: 8, low: 0, medium: 4 };
+const CLUSTER_COUNTS: Readonly<Record<NearLevel, number>> = { high: 8, medium: 4 };
 
 export function isBerryPart(part: number): boolean {
   return part >= BERRY_PART;
@@ -33,7 +33,7 @@ function berryPart(cluster: number, berry: number): number {
   return BERRY_PART + ripening;
 }
 
-function berryShape(level: PlantDetailLevel): Shape {
+function berryShape(level: NearLevel): Shape {
   if (level === "high") {
     return icosphere(BERRY_RADIUS, 0);
   }
@@ -65,7 +65,7 @@ export function berryClusters(
   structure: TreeStructure,
   look: TreeLook,
   seed: number,
-  level: PlantDetailLevel
+  level: NearLevel
 ): MeshData {
   const random = createRandom(seed);
   const builder = new MeshBuilder({ flutter: FOLIAGE_FLUTTER, slot: MaterialSlot.Berry });
