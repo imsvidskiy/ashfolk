@@ -136,7 +136,7 @@ export function SavedWorldList() {
   const now = useNow(CLOCK_MILLISECONDS);
 
   if (!canReadSaves) {
-    return <SavesUnavailableNote />;
+    return <p className="text-ink-soft text-sm">{UNAVAILABLE_NOTE}</p>;
   }
 
   return (
