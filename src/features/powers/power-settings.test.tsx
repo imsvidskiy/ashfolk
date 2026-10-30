@@ -105,11 +105,13 @@ describe("power settings", () => {
 
     await species.click();
 
-    const options = screen.getByRole("option").elements();
+    await expect
+      .poll(() => {
+        return screen.getByRole("option").elements();
+      })
+      .toHaveLength(12);
 
-    expect(options).toHaveLength(12);
-
-    for (const option of options) {
+    for (const option of screen.getByRole("option").elements()) {
       expect(option.querySelectorAll("img")).toHaveLength(1);
     }
   });
