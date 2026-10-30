@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from "vitest";
-import { DEFAULT_WORLD_REQUEST } from "../../generation/generation-options.ts";
+import { DEFAULT_WORLD_REQUEST } from "../../generation/testing/world-request.ts";
 import { ignore } from "../../shared/ignore.ts";
 import { SAVE_VERSION, type SavedWorldState } from "../../simulation/saved-world.ts";
 import { Simulation } from "../../simulation/simulation.ts";

@@ -1,6 +1,7 @@
 import { expose, wrap } from "comlink";
 import { describe, expect, it } from "vitest";
-import { DEFAULT_WORLD_REQUEST, type WorldRequest } from "../generation/generation-options.ts";
+import type { WorldRequest } from "../generation/generation-options.ts";
+import { DEFAULT_WORLD_REQUEST } from "../generation/testing/world-request.ts";
 import { ignore } from "../shared/ignore.ts";
 import type { InitialWorld } from "../simulation/frame.ts";
 import type { SavedWorldState } from "../simulation/saved-world.ts";

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
+import { signedVolume } from "../testing/mesh-checks.ts";
 import { MeshBuilder } from "./mesh-builder.ts";
 import { mergeMeshes, triangleCount, vertexCount } from "./mesh-data.ts";
-import { signedVolume } from "./shape.ts";
 import { box } from "./shapes.ts";
 import { transformOf } from "./transforms.ts";
 

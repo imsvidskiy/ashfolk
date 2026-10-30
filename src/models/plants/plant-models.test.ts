@@ -6,7 +6,7 @@ import { highestExposedOpenEdge, meshProblems } from "../testing/mesh-checks.ts"
 import { isInsidePiece, loosePieces, type MeshPiece, meshPieces } from "../testing/mesh-connectivity.ts";
 import { windBentMesh } from "../testing/moved-mesh.ts";
 import { widestReach } from "../testing/structure-checks.ts";
-import { BERRY_RADIUS, isBerryPart } from "./berries.ts";
+import { BERRY_PART, BERRY_RADIUS } from "./berries.ts";
 import { CACTUS_FORMS, cactusForm } from "./cacti.ts";
 import {
   buildPlantVariants,
@@ -79,6 +79,10 @@ function averageTriangles(species: PlantSpeciesIndex, level: PlantDetailLevel): 
       return sum + triangleCount(mesh);
     }, 0) / variants.length
   );
+}
+
+function isBerryPart(part: number): boolean {
+  return part >= BERRY_PART;
 }
 
 function berryPieces(bush: MeshData): MeshPiece[] {
