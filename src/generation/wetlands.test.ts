@@ -1,14 +1,28 @@
-import { describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, it } from "vitest";
+import { Biome } from "../content/biomes.ts";
+import { isPoolGround } from "../content/grounds.ts";
+import { isOnIsland } from "../world/coast.ts";
 import { slopeAt } from "../world/footing.ts";
+import type { TerrainData } from "../world/terrain-data.ts";
 import { landEverywhere } from "../world/testing/terrain-fixtures.ts";
 import { NO_WATER } from "../world/water.ts";
-import { WorldGrid } from "../world/world-grid.ts";
+import { NEIGHBOR_OFFSETS, WorldGrid } from "../world/world-grid.ts";
+import { FULL_SIZE_TIMEOUT, fullSizeWorld } from "./testing/generated-worlds.ts";
 import { findPools, findSmallAreas, isWetland, matchWetlandShare, measureWetness } from "./wetlands.ts";
+import type { GeneratedWorld } from "./world-generator.ts";
 
 const grid = new WorldGrid({ cellSize: 10, cellsPerSide: 96 });
 const LAKE_RADIUS = 120;
 const LAKE_LEVEL = 100.5;
 const TIED_WETNESS_SHARE = 1 / 97;
+
+interface SwampSurvey {
+  readonly faults: string[];
+  landCells: number;
+  patches: number;
+  poolCells: number;
+  swampCells: number;
+}
 
 function wetnessOf(seed: number, desert = 0): Float32Array {
   const world = lakeWorld(seed, desert);
@@ -83,6 +97,64 @@ function square(column: number, row: number, size: number): number[] {
   }
 
   return cells;
+}
+
+function markPatch(swampGrid: WorldGrid, terrain: TerrainData, start: number, seen: Uint8Array): void {
+  const pending = [start];
+
+  seen[start] = 1;
+
+  for (const cell of pending) {
+    for (const offset of NEIGHBOR_OFFSETS) {
+      const neighbor = swampGrid.neighborIndex(swampGrid.columnOf(cell), swampGrid.rowOf(cell), offset);
+
+      if (neighbor >= 0 && seen[neighbor] === 0 && terrain.biome[neighbor] === Biome.Swamp) {
+        seen[neighbor] = 1;
+        pending.push(neighbor);
+      }
+    }
+  }
+}
+
+function surveySwamps(generated: GeneratedWorld): SwampSurvey {
+  const { terrain } = generated;
+
+  const swampGrid = new WorldGrid(generated.dimensions);
+  const seen = new Uint8Array(swampGrid.cellCount);
+  const survey: SwampSurvey = { faults: [], landCells: 0, patches: 0, poolCells: 0, swampCells: 0 };
+
+  for (let cell = 0; cell < swampGrid.cellCount; cell += 1) {
+    const isSwamp = terrain.biome[cell] === Biome.Swamp;
+
+    if (isOnIsland(terrain.coastDistance, cell) && terrain.biome[cell] !== Biome.Water) {
+      survey.landCells += 1;
+    }
+
+    if (isPoolGround(terrain.ground[cell])) {
+      survey.poolCells += 1;
+
+      if (!isSwamp) {
+        survey.faults.push(`pool outside a swamp at ${cell}`);
+      }
+    }
+
+    if (!isSwamp) {
+      continue;
+    }
+
+    survey.swampCells += 1;
+
+    if (terrain.dryness[cell] > 0.35 || terrain.height[cell] > 620 || slopeAt(terrain.height, swampGrid, cell) > 0.4) {
+      survey.faults.push(`swamp on dry, high or steep ground at ${cell}`);
+    }
+
+    if (seen[cell] === 0) {
+      survey.patches += 1;
+      markPatch(swampGrid, terrain, cell, seen);
+    }
+  }
+
+  return survey;
 }
 
 describe("wetlands", () => {
@@ -211,5 +283,25 @@ describe("wetlands", () => {
 
     expect(bentExponent(soakedBefore, soaked, 0)).toBeCloseTo(2.4, 4);
     expect(bentExponent(parchedBefore, parched, 0)).toBeCloseTo(0.7, 4);
+  });
+});
+
+describe("wetlands of full-size islands", () => {
+  let worlds: GeneratedWorld[];
+
+  beforeAll(() => {
+    worlds = [fullSizeWorld(7), fullSizeWorld(1, "square")];
+  }, FULL_SIZE_TIMEOUT);
+
+  it("grows several swamps with pools on low, flat, wet ground on both shapes", () => {
+    for (const generated of worlds) {
+      const survey = surveySwamps(generated);
+
+      expect(survey.faults).toEqual([]);
+      expect(survey.swampCells / survey.landCells).toBeGreaterThan(0.01);
+      expect(survey.swampCells / survey.landCells).toBeLessThan(0.07);
+      expect(survey.patches).toBeGreaterThanOrEqual(4);
+      expect(survey.poolCells).toBeGreaterThan(survey.swampCells * 0.03);
+    }
   });
 });

@@ -1,16 +1,42 @@
-import { describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, it } from "vitest";
+import { ISLAND_SHAPES } from "../world/island-shape.ts";
+import type { River, RiverPoint } from "../world/water.ts";
 import { WorldGrid } from "../world/world-grid.ts";
 import { NO_CELL } from "./drainage.ts";
 import type { RiverChain } from "./river-chains.ts";
-import { type RiverLand, spaceRiverChains } from "./river-spacing.ts";
+import { type RiverLand, SOURCE_REACH, spaceRiverChains } from "./river-spacing.ts";
+import { labelPatches } from "./testing/cell-patches.ts";
+import { coarseWorld, FULL_SIZE_TIMEOUT, fullSizeWorld } from "./testing/generated-worlds.ts";
+import {
+  endsAwayFromWater,
+  isLakeWater,
+  isNear,
+  JUNCTION_CELLS,
+  joinsRiver,
+  lakeCellsNear,
+  riverEnd,
+  riverPathCells,
+} from "./testing/water-checks.ts";
+import type { GeneratedWorld } from "./world-generator.ts";
 
 const TRUNK_COLUMN = 50;
 const TRUNK_HEAD_ROW = 10;
 const TRUNK_FLOW = 1000;
 const STREAM_FLOW = 500;
 const LATER_STREAM_FLOW = 400;
+const SMALLEST_RIVER_GAP = 35;
+const CONFLUENCE_REACH = 100;
+const TRUNK_LAKE_CELLS = 1.5;
+const SMOOTHING_SLACK = 10;
 
 const grid = new WorldGrid({ cellSize: 10, cellsPerSide: 100 });
+
+interface PointBounds {
+  maximumX: number;
+  maximumZ: number;
+  minimumX: number;
+  minimumZ: number;
+}
 
 function landWithLake(lake: number = NO_CELL): RiverLand {
   const accumulation = new Float32Array(grid.cellCount);
@@ -83,6 +109,185 @@ function stream(land: RiverLand, cells: number[], joinRow: number, flow: number)
   return { cells, joinsCell: trunkCell(joinRow), mouthReceiver: trunkCell(joinRow) };
 }
 
+function confluencesOf(rivers: readonly River[], first: River, second: River, reach: number): RiverPoint[] {
+  const confluences: RiverPoint[] = [];
+
+  for (const [tributary, main] of [
+    [first, second],
+    [second, first],
+  ] as const) {
+    if (joinsRiver(tributary, main, reach)) {
+      confluences.push(riverEnd(tributary));
+    }
+  }
+
+  for (const third of rivers) {
+    if (third !== first && third !== second && joinsRiver(first, third, reach) && joinsRiver(second, third, reach)) {
+      confluences.push(riverEnd(first), riverEnd(second));
+    }
+  }
+
+  return confluences;
+}
+
+function boundsOf(points: readonly RiverPoint[]): PointBounds {
+  const bounds = {
+    maximumX: Number.NEGATIVE_INFINITY,
+    maximumZ: Number.NEGATIVE_INFINITY,
+    minimumX: Number.POSITIVE_INFINITY,
+    minimumZ: Number.POSITIVE_INFINITY,
+  };
+
+  for (const point of points) {
+    bounds.minimumX = Math.min(bounds.minimumX, point.x);
+    bounds.maximumX = Math.max(bounds.maximumX, point.x);
+    bounds.minimumZ = Math.min(bounds.minimumZ, point.z);
+    bounds.maximumZ = Math.max(bounds.maximumZ, point.z);
+  }
+
+  return bounds;
+}
+
+function squaredDistanceToBounds(point: RiverPoint, bounds: PointBounds): number {
+  const offsetX = Math.max(bounds.minimumX - point.x, 0, point.x - bounds.maximumX);
+  const offsetZ = Math.max(bounds.minimumZ - point.z, 0, point.z - bounds.maximumZ);
+
+  return offsetX * offsetX + offsetZ * offsetZ;
+}
+
+function sharesLake(generated: GeneratedWorld, lakes: Int32Array, first: RiverPoint, second: RiverPoint): boolean {
+  const firstLakes = new Set(
+    lakeCellsNear(generated, first).map((cell) => {
+      return lakes[cell];
+    })
+  );
+
+  return lakeCellsNear(generated, second).some((cell) => {
+    return firstLakes.has(lakes[cell]);
+  });
+}
+
+function lakeCrossingsOf(generated: GeneratedWorld, lakes: Int32Array, first: River, second: River): RiverPoint[] {
+  const crossings: RiverPoint[] = [];
+
+  for (const [inflow, outflow] of [
+    [first, second],
+    [second, first],
+  ] as const) {
+    const [source] = outflow.points;
+    const mouth = riverEnd(inflow);
+
+    if (source !== undefined && sharesLake(generated, lakes, mouth, source)) {
+      crossings.push(mouth, source);
+    }
+  }
+
+  return crossings;
+}
+
+function closestDistinctRivers(generated: GeneratedWorld): number {
+  const { cellSize } = generated.dimensions;
+  const { rivers } = generated.water;
+
+  const lakes = labelPatches(new WorldGrid(generated.dimensions), (cell) => {
+    return isLakeWater(generated.terrain, cell);
+  });
+
+  let closestSquared = Number.POSITIVE_INFINITY;
+
+  for (const [index, first] of rivers.entries()) {
+    for (const second of rivers.slice(index + 1)) {
+      const confluences = [
+        ...confluencesOf(rivers, first, second, cellSize * JUNCTION_CELLS),
+        ...lakeCrossingsOf(generated, lakes, first, second),
+      ];
+
+      function isApart(point: RiverPoint): boolean {
+        return confluences.every((confluence) => {
+          return !isNear(point, confluence, CONFLUENCE_REACH);
+        });
+      }
+
+      const firstPoints = first.points.filter(isApart);
+      const secondPoints = second.points.filter(isApart);
+      const secondBounds = boundsOf(secondPoints);
+
+      for (const point of firstPoints) {
+        if (squaredDistanceToBounds(point, secondBounds) >= closestSquared) {
+          continue;
+        }
+
+        for (const other of secondPoints) {
+          const offsetX = point.x - other.x;
+          const offsetZ = point.z - other.z;
+
+          closestSquared = Math.min(closestSquared, offsetX * offsetX + offsetZ * offsetZ);
+        }
+      }
+    }
+  }
+
+  return Math.sqrt(closestSquared);
+}
+
+function alongToNearest(river: River, target: RiverPoint): { along: number; distance: number } {
+  let along = 0;
+  let best = { along: 0, distance: Number.POSITIVE_INFINITY };
+
+  for (const [index, point] of river.points.entries()) {
+    const previous = river.points[Math.max(0, index - 1)];
+
+    along += Math.hypot(point.x - previous.x, point.z - previous.z);
+
+    const distance = Math.hypot(point.x - target.x, point.z - target.z);
+
+    if (distance < best.distance) {
+      best = { along, distance };
+    }
+  }
+
+  return best;
+}
+
+function isTrunkFedByLake(generated: GeneratedWorld, worldGrid: WorldGrid, river: River): boolean {
+  const [head] = riverPathCells(worldGrid, river);
+
+  return worldGrid
+    .cellsInRadius(worldGrid.cellCenterX(head), worldGrid.cellCenterZ(head), worldGrid.cellSize * TRUNK_LAKE_CELLS)
+    .some((cell) => {
+      return isLakeWater(generated.terrain, cell);
+    });
+}
+
+function joinsNearSources(generated: GeneratedWorld): string[] {
+  const { cellSize } = generated.dimensions;
+  const { rivers } = generated.water;
+
+  const worldGrid = new WorldGrid(generated.dimensions);
+  const trunks = rivers.filter((river) => {
+    return !isTrunkFedByLake(generated, worldGrid, river);
+  });
+  const faults: string[] = [];
+
+  for (const tributary of rivers) {
+    const end = riverEnd(tributary);
+
+    for (const main of trunks) {
+      if (main === tributary) {
+        continue;
+      }
+
+      const nearest = alongToNearest(main, end);
+
+      if (nearest.distance < cellSize * JUNCTION_CELLS && nearest.along < SOURCE_REACH - SMOOTHING_SLACK) {
+        faults.push(`river ${tributary.id} joins river ${main.id} ${Math.round(nearest.along)} m below its source`);
+      }
+    }
+  }
+
+  return faults;
+}
+
 describe("spaceRiverChains", () => {
   it("carries a stream that joins near a river's source on as that river's upper course", () => {
     const land = landWithLake();
@@ -126,5 +331,49 @@ describe("spaceRiverChains", () => {
     const spaced = spaceRiverChains(land, [tributary, trunk()]);
 
     expect(spaced).toEqual([trunk(), tributary]);
+  });
+});
+
+describe("river spacing on generated islands", () => {
+  it("keeps distinct rivers apart instead of running them side by side on several seeds and both shapes", () => {
+    for (const seed of [3, 7, 11]) {
+      for (const shape of ISLAND_SHAPES) {
+        expect(closestDistinctRivers(coarseWorld(seed, shape))).toBeGreaterThan(SMALLEST_RIVER_GAP);
+      }
+    }
+  });
+});
+
+describe("river spacing on full-size islands", () => {
+  let worlds: GeneratedWorld[];
+
+  beforeAll(() => {
+    worlds = [fullSizeWorld(7), fullSizeWorld(1, "square")];
+  }, FULL_SIZE_TIMEOUT);
+
+  it("keeps the full-size rivers apart on both shapes", () => {
+    for (const generated of worlds) {
+      expect(closestDistinctRivers(generated)).toBeGreaterThan(SMALLEST_RIVER_GAP);
+    }
+  });
+});
+
+describe("river joins on full-size islands", () => {
+  let worlds: GeneratedWorld[];
+
+  beforeAll(() => {
+    worlds = [fullSizeWorld(10), fullSizeWorld(1), fullSizeWorld(3, "square"), fullSizeWorld(8, "square")];
+  }, FULL_SIZE_TIMEOUT);
+
+  it("joins no river into another just below its cave or pond on several seeds and both shapes", () => {
+    for (const generated of worlds) {
+      expect(joinsNearSources(generated)).toEqual([]);
+    }
+  });
+
+  it("ends every river in water: past the coast, in a lake or in another river", () => {
+    for (const generated of worlds) {
+      expect(endsAwayFromWater(generated)).toEqual([]);
+    }
   });
 });
