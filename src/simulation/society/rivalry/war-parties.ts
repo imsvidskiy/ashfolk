@@ -29,7 +29,7 @@ function isStandingFighter(person: Person): boolean {
     return false;
   }
 
-  return person.job === null || person.job.kind !== "flee";
+  return person.job?.kind !== "flee";
 }
 
 export function nearestFoeAmong(tick: PersonTick, candidates: readonly Person[], radius: number): Foe | null {
