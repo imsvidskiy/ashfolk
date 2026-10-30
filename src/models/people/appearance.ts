@@ -18,6 +18,7 @@ const NEOLITHIC = 2;
 const BRONZE_AGE = 4;
 const IRON_AGE = 5;
 const RETIRED_ACCESSORY_DRAWS = 5;
+const RETIRED_ERA_DRAWS = 2;
 
 export type HairStyle = "bald" | "braids" | "bun" | "fringe" | "long" | "ponytail" | "short" | "wild";
 
@@ -292,9 +293,14 @@ function clothingColors(random: RandomSource, tribe: TribeLook): Pick<Appearance
 
 function eraRolls(seed: number): EraRolls {
   const random = randomFromUnitSeed(seed, ERA_SALT);
+  const boots = random.next();
+
+  for (let draw = 0; draw < RETIRED_ERA_DRAWS; draw += 1) {
+    random.next();
+  }
 
   return {
-    boots: random.next(),
+    boots,
     cape: random.next(),
     dye: random.next(),
     dyeChoice: random.next(),
