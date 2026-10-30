@@ -259,6 +259,13 @@ export class SocietyHarness {
   }
 
   spawnTribe(people: number): Tribe | null {
-    return this.society.spawnTribe({ context: this.context, people, technologies: [], x: 0, z: 0 });
+    return this.society.spawnTribe({
+      canSettleRoughGround: false,
+      context: this.context,
+      people,
+      technologies: [],
+      x: 0,
+      z: 0,
+    });
   }
 }

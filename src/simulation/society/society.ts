@@ -58,6 +58,7 @@ interface SocietyDependencies {
 }
 
 interface TribeArrival {
+  canSettleRoughGround: boolean;
   context: SocietyContext;
   people: number;
   technologies: readonly TechnologyId[];
@@ -247,6 +248,7 @@ export class SocietySystem {
 
     const site = findCampSite(
       {
+        canSettleRoughGround: arrival.canSettleRoughGround,
         excluded: null,
         isNearOrigin: true,
         minimumNeighborDistance: 0,

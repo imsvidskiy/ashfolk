@@ -129,7 +129,14 @@ function createSimulation(): Simulation {
   floodCells(simulation.world, shore, 2);
   simulation.world.clearPlants(grid.cellAt(OPEN_GROUND.x, OPEN_GROUND.z), true);
   simulation.weather.setKind("clear");
-  simulation.society.spawnTribe({ context: simulation.services, people: 3, technologies: [], x: -120, z: 60 });
+  simulation.society.spawnTribe({
+    canSettleRoughGround: true,
+    context: simulation.services,
+    people: 3,
+    technologies: [],
+    x: -120,
+    z: 60,
+  });
   simulation.fauna.spawnHerd("deer", -120, -120, 2, simulation.random);
 
   return simulation;

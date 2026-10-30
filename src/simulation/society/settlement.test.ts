@@ -1,11 +1,15 @@
 import { describe, expect, it } from "vitest";
+import { PlantSpecies } from "../../content/plants.ts";
 import { SocietyHarness, settle } from "../testing/test-society.ts";
-import { floodStrip, fordAcross } from "../testing/test-world.ts";
+import { floodStrip, fordAcross, plantInCell } from "../testing/test-world.ts";
 import type { Person } from "./person.ts";
 import { considerSplit, findCampSite, scoreSite, siteSearchNear } from "./settlement.ts";
 import type { Tribe } from "./tribe.ts";
 
 const TRIBE_SIZE = 6;
+const LEDGE_X = 120;
+const LEDGE_RADIUS = 25;
+const MOUNTAIN_RADIUS = 160;
 
 interface SplittingTribe {
   harness: SocietyHarness;
@@ -28,6 +32,22 @@ function settleSplittingTribe(youngestAge: number): SplittingTribe {
   }
 
   return { harness, members, tribe };
+}
+
+function mountainWithLedge(x: number, z: number): number {
+  const distance = Math.max(LEDGE_RADIUS, Math.hypot(x - LEDGE_X, z));
+
+  return 100 + 0.5 * Math.max(0, MOUNTAIN_RADIUS - distance);
+}
+
+function plantOaksAround(harness: SocietyHarness, x: number, z: number, everyNthCell: number): void {
+  const cells = harness.world.grid.cellsInRadius(x, z, 100);
+
+  for (const [index, cell] of cells.entries()) {
+    if (index % everyNthCell === 0) {
+      plantInCell(harness.world, cell, PlantSpecies.Oak);
+    }
+  }
 }
 
 function nextDrawAfterSplitCheck(youngestAge: number): number {
@@ -79,6 +99,41 @@ describe("camp sites", () => {
 
     expect(scoreSite({ x: 0, z: 0 }, search, harness.context, [])).toBe(Number.NEGATIVE_INFINITY);
     expect(scoreSite({ x: 200, z: 100 }, search, harness.context, [])).toBeGreaterThan(-5);
+  });
+
+  it("are unsuitable on a flat ledge of a steep mountainside unless nothing else is left", () => {
+    const harness = new SocietyHarness({ world: { heightAt: mountainWithLedge } });
+
+    const search = siteSearchNear({ x: 0, z: 0 }, 300, null);
+
+    expect(harness.world.slope(harness.world.grid.cellAt(LEDGE_X, 0))).toBeLessThan(0.05);
+    expect(scoreSite({ x: LEDGE_X, z: 0 }, search, harness.context, [])).toBe(Number.NEGATIVE_INFINITY);
+    expect(scoreSite({ x: -150, z: 0 }, search, harness.context, [])).toBeGreaterThan(-5);
+
+    const roughSearch = { ...search, canSettleRoughGround: true };
+
+    expect(scoreSite({ x: LEDGE_X, z: 0 }, roughSearch, harness.context, [])).toBeGreaterThan(Number.NEGATIVE_INFINITY);
+    expect(scoreSite({ x: LEDGE_X, z: 0 }, roughSearch, harness.context, [])).toBeLessThan(
+      scoreSite({ x: -150, z: 0 }, roughSearch, harness.context, [])
+    );
+  });
+
+  it("rank a closed forest below a meadow with a few trees", () => {
+    const harness = new SocietyHarness();
+
+    const search = { ...siteSearchNear({ x: 0, z: 0 }, 300, null), canSettleRoughGround: true };
+    const meadow = { x: -100, z: -100 };
+    const forest = { x: 100, z: 100 };
+
+    plantOaksAround(harness, meadow.x, meadow.z, 8);
+    plantOaksAround(harness, forest.x, forest.z, 1);
+
+    expect(scoreSite(forest, search, harness.context, [])).toBeLessThan(
+      scoreSite(meadow, search, harness.context, []) - 3
+    );
+    expect(scoreSite(forest, { ...search, canSettleRoughGround: false }, harness.context, [])).toBe(
+      Number.NEGATIVE_INFINITY
+    );
   });
 
   it("do not count burnt trees and bushes as food and wood nearby", () => {

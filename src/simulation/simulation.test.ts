@@ -1,4 +1,5 @@
 import { describe, expect, it, it as test, vi } from "vitest";
+import { isLivingTreeSpecies } from "../content/plants.ts";
 import type { TechnologyId } from "../content/technologies.ts";
 import { DEFAULT_GENERATION_OPTIONS } from "../generation/generation-options.ts";
 import { generateWorld } from "../generation/world-generator.ts";
@@ -7,6 +8,7 @@ import { ignore } from "../shared/ignore.ts";
 import { ANIMAL_STRIDE, AnimalField, PERSON_STRIDE, PersonField } from "../world/agent-buffers.ts";
 import type { IslandShapeKind } from "../world/island-shape.ts";
 import { islandDimensions } from "../world/island-size.ts";
+import { NO_PLANT } from "../world/vegetation-store.ts";
 import { isHopping } from "./agents/hops.ts";
 import { setDestination } from "./agents/movement.ts";
 import { Simulation, type SimulationSnapshot } from "./simulation.ts";
@@ -38,6 +40,14 @@ const TICKS_BETWEEN_COMPARISONS = 10;
 const COMPARISONS = 40;
 const ARROWS_IN_FLIGHT = 8;
 const SETTLING_STEP = 0.25;
+const ROUGH_STARTS: readonly (readonly [IslandShapeKind, number])[] = [
+  ["round", 3],
+  ["round", 9],
+  ["square", 1],
+  ["square", 21],
+];
+const CAMP_SURROUNDINGS = 80;
+const CAMP_WOODS = 100;
 
 interface Walker {
   readonly id: number;
@@ -53,6 +63,34 @@ function createSimulation(): Simulation {
   simulation.weather.setKind("clear");
 
   return simulation;
+}
+
+function meanSlopeAround(simulation: Simulation, x: number, z: number): number {
+  const { world } = simulation;
+
+  const land = world.grid.cellsInRadius(x, z, CAMP_SURROUNDINGS).filter((cell) => {
+    return !world.isWater(cell);
+  });
+
+  return (
+    land.reduce((sum, cell) => {
+      return sum + world.slope(cell);
+    }, 0) / land.length
+  );
+}
+
+function treesAround(simulation: Simulation, x: number, z: number): number {
+  const { vegetation } = simulation.world;
+
+  let trees = 0;
+
+  for (const cell of simulation.world.grid.cellsInRadius(x, z, CAMP_WOODS)) {
+    for (let plant = vegetation.firstPlantInCell(cell); plant !== NO_PLANT; plant = vegetation.nextPlantInCell(plant)) {
+      trees += vegetation.isAlive(plant) && isLivingTreeSpecies(vegetation.species[plant]) ? 1 : 0;
+    }
+  }
+
+  return trees;
 }
 
 function advanceFor(simulation: Simulation, seconds: number): void {
@@ -662,6 +700,21 @@ describe("arrival on islands of every layout", () => {
       simulation.populate();
 
       expect(simulation.society.tribes()).toHaveLength(3);
+    }
+  });
+});
+
+describe("first camps", () => {
+  it.each(ROUGH_STARTS)("stand on open ground on a %s island of seed %i", { timeout: 60_000 }, (shape, seed) => {
+    const simulation = new Simulation(generateWorld(seed, { ...DEFAULT_GENERATION_OPTIONS, shape }));
+
+    simulation.populate();
+
+    expect(simulation.society.tribes()).toHaveLength(3);
+
+    for (const tribe of simulation.society.tribes()) {
+      expect(meanSlopeAround(simulation, tribe.campX, tribe.campZ)).toBeLessThan(0.26);
+      expect(treesAround(simulation, tribe.campX, tribe.campZ)).toBeLessThan(200);
     }
   });
 });
