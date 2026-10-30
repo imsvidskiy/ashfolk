@@ -1,6 +1,6 @@
 import { clamp, smoothstep } from "../shared/math.ts";
 import type { WorldGrid } from "../world/world-grid.ts";
-import { analyzeDrainage, type DrainageBasins, NO_CELL } from "./hydrology.ts";
+import { analyzeDrainage, type DrainageBasins, NO_CELL } from "./drainage.ts";
 
 const SMALLEST_VALLEY_FLOW = 0.25;
 const LAKE_TAPER_CELLS = 12;

@@ -130,6 +130,10 @@ function heightAt(map: Float32Array, size: number, x: number, z: number): number
   return lerp(lerp(northWest, northEast, offsetX), lerp(southWest, southEast, offsetX), offsetZ);
 }
 
+function isOnMap(column: number, row: number, size: number): boolean {
+  return column >= 0 && row >= 0 && column < size && row < size;
+}
+
 function erode(
   map: Float32Array,
   size: number,
@@ -159,10 +163,6 @@ function erode(
   }
 
   return removed;
-}
-
-function isOnMap(column: number, row: number, size: number): boolean {
-  return column >= 0 && row >= 0 && column < size && row < size;
 }
 
 function depositedAmount(heightChange: number, sediment: number, capacity: number): number {

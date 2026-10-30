@@ -5,7 +5,7 @@ import { isOnIsland } from "../world/coast.ts";
 import { countForArea } from "../world/island-size.ts";
 import { NEIGHBOR_OFFSETS, type WorldGrid } from "../world/world-grid.ts";
 import { boxBlur } from "./box-blur.ts";
-import { analyzeDrainage, DEFAULT_HYDROLOGY, type DrainageBasins, NO_CELL } from "./hydrology.ts";
+import { analyzeDrainage, DEFAULT_HYDROLOGY, type DrainageBasins, NO_CELL } from "./drainage.ts";
 
 const NORMAL_LAKE_COUNT = 3;
 const SMALLEST_FEED = 1.2;

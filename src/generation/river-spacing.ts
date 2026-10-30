@@ -1,6 +1,7 @@
 import { isOnIsland, touchesOffIsland } from "../world/coast.ts";
 import type { WorldGrid } from "../world/world-grid.ts";
-import { chainCells, type DrainageBasins, isNearLake, NO_CELL, type RiverChain, riverWidthFor } from "./hydrology.ts";
+import { type DrainageBasins, isNearLake, NO_CELL } from "./drainage.ts";
+import { chainCells, type RiverChain, riverWidthFor } from "./river-chains.ts";
 
 const SMALLEST_SPACING = 40;
 const SPACING_WIDTHS = 2.5;
@@ -17,7 +18,6 @@ const CAPTURE_BUMP = 8;
 const FLOW_LOOKAROUND = 3;
 const PARALLEL_REACH = 180;
 const PARALLEL_RUN = 400;
-
 export const SOURCE_REACH = 100;
 
 export interface RiverLand {
@@ -74,6 +74,21 @@ function spacingBetween(spacing: Spacing, cell: number, other: number): number {
     spacing.grid.cellSize * SPACING_CELLS,
     Math.min(LARGEST_SPACING, SPACING_WIDTHS * wider)
   );
+}
+
+function riverCellAt(spacing: Spacing, cell: number, offset: NearbyOffset): number {
+  const { grid, owners } = spacing;
+
+  const column = grid.columnOf(cell) + offset.column;
+  const row = grid.rowOf(cell) + offset.row;
+
+  if (!grid.contains(column, row)) {
+    return NO_CELL;
+  }
+
+  const other = grid.index(column, row);
+
+  return owners[other] === NO_CELL ? NO_CELL : other;
 }
 
 function nearestRiver(
@@ -278,21 +293,6 @@ function offsetsWithin(grid: WorldGrid, meters: number): NearbyOffset[] {
   return offsets.sort(byDistance);
 }
 
-function riverCellAt(spacing: Spacing, cell: number, offset: NearbyOffset): number {
-  const { grid, owners } = spacing;
-
-  const column = grid.columnOf(cell) + offset.column;
-  const row = grid.rowOf(cell) + offset.row;
-
-  if (!grid.contains(column, row)) {
-    return NO_CELL;
-  }
-
-  const other = grid.index(column, row);
-
-  return owners[other] === NO_CELL ? NO_CELL : other;
-}
-
 function captureFor(spacing: Spacing, cells: readonly number[], head: number, index: number): RiverChain | null {
   const { grid, heights, nearbyOffsets, owners } = spacing;
 
@@ -383,6 +383,20 @@ function claim(spacing: Spacing, spaced: RiverChain[], chain: RiverChain, index:
   spaced[index] = chain;
 }
 
+function isFedByLake(spacing: Spacing, chain: RiverChain): boolean {
+  const { basins, grid } = spacing;
+
+  const [head] = chain.cells;
+
+  return isNearLake(
+    grid,
+    basins.lakeIds,
+    grid.cellCenterX(head),
+    grid.cellCenterZ(head),
+    grid.cellSize * SPACING_CELLS
+  );
+}
+
 function sourceJoined(spacing: Spacing, spaced: readonly RiverChain[], chain: RiverChain): JoinedSource | null {
   const { grid, owners } = spacing;
 
@@ -419,20 +433,6 @@ function extendUpstream(spacing: Spacing, spaced: RiverChain[], source: JoinedSo
   }
 
   claim(spacing, spaced, { ...trunk, cells: [...upper.cells, ...trunk.cells.slice(source.at)] }, source.trunk);
-}
-
-function isFedByLake(spacing: Spacing, chain: RiverChain): boolean {
-  const { basins, grid } = spacing;
-
-  const [head] = chain.cells;
-
-  return isNearLake(
-    grid,
-    basins.lakeIds,
-    grid.cellCenterX(head),
-    grid.cellCenterZ(head),
-    grid.cellSize * SPACING_CELLS
-  );
 }
 
 function isLongEnough(spacing: Spacing, chain: RiverChain): boolean {
