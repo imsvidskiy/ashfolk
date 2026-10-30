@@ -27,7 +27,13 @@
     href="https://github.com/sponsors/imsvidskiy"
   ><img
     src="https://img.shields.io/github/sponsors/imsvidskiy?label=Sponsor&logo=GitHub&color=ea4aaa"
-    alt="Sponsor"
+    alt="Sponsor on GitHub"
+  ></a>
+  <a
+    href="https://whop.com/ashfolk-supporter/"
+  ><img
+    src="https://img.shields.io/badge/Support-on%20Whop-ec6839"
+    alt="Support on Whop"
   ></a>
 </p>
 
