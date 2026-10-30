@@ -99,6 +99,10 @@ export class GameSession {
     return this.mirror.frame;
   }
 
+  get isAdvancing(): boolean {
+    return this.#request !== null;
+  }
+
   get status(): SessionStatus {
     return this.#status;
   }

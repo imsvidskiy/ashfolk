@@ -43,33 +43,34 @@ interface Stroke {
 }
 
 interface Cast {
+  readonly framesLeft: number;
   readonly point: SoundPoint;
   readonly sounds: readonly SoundDefinition[];
 }
 
 export class PowerSounds {
   readonly #engine: SoundEngine;
-  readonly #heightAt: (x: number, z: number) => number;
+  readonly #groundPoint: (x: number, z: number) => SoundPoint;
   #pending: Cast[] = [];
   #stroke: Stroke | null = null;
 
-  constructor(engine: SoundEngine, heightAt: (x: number, z: number) => number) {
+  constructor(engine: SoundEngine, groundPoint: (x: number, z: number) => SoundPoint) {
     this.#engine = engine;
-    this.#heightAt = heightAt;
+    this.#groundPoint = groundPoint;
   }
 
-  hear(command: SimulationCommand, now: number): void {
+  hear(command: SimulationCommand, now: number, isAdvancing: boolean): void {
     switch (command.type) {
       case "usePower":
-        this.#cast(command.powerId, this.#pointAt(command.x, command.z));
+        this.#cast(command.powerId, this.#groundPoint(command.x, command.z), isAdvancing);
 
         return;
       case "beginStroke":
-        this.#begin(command.powerId, this.#pointAt(command.x, command.z), now);
+        this.#begin(command.powerId, this.#groundPoint(command.x, command.z), now);
 
         return;
       case "moveStroke":
-        this.#move(this.#pointAt(command.x, command.z));
+        this.#move(this.#groundPoint(command.x, command.z));
 
         return;
       case "endStroke":
@@ -85,13 +86,15 @@ export class PowerSounds {
 
     this.#pending = [];
 
-    if (wasRefused) {
-      return;
-    }
-
     for (const cast of casts) {
-      for (const [index, sound] of cast.sounds.entries()) {
-        this.#engine.play(sound, cast.point, { delaySeconds: index * CALL_DELAY_SECONDS });
+      if (cast.framesLeft > 1) {
+        this.#pending.push({ ...cast, framesLeft: cast.framesLeft - 1 });
+
+        continue;
+      }
+
+      if (!wasRefused) {
+        this.#play(cast);
       }
     }
   }
@@ -112,11 +115,17 @@ export class PowerSounds {
     this.#pending = [];
   }
 
-  #cast(powerId: PowerId, point: SoundPoint): void {
+  #cast(powerId: PowerId, point: SoundPoint, isAdvancing: boolean): void {
     const sounds = CASTS.get(powerId);
 
     if (sounds !== undefined) {
-      this.#pending.push({ point, sounds });
+      this.#pending.push({ framesLeft: isAdvancing ? 2 : 1, point, sounds });
+    }
+  }
+
+  #play(cast: Cast): void {
+    for (const [index, sound] of cast.sounds.entries()) {
+      this.#engine.play(sound, cast.point, { delaySeconds: index * CALL_DELAY_SECONDS });
     }
   }
 
@@ -161,9 +170,5 @@ export class PowerSounds {
     if (stroke !== null && stroke.loop !== null) {
       stroke.loop.stop(BRUSH_FADE_SECONDS);
     }
-  }
-
-  #pointAt(x: number, z: number): SoundPoint {
-    return { x, y: this.#heightAt(x, z), z };
   }
 }

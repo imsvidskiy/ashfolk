@@ -24,10 +24,22 @@ describe("sound engine", () => {
     const detach = engine.attach(window);
 
     await userEvent.keyboard("{Shift}");
+    await vi.waitFor(() => {
+      expect(engine.context?.state).toBe("running");
+    });
     engine.setLevels({ ...DEFAULT_SOUND_LEVELS, isMuted: true });
 
     expect(engine.isAudible).toBe(false);
     expect(engine.loop(SOUNDS.fire, { x: 0, y: 0, z: 0 }, { seconds: 1, volume: 1 })).not.toBeNull();
+    await vi.waitFor(() => {
+      expect(engine.context?.state).toBe("suspended");
+    });
+
+    engine.setLevels(DEFAULT_SOUND_LEVELS);
+
+    await vi.waitFor(() => {
+      expect(engine.context?.state).toBe("running");
+    });
     detach();
   });
 

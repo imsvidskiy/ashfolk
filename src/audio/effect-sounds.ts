@@ -1,5 +1,6 @@
 import type { SimulationEffect, TornadoEffect } from "../simulation/effects.ts";
 import { tornadoDuration, tornadoPositionAt } from "../simulation/powers/tornadoes.ts";
+import type { HearingView } from "./hearing-view.ts";
 import { SOUNDS, type SoundDefinition } from "./sound-catalog.ts";
 import type { PlayOptions, SoundEngine, SoundLoop, SoundPoint } from "./sound-engine.ts";
 
@@ -15,34 +16,24 @@ const BLESSINGS = {
   inspiration: SOUNDS.blessingInspiration,
 } as const;
 
-export interface EffectListener {
-  readonly focusX: number;
-  readonly focusZ: number;
-}
-
-interface GroundPlace {
-  readonly x: number;
-  readonly z: number;
-}
-
 interface Twister {
+  age: number;
   readonly duration: number;
   readonly effect: TornadoEffect;
   readonly loop: SoundLoop;
-  readonly startedAt: number;
 }
 
 export class EffectSounds {
   readonly #engine: SoundEngine;
-  readonly #heightAt: (x: number, z: number) => number;
+  readonly #groundPoint: (x: number, z: number) => SoundPoint;
   readonly #twisters: Twister[] = [];
 
-  constructor(engine: SoundEngine, heightAt: (x: number, z: number) => number) {
+  constructor(engine: SoundEngine, groundPoint: (x: number, z: number) => SoundPoint) {
     this.#engine = engine;
-    this.#heightAt = heightAt;
+    this.#groundPoint = groundPoint;
   }
 
-  hear(effect: SimulationEffect, listener: EffectListener, now: number): void {
+  hear(effect: SimulationEffect, view: HearingView): void {
     switch (effect.kind) {
       case "arrow":
         this.#play(SOUNDS.arrow, effect.toX, effect.toZ);
@@ -63,7 +54,7 @@ export class EffectSounds {
 
         return;
       case "lightning":
-        this.#hearLightning(effect.x, effect.z, effect.isNatural, listener);
+        this.#hearLightning(effect.x, effect.z, effect.isNatural, view);
 
         return;
       case "meteor":
@@ -78,26 +69,29 @@ export class EffectSounds {
 
         return;
       case "tornado":
-        this.#startTwister(effect, now);
+        this.#startTwister(effect);
 
         return;
       default:
     }
   }
 
-  update(now: number): void {
+  update(gameSeconds: number): void {
     for (let index = this.#twisters.length - 1; index >= 0; index -= 1) {
       const twister = this.#twisters[index];
-      const age = now - twister.startedAt;
 
-      if (age >= twister.duration) {
+      twister.age += gameSeconds;
+
+      if (twister.age >= twister.duration) {
         twister.loop.stop(TORNADO_FADE_SECONDS);
         this.#twisters.splice(index, 1);
 
         continue;
       }
 
-      twister.loop.setPosition(this.#pointAt(tornadoPositionAt(twister.effect.path, age)));
+      const { x, z } = tornadoPositionAt(twister.effect.path, twister.age);
+
+      twister.loop.setPosition(this.#groundPoint(x, z));
     }
   }
 
@@ -107,8 +101,8 @@ export class EffectSounds {
     }
   }
 
-  #hearLightning(x: number, z: number, isNatural: boolean, listener: EffectListener): void {
-    const distance = Math.hypot(x - listener.focusX, z - listener.focusZ);
+  #hearLightning(x: number, z: number, isNatural: boolean, view: HearingView): void {
+    const distance = Math.hypot(x - view.focusX, z - view.focusZ);
 
     if (!isNatural || distance < CLOSE_LIGHTNING) {
       this.#play(SOUNDS.lightning, x, z);
@@ -119,22 +113,21 @@ export class EffectSounds {
     this.#play(SOUNDS.thunderFar, x, z, { delaySeconds: Math.min(LONGEST_THUNDER_DELAY, distance / SPEED_OF_SOUND) });
   }
 
-  #startTwister(effect: TornadoEffect, now: number): void {
+  #startTwister(effect: TornadoEffect): void {
     const start = tornadoPositionAt(effect.path, 0);
-    const loop = this.#engine.loop(SOUNDS.tornado, this.#pointAt(start), { seconds: TORNADO_FADE_SECONDS, volume: 1 });
+    const loop = this.#engine.loop(SOUNDS.tornado, this.#groundPoint(start.x, start.z), {
+      seconds: TORNADO_FADE_SECONDS,
+      volume: 1,
+    });
 
     if (loop === null) {
       return;
     }
 
-    this.#twisters.push({ duration: tornadoDuration(effect.path), effect, loop, startedAt: now });
+    this.#twisters.push({ age: 0, duration: tornadoDuration(effect.path), effect, loop });
   }
 
   #play(sound: SoundDefinition, x: number, z: number, options: PlayOptions = {}): void {
-    this.#engine.play(sound, this.#pointAt({ x, z }), options);
-  }
-
-  #pointAt(place: GroundPlace): SoundPoint {
-    return { x: place.x, y: this.#heightAt(place.x, place.z), z: place.z };
+    this.#engine.play(sound, this.#groundPoint(x, z), options);
   }
 }

@@ -7,6 +7,7 @@ import { AmbienceMixer, sampleAmbience } from "./ambience.ts";
 import { ambienceLevels } from "./ambience-levels.ts";
 import { EffectSounds } from "./effect-sounds.ts";
 import { type Emitter, EmitterLoops, groupCells } from "./emitters.ts";
+import type { HearingView } from "./hearing-view.ts";
 import { MusicPlayer } from "./music-player.ts";
 import { PowerSounds } from "./power-sounds.ts";
 import { SOUNDS } from "./sound-catalog.ts";
@@ -24,6 +25,7 @@ const FIRE_EMITTERS = 4;
 const LAVA_EMITTERS = 3;
 const HOT_LAVA = 40;
 const MILLISECONDS_PER_SECOND = 1000;
+const LISTENER_TOLERANCE = 1e-3;
 
 const PRELOADED = [
   SOUNDS.handDrop,
@@ -38,10 +40,10 @@ const PRELOADED = [
 
 type WorldEngine = Pick<EngineHandle, "camera" | "session" | "subscribeToRenders">;
 
-interface View {
-  readonly focusX: number;
-  readonly focusZ: number;
-  readonly viewDistance: number;
+interface Listener {
+  readonly forward: SoundPoint;
+  readonly position: SoundPoint;
+  readonly up: SoundPoint;
 }
 
 function secondsNow(): number {
@@ -64,7 +66,7 @@ function lavaEmitters(
   grid: WorldGrid,
   lava: LavaView | null,
   volcanoes: readonly VolcanoView[],
-  view: View
+  view: HearingView
 ): Emitter[] {
   const flows =
     lava === null
@@ -86,54 +88,66 @@ function lavaEmitters(
   return [...flows, ...craters];
 }
 
-function listenerOf(
-  engine: WorldEngine,
-  heightAt: (x: number, z: number) => number
-): [SoundPoint, SoundPoint, SoundPoint] {
+function listenerOf(engine: WorldEngine, groundPoint: (x: number, z: number) => SoundPoint): Listener {
   const { elements } = engine.camera.camera.matrixWorld;
   const { distance, targetX, targetZ } = engine.camera.state;
 
-  const focusY = heightAt(targetX, targetZ);
-  const toCamera = { x: elements[12] - targetX, y: elements[13] - focusY, z: elements[14] - targetZ };
+  const focus = groundPoint(targetX, targetZ);
+  const toCamera = { x: elements[12] - focus.x, y: elements[13] - focus.y, z: elements[14] - focus.z };
   const length = Math.max(1e-6, Math.hypot(toCamera.x, toCamera.y, toCamera.z));
   const hearing = clamp(distance * HEARING_HEIGHT_SHARE, LOWEST_HEARING, HIGHEST_HEARING);
 
-  return [
-    {
-      x: targetX + (toCamera.x / length) * hearing,
-      y: focusY + (toCamera.y / length) * hearing,
-      z: targetZ + (toCamera.z / length) * hearing,
+  return {
+    forward: { x: -elements[8], y: -elements[9], z: -elements[10] },
+    position: {
+      x: focus.x + (toCamera.x / length) * hearing,
+      y: focus.y + (toCamera.y / length) * hearing,
+      z: focus.z + (toCamera.z / length) * hearing,
     },
-    { x: -elements[8], y: -elements[9], z: -elements[10] },
-    { x: elements[4], y: elements[5], z: elements[6] },
-  ];
+    up: { x: elements[4], y: elements[5], z: elements[6] },
+  };
+}
+
+function isNear(first: SoundPoint, second: SoundPoint): boolean {
+  return (
+    Math.abs(first.x - second.x) < LISTENER_TOLERANCE &&
+    Math.abs(first.y - second.y) < LISTENER_TOLERANCE &&
+    Math.abs(first.z - second.z) < LISTENER_TOLERANCE
+  );
+}
+
+function isSameListener(first: Listener, second: Listener): boolean {
+  return (
+    isNear(first.position, second.position) && isNear(first.forward, second.forward) && isNear(first.up, second.up)
+  );
 }
 
 export function connectWorldSounds(engine: WorldEngine, sound: SoundEngine): () => void {
   const { mirror } = engine.session;
 
-  function heightAt(x: number, z: number): number {
-    return mirror.heightAt(x, z);
+  function groundPoint(x: number, z: number): SoundPoint {
+    return { x, y: mirror.heightAt(x, z), z };
   }
 
-  function viewOf(): View {
+  function viewOf(): HearingView {
     const { distance, targetX, targetZ } = engine.camera.state;
 
     return { focusX: targetX, focusZ: targetZ, viewDistance: distance };
   }
 
   const ambience = new AmbienceMixer(sound);
-  const effects = new EffectSounds(sound, heightAt);
-  const fires = new EmitterLoops(sound, SOUNDS.fire, heightAt);
-  const lavas = new EmitterLoops(sound, SOUNDS.lava, heightAt);
+  const effects = new EffectSounds(sound, groundPoint);
+  const fires = new EmitterLoops(sound, SOUNDS.fire, groundPoint);
+  const lavas = new EmitterLoops(sound, SOUNDS.lava, groundPoint);
   const music = new MusicPlayer(sound, secondsNow());
-  const powers = new PowerSounds(sound, heightAt);
-  const story = new StorySounds(sound, heightAt);
-  const work = new WorkSounds(sound, heightAt);
+  const powers = new PowerSounds(sound, groundPoint);
+  const story = new StorySounds(sound, groundPoint);
+  const work = new WorkSounds(sound, groundPoint);
   let frame: SimulationFrame = engine.session.frame;
   let knownLava: LavaView | null = null;
   let isHolding = frame.held !== null;
   let hasPreloaded = false;
+  let heardListener: Listener | null = null;
   let lastRender = secondsNow();
   let nextAmbienceAt = 0;
 
@@ -141,6 +155,7 @@ export function connectWorldSounds(engine: WorldEngine, sound: SoundEngine): () 
     const now = secondsNow();
     const view = viewOf();
     const wasRefused = next.notices.length > 0;
+    const isHoldingNow = next.held !== null;
 
     frame = next;
     powers.settle(wasRefused);
@@ -149,28 +164,30 @@ export function connectWorldSounds(engine: WorldEngine, sound: SoundEngine): () 
       sound.play(SOUNDS.uiRefuse, null);
     }
 
-    for (const effect of next.effects) {
-      effects.hear(effect, view, now);
+    if (isHoldingNow !== isHolding) {
+      isHolding = isHoldingNow;
+      sound.play(isHolding ? SOUNDS.handGrab : SOUNDS.handDrop, null);
     }
-
-    story.hear(next.chronicle, view, now);
-    work.listen(next.people, next.personCount, view);
-    fires.update(
-      groupCells(mirror.grid, next.burningCells, { bucketSize: FIRE_BUCKET, ...view, limit: FIRE_EMITTERS })
-    );
 
     if (next.lava !== null) {
       knownLava = next.lava;
     }
 
-    lavas.update(lavaEmitters(mirror.grid, knownLava, next.volcanoes, view));
-
-    const isHoldingNow = next.held !== null;
-
-    if (isHoldingNow !== isHolding) {
-      isHolding = isHoldingNow;
-      sound.play(isHolding ? SOUNDS.handGrab : SOUNDS.handDrop, null);
+    for (const effect of next.effects) {
+      effects.hear(effect, view);
     }
+
+    story.hear(next.chronicle, view, now);
+
+    if (!sound.isAudible) {
+      return;
+    }
+
+    work.listen(next.people, next.personCount, view);
+    fires.update(
+      groupCells(mirror.grid, next.burningCells, { bucketSize: FIRE_BUCKET, ...view, limit: FIRE_EMITTERS })
+    );
+    lavas.update(lavaEmitters(mirror.grid, knownLava, next.volcanoes, view));
   }
 
   function hearRender(): void {
@@ -188,12 +205,17 @@ export function connectWorldSounds(engine: WorldEngine, sound: SoundEngine): () 
       sound.preload(PRELOADED);
     }
 
-    const [position, forward, up] = listenerOf(engine, heightAt);
+    const listener = listenerOf(engine, groundPoint);
+    const gameSeconds = frame.isPaused ? 0 : step * frame.speed;
 
-    sound.setListener(position, forward, up);
-    effects.update(now);
+    if (heardListener === null || !isSameListener(heardListener, listener)) {
+      heardListener = listener;
+      sound.setListener(listener.position, listener.forward, listener.up);
+    }
+
+    effects.update(gameSeconds);
     powers.update(now);
-    work.update(frame.isPaused ? 0 : step * frame.speed);
+    work.update(gameSeconds);
     music.update(now, frame.calendar.hours);
 
     if (now < nextAmbienceAt) {
@@ -209,7 +231,7 @@ export function connectWorldSounds(engine: WorldEngine, sound: SoundEngine): () 
 
   const unsubscribeFrames = engine.session.subscribe(hearFrame);
   const unsubscribeCommands = engine.session.subscribeToCommands((command) => {
-    powers.hear(command, secondsNow());
+    powers.hear(command, secondsNow(), engine.session.isAdvancing);
   });
   const unsubscribeRenders = engine.subscribeToRenders(hearRender);
 

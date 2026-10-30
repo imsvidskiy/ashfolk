@@ -1,6 +1,7 @@
 import type { ChronicleCategory, ChronicleEntry } from "../simulation/chronicle.ts";
+import type { HearingView } from "./hearing-view.ts";
 import { SOUNDS, type SoundDefinition } from "./sound-catalog.ts";
-import type { SoundEngine } from "./sound-engine.ts";
+import type { SoundEngine, SoundPoint } from "./sound-engine.ts";
 
 const JINGLE_GAP_SECONDS = 4;
 const NEARBY_REACH = 150;
@@ -28,24 +29,18 @@ interface StoryCue {
   readonly sound: SoundDefinition;
 }
 
-export interface StoryView {
-  readonly focusX: number;
-  readonly focusZ: number;
-  readonly viewDistance: number;
-}
-
 interface Heard {
   readonly cue: StoryCue;
   readonly entry: ChronicleEntry;
 }
 
-function isNearby(entry: ChronicleEntry, view: StoryView): boolean {
+function isNearby(entry: ChronicleEntry, view: HearingView): boolean {
   const reach = NEARBY_REACH + view.viewDistance * NEARBY_VIEW_SHARE;
 
   return Math.hypot(entry.x - view.focusX, entry.z - view.focusZ) < reach;
 }
 
-export function loudestStory(entries: readonly ChronicleEntry[], view: StoryView): Heard | null {
+export function loudestStory(entries: readonly ChronicleEntry[], view: HearingView): Heard | null {
   let loudest: Heard | null = null;
 
   for (const entry of entries) {
@@ -65,15 +60,15 @@ export function loudestStory(entries: readonly ChronicleEntry[], view: StoryView
 
 export class StorySounds {
   readonly #engine: SoundEngine;
-  readonly #heightAt: (x: number, z: number) => number;
+  readonly #groundPoint: (x: number, z: number) => SoundPoint;
   #quietUntil = Number.NEGATIVE_INFINITY;
 
-  constructor(engine: SoundEngine, heightAt: (x: number, z: number) => number) {
+  constructor(engine: SoundEngine, groundPoint: (x: number, z: number) => SoundPoint) {
     this.#engine = engine;
-    this.#heightAt = heightAt;
+    this.#groundPoint = groundPoint;
   }
 
-  hear(entries: readonly ChronicleEntry[], view: StoryView, now: number): void {
+  hear(entries: readonly ChronicleEntry[], view: HearingView, now: number): void {
     const heard = loudestStory(entries, view);
 
     if (heard === null) {
@@ -83,7 +78,7 @@ export class StorySounds {
     const { cue, entry } = heard;
 
     if (cue.isPlaced) {
-      this.#engine.play(cue.sound, { x: entry.x, y: this.#heightAt(entry.x, entry.z), z: entry.z });
+      this.#engine.play(cue.sound, this.#groundPoint(entry.x, entry.z));
 
       return;
     }

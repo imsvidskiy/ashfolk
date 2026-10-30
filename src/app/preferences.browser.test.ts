@@ -1,18 +1,9 @@
 import { describe, expect, it, vi } from "vitest";
-import { DEFAULT_SOUND_LEVELS } from "../audio/sound-engine.ts";
 import { ignore } from "../shared/ignore.ts";
-import {
-  storedLabelsShown,
-  storedQuality,
-  storedSoundLevels,
-  storeLabelsShown,
-  storeQuality,
-  storeSoundLevels,
-} from "./preferences.ts";
+import { storedLabelsShown, storedQuality, storeLabelsShown, storeQuality } from "./preferences.ts";
 
 const QUALITY_KEY = "dawnfolk.quality";
 const LABELS_KEY = "dawnfolk.labels";
-const SOUND_KEY = "dawnfolk.sound";
 
 describe("saved preferences", () => {
   it("has no saved quality at first", () => {
@@ -62,22 +53,5 @@ describe("saved preferences", () => {
 
     expect(storedLabelsShown()).toBe(true);
     expect(warn).toHaveBeenCalledExactlyOnceWith("Ignoring a saved label setting", expect.any(Array));
-  });
-
-  it("remembers the sound settings", () => {
-    expect(storedSoundLevels()).toBeNull();
-
-    storeSoundLevels({ ...DEFAULT_SOUND_LEVELS, isMuted: true, music: 0.2 });
-
-    expect(storedSoundLevels()).toEqual({ ...DEFAULT_SOUND_LEVELS, isMuted: true, music: 0.2 });
-  });
-
-  it("ignores and reports broken sound settings", () => {
-    const warn = vi.spyOn(console, "warn").mockImplementation(ignore);
-
-    localStorage.setItem(SOUND_KEY, JSON.stringify({ master: 3 }));
-
-    expect(storedSoundLevels()).toBeNull();
-    expect(warn).toHaveBeenCalledExactlyOnceWith("Ignoring the saved sound settings", expect.any(Array));
   });
 });

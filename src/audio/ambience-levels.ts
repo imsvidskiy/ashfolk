@@ -1,9 +1,7 @@
+import { isWinter, seasonName } from "../content/seasons.ts";
 import { MAXIMUM_WIND_SPEED } from "../content/weather.ts";
 import { smoothstep } from "../shared/math.ts";
 import type { AMBIENCE_LAYERS } from "./sound-catalog.ts";
-
-const WINTER = 3;
-const SUMMER = 1;
 
 export type AmbienceLayer = keyof typeof AMBIENCE_LAYERS;
 
@@ -40,13 +38,7 @@ function dawn(hours: number): number {
 }
 
 function seasonLife(season: number): number {
-  const index = Math.floor(season) % 4;
-
-  if (index === WINTER) {
-    return 0.2;
-  }
-
-  return 1;
+  return isWinter(season) ? 0.2 : 1;
 }
 
 export function ambienceLevels(sample: AmbienceSample): AmbienceLevels {
@@ -61,7 +53,7 @@ export function ambienceLevels(sample: AmbienceSample): AmbienceLevels {
   const night = 1 - day;
   const shelter = 1 - 0.85 * Math.max(rain, snow, sample.storm);
   const life = seasonLife(sample.season) * shelter * nearness;
-  const warmth = Math.floor(sample.season) % 4 === SUMMER ? 1 : 0.6;
+  const warmth = seasonName(sample.season) === "Summer" ? 1 : 0.6;
 
   return {
     birdsDawn: dawn(hours) * (land.open + land.forest + land.cold) * life,
@@ -69,7 +61,7 @@ export function ambienceLevels(sample: AmbienceSample): AmbienceLevels {
     birdsMeadow: day * land.open * life,
     birdsTaiga: day * land.cold * life,
     cicadas: day * Math.max(sample.isHot ? 1 : 0, land.dry * 0.7) * warmth * life,
-    crickets: night * (land.open + land.forest + land.dry) * warmth * life,
+    crickets: night * Math.min(1, land.open + land.forest + land.dry) * warmth * life,
     frogs: land.swamp * (0.4 + 0.6 * night) * seasonLife(sample.season) * nearness,
     rainHeavy: smoothstep(0.6, 1, rain) * Math.max(0.6, nearness),
     rainLight: rain * (1 - smoothstep(0.6, 1, rain) * 0.7) * Math.max(0.5, nearness),

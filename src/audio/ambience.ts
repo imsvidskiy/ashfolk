@@ -3,8 +3,10 @@ import { fallsAsSnow } from "../content/weather.ts";
 import { clamp } from "../shared/math.ts";
 import type { TerrainSnapshot, WeatherView } from "../simulation/frame.ts";
 import type { CalendarView } from "../simulation/nature/calendar.ts";
+import { isOnIsland } from "../world/coast.ts";
 import type { WorldGrid } from "../world/world-grid.ts";
 import type { AmbienceLayer, AmbienceLevels, AmbienceSample, LandShares } from "./ambience-levels.ts";
+import type { HearingView } from "./hearing-view.ts";
 import { AMBIENCE_LAYERS } from "./sound-catalog.ts";
 import type { SoundEngine, SoundLoop } from "./sound-engine.ts";
 
@@ -35,14 +37,11 @@ export interface AmbienceWorld {
   readonly grid: WorldGrid;
   readonly isBrookAt: (x: number, z: number) => boolean;
   readonly isWaterAt: (x: number, z: number) => boolean;
-  readonly terrain: Pick<TerrainSnapshot, "baseTemperature" | "biome">;
+  readonly terrain: Pick<TerrainSnapshot, "baseTemperature" | "biome" | "coastDistance">;
 }
 
-export interface AmbienceView {
+export interface AmbienceView extends HearingView {
   readonly calendar: CalendarView;
-  readonly focusX: number;
-  readonly focusZ: number;
-  readonly viewDistance: number;
   readonly weather: WeatherView;
 }
 
@@ -72,7 +71,13 @@ function landAround(world: AmbienceWorld, view: AmbienceView): LandAround {
       const z = view.focusZ - reach + row * step;
       const cell = grid.cellAt(x, z);
 
-      if (cell < 0) {
+      if (!isOnIsland(terrain.coastDistance, cell)) {
+        continue;
+      }
+
+      if (world.isBrookAt(x, z)) {
+        brook += 1;
+
         continue;
       }
 
@@ -80,10 +85,6 @@ function landAround(world: AmbienceWorld, view: AmbienceView): LandAround {
         water += 1;
 
         continue;
-      }
-
-      if (world.isBrookAt(x, z)) {
-        brook += 1;
       }
 
       const groups = LAND_GROUPS.get(terrain.biome[cell]);
@@ -177,6 +178,7 @@ export class AmbienceMixer {
     if (now - playing.quietSince > RELEASE_SECONDS) {
       playing.loop.stop(STOP_FADE_SECONDS);
       this.#playing.delete(layer);
+      this.#engine.unload(AMBIENCE_LAYERS[layer]);
     }
   }
 

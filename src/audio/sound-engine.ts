@@ -250,6 +250,12 @@ export class SoundEngine {
     }
   }
 
+  unload(sound: SoundDefinition): void {
+    for (const url of sound.files) {
+      this.#buffers.delete(url);
+    }
+  }
+
   play(sound: SoundDefinition, point: SoundPoint | null, options: PlayOptions = {}): void {
     const graph = this.#graph;
 

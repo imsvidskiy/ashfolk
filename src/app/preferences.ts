@@ -1,23 +1,12 @@
 import { z } from "zod";
-import type { SoundLevels } from "../audio/sound-engine.ts";
 import { QUALITY_LEVELS, type QualityLevel } from "../rendering/render-quality.ts";
 
 const QUALITY_KEY = "dawnfolk.quality";
 const LABELS_KEY = "dawnfolk.labels";
 const OUTLINES_KEY = "dawnfolk.outlines";
-const SOUND_KEY = "dawnfolk.sound";
 
 const qualitySchema = z.enum(QUALITY_LEVELS);
 const visibilitySchema = z.enum(["hidden", "shown"]);
-const volumeSchema = z.number().min(0).max(1);
-const soundSchema = z.object({
-  ambience: volumeSchema,
-  effects: volumeSchema,
-  interface: volumeSchema,
-  isMuted: z.boolean(),
-  master: volumeSchema,
-  music: volumeSchema,
-});
 
 function readStorage(key: string): string | null {
   try {
@@ -90,30 +79,4 @@ export function storedOutlinesShown(): boolean {
 
 export function storeOutlinesShown(areShown: boolean): void {
   writePreference(OUTLINES_KEY, areShown ? "shown" : "hidden", "outline setting");
-}
-
-export function storedSoundLevels(): SoundLevels | null {
-  const stored = readStorage(SOUND_KEY);
-
-  if (stored === null) {
-    return null;
-  }
-
-  try {
-    const result = soundSchema.safeParse(JSON.parse(stored));
-
-    if (result.success) {
-      return result.data;
-    }
-
-    console.warn("Ignoring the saved sound settings", result.error.issues);
-  } catch (error) {
-    console.warn("Ignoring the saved sound settings", error);
-  }
-
-  return null;
-}
-
-export function storeSoundLevels(levels: SoundLevels): void {
-  writePreference(SOUND_KEY, JSON.stringify(levels), "sound settings");
 }

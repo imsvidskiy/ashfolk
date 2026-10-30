@@ -1,13 +1,14 @@
 import { HUMAN_CLIPS } from "../models/people/human-clips.ts";
+import { fractionalPart } from "../shared/math.ts";
 import { PERSON_STRIDE, PersonField } from "../world/agent-buffers.ts";
 import { PERSON_POSES, type PersonPose } from "../world/agent-poses.ts";
+import type { HearingView } from "./hearing-view.ts";
 import { SOUNDS, type SoundDefinition } from "./sound-catalog.ts";
-import type { SoundEngine } from "./sound-engine.ts";
+import type { SoundEngine, SoundPoint } from "./sound-engine.ts";
 
 const HEARING_VIEW_DISTANCE = 350;
 const HEARING_REACH = 120;
 const LOUDEST_WORKERS = 3;
-const LARGEST_KEPT_DRIFT = 0.2;
 
 const STRIKES: ReadonlyMap<PersonPose, Strike> = new Map([
   ["brawl", strike(SOUNDS.fight, "brawl", 0.5)],
@@ -32,22 +33,10 @@ interface Worker {
   readonly z: number;
 }
 
-export interface WorkView {
-  readonly focusX: number;
-  readonly focusZ: number;
-  readonly viewDistance: number;
-}
-
 function strike(sound: SoundDefinition, pose: PersonPose, at: number): Strike {
   const { timing } = HUMAN_CLIPS[pose];
 
   return { at, cycleSeconds: timing.kind === "stride" ? 1 : timing.cycleSeconds, sound };
-}
-
-function drift(from: number, to: number): number {
-  const difference = Math.abs(from - to) % 1;
-
-  return Math.min(difference, 1 - difference);
 }
 
 function crosses(from: number, to: number, mark: number): boolean {
@@ -58,7 +47,7 @@ function crosses(from: number, to: number, mark: number): boolean {
   return from < mark || mark <= to;
 }
 
-export function nearestWorkers(people: Float32Array, count: number, view: WorkView): Worker[] {
+export function nearestWorkers(people: Float32Array, count: number, view: HearingView): Worker[] {
   const workers: Worker[] = [];
 
   for (let index = 0; index < count; index += 1) {
@@ -93,16 +82,16 @@ export function nearestWorkers(people: Float32Array, count: number, view: WorkVi
 
 export class WorkSounds {
   readonly #engine: SoundEngine;
-  readonly #heightAt: (x: number, z: number) => number;
+  readonly #groundPoint: (x: number, z: number) => SoundPoint;
   readonly #phases = new Map<number, number>();
   #workers: Worker[] = [];
 
-  constructor(engine: SoundEngine, heightAt: (x: number, z: number) => number) {
+  constructor(engine: SoundEngine, groundPoint: (x: number, z: number) => SoundPoint) {
     this.#engine = engine;
-    this.#heightAt = heightAt;
+    this.#groundPoint = groundPoint;
   }
 
-  listen(people: Float32Array, count: number, view: WorkView): void {
+  listen(people: Float32Array, count: number, view: HearingView): void {
     if (view.viewDistance > HEARING_VIEW_DISTANCE) {
       this.#workers = [];
       this.#phases.clear();
@@ -117,9 +106,8 @@ export class WorkSounds {
 
     for (const worker of this.#workers) {
       const local = known.get(worker.id);
-      const isInStep = local !== undefined && drift(local, worker.phase) < LARGEST_KEPT_DRIFT;
 
-      this.#phases.set(worker.id, isInStep ? local : worker.phase);
+      this.#phases.set(worker.id, local === undefined ? fractionalPart(worker.phase) : local);
     }
   }
 
@@ -140,7 +128,7 @@ export class WorkSounds {
       this.#phases.set(worker.id, to);
 
       if (crosses(from, to, worker.strike.at)) {
-        this.#engine.play(worker.strike.sound, { x: worker.x, y: this.#heightAt(worker.x, worker.z), z: worker.z });
+        this.#engine.play(worker.strike.sound, this.#groundPoint(worker.x, worker.z));
       }
     }
   }

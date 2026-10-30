@@ -1,8 +1,9 @@
 import { describe, expect, it } from "vitest";
+import { SEASONS } from "../content/seasons.ts";
 import { type AmbienceSample, ambienceLevels } from "./ambience-levels.ts";
 
-const SUMMER = 1;
-const WINTER = 3;
+const SUMMER = SEASONS.indexOf("Summer");
+const WINTER = SEASONS.indexOf("Winter");
 
 const MEADOW_NOON: AmbienceSample = {
   brook: 0,
@@ -33,6 +34,14 @@ describe("ambience levels", () => {
 
     expect(levels.birdsMeadow).toBe(0);
     expect(levels.crickets).toBeGreaterThan(0.8);
+  });
+
+  it("keeps the crickets of a steppe night as loud as a meadow's", () => {
+    const meadow = ambienceLevels({ ...MEADOW_NOON, hours: 23 });
+    const steppe = ambienceLevels({ ...MEADOW_NOON, hours: 23, land: { ...MEADOW_NOON.land, dry: 1, open: 1 } });
+
+    expect(steppe.crickets).toBe(meadow.crickets);
+    expect(steppe.crickets).toBeLessThanOrEqual(1);
   });
 
   it("plays rain as its own layer and quiets the animals", () => {

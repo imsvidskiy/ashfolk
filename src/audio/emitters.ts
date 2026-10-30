@@ -70,14 +70,14 @@ export function groupCells(grid: WorldGrid, cells: Iterable<number>, options: Ce
 
 export class EmitterLoops {
   readonly #engine: SoundEngine;
-  readonly #heightAt: (x: number, z: number) => number;
+  readonly #groundPoint: (x: number, z: number) => SoundPoint;
   readonly #loops = new Map<string, SoundLoop>();
   readonly #sound: SoundDefinition;
 
-  constructor(engine: SoundEngine, sound: SoundDefinition, heightAt: (x: number, z: number) => number) {
+  constructor(engine: SoundEngine, sound: SoundDefinition, groundPoint: (x: number, z: number) => SoundPoint) {
     this.#engine = engine;
     this.#sound = sound;
-    this.#heightAt = heightAt;
+    this.#groundPoint = groundPoint;
   }
 
   update(emitters: readonly Emitter[]): void {
@@ -101,7 +101,7 @@ export class EmitterLoops {
   }
 
   #place(emitter: Emitter): void {
-    const point: SoundPoint = { x: emitter.x, y: this.#heightAt(emitter.x, emitter.z), z: emitter.z };
+    const point = this.#groundPoint(emitter.x, emitter.z);
     const playing = this.#loops.get(emitter.key);
 
     if (playing !== undefined) {
