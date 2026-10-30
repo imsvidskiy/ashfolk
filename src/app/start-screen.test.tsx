@@ -5,6 +5,7 @@ import { useLaunchStore } from "./launch-store.ts";
 import { StartScreen } from "./start-screen.tsx";
 
 const initialLaunch = useLaunchStore.getState();
+
 describe("start screen", () => {
   it("offers a named round world from a random seed", async () => {
     const screen = await render(<StartScreen />);
