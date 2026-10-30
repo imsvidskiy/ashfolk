@@ -178,6 +178,7 @@ export class VegetationView {
   readonly #shadowProxies: readonly PlantBatch[];
   #heldBatch: InstanceBatch | null = null;
   #levelDistances = LEVEL_DISTANCES;
+  #paintedSeason = Number.NaN;
   #shadowLevelCount = SHADOW_LEVEL_COUNT;
   #shouldRefillAll = true;
 
@@ -395,6 +396,12 @@ export class VegetationView {
   }
 
   #paintSeason(season: number): void {
+    if (season === this.#paintedSeason) {
+      return;
+    }
+
+    this.#paintedSeason = season;
+
     for (const [species, look] of this.#looks.entries()) {
       const current = foliageLook(PLANT_SPECIES[species].index, season);
 
