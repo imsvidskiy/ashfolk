@@ -8,6 +8,7 @@ const WORLD_HALF_SIZE = 4000;
 const CANVAS_WIDTH = 390;
 const CANVAS_HEIGHT = 844;
 const HOLD_MILLISECONDS = 400;
+const HOLD_DELAY_MILLISECONDS = 140;
 
 type ToolSpy = ReturnType<typeof createTool>;
 
@@ -196,10 +197,11 @@ describe("pointer controls", () => {
     const rig = createRig();
 
     touch(rig, "pointerdown", 1, 195, 420);
+    wait(HOLD_DELAY_MILLISECONDS - 1);
 
     expect(rig.tool.begin).not.toHaveBeenCalled();
 
-    wait(HOLD_MILLISECONDS);
+    wait(1);
 
     expect(rig.tool.begin).toHaveBeenCalledTimes(1);
 
