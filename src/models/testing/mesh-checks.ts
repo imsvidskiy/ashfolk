@@ -206,3 +206,9 @@ function pieceThickness(mesh: MeshData, piece: MeshPiece): number {
 
   return area === 0 ? 0 : (2 * Math.abs(volume)) / area;
 }
+
+export function verticesWhere(mesh: MeshData, accepts: (vertex: number) => boolean): number[] {
+  return Array.from({ length: vertexCount(mesh) }, (_, vertex) => {
+    return vertex;
+  }).filter(accepts);
+}

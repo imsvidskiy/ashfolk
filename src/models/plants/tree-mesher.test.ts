@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { MaterialSlot } from "../materials.ts";
 import { type MeshData, vertexCount } from "../mesh/mesh-data.ts";
+import { verticesWhere } from "../testing/mesh-checks.ts";
 import { loosePieces } from "../testing/mesh-connectivity.ts";
 import { meshTree, type PlantDetailLevel, plantSway, type TreeLook } from "./tree-mesher.ts";
 import type { TreeStructure } from "./tree-structure.ts";
@@ -91,9 +92,7 @@ function heightOf(mesh: MeshData, vertex: number): number {
 }
 
 function foliageOf(mesh: MeshData): number[] {
-  return Array.from({ length: vertexCount(mesh) }, (_, vertex) => {
-    return vertex;
-  }).filter((vertex) => {
+  return verticesWhere(mesh, (vertex) => {
     return mesh.channels.slot[vertex] === MaterialSlot.Leaf;
   });
 }
@@ -150,9 +149,7 @@ describe("tree mesher", () => {
   it.each(["high", "medium"] as const)("rounds off the top of a forking trunk at %s detail", (level) => {
     const mesh = meshTree({ ...FORKED, foliage: [] }, LOOK, level);
 
-    const wood = Array.from({ length: vertexCount(mesh) }, (_, vertex) => {
-      return vertex;
-    }).filter((vertex) => {
+    const wood = verticesWhere(mesh, (vertex) => {
       return Math.hypot(mesh.positions[vertex * 3], mesh.positions[vertex * 3 + 2]) < 0.25;
     });
 
@@ -168,9 +165,7 @@ describe("tree mesher", () => {
   it("carries the trunk on into the crown at low detail", () => {
     const mesh = meshTree(TREE, LOOK, "low");
 
-    const wood = Array.from({ length: vertexCount(mesh) }, (_, vertex) => {
-      return vertex;
-    }).filter((vertex) => {
+    const wood = verticesWhere(mesh, (vertex) => {
       return mesh.channels.slot[vertex] === MaterialSlot.Bark;
     });
 
@@ -193,15 +188,11 @@ describe("tree mesher", () => {
   it("shades a frond from above and below", () => {
     const mesh = meshTree(FROND_TREE, LOOK, "high");
 
-    const leafNormals = Array.from({ length: vertexCount(mesh) }, (_, vertex) => {
-      return vertex;
-    })
-      .filter((vertex) => {
-        return mesh.channels.slot[vertex] === MaterialSlot.Leaf && mesh.positions[vertex * 3] > 1;
-      })
-      .map((vertex) => {
-        return mesh.normals[vertex * 3 + 1];
-      });
+    const leafNormals = verticesWhere(mesh, (vertex) => {
+      return mesh.channels.slot[vertex] === MaterialSlot.Leaf && mesh.positions[vertex * 3] > 1;
+    }).map((vertex) => {
+      return mesh.normals[vertex * 3 + 1];
+    });
 
     expect(Math.max(...leafNormals)).toBeGreaterThan(0.5);
     expect(Math.min(...leafNormals)).toBeLessThan(-0.5);

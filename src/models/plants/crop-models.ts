@@ -198,8 +198,12 @@ function addFlax(context: ClumpContext): void {
   }
 }
 
+function frondAngle(index: number, count: number): number {
+  return (index / count) * FULL_TURN + scatter(index, 7) * 0.5;
+}
+
 function frondPoints(index: number, count: number, height: number): TubePoint[] {
-  const angle = (index / count) * FULL_TURN + scatter(index, 7) * 0.5;
+  const angle = frondAngle(index, count);
   const reach = 0.12 + scatter(index, 8) * 0.06;
   const rise = height * (0.85 + scatter(index, 9) * 0.15);
 
@@ -224,10 +228,12 @@ function addCarrots(context: ClumpContext): void {
       continue;
     }
 
+    const angle = frondAngle(frond, fronds);
+
     for (const point of points.slice(1)) {
       context.builder.add(leaflet, {
         style: leaf,
-        transform: transformOf({ position: [point.x, point.y, point.z], rotation: [0, frond, 0.4] }),
+        transform: transformOf({ position: [point.x, point.y, point.z], rotation: [0, -angle, 0.4] }),
       });
     }
   }

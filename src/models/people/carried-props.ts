@@ -4,9 +4,9 @@ import { createRandom } from "../../shared/random.ts";
 import { MaterialSlot, type MaterialSlotIndex } from "../materials.ts";
 import type { MeshBuilder } from "../mesh/mesh-builder.ts";
 import type { Shape } from "../mesh/shape.ts";
-import { blob, lathe, sphere, torus } from "../mesh/shapes.ts";
+import { blob, lathe, sphere } from "../mesh/shapes.ts";
 import { type Triple, transformOf } from "../mesh/transforms.ts";
-import { type HumanDetail, trimSegments } from "./human-detail.ts";
+import { type HumanDetail, trimmedRing, trimSegments } from "./human-detail.ts";
 import { CRADLE, inLeftHand, LEFT_FIST, onChest } from "./prop-placement.ts";
 
 const LOAD_NOISE = createVolumeNoise(createRandom(5151));
@@ -90,7 +90,7 @@ export function addCarriedFruit(builder: MeshBuilder, detail: HumanDetail): void
     style: inLeftHand(MaterialSlot.Thatch),
     transform: transformOf({ position: [x, bottom, z] }),
   });
-  builder.add(torus(0.108, 0.008, 14, 4), {
+  builder.add(trimmedRing(detail, 0.108, 0.008, 14), {
     style: inLeftHand(MaterialSlot.Wood),
     transform: transformOf({ position: [x, bottom + 0.13, z], rotation: [0, 0, Math.PI / 2], scale: [1.35, 1, 1] }),
   });
