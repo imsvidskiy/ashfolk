@@ -209,6 +209,10 @@ export class WorldRenderer {
     this.#output = createRenderOutput(renderer, this.scene, camera, quality);
   }
 
+  drawnHeading(kind: "animal" | "person", id: number): number | null {
+    return kind === "person" ? this.#people.drawnHeading(id) : this.#animals.drawnHeading(id);
+  }
+
   highlight(target: GrabTarget | null): void {
     this.#highlighted = target;
   }

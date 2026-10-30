@@ -1,5 +1,6 @@
 import { Matrix4, PerspectiveCamera, type Vector3, type WebGPURenderer } from "three/webgpu";
 import type { GenerationProgress, WorldRequest } from "../generation/generation-options.ts";
+import { ANIMAL_WADING_DEPTH, PERSON_WADING_DEPTH, standingHeight } from "../rendering/agents/agent-view-input.ts";
 import { createGraphics } from "../rendering/create-graphics.ts";
 import { type QualityLevel, RENDER_QUALITY } from "../rendering/render-quality.ts";
 import { WorldRenderer } from "../rendering/world-renderer.ts";
@@ -130,7 +131,16 @@ export class GameEngine implements EngineHandle {
       quality: RENDER_QUALITY[parts.quality],
       renderer: parts.renderer,
     });
-    this.#entityPicker = new EntityPicker(perspective, heightAt);
+    this.#entityPicker = new EntityPicker(
+      perspective,
+      heightAt,
+      (kind, x, z) => {
+        return standingHeight(mirror, x, z, kind === "person" ? PERSON_WADING_DEPTH : ANIMAL_WADING_DEPTH);
+      },
+      (kind, id) => {
+        return this.#world.drawnHeading(kind, id);
+      }
+    );
     this.#labels = new LabelProjector(
       perspective,
       {
@@ -409,7 +419,9 @@ export class GameEngine implements EngineHandle {
   }
 
   #selectAt(point: Vector3 | null, screen: ScreenPoint): void {
-    const selection = this.#entityPicker.pick(this.session.frame, screen, this.#viewport, point);
+    const scene = { frame: this.session.frame, secondsSinceTick: this.#secondsSinceTick() };
+
+    const selection = this.#entityPicker.pick(scene, screen, this.#viewport, point);
 
     this.session.send({ selection, type: "setSelection" });
   }
@@ -422,10 +434,15 @@ export class GameEngine implements EngineHandle {
       plantsNear: (spots: readonly GroundPoint[], radius: number) => {
         return this.#world.plantsNear(spots, radius);
       },
+      secondsSinceTick: this.#secondsSinceTick(),
       vegetation,
     };
 
     return this.#entityPicker.pickGrabbable(scene, screen, this.#viewport, point);
+  }
+
+  #secondsSinceTick(): number {
+    return this.session.mirror.gameSecondsSinceTick(performance.now());
   }
 
   #resize(): void {
