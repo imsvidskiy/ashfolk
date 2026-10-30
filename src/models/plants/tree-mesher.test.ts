@@ -3,11 +3,9 @@ import { MaterialSlot } from "../materials.ts";
 import { type MeshData, vertexCount } from "../mesh/mesh-data.ts";
 import { verticesWhere } from "../testing/mesh-checks.ts";
 import { loosePieces } from "../testing/mesh-connectivity.ts";
-import { meshTree, type PlantDetailLevel, plantSway, type TreeLook } from "./tree-mesher.ts";
+import { PLANT_DETAIL_LEVELS } from "./plant-models.ts";
+import { BROADLEAF_LOOK, meshTree, plantSway } from "./tree-mesher.ts";
 import type { TreeStructure } from "./tree-structure.ts";
-
-const LEVELS: readonly PlantDetailLevel[] = ["high", "medium", "low", "far"];
-const LOOK: TreeLook = { bark: MaterialSlot.Bark, foliage: MaterialSlot.Leaf, hasBarkMarks: false };
 
 const TREE: TreeStructure = {
   branches: [
@@ -98,24 +96,27 @@ function foliageOf(mesh: MeshData): number[] {
 }
 
 describe("tree mesher", () => {
-  it.each(LEVELS)("sways the trunk, the branches and the crown alike at every height at %s detail", (level) => {
-    const mesh = meshTree(TREE, LOOK, level);
+  it.each(PLANT_DETAIL_LEVELS)(
+    "sways the trunk, the branches and the crown alike at every height at %s detail",
+    (level) => {
+      const mesh = meshTree(TREE, BROADLEAF_LOOK, level);
 
-    for (let vertex = 0; vertex < vertexCount(mesh); vertex += 1) {
-      const height = mesh.positions[vertex * 3 + 1];
+      for (let vertex = 0; vertex < vertexCount(mesh); vertex += 1) {
+        const height = mesh.positions[vertex * 3 + 1];
 
-      expect(mesh.channels.sway[vertex]).toBeCloseTo(plantSway(height, TREE.height), 5);
+        expect(mesh.channels.sway[vertex]).toBeCloseTo(plantSway(height, TREE.height), 5);
+      }
     }
-  });
+  );
 
-  it.each(LEVELS)("grows the crown of a plant without a trunk out of the ground at %s detail", (level) => {
-    const mesh = meshTree(SHRUB, LOOK, level);
+  it.each(PLANT_DETAIL_LEVELS)("grows the crown of a plant without a trunk out of the ground at %s detail", (level) => {
+    const mesh = meshTree(SHRUB, BROADLEAF_LOOK, level);
 
     expect(loosePieces(mesh)).toEqual([]);
   });
 
-  it.each(LEVELS)("drapes a weeping crown in one piece at %s detail", (level) => {
-    const mesh = meshTree(WEEPING, LOOK, level);
+  it.each(PLANT_DETAIL_LEVELS)("drapes a weeping crown in one piece at %s detail", (level) => {
+    const mesh = meshTree(WEEPING, BROADLEAF_LOOK, level);
     const leaves = foliageOf(mesh);
 
     expect(loosePieces(mesh)).toEqual([]);
@@ -131,7 +132,7 @@ describe("tree mesher", () => {
   it.each(["high", "medium"] as const)(
     "sways the top of a weeping crown with the tree and swings its hem fully at %s detail",
     (level) => {
-      const mesh = meshTree(WEEPING, LOOK, level);
+      const mesh = meshTree(WEEPING, BROADLEAF_LOOK, level);
       const leaves = foliageOf(mesh);
 
       const top = leaves.reduce((highest, vertex) => {
@@ -147,7 +148,7 @@ describe("tree mesher", () => {
   );
 
   it.each(["high", "medium"] as const)("rounds off the top of a forking trunk at %s detail", (level) => {
-    const mesh = meshTree({ ...FORKED, foliage: [] }, LOOK, level);
+    const mesh = meshTree({ ...FORKED, foliage: [] }, BROADLEAF_LOOK, level);
 
     const wood = verticesWhere(mesh, (vertex) => {
       return Math.hypot(mesh.positions[vertex * 3], mesh.positions[vertex * 3 + 2]) < 0.25;
@@ -163,7 +164,7 @@ describe("tree mesher", () => {
   });
 
   it("carries the trunk on into the crown at low detail", () => {
-    const mesh = meshTree(TREE, LOOK, "low");
+    const mesh = meshTree(TREE, BROADLEAF_LOOK, "low");
 
     const wood = verticesWhere(mesh, (vertex) => {
       return mesh.channels.slot[vertex] === MaterialSlot.Bark;
@@ -179,14 +180,14 @@ describe("tree mesher", () => {
     expect(loosePieces(mesh)).toEqual([]);
   });
 
-  it.each(LEVELS)("grows fronds out of the crown on both faces at %s detail", (level) => {
-    const mesh = meshTree(FROND_TREE, LOOK, level);
+  it.each(PLANT_DETAIL_LEVELS)("keeps fronds attached to the crown at %s detail", (level) => {
+    const mesh = meshTree(FROND_TREE, BROADLEAF_LOOK, level);
 
     expect(loosePieces(mesh)).toEqual([]);
   });
 
   it("shades a frond from above and below", () => {
-    const mesh = meshTree(FROND_TREE, LOOK, "high");
+    const mesh = meshTree(FROND_TREE, BROADLEAF_LOOK, "high");
 
     const leafNormals = verticesWhere(mesh, (vertex) => {
       return mesh.channels.slot[vertex] === MaterialSlot.Leaf && mesh.positions[vertex * 3] > 1;
@@ -198,8 +199,8 @@ describe("tree mesher", () => {
     expect(Math.min(...leafNormals)).toBeLessThan(-0.5);
   });
 
-  it.each(LEVELS)("keeps a leafless tree to its bare wood at %s detail", (level) => {
-    const mesh = meshTree(BARE, LOOK, level);
+  it.each(PLANT_DETAIL_LEVELS)("keeps a leafless tree to its bare wood at %s detail", (level) => {
+    const mesh = meshTree(BARE, BROADLEAF_LOOK, level);
 
     expect(mesh.channels.slot).not.toContain(MaterialSlot.Leaf);
     expect(vertexCount(mesh)).toBeGreaterThan(0);
