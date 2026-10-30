@@ -36,6 +36,7 @@
   <a href="#features">Features</a> ·
   <a href="#getting-started">Getting started</a> ·
   <a href="#architecture">Architecture</a> ·
+  <a href="docs/roadmap.md">Roadmap</a> ·
   <a href="CONTRIBUTING.md">Contributing</a> ·
   <a href="https://github.com/sponsors/imsvidskiy">Sponsor</a>
 </p>
