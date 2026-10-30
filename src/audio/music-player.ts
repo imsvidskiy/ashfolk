@@ -1,5 +1,5 @@
 import { MUSIC_TRACKS } from "./sound-catalog.ts";
-import type { SoundEngine } from "./sound-engine.ts";
+import type { MusicOutput, SoundEngine } from "./sound-engine.ts";
 
 const FIRST_TRACK_DELAY_SECONDS = 8;
 const SHORTEST_REST_SECONDS = 45;
@@ -15,11 +15,6 @@ const MOODS: Readonly<Record<Mood, readonly string[]>> = {
   dusk: [...MUSIC_TRACKS.cozyDusk],
   night: [...MUSIC_TRACKS.cozyNight, ...MUSIC_TRACKS.arcadeNight],
 };
-
-interface Output {
-  readonly element: HTMLAudioElement;
-  readonly gain: GainNode;
-}
 
 export function moodAt(hours: number): Mood {
   if (hours >= 7 && hours < 17) {
@@ -43,7 +38,6 @@ export function nextTrack(mood: Mood, previous: string | null, roll: number): st
 
 export class MusicPlayer {
   readonly #engine: SoundEngine;
-  #output: Output | null = null;
   #previous: string | null = null;
   #startsAt: number | null;
 
@@ -53,7 +47,7 @@ export class MusicPlayer {
   }
 
   update(now: number, hours: number): void {
-    const output = this.#ensureOutput();
+    const output = this.#engine.music;
 
     if (output === null) {
       return;
@@ -63,6 +57,10 @@ export class MusicPlayer {
       output.element.pause();
 
       return;
+    }
+
+    if (this.#startsAt === null && output.element.ended) {
+      this.#startsAt = now + SHORTEST_REST_SECONDS + Math.random() * (LONGEST_REST_SECONDS - SHORTEST_REST_SECONDS);
     }
 
     if (this.#startsAt === null) {
@@ -77,9 +75,7 @@ export class MusicPlayer {
   }
 
   dispose(): void {
-    const output = this.#output;
-
-    this.#output = null;
+    const output = this.#engine.music;
 
     if (output === null) {
       return;
@@ -91,41 +87,10 @@ export class MusicPlayer {
     setTimeout(() => {
       output.element.pause();
       output.element.removeAttribute("src");
-      output.gain.disconnect();
     }, FADE_OUT_SECONDS * 1000);
   }
 
-  #ensureOutput(): Output | null {
-    if (this.#output !== null) {
-      return this.#output;
-    }
-
-    const { context } = this.#engine;
-    const bus = this.#engine.busOutput("music");
-
-    if (context === null || bus === null) {
-      return null;
-    }
-
-    const element = new Audio();
-    const gain = context.createGain();
-
-    element.preload = "auto";
-    gain.gain.value = 0;
-    context.createMediaElementSource(element).connect(gain);
-    gain.connect(bus);
-    element.addEventListener("ended", () => {
-      this.#startsAt =
-        performance.now() / 1000 +
-        SHORTEST_REST_SECONDS +
-        Math.random() * (LONGEST_REST_SECONDS - SHORTEST_REST_SECONDS);
-    });
-    this.#output = { element, gain };
-
-    return this.#output;
-  }
-
-  #start(output: Output, now: number, hours: number): void {
+  #start(output: MusicOutput, now: number, hours: number): void {
     const track = nextTrack(moodAt(hours), this.#previous, Math.random());
     const { context } = output.gain;
 
@@ -138,7 +103,7 @@ export class MusicPlayer {
     this.#play(output, now);
   }
 
-  #resume(output: Output, now: number): void {
+  #resume(output: MusicOutput, now: number): void {
     if (!output.element.paused) {
       return;
     }
@@ -146,7 +111,7 @@ export class MusicPlayer {
     this.#play(output, now);
   }
 
-  #play(output: Output, now: number): void {
+  #play(output: MusicOutput, now: number): void {
     output.element.play().catch(() => {
       this.#startsAt = now + RETRY_SECONDS;
     });

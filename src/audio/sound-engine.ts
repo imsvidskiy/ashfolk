@@ -46,6 +46,11 @@ export interface LoopFade {
   readonly volume: number;
 }
 
+export interface MusicOutput {
+  readonly element: HTMLAudioElement;
+  readonly gain: GainNode;
+}
+
 export interface SoundLoop {
   readonly setPosition: (point: SoundPoint) => void;
   readonly setVolume: (volume: number, smoothingSeconds: number) => void;
@@ -71,6 +76,7 @@ interface Graph {
   readonly buses: Readonly<Record<SoundBus, GainNode>>;
   readonly context: AudioContext;
   readonly master: GainNode;
+  readonly music: MusicOutput;
 }
 
 function perceived(level: number): number {
@@ -98,7 +104,15 @@ function createGraph(): Graph {
     buses[bus].connect(master);
   }
 
-  return { buses, context, master };
+  const element = new Audio();
+  const gain = context.createGain();
+
+  element.preload = "auto";
+  gain.gain.value = 0;
+  context.createMediaElementSource(element).connect(gain);
+  gain.connect(buses.music);
+
+  return { buses, context, master, music: { element, gain } };
 }
 
 function createPanner(context: AudioContext, sound: SoundDefinition, point: SoundPoint): PannerNode {
@@ -148,6 +162,10 @@ export class SoundEngine {
     return this.#levels;
   }
 
+  get music(): MusicOutput | null {
+    return this.#graph === null ? null : this.#graph.music;
+  }
+
   attach(target: Window): () => void {
     const abort = new AbortController();
 
@@ -193,10 +211,6 @@ export class SoundEngine {
     }
 
     this.#applyRunning();
-  }
-
-  busOutput(bus: SoundBus): GainNode | null {
-    return this.#graph === null ? null : this.#graph.buses[bus];
   }
 
   setListener(position: SoundPoint, forward: SoundPoint, up: SoundPoint): void {
@@ -445,6 +459,9 @@ export class SoundEngine {
 
     this.#graph = createGraph();
     this.setLevels(this.#levels);
+
+    // Mobile browsers let a media element play later only after it first plays inside a gesture.
+    this.#graph.music.element.play().catch(ignore);
   }
 
   #applyRunning(): void {

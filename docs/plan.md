@@ -537,7 +537,9 @@ volcanoes, weather, the calendar and people's poses. Cues move into modules late
   jingle at a time; `work-sounds.ts` for the closest three people chopping, mining, building, digging or fighting,
   timed to their animation's strike; `interface-sounds.ts` for clicks, tabs, panels and the chosen power.
 - **Music.** `music-player.ts` streams one track at a time through `MediaElementAudioSourceNode`, picked by the
-  hour, never the same twice, with a fade in and a rest of 45 to 120 seconds between tracks.
+  hour, never the same twice, with a fade in and a rest of 45 to 120 seconds between tracks. The engine makes the
+  media element in the first gesture and plays it once there, because mobile browsers otherwise refuse to start it
+  later.
 - **Assets.** Opus in WebM only; WebGPU already needs Safari 26, which decodes it. A sound that fails to decode
   stays silent. One-shots are mono at 48 kbps, music stereo at 64 kbps. Masters and their prompts stay outside the
   repository; `bun run sounds <folder>` trims, levels by loudness and encodes them with `ffmpeg`, and the catalog in
