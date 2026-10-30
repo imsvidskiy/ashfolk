@@ -5,13 +5,14 @@ import type { WorldMirror } from "../../game/world-mirror.ts";
 import { canonicalHeight, farVariantOf, footprintRadius, plantVariantCount } from "../../models/plants/plant-models.ts";
 import { isDistantLevel, type PlantDetailLevel } from "../../models/plants/tree-mesher.ts";
 import { grownIndexArray } from "../../shared/growth.ts";
-import { clamp } from "../../shared/math.ts";
+import { clamp, hashToUnit } from "../../shared/math.ts";
 import type { CellRegion } from "../../world/change-tracking.ts";
 import { NO_PLANT, PlantState, type VegetationChannels } from "../../world/vegetation-store.ts";
 
 export const CHUNK_CELLS = 16;
 export const FLOATS_PER_PLANT = 8;
 export const PLANT_SINKING = 0.15;
+export const SPARSE_SHARE = 1 / 3;
 
 const NO_CHUNK = -1;
 const NO_BUCKET = -1;
@@ -42,6 +43,7 @@ export interface VegetationChunk {
   changedBuckets: number[];
   isDirty: boolean;
   readonly plants: Set<number>;
+  sparseCounts: number[];
 }
 
 export function bucketOf(species: number, seed: number): number {
@@ -89,6 +91,10 @@ export function writePlantLook(
   target[offset + 3] = vegetation.fruit[plant];
 }
 
+function isKeptWhenSparse(plant: number): boolean {
+  return hashToUnit(plant, 1) < SPARSE_SHARE;
+}
+
 function allocateBucket(count: number): Float32Array {
   if (count === 0) {
     return EMPTY_BUCKET;
@@ -114,7 +120,14 @@ export class VegetationChunks {
     this.chunksPerSide = Math.ceil(mirror.grid.cellsPerSide / CHUNK_CELLS);
 
     for (let chunk = 0; chunk < this.chunksPerSide * this.chunksPerSide; chunk += 1) {
-      this.chunks.push({ bounds: new Box3(), buckets: [], changedBuckets: [], isDirty: true, plants: new Set() });
+      this.chunks.push({
+        bounds: new Box3(),
+        buckets: [],
+        changedBuckets: [],
+        isDirty: true,
+        plants: new Set(),
+        sparseCounts: [],
+      });
       this.#touchedBuckets.push(new Set());
     }
 
@@ -260,9 +273,21 @@ export class VegetationChunks {
 
   #repack(chunk: VegetationChunk, touched: Set<number>): void {
     const counts = new Array<number>(BUCKET_COUNT).fill(0);
+    const sparseCounts = new Array<number>(BUCKET_COUNT).fill(0);
+    const sparse: number[] = [];
+    const rest: number[] = [];
 
     for (const plant of chunk.plants) {
-      counts[this.#bucketOfPlant[plant]] += 1;
+      const bucket = this.#bucketOfPlant[plant];
+
+      counts[bucket] += 1;
+
+      if (isKeptWhenSparse(plant)) {
+        sparseCounts[bucket] += 1;
+        sparse.push(plant);
+      } else {
+        rest.push(plant);
+      }
     }
 
     const buckets = counts.map((count) => {
@@ -272,7 +297,7 @@ export class VegetationChunks {
 
     chunk.bounds.makeEmpty();
 
-    for (const plant of chunk.plants) {
+    for (const plant of [...sparse, ...rest]) {
       const bucket = this.#bucketOfPlant[plant];
       const offset = filled[bucket] * FLOATS_PER_PLANT;
 
@@ -281,6 +306,7 @@ export class VegetationChunks {
     }
 
     chunk.buckets = buckets;
+    chunk.sparseCounts = sparseCounts;
     chunk.changedBuckets = [...touched];
     chunk.isDirty = false;
     touched.clear();

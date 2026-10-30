@@ -30,18 +30,23 @@ import {
   FLOATS_PER_PLANT,
   PLANT_BUCKETS,
   PLANT_SINKING,
+  SPARSE_SHARE,
   type VegetationChunk,
   VegetationChunks,
   writePlantLook,
 } from "./vegetation-chunks.ts";
 
-const LEVEL_DISTANCES: readonly number[] = [160, 600, 1600, 4200];
+const LEVEL_DISTANCES: readonly number[] = [160, 600, 1600, 4200, Number.POSITIVE_INFINITY];
 const FAR_LEVEL_DISTANCES: readonly number[] = [160, 600, 1600, Number.POSITIVE_INFINITY];
-const SHADOW_LEVEL_COUNT = 2;
+const SHADOW_LEVEL_COUNT = 3;
 const BURN_DETAIL_FADE = { end: 1300, start: 500 } as const;
 const FAR_BURN_DETAIL_FADE = { end: 24_000, start: 16_000 } as const;
 const NEAREST_LEVEL = 0;
 const SHADOW_PROXY_LEVEL = 1;
+const FARTHEST_MODEL_LEVEL = 3;
+const SPARSE_LEVEL = 4;
+const SPARSE_OVERLAP = 1.15;
+const SPARSE_WIDENING = Math.sqrt(1 / SPARSE_SHARE) * SPARSE_OVERLAP;
 
 const PLANT_CHANNELS: readonly VertexChannel[] = ["flutter", "part", "shade", "slot", "sway"];
 
@@ -133,7 +138,33 @@ function chunkLevelOf(
   return levelWithin(distance, levelDistances, detail);
 }
 
-function fillPlants(plants: PlantBatch, chunks: readonly VegetationChunk[], casterCount: number): void {
+function widened(mesh: MeshData, factor: number): MeshData {
+  const positions = mesh.positions.slice();
+
+  for (let offset = 0; offset < positions.length; offset += 3) {
+    positions[offset] *= factor;
+    positions[offset + 2] *= factor;
+  }
+
+  return { ...mesh, positions };
+}
+
+function plantsOf(chunk: VegetationChunk, bucket: number, isSparse: boolean): Float32Array {
+  const source = chunk.buckets[bucket];
+
+  if (!isSparse) {
+    return source;
+  }
+
+  return source.subarray(0, chunk.sparseCounts[bucket] * FLOATS_PER_PLANT);
+}
+
+function fillPlants(
+  plants: PlantBatch,
+  chunks: readonly VegetationChunk[],
+  casterCount: number,
+  isSparse = false
+): void {
   const { batch, buckets, counts } = plants;
 
   const sources: Float32Array[] = [];
@@ -142,7 +173,7 @@ function fillPlants(plants: PlantBatch, chunks: readonly VegetationChunk[], cast
 
   for (const [index, chunk] of chunks.entries()) {
     for (const bucket of buckets) {
-      const source = chunk.buckets[bucket];
+      const source = plantsOf(chunk, bucket, isSparse);
 
       if (source.length === 0) {
         continue;
@@ -191,13 +222,17 @@ export class VegetationView {
       return new SpeciesLook();
     });
 
-    const models = PLANT_DETAIL_LEVELS.map((level) => {
+    const detailedModels = PLANT_DETAIL_LEVELS.map((level) => {
       return bucketGroups(level).map((buckets) => {
         const { species, variant } = PLANT_BUCKETS[buckets[0]];
 
         return { buckets, mesh: buildPlantVariant(species, variant, level), species };
       });
     });
+    const sparseModels = detailedModels[FARTHEST_MODEL_LEVEL].map((model) => {
+      return { ...model, mesh: widened(model.mesh, SPARSE_WIDENING) };
+    });
+    const models = [...detailedModels, sparseModels];
 
     const materials = this.#looks.map((look, species) => {
       return createPlantMaterial({
@@ -490,7 +525,7 @@ export class VegetationView {
             return changed.has(bucket);
           })
         ) {
-          fillPlants(batch, chunks, casters.length);
+          fillPlants(batch, chunks, casters.length, level === SPARSE_LEVEL);
         }
       }
 
