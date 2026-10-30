@@ -317,6 +317,23 @@ describe("volcanoes", () => {
     expect(simulation.world.vegetation.hasPlantsInCell(cell)).toBe(false);
   });
 
+  it("goes out where water floods its lava", () => {
+    const simulation = erupt({ hasRiver: false });
+
+    runFor(simulation, SWELL_SECONDS + 5);
+
+    const flooded = [...onlyVolcano(simulation).lava.keys()].slice(0, 5);
+
+    floodCells(simulation.world, flooded, 2);
+    simulation.step();
+
+    expect(
+      flooded.filter((cell) => {
+        return onlyVolcano(simulation).lava.has(cell);
+      })
+    ).toEqual([]);
+  });
+
   it("keeps its lava and ash on the island", () => {
     const simulation = createSimulation({ hasRiver: false });
     const { grid, terrain } = simulation.world;

@@ -446,10 +446,14 @@ function endanger(volcano: Volcano, seconds: number, services: PowerServices): v
   hazards.addZone({ radius: volcano.radius * CRATER_DANGER, remainingSeconds: seconds, x: volcano.x, z: volcano.z });
 }
 
-function burnPlantsOnLava(volcano: Volcano, services: PowerServices): void {
+function settleLava(volcano: Volcano, services: PowerServices): void {
+  const { world } = services;
+
   for (const cell of volcano.lava.keys()) {
-    if (isHot(volcano, cell)) {
-      services.world.clearPlants(cell, false);
+    if (world.isWater(cell)) {
+      volcano.lava.delete(cell);
+    } else if (isHot(volcano, cell)) {
+      world.clearPlants(cell, false);
     }
   }
 }
@@ -548,7 +552,7 @@ export class VolcanoSystem {
         cool(volcano, seconds);
       }
 
-      burnPlantsOnLava(volcano, services);
+      settleLava(volcano, services);
       endanger(volcano, seconds, services);
     }
 
