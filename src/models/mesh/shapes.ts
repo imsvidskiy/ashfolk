@@ -452,15 +452,14 @@ export function cylinder(options: CylinderOptions): Shape {
 
   const writer = new ShapeWriter();
   const slope = new Vector3(height, radiusBottom - radiusTop, 0).normalize();
-  const rings: Ring[] = [];
+  const normal = { radial: slope.x, vertical: slope.y };
+  const base = latheRing(writer, { radius: radiusBottom, y: 0 }, normal, 0, radialSegments);
 
-  for (const amount of [0, 1]) {
-    const point = { radius: radiusBottom + (radiusTop - radiusBottom) * amount, y: height * amount };
-
-    rings.push(latheRing(writer, point, { radial: slope.x, vertical: slope.y }, amount, radialSegments));
+  if (radiusTop <= POLE_RADIUS && base.length > 1) {
+    addConeTip(writer, base, height, normal);
+  } else {
+    connectRings(writer, base, latheRing(writer, { radius: radiusTop, y: height }, normal, 1, radialSegments));
   }
-
-  connectRingChain(writer, rings);
 
   if (radiusBottom > POLE_RADIUS) {
     addFlatCap(writer, radiusBottom, 0, radialSegments, false);
@@ -471,6 +470,17 @@ export function cylinder(options: CylinderOptions): Shape {
   }
 
   return writer.finish();
+}
+
+function addConeTip(writer: ShapeWriter, base: Ring, height: number, normal: ProfileNormal): void {
+  for (let segment = 0; segment < base.length; segment += 1) {
+    const middle = (segment + 0.5) / base.length;
+    const angle = middle * FULL_TURN;
+    const direction = new Vector3(normal.radial * Math.cos(angle), normal.vertical, normal.radial * Math.sin(angle));
+    const tip = writer.vertex(new Vector3(0, height, 0), direction.normalize(), 1, middle);
+
+    writer.triangle(base[segment], tip, base[(segment + 1) % base.length]);
+  }
 }
 
 function addFlatCap(writer: ShapeWriter, radius: number, y: number, segments: number, isTop: boolean): void {
