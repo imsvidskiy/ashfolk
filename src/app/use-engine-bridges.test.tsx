@@ -1,14 +1,8 @@
-import { afterEach, describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 import { renderHook } from "vitest-browser-react";
 import { useSavesStore } from "../features/saves/saves-store.ts";
 import { CHANGED_HEIGHT, startLoadedWorld, UNCHANGED_HEIGHT } from "../features/testing/land-change-fixtures.ts";
 import { useEngineBridges } from "./use-engine-bridges.ts";
-
-const initialSaves = useSavesStore.getState();
-
-afterEach(() => {
-  useSavesStore.setState(initialSaves, true);
-});
 
 describe("engine bridges", () => {
   it("autosaves a world whose land grows as it did", async () => {

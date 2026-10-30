@@ -1,17 +1,10 @@
-import { afterEach, describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 import { render } from "vitest-browser-react";
-import { useSavesStore } from "../features/saves/saves-store.ts";
 import { blockSavedWorlds } from "../features/testing/save-fixtures.ts";
 import { useLaunchStore } from "./launch-store.ts";
 import { StartScreen } from "./start-screen.tsx";
 
 const initialLaunch = useLaunchStore.getState();
-const initialSaves = useSavesStore.getState();
-
-afterEach(() => {
-  useSavesStore.setState(initialSaves, true);
-});
-
 describe("start screen", () => {
   it("offers a named round world from a random seed", async () => {
     const screen = await render(<StartScreen />);
