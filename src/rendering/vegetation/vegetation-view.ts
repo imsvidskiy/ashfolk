@@ -16,6 +16,7 @@ import type { MeshData, VertexChannel } from "../../models/mesh/mesh-data.ts";
 import { buildPlantVariant, PLANT_DETAIL_LEVELS } from "../../models/plants/plant-models.ts";
 import type { CellRegion } from "../../world/change-tracking.ts";
 import { NO_PLANT } from "../../world/vegetation-store.ts";
+import { CAMERA_FADE_REACH, extentOf, type ObjectExtent } from "../camera-fade.ts";
 import type { FireGlow } from "../effects/fire-glow.ts";
 import type { HandMotion } from "../hand-motion.ts";
 import { geometryFromMeshData, InstanceBatch, toInstancedGeometry } from "../instancing.ts";
@@ -99,6 +100,31 @@ function crownMiddle(models: readonly PlantModel[], species: number): number {
   }
 
   return (lowest + highest) / 2;
+}
+
+function speciesExtent(models: readonly PlantModel[], species: number): ObjectExtent {
+  let height = 0;
+  let radius = 0;
+
+  for (const { mesh } of models.filter((model) => {
+    return model.species === species;
+  })) {
+    const extent = extentOf(mesh.positions);
+
+    height = Math.max(height, extent.height);
+    radius = Math.max(radius, extent.radius);
+  }
+
+  return { height, radius };
+}
+
+function needsRefill(plants: PlantBatch, changed: ReadonlySet<number>, isWhole: boolean): boolean {
+  return (
+    isWhole ||
+    plants.buckets.some((bucket) => {
+      return changed.has(bucket);
+    })
+  );
 }
 
 function shadowFrustumOf(sun: DirectionalLight): Frustum {
@@ -198,9 +224,11 @@ export class VegetationView {
   readonly weather = new PlantWeather();
   readonly #batches: readonly (readonly PlantBatch[])[];
   readonly #changedBuckets: readonly Set<number>[];
+  readonly #chunkFading: Uint8Array;
   readonly #chunkLevels: Int8Array;
   readonly #chunkShadows: Uint8Array;
   readonly #detailFade = uniform(new Vector2(BURN_DETAIL_FADE.start, BURN_DETAIL_FADE.end));
+  readonly #fadingBatches: readonly PlantBatch[];
   readonly #heldBatches = new Map<number, InstanceBatch>();
   readonly #heldInstance = new Float32Array(FLOATS_PER_PLANT);
   readonly #highlight = uniform(new Vector3());
@@ -208,6 +236,7 @@ export class VegetationView {
   readonly #mirror: WorldMirror;
   readonly #shadowProxies: readonly PlantBatch[];
   #heldBatch: InstanceBatch | null = null;
+  #isWarmingFading: boolean;
   #levelDistances = LEVEL_DISTANCES;
   #paintedSeason = Number.NaN;
   #shadowLevelCount = SHADOW_LEVEL_COUNT;
@@ -215,9 +244,6 @@ export class VegetationView {
 
   constructor(mirror: WorldMirror, textures: TerrainTextures, glow: FireGlow) {
     this.#mirror = mirror;
-    this.chunks = new VegetationChunks(mirror);
-    this.#chunkLevels = new Int8Array(this.chunks.chunks.length).fill(HIDDEN_LEVEL);
-    this.#chunkShadows = new Uint8Array(this.chunks.chunks.length);
     this.#looks = PLANT_SPECIES.map(() => {
       return new SpeciesLook();
     });
@@ -233,12 +259,20 @@ export class VegetationView {
       return { ...model, mesh: widened(model.mesh, SPARSE_WIDENING) };
     });
     const models = [...detailedModels, sparseModels];
+    const crowns = PLANT_SPECIES.map((_definition, species) => {
+      return speciesExtent(models[NEAREST_LEVEL], species);
+    });
+
+    this.chunks = new VegetationChunks(mirror, crowns);
+    this.#chunkFading = new Uint8Array(this.chunks.chunks.length);
+    this.#chunkLevels = new Int8Array(this.chunks.chunks.length).fill(HIDDEN_LEVEL);
+    this.#chunkShadows = new Uint8Array(this.chunks.chunks.length);
 
     const materials = this.#looks.map((look, species) => {
-      return createPlantMaterial({
+      const options = {
         crown: {
           hasTiers: species === PlantSpecies.Spruce,
-          middle: crownMiddle(models[0], species),
+          middle: crownMiddle(models[NEAREST_LEVEL], species),
         },
         detailFade: this.#detailFade,
         glow,
@@ -248,22 +282,43 @@ export class VegetationView {
         look,
         textures,
         weather: this.weather,
-      });
+      };
+
+      return {
+        fading: createPlantMaterial({ ...options, fadingExtent: crowns[species] }),
+        solid: createPlantMaterial({ ...options, fadingExtent: null }),
+      };
     });
 
     this.#batches = models.map((levelModels, levelIndex) => {
       return levelModels.map(({ buckets, mesh, species }) => {
-        return this.#createBatch(geometryFromMeshData(mesh, PLANT_CHANNELS), materials[species], levelIndex, buckets);
+        return this.#createBatch(
+          geometryFromMeshData(mesh, PLANT_CHANNELS),
+          materials[species].solid,
+          levelIndex,
+          buckets
+        );
       });
+    });
+    this.#fadingBatches = this.#batches[NEAREST_LEVEL].map(({ batch, buckets }, index) => {
+      const { species } = models[NEAREST_LEVEL][index];
+
+      return this.#createBatch(
+        toInstancedGeometry(batch.mesh.geometry),
+        materials[species].fading,
+        NEAREST_LEVEL,
+        buckets
+      );
     });
 
     this.#shadowProxies = models[SHADOW_PROXY_LEVEL].map(({ buckets, mesh, species }) => {
-      return this.#createShadowProxy(geometryFromMeshData(mesh, PLANT_CHANNELS), materials[species], buckets);
+      return this.#createShadowProxy(geometryFromMeshData(mesh, PLANT_CHANNELS), materials[species].solid, buckets);
     });
 
     this.#changedBuckets = this.#batches.map(() => {
       return new Set<number>();
     });
+    this.#isWarmingFading = true;
   }
 
   plantsChanged(indices: readonly number[]): void {
@@ -350,10 +405,11 @@ export class VegetationView {
     this.#markBucketsOf(repacked);
     this.#refillDirtyLevels(this.#shouldRefillAll);
     this.#shouldRefillAll = false;
+    this.#warmFadingBatches();
   }
 
   dispose(): void {
-    for (const plants of [...this.#batches.flat(), ...this.#shadowProxies]) {
+    for (const plants of [...this.#batches.flat(), ...this.#fadingBatches, ...this.#shadowProxies]) {
       plants.batch.dispose();
     }
 
@@ -409,7 +465,7 @@ export class VegetationView {
       return known;
     }
 
-    const { mesh } = this.#nearestBatchOf(bucket).batch;
+    const { mesh } = this.#fadingBatchOf(bucket).batch;
     const batch = new InstanceBatch(toInstancedGeometry(mesh.geometry), mesh.material, PLANT_FIELDS, 1);
 
     batch.mesh.castShadow = true;
@@ -420,8 +476,8 @@ export class VegetationView {
     return batch;
   }
 
-  #nearestBatchOf(bucket: number): PlantBatch {
-    for (const plants of this.#batches[NEAREST_LEVEL]) {
+  #fadingBatchOf(bucket: number): PlantBatch {
+    for (const plants of this.#fadingBatches) {
       if (plants.buckets.includes(bucket)) {
         return plants;
       }
@@ -451,6 +507,8 @@ export class VegetationView {
     for (const [index, chunk] of this.chunks.chunks.entries()) {
       const level = chunkLevelOf(chunk, camera, frustum, detail, this.#levelDistances);
       const castsShadow = castsShadowAt(chunk, level, shadowFrustum, this.#shadowLevelCount) ? 1 : 0;
+      const fades =
+        level === NEAREST_LEVEL && chunk.bounds.distanceToPoint(camera.position) < CAMERA_FADE_REACH ? 1 : 0;
       const previous = this.#chunkLevels[index];
 
       if (level !== previous) {
@@ -461,6 +519,11 @@ export class VegetationView {
 
       if (castsShadow !== this.#chunkShadows[index]) {
         this.#chunkShadows[index] = castsShadow;
+        this.#markBucketsDirty(chunk, level);
+      }
+
+      if (fades !== this.#chunkFading[index]) {
+        this.#chunkFading[index] = fades;
         this.#markBucketsDirty(chunk, level);
       }
     }
@@ -510,39 +573,58 @@ export class VegetationView {
         continue;
       }
 
-      const casters = this.chunks.chunks.filter((_chunk, index) => {
-        return this.#chunkLevels[index] === level && this.#chunkShadows[index] === 1;
-      });
-      const others = this.chunks.chunks.filter((_chunk, index) => {
-        return this.#chunkLevels[index] === level && this.#chunkShadows[index] === 0;
-      });
-      const chunks = [...casters, ...others];
+      const casters = this.#chunksWhere(level, 1, 0);
+      const chunks = [...casters, ...this.#chunksWhere(level, 0, 0)];
 
       for (const batch of batches) {
-        if (
-          isWhole ||
-          batch.buckets.some((bucket) => {
-            return changed.has(bucket);
-          })
-        ) {
+        if (needsRefill(batch, changed, isWhole)) {
           fillPlants(batch, chunks, casters.length, level === SPARSE_LEVEL);
         }
       }
 
       if (level === NEAREST_LEVEL) {
-        for (const proxy of this.#shadowProxies) {
-          if (
-            isWhole ||
-            proxy.buckets.some((bucket) => {
-              return changed.has(bucket);
-            })
-          ) {
-            fillPlants(proxy, casters, casters.length);
-          }
-        }
+        this.#refillNearCamera(casters, changed, isWhole);
       }
 
       changed.clear();
+    }
+  }
+
+  #refillNearCamera(casters: readonly VegetationChunk[], changed: ReadonlySet<number>, isWhole: boolean): void {
+    const fadingCasters = this.#chunksWhere(NEAREST_LEVEL, 1, 1);
+    const fading = [...fadingCasters, ...this.#chunksWhere(NEAREST_LEVEL, 0, 1)];
+    const allCasters = [...casters, ...fadingCasters];
+
+    for (const batch of this.#fadingBatches) {
+      if (needsRefill(batch, changed, isWhole)) {
+        fillPlants(batch, fading, fadingCasters.length);
+      }
+    }
+
+    for (const proxy of this.#shadowProxies) {
+      if (needsRefill(proxy, changed, isWhole)) {
+        fillPlants(proxy, allCasters, allCasters.length);
+      }
+    }
+  }
+
+  #chunksWhere(level: number, castsShadow: number, fades: number): VegetationChunk[] {
+    return this.chunks.chunks.filter((_chunk, index) => {
+      return (
+        this.#chunkLevels[index] === level &&
+        this.#chunkShadows[index] === castsShadow &&
+        this.#chunkFading[index] === fades
+      );
+    });
+  }
+
+  #warmFadingBatches(): void {
+    const isWarming = this.#isWarmingFading;
+
+    this.#isWarmingFading = false;
+
+    for (const { batch } of this.#fadingBatches) {
+      batch.mesh.visible = isWarming || batch.count > 0;
     }
   }
 }

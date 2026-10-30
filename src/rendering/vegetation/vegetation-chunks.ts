@@ -8,6 +8,7 @@ import { grownIndexArray } from "../../shared/growth.ts";
 import { clamp, hashToUnit } from "../../shared/math.ts";
 import type { CellRegion } from "../../world/change-tracking.ts";
 import { NO_PLANT, PlantState, type VegetationChannels } from "../../world/vegetation-store.ts";
+import type { ObjectExtent } from "../camera-fade.ts";
 
 export const CHUNK_CELLS = 16;
 export const FLOATS_PER_PLANT = 8;
@@ -18,6 +19,9 @@ const NO_CHUNK = -1;
 const NO_BUCKET = -1;
 const EMPTY_BUCKET = new Float32Array(0);
 const corner = new Vector3();
+const NO_CROWNS: readonly ObjectExtent[] = PLANT_SPECIES.map(() => {
+  return { height: 0, radius: 0 };
+});
 
 interface PlantBucket {
   readonly species: PlantSpeciesIndex;
@@ -106,6 +110,7 @@ function allocateBucket(count: number): Float32Array {
 export class VegetationChunks {
   readonly chunks: VegetationChunk[] = [];
   readonly chunksPerSide: number;
+  readonly #crowns: readonly ObjectExtent[];
   readonly #footprints: readonly number[] = PLANT_SPECIES.map((species) => {
     return footprintRadius(species.index);
   });
@@ -115,8 +120,9 @@ export class VegetationChunks {
   #chunkOfPlant = new Int32Array(0);
   #heldPlant = NO_PLANT;
 
-  constructor(mirror: WorldMirror) {
+  constructor(mirror: WorldMirror, crowns = NO_CROWNS) {
     this.#mirror = mirror;
+    this.#crowns = crowns;
     this.chunksPerSide = Math.ceil(mirror.grid.cellsPerSide / CHUNK_CELLS);
 
     for (let chunk = 0; chunk < this.chunksPerSide * this.chunksPerSide; chunk += 1) {
@@ -329,10 +335,15 @@ export class VegetationChunks {
     target[offset + 3] = vegetation.rotation[plant];
     writePlantLook(vegetation, plant, target, offset + 4);
 
-    const reach = vegetation.state[plant] === PlantState.Fallen ? height : height * 0.5;
+    const crown = this.#crowns[species];
+    const isFallen = vegetation.state[plant] === PlantState.Fallen;
+    const reach = isFallen
+      ? Math.max(height, Math.max(crown.radius, crown.height) * scale)
+      : Math.max(height * 0.5, crown.radius * scale);
+    const top = Math.max(height, (isFallen ? crown.radius : crown.height) * scale);
 
     bounds.expandByPoint(corner.set(x - reach, y - 1, z - reach));
-    bounds.expandByPoint(corner.set(x + reach, y + height, z + reach));
+    bounds.expandByPoint(corner.set(x + reach, y + top, z + reach));
   }
 
   #groundAround(x: number, z: number, radius: number): number {

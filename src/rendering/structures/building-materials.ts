@@ -22,6 +22,7 @@ import { eraDefinition } from "../../content/eras.ts";
 import { MaterialSlot, SLOT_COLOR_TABLE } from "../../models/materials.ts";
 import { GLOW_PART } from "../../models/structures/structure-parts.ts";
 import type { WorldGrid } from "../../world/world-grid.ts";
+import { fadeNearCamera } from "../camera-fade.ts";
 import { rotateAroundUp, slotColorTable } from "../node-helpers.ts";
 import { markOutlined } from "../outlines.ts";
 import { coarseGroundOffsetNode } from "../terrain/height-sampling.ts";
@@ -49,7 +50,11 @@ function placedOnGround(
   })();
 }
 
-export function createBuildingMaterial(textures: TerrainTextures, grid: WorldGrid): MeshStandardNodeMaterial {
+export function createBuildingMaterial(
+  textures: TerrainTextures,
+  grid: WorldGrid,
+  isFading: boolean
+): MeshStandardNodeMaterial {
   const material = new MeshStandardNodeMaterial();
   const placement = attribute("buildingPlacement", "vec4");
   const look = attribute("buildingLook", "vec4");
@@ -90,12 +95,20 @@ export function createBuildingMaterial(textures: TerrainTextures, grid: WorldGri
   material.emissiveNode = vec3(1, 0.42, 0.12).mul(glow);
   material.roughnessNode = float(0.86);
 
-  markOutlined(material);
+  if (isFading) {
+    fadeNearCamera(material, state.w);
+  } else {
+    markOutlined(material);
+  }
 
   return material;
 }
 
-export function createPlinthMaterial(textures: TerrainTextures, grid: WorldGrid): MeshStandardNodeMaterial {
+export function createPlinthMaterial(
+  textures: TerrainTextures,
+  grid: WorldGrid,
+  isFading: boolean
+): MeshStandardNodeMaterial {
   const material = new MeshStandardNodeMaterial();
   const placement = attribute("plinthPlacement", "vec4");
   const box = attribute("plinthBox", "vec4");
@@ -123,7 +136,11 @@ export function createPlinthMaterial(textures: TerrainTextures, grid: WorldGrid)
   material.colorNode = mix(footing.mul(grain), CHARCOAL, damage.mul(0.6));
   material.roughnessNode = float(0.92);
 
-  markOutlined(material);
+  if (isFading) {
+    fadeNearCamera(material, look.w);
+  } else {
+    markOutlined(material);
+  }
 
   return material;
 }

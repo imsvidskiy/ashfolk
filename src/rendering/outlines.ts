@@ -42,8 +42,8 @@ export interface OutlineControls {
   readonly strength: UniformNode<"float", number>;
 }
 
-function surfaceOf(isOutlined: boolean): Node<"vec4"> {
-  return vec4(normalView.xy, positionView.z.negate(), isOutlined ? 1 : 0);
+function surfaceOf(outlining: Node<"float">): Node<"vec4"> {
+  return vec4(normalView.xy, positionView.z.negate(), outlining);
 }
 
 function distanceOf(surface: Node<"vec4">): Node<"float"> {
@@ -59,11 +59,11 @@ export function createOutlineControls(): OutlineControls {
 }
 
 export function sceneTargets(): MRTNode {
-  return mrt({ [OUTLINE_TARGET]: surfaceOf(false), output });
+  return mrt({ [OUTLINE_TARGET]: surfaceOf(float(0)), output });
 }
 
-export function markOutlined(material: MeshStandardNodeMaterial): void {
-  material.mrtNode = mrt({ [OUTLINE_TARGET]: surfaceOf(true) });
+export function markOutlined(material: MeshStandardNodeMaterial, outlining: Node<"float"> = float(1)): void {
+  material.mrtNode = mrt({ [OUTLINE_TARGET]: surfaceOf(outlining) });
 }
 
 export function outlinedColor(color: TextureNode, surfaces: TextureNode, controls: OutlineControls): Node<"vec3"> {
