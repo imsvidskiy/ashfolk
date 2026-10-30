@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { SocietyHarness, settle } from "../testing/test-society.ts";
+import { addShelter, SocietyHarness, settle } from "../testing/test-society.ts";
 import { assignHomes } from "./housing.ts";
 import type { Person } from "./person.ts";
 import { considerSplit } from "./settlement.ts";
@@ -48,9 +48,8 @@ describe("splits", () => {
       new SocietyHarness({ world: { dimensions: { cellSize: 10, cellsPerSide: 192 } } })
     );
 
-    const tent = harness.buildings.add({ kind: "tent", rotation: 0, tribeId: tribe.id, x: 30, z: 30 }, harness.random);
+    const tent = addShelter(harness, tribe, "tent", 30, 30);
 
-    tribe.buildings.shelterIds.push(tent.id);
     tent.progress = 1;
     assignHomes(tribe, harness.buildings, harness.society.membersOf(tribe));
     considerSplit(tribe, members, harness.context);

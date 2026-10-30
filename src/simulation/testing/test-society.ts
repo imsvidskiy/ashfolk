@@ -1,3 +1,4 @@
+import type { BuildingKind } from "../../content/buildings.ts";
 import type { TechnologyId } from "../../content/technologies.ts";
 import { DEFAULT_WORLD_RULES, type WorldRules } from "../../content/world-rules.ts";
 import { createRandom, type RandomSource } from "../../shared/random.ts";
@@ -96,6 +97,14 @@ export function teach(tribe: Tribe, technologies: readonly TechnologyId[], eraIn
   }
 
   return tribe;
+}
+
+export function addShelter(harness: SocietyHarness, tribe: Tribe, kind: BuildingKind, x: number, z: number): Building {
+  const shelter = harness.buildings.add({ kind, rotation: 0, tribeId: tribe.id, x, z }, harness.random);
+
+  tribe.buildings.shelterIds.push(shelter.id);
+
+  return shelter;
 }
 
 export function completeStructure(tribe: Tribe, building: Building): Building {

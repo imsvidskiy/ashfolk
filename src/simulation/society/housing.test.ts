@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { SocietyHarness, settle } from "../testing/test-society.ts";
+import { addShelter, SocietyHarness, settle } from "../testing/test-society.ts";
 import { assignHomes, housingCapacity } from "./housing.ts";
 import type { Person } from "./person.ts";
 import type { Tribe } from "./tribe.ts";
@@ -9,10 +9,7 @@ const TRIBE_SIZE = 6;
 function settleWithTent(harness: SocietyHarness, people: number): Tribe {
   const tribe = settle(harness, people);
 
-  const tent = harness.buildings.add({ kind: "tent", rotation: 0, tribeId: tribe.id, x: 30, z: 30 }, harness.random);
-
-  tribe.buildings.shelterIds.push(tent.id);
-  tent.progress = 1;
+  addShelter(harness, tribe, "tent", 30, 30).progress = 1;
   assignHomes(tribe, harness.buildings, harness.society.membersOf(tribe));
 
   return tribe;
@@ -30,9 +27,7 @@ describe("housing", () => {
 
     const tribe = settle(harness, TRIBE_SIZE);
 
-    const tent = harness.buildings.add({ kind: "tent", rotation: 0, tribeId: tribe.id, x: 30, z: 30 }, harness.random);
-
-    tribe.buildings.shelterIds.push(tent.id);
+    const tent = addShelter(harness, tribe, "tent", 30, 30);
 
     expect(housingCapacity(tribe, harness.buildings)).toBe(4);
 
