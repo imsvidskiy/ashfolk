@@ -71,7 +71,6 @@ const CAVE_DARKNESS = 0.85;
 const NO_LOWER_WATER = 1e6;
 const BESIDE_OFFSETS = [vec2(1, 0), vec2(-1, 0), vec2(0, 1), vec2(0, -1)];
 const DIAGONAL_OFFSETS = [vec2(1, 1), vec2(-1, -1), vec2(1, -1), vec2(-1, 1)];
-const AROUND_OFFSETS = [...BESIDE_OFFSETS, ...DIAGONAL_OFFSETS];
 
 function shoreWobble(depth: Node<"float">, viewDistance: Node<"float">): Node<"float"> {
   const point = positionWorld.xz;
@@ -188,39 +187,22 @@ export function createWaterMaterial(
     return select(lowest.lessThan(NO_LOWER_WATER), min(highest, lowest.add(BANK_STEP)), float(NO_LOWER_WATER));
   }
 
-  function lowestNearby(vertex: Node<"vec2">): Node<"float"> {
-    const lowest = lowestAround(vertex, AROUND_OFFSETS).toVar();
-
-    for (const span of [step.mul(0.5), step]) {
-      If(lowest.greaterThanEqual(NO_LOWER_WATER), () => {
-        lowest.assign(
-          lowestAround(
-            vertex,
-            AROUND_OFFSETS.map((offset) => {
-              return offset.mul(span);
-            })
-          )
-        );
-      });
-    }
-
-    return lowest;
-  }
-
   function vertexLevel(vertex: Node<"vec2">): Node<"float"> {
     const ownCell = ivec2(vertex);
     const own = textureLoad(textures.water, ownCell).x;
     const ground = textureLoad(textures.height, ownCell).x;
     const reach = textureLoad(textures.shore, ownCell).w;
 
-    const isCoarseShore = step.greaterThan(1.5).and(reach.lessThanEqual(step.add(COARSE_REACH_MARGIN)));
+    const isCoarse = step.greaterThan(1.5);
+    const isCoarseShore = isCoarse.and(reach.lessThanEqual(step.add(COARSE_REACH_MARGIN)));
+    const coarseGround = ground.add(COARSE_LIFT);
     const level = ground.sub(HIDDEN_DEPTH).toVar();
 
     If(own.greaterThan(PRESENT_LEVEL), () => {
-      level.assign(own);
+      level.assign(select(isCoarse, max(own, coarseGround), own));
     })
       .ElseIf(isCoarseShore, () => {
-        level.assign(min(ground, lowestNearby(vertex)).add(COARSE_LIFT));
+        level.assign(coarseGround);
       })
       .Else(() => {
         const beside = bankAround(vertex, BESIDE_OFFSETS);
