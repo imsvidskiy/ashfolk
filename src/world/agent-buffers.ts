@@ -37,6 +37,25 @@ export const AnimalField = {
   Z: 2,
 } as const;
 
+export interface MotionFields {
+  readonly VelocityX: number;
+  readonly VelocityZ: number;
+  readonly X: number;
+  readonly Z: number;
+}
+
+export function restPositionOf(
+  data: Float32Array,
+  offset: number,
+  fields: MotionFields,
+  secondsSinceTick: number
+): { readonly x: number; readonly z: number } {
+  return {
+    x: data[offset + fields.X] + data[offset + fields.VelocityX] * secondsSinceTick,
+    z: data[offset + fields.Z] + data[offset + fields.VelocityZ] * secondsSinceTick,
+  };
+}
+
 export const SURFACE_CHANNELS = 4;
 
 export const SurfaceChannel = {

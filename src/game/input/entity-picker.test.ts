@@ -12,7 +12,7 @@ import { ANIMAL_STRIDE, AnimalField, PERSON_STRIDE, PersonField } from "../../wo
 import { createVegetationChannels, PlantState, type VegetationBuffers } from "../../world/vegetation-store.ts";
 import type { GroundPoint } from "../camera/god-camera.ts";
 import { CENTER, cameraLookingAt, VIEWPORT } from "../testing/view-fixtures.ts";
-import { EntityPicker } from "./entity-picker.ts";
+import { type AgentFooting, EntityPicker, type GrabScene } from "./entity-picker.ts";
 import { GroundPicker, type HeightField, type ScreenPoint } from "./ground-picker.ts";
 import { normalizedToPixels, projectToNormalized } from "./screen-projection.ts";
 
@@ -20,10 +20,18 @@ const WORLD_HALF_SIZE = 2000;
 const WIDE_WORLD_HALF_SIZE = 4000;
 const MINIMUM_PITCH = 0.08;
 const HARE = ANIMAL_KINDS.indexOf("hare");
+const MAMMOTH = ANIMAL_KINDS.indexOf("mammoth");
+const CHILD_AGE_YEARS = 5;
 const ADULT_AGE_YEARS = 25;
 const EMPTY_FRAME = new Simulation(
   createVegetatedWorld({ dimensions: { cellSize: 10, cellsPerSide: 32 } })
 ).initialWorld().frame;
+
+function standingOn(heightAt: HeightField): AgentFooting {
+  return (_kind, x, z) => {
+    return heightAt(x, z);
+  };
+}
 
 function frameWithPeople(...positions: readonly (readonly [number, number])[]): SimulationFrame {
   return {
@@ -36,10 +44,14 @@ function frameWithPeople(...positions: readonly (readonly [number, number])[]): 
 }
 
 function frameWithHare(x: number, z: number): SimulationFrame {
+  return frameWithAnimal(HARE, x, z);
+}
+
+function frameWithAnimal(kind: number, x: number, z: number): SimulationFrame {
   const animals = new Float32Array(ANIMAL_STRIDE);
 
   animals[AnimalField.Id] = 7;
-  animals[AnimalField.Kind] = HARE;
+  animals[AnimalField.Kind] = kind;
   animals[AnimalField.AppearanceSeed] = 0.5;
   animals[AnimalField.X] = x;
   animals[AnimalField.Z] = z;
@@ -51,11 +63,25 @@ function closeCamera(): PerspectiveCamera {
   return cameraAt(0, 0.8, 3, { x: 0, y: 0.2, z: -6 });
 }
 
-function grabHare(camera: PerspectiveCamera, vegetation: VegetationBuffers, screen: ScreenPoint): GrabTarget | null {
-  const ground = new GroundPicker(camera, flatGround, WORLD_HALF_SIZE).pick(screen, VIEWPORT);
-  const scene = { frame: frameWithHare(0, 0), plantsNear: everyPlant, secondsSinceTick: 0, vegetation };
+function grabHare(
+  camera: PerspectiveCamera,
+  vegetation: VegetationBuffers,
+  screen: ScreenPoint,
+  frame = frameWithHare(0, 0)
+): GrabTarget | null {
+  return grabBetweenTicks(camera, { frame, plantsNear: everyPlant, secondsSinceTick: 0, vegetation }, screen);
+}
 
-  return new EntityPicker(camera, flatGround).pickGrabbable(scene, screen, VIEWPORT, ground);
+function grabBetweenTicks(camera: PerspectiveCamera, scene: GrabScene, screen: ScreenPoint): GrabTarget | null {
+  const ground = new GroundPicker(camera, flatGround, WORLD_HALF_SIZE).pick(screen, VIEWPORT);
+
+  return new EntityPicker(camera, flatGround, standingOn(flatGround)).pickGrabbable(scene, screen, VIEWPORT, ground);
+}
+
+function grabRunningHare(camera: PerspectiveCamera, frame: SimulationFrame, secondsSinceTick: number) {
+  const scene = { frame, plantsNear: everyPlant, secondsSinceTick, vegetation: plantAt(PlantSpecies.Oak, 400, 0) };
+
+  return grabBetweenTicks(camera, scene, screenOf(camera, 0, 0.2, 0));
 }
 
 function ridgeHeight(x: number, z: number): number {
@@ -135,7 +161,7 @@ function grabFromLowCamera(
   const ground = new GroundPicker(camera, flatGround, WORLD_HALF_SIZE).pick(screen, VIEWPORT);
   const scene = { frame: frameWithPeople(...people), plantsNear: everyPlant, secondsSinceTick: 0, vegetation };
 
-  return new EntityPicker(camera, flatGround).pickGrabbable(scene, screen, VIEWPORT, ground);
+  return new EntityPicker(camera, flatGround, standingOn(flatGround)).pickGrabbable(scene, screen, VIEWPORT, ground);
 }
 
 function besidePersonBehindOak(pixels: number): ScreenPoint {
@@ -189,7 +215,7 @@ function grabOver(
   const ground = new GroundPicker(camera, heightAt, WIDE_WORLD_HALF_SIZE).pick(screen, VIEWPORT);
   const scene = { frame: frameWithPeople(), plantsNear: plantsNearSpots(vegetation), secondsSinceTick: 0, vegetation };
 
-  return new EntityPicker(camera, heightAt).pickGrabbable(scene, screen, VIEWPORT, ground);
+  return new EntityPicker(camera, heightAt, standingOn(heightAt)).pickGrabbable(scene, screen, VIEWPORT, ground);
 }
 
 function noPlants(): readonly number[] {
@@ -201,7 +227,7 @@ function grabAt(vegetation: VegetationBuffers, ...people: readonly (readonly [nu
 
   const ground = new GroundPicker(camera, flatGround, WORLD_HALF_SIZE).pick(CENTER, VIEWPORT);
 
-  return new EntityPicker(camera, flatGround).pickGrabbable(
+  return new EntityPicker(camera, flatGround, standingOn(flatGround)).pickGrabbable(
     { frame: frameWithPeople(...people), plantsNear: theOnePlant, secondsSinceTick: 0, vegetation },
     CENTER,
     VIEWPORT,
@@ -223,7 +249,12 @@ function pickAt(heightAt: HeightField, ...positions: readonly (readonly [number,
 
   const ground = new GroundPicker(camera, heightAt, WORLD_HALF_SIZE).pick(CENTER, VIEWPORT);
 
-  return new EntityPicker(camera, heightAt).pick({ frame, secondsSinceTick: 0 }, CENTER, VIEWPORT, ground);
+  return new EntityPicker(camera, heightAt, standingOn(heightAt)).pick(
+    { frame, secondsSinceTick: 0 },
+    CENTER,
+    VIEWPORT,
+    ground
+  );
 }
 
 describe("entity picker", () => {
@@ -251,9 +282,7 @@ describe("entity picker", () => {
     const camera = cameraLookingAt(0, 0);
     const frame = frameWithPeople([0, 900]);
 
-    const picker = new EntityPicker(camera, () => {
-      return 0;
-    });
+    const picker = new EntityPicker(camera, flatGround, standingOn(flatGround));
 
     expect(picker.pick({ frame, secondsSinceTick: 0 }, CENTER, VIEWPORT, new Vector3(0, 0, 0))).toMatchObject({
       kind: "cell",
@@ -295,7 +324,9 @@ describe("entity picker", () => {
     };
 
     expect(ground?.distanceTo(camera.position)).toBeGreaterThan(2600);
-    expect(new EntityPicker(camera, flatGround).pickGrabbable(scene, screen, VIEWPORT, ground)).toEqual({
+    expect(
+      new EntityPicker(camera, flatGround, standingOn(flatGround)).pickGrabbable(scene, screen, VIEWPORT, ground)
+    ).toEqual({
       id: 0,
       kind: "plant",
     });
@@ -325,7 +356,9 @@ describe("entity picker", () => {
 
     vegetation.height[0] = 30;
 
-    expect(new EntityPicker(camera, peakHeight).pickGrabbable(scene, CENTER, VIEWPORT, null)).toEqual({
+    expect(
+      new EntityPicker(camera, peakHeight, standingOn(peakHeight)).pickGrabbable(scene, CENTER, VIEWPORT, null)
+    ).toEqual({
       id: 0,
       kind: "plant",
     });
@@ -354,7 +387,9 @@ describe("entity picker", () => {
       vegetation: plantAt(PlantSpecies.Oak, 0, -4),
     };
 
-    expect(new EntityPicker(camera, flatGround).pickGrabbable(scene, CENTER, VIEWPORT, ground)).toBeNull();
+    expect(
+      new EntityPicker(camera, flatGround, standingOn(flatGround)).pickGrabbable(scene, CENTER, VIEWPORT, ground)
+    ).toBeNull();
   });
 
   it("reaches a tree a few pixels from the pointer in a far view", () => {
@@ -368,7 +403,9 @@ describe("entity picker", () => {
       vegetation: plantAt(PlantSpecies.Oak, 80, 0),
     };
 
-    expect(new EntityPicker(camera, flatGround).pickGrabbable(scene, CENTER, VIEWPORT, ground)).toEqual({
+    expect(
+      new EntityPicker(camera, flatGround, standingOn(flatGround)).pickGrabbable(scene, CENTER, VIEWPORT, ground)
+    ).toEqual({
       id: 0,
       kind: "plant",
     });
@@ -390,7 +427,9 @@ describe("entity picker", () => {
 
     const screen = screenOf(camera, 0, 11, 0);
 
-    expect(new EntityPicker(camera, flatGround).pickGrabbable(scene, screen, VIEWPORT, null)).toEqual({
+    expect(
+      new EntityPicker(camera, flatGround, standingOn(flatGround)).pickGrabbable(scene, screen, VIEWPORT, null)
+    ).toEqual({
       id: 0,
       kind: "plant",
     });
@@ -408,7 +447,9 @@ describe("entity picker", () => {
 
     const screen = screenOf(camera, 0, 6, -2000);
 
-    expect(new EntityPicker(camera, flatGround).pickGrabbable(scene, screen, VIEWPORT, null)).toEqual({
+    expect(
+      new EntityPicker(camera, flatGround, standingOn(flatGround)).pickGrabbable(scene, screen, VIEWPORT, null)
+    ).toEqual({
       id: 0,
       kind: "plant",
     });
@@ -433,10 +474,19 @@ describe("entity picker", () => {
       id: 7,
       kind: "animal",
     });
-    expect(grabHare(camera, plantAt(PlantSpecies.Oak, 400, 0), screenOf(camera, 0.3, 0.25, 0))).toEqual({
+  });
+
+  it("grabs a hare seen side-on by its flank", () => {
+    const camera = closeCamera();
+    const frame = frameWithHare(0, 0);
+
+    frame.animals[AnimalField.Heading] = Math.PI / 2;
+
+    expect(grabHare(camera, plantAt(PlantSpecies.Oak, 400, 0), screenOf(camera, 0.3, 0.25, 0), frame)).toEqual({
       id: 7,
       kind: "animal",
     });
+    expect(grabHare(camera, plantAt(PlantSpecies.Oak, 400, 0), screenOf(camera, 0.3, 0.25, 0))).toBeNull();
   });
 
   it("grabs a hare up close before the tree standing behind it", () => {
@@ -449,28 +499,21 @@ describe("entity picker", () => {
   it("grabs a running hare where it is drawn between ticks", () => {
     const camera = closeCamera();
     const frame = frameWithHare(-1.5, 0);
-    const screen = screenOf(camera, 0, 0.2, 0);
 
     frame.animals[AnimalField.VelocityX] = 10;
 
-    const ground = new GroundPicker(camera, flatGround, WORLD_HALF_SIZE).pick(screen, VIEWPORT);
-    const picker = new EntityPicker(camera, flatGround);
-    const vegetation = plantAt(PlantSpecies.Oak, 400, 0);
+    expect(grabRunningHare(camera, frame, 0.15)).toEqual({ id: 7, kind: "animal" });
+    expect(grabRunningHare(camera, frame, 0)).toBeNull();
+  });
 
-    expect(
-      picker.pickGrabbable(
-        { frame, plantsNear: everyPlant, secondsSinceTick: 0.15, vegetation },
-        screen,
-        VIEWPORT,
-        ground
-      )
-    ).toEqual({
-      id: 7,
-      kind: "animal",
-    });
-    expect(
-      picker.pickGrabbable({ frame, plantsNear: everyPlant, secondsSinceTick: 0, vegetation }, screen, VIEWPORT, ground)
-    ).toBeNull();
+  it("grabs a hare running across the view where it is drawn between ticks", () => {
+    const camera = cameraAt(3, 0.8, 0, { x: -6, y: 0.2, z: 0 });
+    const frame = frameWithHare(0, -1.5);
+
+    frame.animals[AnimalField.VelocityZ] = 10;
+
+    expect(grabRunningHare(camera, frame, 0.15)).toEqual({ id: 7, kind: "animal" });
+    expect(grabRunningHare(camera, frame, 0)).toBeNull();
   });
 
   it("leaves a hare up close alone when the pointer is well off its body", () => {
@@ -497,7 +540,7 @@ describe("entity picker", () => {
     const ground = new GroundPicker(camera, flatGround, WORLD_HALF_SIZE).pick(screen, VIEWPORT);
 
     expect(
-      new EntityPicker(camera, flatGround).pick(
+      new EntityPicker(camera, flatGround, standingOn(flatGround)).pick(
         { frame: frameWithPeople([0, 0]), secondsSinceTick: 0 },
         screen,
         VIEWPORT,
@@ -507,6 +550,77 @@ describe("entity picker", () => {
       id: 1,
       kind: "person",
     });
+  });
+
+  it("grabs a tree beside a mammoth seen head-on, not the mammoth", () => {
+    const camera = cameraAt(0, 2, 10, { x: 0, y: 2, z: 0 });
+    const vegetation = twoPlants(PlantSpecies.Oak, { x: 1.5, z: 0.5 }, { x: 400, z: 0 });
+    const scene = { frame: frameWithAnimal(MAMMOTH, 0, 0), plantsNear: everyPlant, secondsSinceTick: 0, vegetation };
+
+    expect(grabBetweenTicks(camera, scene, screenOf(camera, 1.5, 1.5, 0.5))).toEqual({ id: 0, kind: "plant" });
+    expect(grabBetweenTicks(camera, scene, screenOf(camera, 0, 1.5, 0.5))).toEqual({ id: 7, kind: "animal" });
+  });
+
+  it("selects the ground just in front of a mammoth's feet", () => {
+    const camera = cameraAt(0, 2, 10, { x: 0, y: 2, z: 0 });
+    const screen = screenOf(camera, 0, 0, 3.5);
+
+    const ground = new GroundPicker(camera, flatGround, WORLD_HALF_SIZE).pick(screen, VIEWPORT);
+    const scene = { frame: frameWithAnimal(MAMMOTH, 0, 0), secondsSinceTick: 0 };
+
+    expect(new EntityPicker(camera, flatGround, standingOn(flatGround)).pick(scene, screen, VIEWPORT, ground)).toEqual(
+      expect.objectContaining({ kind: "cell" })
+    );
+  });
+
+  it("selects a person where they are drawn on a log above the riverbed", () => {
+    const camera = cameraAt(0, 6, 4, { x: 0, y: 5.8, z: 0 });
+    const screen = screenOf(camera, 0, 5.9, 0);
+
+    const ground = new GroundPicker(camera, flatGround, WORLD_HALF_SIZE).pick(screen, VIEWPORT);
+    const picker = new EntityPicker(camera, flatGround, () => {
+      return 5;
+    });
+
+    expect(picker.pick({ frame: frameWithPeople([0, 0]), secondsSinceTick: 0 }, screen, VIEWPORT, ground)).toEqual({
+      id: 1,
+      kind: "person",
+    });
+  });
+
+  it("picks the nearer of two people who overlap under the pointer", () => {
+    const camera = cameraAt(0, 1.5, 4, { x: 0, y: 1, z: 0 });
+    const frame = frameWithPeople([0, -2], [0, 0]);
+    const screen = screenOf(camera, 0, 1, 0);
+    const vegetation = plantAt(PlantSpecies.Oak, 400, 0);
+
+    const ground = new GroundPicker(camera, flatGround, WORLD_HALF_SIZE).pick(screen, VIEWPORT);
+    const picker = new EntityPicker(camera, flatGround, standingOn(flatGround));
+
+    expect(picker.pick({ frame, secondsSinceTick: 0 }, screen, VIEWPORT, ground)).toEqual({ id: 2, kind: "person" });
+    expect(
+      picker.pickGrabbable({ frame, plantsNear: everyPlant, secondsSinceTick: 0, vegetation }, screen, VIEWPORT, ground)
+    ).toEqual({ id: 2, kind: "person" });
+  });
+
+  it("misses above a child's head where an adult would be grabbed", () => {
+    const camera = cameraAt(0, 1.8, 4, { x: 0, y: 1.8, z: 0 });
+    const adult = frameWithPeople([0, 0]);
+    const child = frameWithPeople([0, 0]);
+    const screen = screenOf(camera, 0, 1.8, 0);
+    const vegetation = plantAt(PlantSpecies.Oak, 400, 0);
+
+    child.people[PersonField.Age] = CHILD_AGE_YEARS;
+
+    expect(
+      grabBetweenTicks(camera, { frame: adult, plantsNear: everyPlant, secondsSinceTick: 0, vegetation }, screen)
+    ).toEqual({
+      id: 1,
+      kind: "person",
+    });
+    expect(
+      grabBetweenTicks(camera, { frame: child, plantsNear: everyPlant, secondsSinceTick: 0, vegetation }, screen)
+    ).toBeNull();
   });
 
   it("picks nothing in the sky or on the ground between trees", () => {

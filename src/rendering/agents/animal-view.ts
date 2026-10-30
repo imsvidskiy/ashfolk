@@ -17,13 +17,14 @@ import { SkeletonPoser } from "../../models/rig/skeleton-poser.ts";
 import { measureStride } from "../../models/rig/stride.ts";
 import { smoothstep } from "../../shared/math.ts";
 import { isTarget } from "../../simulation/hand/grab-target.ts";
-import { ANIMAL_STRIDE, AnimalField } from "../../world/agent-buffers.ts";
+import { ANIMAL_STRIDE, AnimalField, restPositionOf } from "../../world/agent-buffers.ts";
 import { ANIMAL_POSES, type AnimalPose } from "../../world/agent-poses.ts";
 import { HIDDEN_LEVEL } from "../view-input.ts";
 import { AgentMotion } from "./agent-motion.ts";
 import { AgentPalette, NO_ROW } from "./agent-palette.ts";
 import {
   type AgentViewInput,
+  ANIMAL_WADING_DEPTH,
   detailLevel,
   farthestFigure,
   forgetUnseen,
@@ -49,7 +50,6 @@ const ANIMAL_LAYOUT: PaletteLayout = {
 };
 
 const LEVEL_DISTANCES: LevelDistances = { far: 650, high: 90, low: 160 };
-const WADING_DEPTH = 1.2;
 const LEAN_REACH = 1.5;
 const SHORTEST_STRIDE = 0.5;
 const REFERENCE_SEED = 0.5;
@@ -229,13 +229,12 @@ export class AnimalView {
     const { animals } = input.mirror.frame;
 
     const id = animals[offset + AnimalField.Id];
-    const restX = animals[offset + AnimalField.X] + animals[offset + AnimalField.VelocityX] * input.secondsSinceTick;
-    const restZ = animals[offset + AnimalField.Z] + animals[offset + AnimalField.VelocityZ] * input.secondsSinceTick;
-    const pose = input.hand.poseOf("animal", id, restX, restZ);
+    const rest = restPositionOf(animals, offset, AnimalField, input.secondsSinceTick);
+    const pose = input.hand.poseOf("animal", id, rest.x, rest.z);
 
-    const x = pose === null ? restX : pose.x;
-    const z = pose === null ? restZ : pose.z;
-    const y = standingHeight(input.mirror, x, z, WADING_DEPTH) + liftOf(pose);
+    const x = pose === null ? rest.x : pose.x;
+    const z = pose === null ? rest.z : pose.z;
+    const y = standingHeight(input.mirror, x, z, ANIMAL_WADING_DEPTH) + liftOf(pose);
     const isHighlighted = isTarget(input.highlighted, "animal", id);
 
     if (isHighlighted) {

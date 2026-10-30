@@ -1,3 +1,4 @@
+import { Box3, Ray, Vector3 } from "three/webgpu";
 import { ANIMAL_KINDS, type AnimalKind } from "../../content/animals.ts";
 import { animalAppearance } from "../../models/animals/animal-appearance.ts";
 import { buildAnimalParts } from "../../models/animals/animal-models.ts";
@@ -9,18 +10,32 @@ import { FIGURE_SCALE } from "../../models/people/human-proportions.ts";
 import { AnimalField, PersonField } from "../../world/agent-buffers.ts";
 
 export interface AgentBody {
+  readonly back: number;
+  readonly front: number;
+  readonly halfWidth: number;
   readonly height: number;
-  readonly radius: number;
 }
 
+export interface StandingBody extends AgentBody {
+  readonly baseY: number;
+  readonly heading: number;
+  readonly x: number;
+  readonly z: number;
+}
+
+const UP = new Vector3(0, 1, 0);
 const measured = new Map<AnimalKind | "person", AgentBody>();
+const localRay = new Ray();
+const localBox = new Box3();
 
 function bodyOf(mesh: MeshData): AgentBody {
   const { maximum, minimum } = mesh.bounds;
 
   return {
+    back: minimum[2],
+    front: maximum[2],
+    halfWidth: Math.max(-minimum[0], maximum[0]),
     height: maximum[1],
-    radius: Math.max(maximum[0] - minimum[0], maximum[2] - minimum[2]) / 2,
   };
 }
 
@@ -42,7 +57,12 @@ function measuredBody(subject: AnimalKind | "person"): AgentBody {
 }
 
 function scaled(body: AgentBody, scale: number): AgentBody {
-  return { height: body.height * scale, radius: body.radius * scale };
+  return {
+    back: body.back * scale,
+    front: body.front * scale,
+    halfWidth: body.halfWidth * scale,
+    height: body.height * scale,
+  };
 }
 
 export function animalBody(animals: Float32Array, offset: number): AgentBody {
@@ -66,4 +86,15 @@ export function measureAgentBodies(): void {
   for (const kind of ANIMAL_KINDS) {
     measuredBody(kind);
   }
+}
+
+export function rayHitsBody(ray: Ray, body: StandingBody): boolean {
+  const { back, baseY, front, halfWidth, heading, height, x, z } = body;
+
+  localRay.origin.set(ray.origin.x - x, ray.origin.y - baseY, ray.origin.z - z).applyAxisAngle(UP, -heading);
+  localRay.direction.copy(ray.direction).applyAxisAngle(UP, -heading);
+  localBox.min.set(-halfWidth, 0, back);
+  localBox.max.set(halfWidth, height, front);
+
+  return localRay.intersectsBox(localBox);
 }

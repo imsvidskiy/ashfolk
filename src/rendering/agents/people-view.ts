@@ -12,7 +12,7 @@ import { Pose } from "../../models/rig/pose.ts";
 import { SkeletonPoser } from "../../models/rig/skeleton-poser.ts";
 import { smoothstep } from "../../shared/math.ts";
 import { isTarget } from "../../simulation/hand/grab-target.ts";
-import { PERSON_STRIDE, PersonField } from "../../world/agent-buffers.ts";
+import { PERSON_STRIDE, PersonField, restPositionOf } from "../../world/agent-buffers.ts";
 import { CARRIED_ITEMS, type CarriedItem, PERSON_POSES } from "../../world/agent-poses.ts";
 import type { TribeLooks } from "../tribe-looks.ts";
 import { HIDDEN_LEVEL } from "../view-input.ts";
@@ -27,6 +27,7 @@ import {
   type LevelDistances,
   liftOf,
   NO_SELECTION,
+  PERSON_WADING_DEPTH,
   selectedAgentId,
   slopeLean,
   standingHeight,
@@ -62,7 +63,6 @@ const BOUNDING_LIFT = 0.9 * FIGURE_SCALE;
 const BOUNDING_RADIUS = 1.4 * FIGURE_SCALE;
 const WEAPON_CHOICES: readonly (WeaponKind | null)[] = [null, ...WEAPON_KINDS];
 const GEAR_COLOR_INDEX = PERSON_LAYOUT.colorSlots.indexOf(MaterialSlot.Metal);
-const WADING_DEPTH = 1.1;
 const LEAN_REACH = 1;
 const LEAN_SHARE = 0.3;
 const MARKER_LIFT = 1;
@@ -189,13 +189,12 @@ export class PeopleView {
     const { people } = input.mirror.frame;
 
     const id = people[offset + PersonField.Id];
-    const restX = people[offset + PersonField.X] + people[offset + PersonField.VelocityX] * input.secondsSinceTick;
-    const restZ = people[offset + PersonField.Z] + people[offset + PersonField.VelocityZ] * input.secondsSinceTick;
-    const pose = input.hand.poseOf("person", id, restX, restZ);
+    const rest = restPositionOf(people, offset, PersonField, input.secondsSinceTick);
+    const pose = input.hand.poseOf("person", id, rest.x, rest.z);
 
-    const x = pose === null ? restX : pose.x;
-    const z = pose === null ? restZ : pose.z;
-    const y = standingHeight(input.mirror, x, z, WADING_DEPTH) + liftOf(pose);
+    const x = pose === null ? rest.x : pose.x;
+    const z = pose === null ? rest.z : pose.z;
+    const y = standingHeight(input.mirror, x, z, PERSON_WADING_DEPTH) + liftOf(pose);
     const isHighlighted = isTarget(input.highlighted, "person", id);
 
     if (isHighlighted) {

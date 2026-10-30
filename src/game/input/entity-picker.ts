@@ -3,10 +3,24 @@ import { distanceToSegment } from "../../shared/math.ts";
 import type { Selection } from "../../simulation/commands.ts";
 import type { SimulationFrame } from "../../simulation/frame.ts";
 import { type GrabTarget, isGrabbablePlant } from "../../simulation/hand/grab-target.ts";
-import { ANIMAL_STRIDE, AnimalField, PERSON_STRIDE, PersonField } from "../../world/agent-buffers.ts";
+import {
+  ANIMAL_STRIDE,
+  AnimalField,
+  type MotionFields,
+  PERSON_STRIDE,
+  PersonField,
+  restPositionOf,
+} from "../../world/agent-buffers.ts";
 import { PlantState, type VegetationBuffers } from "../../world/vegetation-store.ts";
 import type { GroundPoint } from "../camera/god-camera.ts";
-import { type AgentBody, animalBody, measureAgentBodies, personBody } from "./agent-bodies.ts";
+import {
+  type AgentBody,
+  animalBody,
+  measureAgentBodies,
+  personBody,
+  rayHitsBody,
+  type StandingBody,
+} from "./agent-bodies.ts";
 import type { HeightField, ScreenPoint, ViewportSize } from "./ground-picker.ts";
 import { measureGrabbablePlants, plantHitDistance } from "./plant-volumes.ts";
 import { aimRay, normalizedToPixels, projectToNormalized } from "./screen-projection.ts";
@@ -25,6 +39,7 @@ const SEARCH_STEP = SEARCH_SPACING / 2;
 const CLEARANCE_STEP = 4;
 const AGENT_PRIORITY_METERS = 1;
 const AGENT_FIRST_PIXELS = 12;
+const LARGEST_BODY_REACH = 6;
 
 interface Candidate<Target> {
   readonly distance: number;
@@ -42,8 +57,11 @@ export interface GrabScene extends AgentScene {
   readonly vegetation: Pick<VegetationBuffers, "count" | "height" | "species" | "state" | "x" | "z">;
 }
 
+export type AgentFooting = (kind: "animal" | "person", x: number, z: number) => number;
+
 interface PointerPick {
   readonly ground: Vector3 | null;
+  readonly ray: Ray;
   readonly screen: ScreenPoint;
   readonly viewport: ViewportSize;
 }
@@ -55,13 +73,7 @@ interface ScreenHit {
 
 interface AgentLayout {
   readonly body: (data: Float32Array, offset: number) => AgentBody;
-  readonly fields: {
-    readonly Id: number;
-    readonly VelocityX: number;
-    readonly VelocityZ: number;
-    readonly X: number;
-    readonly Z: number;
-  };
+  readonly fields: MotionFields & { readonly Heading: number; readonly Id: number };
   readonly kind: "animal" | "person";
   readonly stride: number;
 }
@@ -70,12 +82,6 @@ const PEOPLE: AgentLayout = { body: personBody, fields: PersonField, kind: "pers
 const ANIMALS: AgentLayout = { body: animalBody, fields: AnimalField, kind: "animal", stride: ANIMAL_STRIDE };
 
 type PixelPoint = readonly [number, number];
-
-interface StandingBody extends AgentBody {
-  readonly baseY: number;
-  readonly x: number;
-  readonly z: number;
-}
 
 interface RaySearch {
   readonly farthest: number;
@@ -143,19 +149,21 @@ function screenAxis(feet: PixelPoint | null, top: PixelPoint | null): readonly [
 export class EntityPicker {
   readonly #camera: PerspectiveCamera;
   readonly #heightAt: HeightField;
+  readonly #standingAt: AgentFooting;
   readonly #point = new Vector3();
   readonly #projected = new Vector3();
   readonly #raycaster = new Raycaster();
 
-  constructor(camera: PerspectiveCamera, heightAt: HeightField) {
+  constructor(camera: PerspectiveCamera, heightAt: HeightField, standingAt: AgentFooting) {
     this.#camera = camera;
     this.#heightAt = heightAt;
+    this.#standingAt = standingAt;
     measureGrabbablePlants();
     measureAgentBodies();
   }
 
   pick(scene: AgentScene, screen: ScreenPoint, viewport: ViewportSize, ground: Vector3 | null): Selection | null {
-    const pointer = { ground, screen, viewport };
+    const pointer = { ground, ray: aimRay(this.#raycaster, this.#camera, screen, viewport), screen, viewport };
 
     const nearest = this.#nearestCandidate(ground, [
       ...this.#agents(scene, PEOPLE, pointer),
@@ -180,7 +188,7 @@ export class EntityPicker {
     viewport: ViewportSize,
     ground: Vector3 | null
   ): GrabTarget | null {
-    const pointer = { ground, screen, viewport };
+    const pointer = { ground, ray: aimRay(this.#raycaster, this.#camera, screen, viewport), screen, viewport };
 
     const agent = this.#nearestCandidate(ground, [
       ...this.#agents(scene, ANIMALS, pointer),
@@ -239,10 +247,15 @@ export class EntityPicker {
     for (let agent = 0; agent < count; agent += 1) {
       const offset = agent * stride;
 
-      const x = data[offset + fields.X] + data[offset + fields.VelocityX] * secondsSinceTick;
-      const z = data[offset + fields.Z] + data[offset + fields.VelocityZ] * secondsSinceTick;
+      const { x, z } = restPositionOf(data, offset, fields, secondsSinceTick);
+      const baseY = this.#standingAt(kind, x, z);
 
-      const hit = this.#bodyHit({ ...body(data, offset), baseY: this.#heightAt(x, z), x, z }, pointer);
+      if (!this.#isNearRay(x, baseY, z, pointer)) {
+        continue;
+      }
+
+      const heading = data[offset + fields.Heading];
+      const hit = this.#bodyHit({ ...body(data, offset), baseY, heading, x, z }, pointer);
 
       if (hit.distance < PICK_RADIUS_PIXELS) {
         candidates.push({ ...hit, target: { id: data[offset + fields.Id], kind } });
@@ -274,12 +287,11 @@ export class EntityPicker {
   #grabbablePlant(scene: GrabScene, pointer: PointerPick): Candidate<GrabTarget> | null {
     const { vegetation } = scene;
 
-    const ray = aimRay(this.#raycaster, this.#camera, pointer.screen, pointer.viewport);
+    const { ray } = pointer;
     const end = pointer.ground === null ? ray.at(this.#camera.far, new Vector3()) : pointer.ground;
     const { origin } = ray;
     const { farthest, spots } = searchAlong(ray, end, this.#heightAt);
-    const slackPerMeter =
-      (2 * Math.tan((this.#camera.fov * Math.PI) / 360) * PLANT_SLACK_PIXELS) / pointer.viewport.height;
+    const slackPerMeter = this.#metersPerPixel(pointer.viewport) * PLANT_SLACK_PIXELS;
     const groundReach = pointer.ground === null ? Number.POSITIVE_INFINITY : origin.distanceTo(pointer.ground);
 
     let nearest: Candidate<GrabTarget> | null = null;
@@ -319,24 +331,38 @@ export class EntityPicker {
     return reach + Math.max(SMALLEST_OCCLUSION_MARGIN, reach * OCCLUSION_MARGIN_PER_METER);
   }
 
+  #isNearRay(x: number, y: number, z: number, pointer: PointerPick): boolean {
+    const point = this.#point.set(x, y, z);
+
+    const slack = this.#camera.position.distanceTo(point) * this.#metersPerPixel(pointer.viewport) * PICK_RADIUS_PIXELS;
+
+    return pointer.ray.distanceToPoint(point) <= LARGEST_BODY_REACH + slack;
+  }
+
+  #metersPerPixel(viewport: ViewportSize): number {
+    return (2 * Math.tan((this.#camera.fov * Math.PI) / 360)) / viewport.height;
+  }
+
   #bodyHit(body: StandingBody, pointer: PointerPick): ScreenHit {
-    const { baseY, height, radius, x, z } = body;
+    const { baseY, height, x, z } = body;
     const { screen, viewport } = pointer;
 
     const reach = this.#camera.position.distanceTo(this.#point.set(x, baseY + height / 2, z));
-    const feet = this.#screenPoint(x, baseY, z, viewport);
-    const top = this.#screenPoint(x, baseY + height, z, viewport);
 
-    const axis = screenAxis(feet, top);
+    if (rayHitsBody(pointer.ray, body)) {
+      return { distance: 0, reach };
+    }
+
+    const axis = screenAxis(
+      this.#screenPoint(x, baseY, z, viewport),
+      this.#screenPoint(x, baseY + height, z, viewport)
+    );
 
     if (axis === null) {
       return { distance: Number.POSITIVE_INFINITY, reach };
     }
 
-    const pixelsPerMeter = viewport.height / (2 * Math.tan((this.#camera.fov * Math.PI) / 360) * reach);
-    const fromAxis = distanceToSegment(screen.x, screen.y, axis[0], axis[1]);
-
-    return { distance: Math.max(0, fromAxis - radius * pixelsPerMeter), reach };
+    return { distance: distanceToSegment(screen.x, screen.y, axis[0], axis[1]), reach };
   }
 
   #screenPoint(x: number, y: number, z: number, viewport: ViewportSize): PixelPoint | null {
@@ -354,17 +380,13 @@ export class EntityPicker {
   #screenHit(x: number, y: number, z: number, pointer: PointerPick): ScreenHit {
     const { screen, viewport } = pointer;
 
-    const point = this.#point.set(x, y, z);
+    const reach = this.#camera.position.distanceTo(this.#point.set(x, y, z));
+    const pixels = this.#screenPoint(x, y, z, viewport);
 
-    const reach = this.#camera.position.distanceTo(point);
-    const projected = projectToNormalized(this.#camera, point.x, point.y, point.z, this.#projected);
-
-    if (projected === null) {
+    if (pixels === null) {
       return { distance: Number.POSITIVE_INFINITY, reach };
     }
 
-    const pixels = normalizedToPixels(projected, viewport);
-
-    return { distance: Math.hypot(pixels.x - screen.x, pixels.y - screen.y), reach };
+    return { distance: Math.hypot(pixels[0] - screen.x, pixels[1] - screen.y), reach };
   }
 }
