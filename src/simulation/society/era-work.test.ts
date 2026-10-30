@@ -3,6 +3,7 @@ import { NO_PLANT } from "../../world/vegetation-store.ts";
 import { WorldGrid } from "../../world/world-grid.ts";
 import {
   completeStructure,
+  createMiningHarness,
   firstMemberTick,
   MORNING,
   moveToSeason,
@@ -15,6 +16,7 @@ import { depositAround } from "../testing/test-world.ts";
 import { ERA_WORK_OPTIONS } from "./era-work.ts";
 import { MineJob } from "./jobs/mine-job.ts";
 import { findPlanting } from "./jobs/plant-job.ts";
+import { pickUp } from "./person.ts";
 import { addPlotIfNeeded } from "./plots.ts";
 
 const DIMENSIONS = { cellSize: 10, cellsPerSide: 96 };
@@ -74,6 +76,28 @@ describe("mining work", () => {
 
     expect(option.weight(tick, NO_CONSTRUCTION)).toBeCloseTo(2.4);
     expect(option.start(tick, NO_CONSTRUCTION)).toMatchObject({ ore: "tin" });
+  });
+
+  it("counts ore carried home once, not as a miner's share", () => {
+    const harness = createMiningHarness();
+
+    const tribe = teach(settle(harness, 4), THROUGH_MINING, 2);
+
+    completeStructure(
+      tribe,
+      harness.buildings.add(
+        { depositId: 0, kind: "mine", rotation: 0, tribeId: tribe.id, x: 150, z: 40 },
+        harness.random
+      )
+    );
+    moveToSeason(harness, 1);
+
+    const [, carrier] = harness.society.membersOf(tribe);
+    const tick = firstMemberTick(harness, tribe);
+
+    pickUp(carrier, "copperOre", 7, "ore");
+
+    expect(eraOption("mine").weight(tick, NO_CONSTRUCTION)).toBeCloseTo(1.2);
   });
 });
 
