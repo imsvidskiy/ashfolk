@@ -2,7 +2,7 @@
 
 Last updated October 30, 2026
 
-Ashfolk is a free game that runs in your browser. It has no accounts, no ads, no analytics and no cookies. Your worlds and settings stay on your device. This page lists every place where data about you goes, and why.
+Ashfolk is a free god simulator that runs in your browser. It has no accounts, no ads, no analytics and no cookies. Your worlds and settings stay on your device. This page lists every place where data about you goes, and why.
 
 ## Who is responsible
 

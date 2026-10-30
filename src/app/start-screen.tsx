@@ -178,7 +178,7 @@ export function StartScreen() {
 
             <h1 className="text-ink text-4xl font-extrabold tracking-tight">Ashfolk</h1>
 
-            <p className="text-ink-soft">Guide the first tribes of a floating island.</p>
+            <p className="text-ink-soft">Guide the first tribes on a floating island.</p>
           </header>
 
           <hr className="border-line" />

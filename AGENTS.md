@@ -1,6 +1,6 @@
 # Ashfolk
 
-A god game about the first tribes on a floating island, in TypeScript with three.js and React. The
+A god simulator about the first tribes on a floating island, in TypeScript with three.js and React. The
 [README](README.md#architecture) has the code map, and [CONTRIBUTING.md](CONTRIBUTING.md) has the code style,
 commits, pull requests and releases. This file lists what agents tend to miss.
 

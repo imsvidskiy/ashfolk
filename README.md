@@ -4,7 +4,7 @@
 
 <h1 align="center">Ashfolk</h1>
 
-<p align="center">A god game about the first tribes on a floating island</p>
+<p align="center">A god simulator about the first tribes on a floating island</p>
 
 <p align="center">
   <a
@@ -43,7 +43,7 @@
 
 https://github.com/user-attachments/assets/bc99af11-0acd-4cca-85cc-39c3b5a4b256
 
-Shape the land, call rain, fire and lightning, and watch small tribes grow from the Stone Age to the Iron Age.
+Ashfolk is a free god simulator in your browser. Shape a floating island, call rain and fire, and watch its first tribes grow from the Stone Age to the Iron Age.
 
 ## Features
 
