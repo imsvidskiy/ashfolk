@@ -5,8 +5,20 @@ import { Errand, headTo, type Job } from "./job.ts";
 
 const PLANTING_SECONDS = 7;
 
+export function freeSpot(tick: PersonTick): PlotSpot | null {
+  const taken = new Set<PlotSpot>();
+
+  for (const person of tick.context.people.membersOf(tick.tribe)) {
+    if (person !== tick.person && person.job instanceof PlantJob) {
+      taken.add(person.job.spot);
+    }
+  }
+
+  return emptySpot(tick.tribe, tick.context.world, taken);
+}
+
 export function findPlanting(tick: PersonTick): PlantJob | null {
-  const spot = emptySpot(tick.tribe, tick.context.world);
+  const spot = freeSpot(tick);
 
   if (spot === null) {
     return null;
@@ -17,11 +29,11 @@ export function findPlanting(tick: PersonTick): PlantJob | null {
 
 class PlantJob implements Job {
   readonly kind = "plant";
+  readonly spot: PlotSpot;
   readonly #errand: Errand;
-  readonly #spot: PlotSpot;
 
   constructor(tick: PersonTick, spot: PlotSpot) {
-    this.#spot = spot;
+    this.spot = spot;
     this.#errand = new Errand(PLANTING_SECONDS, "dig", spot);
     headTo(tick.person, { x: spot.x + 0.9, z: spot.z + 0.9 }, tick.context);
   }
@@ -33,8 +45,9 @@ class PlantJob implements Job {
       return progress === "abandoned" ? null : this;
     }
 
-    plantSpot(tick.tribe, this.#spot, tick.context);
-    learn(tick.tribe, 0.4, tick.context.rules);
+    if (plantSpot(tick.tribe, this.spot, tick.context)) {
+      learn(tick.tribe, 0.4, tick.context.rules);
+    }
 
     return null;
   }
