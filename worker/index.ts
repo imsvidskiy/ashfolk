@@ -1,4 +1,4 @@
-const HOME_HOST = "playdawnfolk.com";
+const HOME_HOST = "ashfolk.com";
 const MEDIA_PREFIX = "/media/";
 const RANGE_PATTERN = /^bytes=(?<start>\d+)-(?<end>\d*)$/u;
 

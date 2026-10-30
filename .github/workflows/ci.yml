@@ -57,7 +57,7 @@ jobs:
     timeout-minutes: 10
     environment:
       name: production
-      url: https://playdawnfolk.com
+      url: https://ashfolk.com
 
     steps:
       - uses: actions/checkout@v7
