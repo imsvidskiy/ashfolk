@@ -60,6 +60,12 @@ interface SiteSearch {
   radius: number;
 }
 
+interface GroundShares {
+  meanSlope: number;
+  openShare: number;
+  woodedShare: number;
+}
+
 interface Surroundings {
   bushes: number;
   marsh: number;
@@ -107,14 +113,9 @@ export function scoreSite(
 }
 
 function isOpenAround(surroundings: Surroundings): boolean {
-  if (surroundings.nearSamples === 0) {
-    return false;
-  }
+  const shares = groundShares(surroundings);
 
-  return (
-    surroundings.slopeSum / surroundings.nearSamples <= STEEPEST_MEAN_SLOPE &&
-    surroundings.openSamples / surroundings.nearSamples >= SMALLEST_OPEN_SHARE
-  );
+  return shares !== null && shares.meanSlope <= STEEPEST_MEAN_SLOPE && shares.openShare >= SMALLEST_OPEN_SHARE;
 }
 
 function isCampable(world: WorldState, cell: number, point: Waypoint): boolean {
@@ -200,14 +201,26 @@ function forageScore(surroundings: Surroundings): number {
   return Math.min(4, surroundings.bushes * 0.4) + Math.min(2.5, surroundings.trees * 0.06);
 }
 
-function roughnessScore(surroundings: Surroundings): number {
+function groundShares(surroundings: Surroundings): GroundShares | null {
   if (surroundings.nearSamples === 0) {
+    return null;
+  }
+
+  return {
+    meanSlope: surroundings.slopeSum / surroundings.nearSamples,
+    openShare: surroundings.openSamples / surroundings.nearSamples,
+    woodedShare: surroundings.woodedSamples / surroundings.nearSamples,
+  };
+}
+
+function roughnessScore(surroundings: Surroundings): number {
+  const shares = groundShares(surroundings);
+
+  if (shares === null) {
     return 0;
   }
 
-  const meanSlope = surroundings.slopeSum / surroundings.nearSamples;
-  const openShare = surroundings.openSamples / surroundings.nearSamples;
-  const woodedShare = surroundings.woodedSamples / surroundings.nearSamples;
+  const { meanSlope, openShare, woodedShare } = shares;
 
   return meanSlope * 12 + (1 - openShare) * 4 + Math.max(0, woodedShare - CLOSED_CANOPY_SHARE) * 12;
 }
