@@ -62,10 +62,6 @@ function isWorn(part: HumanPart): boolean {
   return !(part.startsWith("body") || part.startsWith("carried"));
 }
 
-function wornWith(part: HumanPart): HumanPart[] {
-  return part === "feather" ? ["headband", part] : [part];
-}
-
 function isArm(mesh: MeshData, piece: MeshPiece): boolean {
   const bound = piece.vertices.filter((vertex) => {
     return ARM_BONES.has(mesh.channels.boneA[vertex]) || ARM_BONES.has(mesh.channels.boneB[vertex]);
@@ -187,7 +183,7 @@ describe("attached parts", () => {
   ] as const)("keeps every worn part and tool on the %s body standing on the ground", (_level, parts) => {
     for (const body of BODIES) {
       for (const part of HUMAN_PARTS.filter(isWorn)) {
-        expect(loosePieces(humanPartsMesh(parts, [body, ...wornWith(part)])), `${body} ${part}`).toEqual([]);
+        expect(loosePieces(humanPartsMesh(parts, [body, part])), `${body} ${part}`).toEqual([]);
       }
     }
   });
@@ -281,7 +277,7 @@ describe("moving parts", () => {
       for (const appearance of people) {
         for (const phase of garmentPhases) {
           for (const garment of GARMENTS) {
-            const mesh = posedPerson(appearance, clip, phase, wornWith(garment));
+            const mesh = posedPerson(appearance, clip, phase, [garment]);
             const body = holdsBodyPart(mesh, bodyPartsOf(appearance));
 
             expect(loosePieces(mesh, TOUCHING, body), `${appearance.ageGroup} ${phase} ${garment}`).toEqual([]);

@@ -8,6 +8,8 @@ import type { AgentMarkers } from "./agent-markers.ts";
 import type { AgentPalette } from "./agent-palette.ts";
 
 export const NO_SELECTION = -1;
+export const ANIMAL_WADING_DEPTH = 1.2;
+export const PERSON_WADING_DEPTH = 1.1;
 
 const ANKLE_DEPTH = 0.18;
 

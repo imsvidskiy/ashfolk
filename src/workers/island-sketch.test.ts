@@ -30,8 +30,20 @@ describe("island sketch", () => {
     expect(shrunk.cellsPerSide).toBe(640);
     expect(shrunk.cellSize).toBe(20);
     expect(shrunk.height).toHaveLength(640 * 640);
-    expect(shrunk.height[0]).toBe(1281);
+    expect(shrunk.height[0]).toBe(640.5);
     expect(shrunk.ground).toBeNull();
     expect(shrunk.waterSurface).toBeNull();
+  });
+
+  it("blends heights so a slope stays even at an uneven step", () => {
+    const shrunk = shrinkSketch(sketchOf(768));
+
+    const rises = Array.from({ length: 12 }, (_, column) => {
+      return shrunk.height[320 * 640 + column + 1] - shrunk.height[320 * 640 + column];
+    });
+
+    for (const rise of rises) {
+      expect(rise).toBeCloseTo(1.2, 1);
+    }
   });
 });
