@@ -31,7 +31,7 @@ interface PowerDefinition {
 export const POWERS = {
   abundance: {
     category: "life",
-    description: "Bushes fill with berries and the nearest tribe gains food and faith.",
+    description: "Fills bushes with berries and gives the nearest tribe food and faith.",
     name: "Abundance",
     parameters: z.object({
       radius: brushRadius(120, 400),
@@ -41,12 +41,12 @@ export const POWERS = {
   },
   deer: {
     category: "life",
-    description: "A herd of deer, quick prey for hunters.",
+    description: "Brings a herd of deer, quick prey for hunters.",
     name: "Deer",
     parameters: z.object({
       herdSize: rangeParameter({
         defaultValue: 5,
-        description: "Animals in the herd.",
+        description: "How many animals come.",
         label: "Herd size",
         maximum: 12,
         minimum: 2,
@@ -58,7 +58,7 @@ export const POWERS = {
   },
   earthquake: {
     category: "elements",
-    description: "Shakes the land: trees fall, huts break, people and animals panic.",
+    description: "Shakes the land. Trees fall, huts break, people and animals panic.",
     name: "Earthquake",
     parameters: z.object({
       magnitude: strength(70, "How hard the ground shakes."),
@@ -68,7 +68,7 @@ export const POWERS = {
   },
   explosion: {
     category: "elements",
-    description: "A blast that leaves a crater, a shockwave and burning debris.",
+    description: "Blasts a crater and throws burning debris around it.",
     name: "Explosion",
     parameters: z.object({
       burningDebris: toggleParameter({
@@ -76,14 +76,14 @@ export const POWERS = {
         description: "Debris sets the surroundings on fire.",
         label: "Burning debris",
       }),
-      power: strength(80, "Depth of the crater and reach of the shockwave."),
+      power: strength(80, "How deep the crater is and how far the blast reaches."),
       radius: brushRadius(45, 160),
     }),
     usage: "point",
   },
   fire: {
     category: "elements",
-    description: "Sets fire to anything that can burn. Dry grass catches at once, wet or snowy ground does not.",
+    description: "Sets fire to what can burn. Dry grass catches at once, wet or snowy ground does not.",
     name: "Fire",
     parameters: z.object({
       intensity: strength(60, "How hot the new fire burns."),
@@ -103,7 +103,7 @@ export const POWERS = {
   },
   forest: {
     category: "land",
-    description: "Plants trees. By default it picks species that suit the local climate.",
+    description: "Plants trees, by default the species that suit the climate.",
     name: "Forest",
     parameters: z.object({
       density: strength(50, "How many trees grow per stroke."),
@@ -132,12 +132,12 @@ export const POWERS = {
   },
   hare: {
     category: "life",
-    description: "A few hares. They nibble meadows and forest edges, breed fast and dart away at any threat.",
+    description: "Brings a few hares. They breed fast and dart away at any threat.",
     name: "Hares",
     parameters: z.object({
       herdSize: rangeParameter({
         defaultValue: 3,
-        description: "Hares in the group.",
+        description: "How many hares come.",
         label: "Group size",
         maximum: 7,
         minimum: 1,
@@ -149,7 +149,7 @@ export const POWERS = {
   },
   healing: {
     category: "life",
-    description: "Heals, feeds and warms everyone inside the circle.",
+    description: "Heals, feeds and warms everyone in the circle.",
     name: "Healing",
     parameters: z.object({
       radius: brushRadius(60, 200),
@@ -158,12 +158,12 @@ export const POWERS = {
   },
   ibex: {
     category: "life",
-    description: "A herd of ibex. They keep to rocky heights and bound uphill when chased.",
+    description: "Brings a herd of ibex. They keep to rocky heights and flee uphill.",
     name: "Ibex",
     parameters: z.object({
       herdSize: rangeParameter({
         defaultValue: 5,
-        description: "Animals in the herd.",
+        description: "How many animals come.",
         label: "Herd size",
         maximum: 9,
         minimum: 2,
@@ -175,16 +175,16 @@ export const POWERS = {
   },
   inspiration: {
     category: "life",
-    description: "The nearest tribe makes its next discovery sooner.",
+    description: "Brings the nearest tribe's next discovery sooner.",
     name: "Inspiration",
     parameters: z.object({
-      strength: strength(50, "Share of the next discovery granted at once."),
+      strength: strength(50, "How much of the next discovery comes at once."),
     }),
     usage: "point",
   },
   lightning: {
     category: "elements",
-    description: "Lightning from a clear sky. Sets trees alight and teaches nearby tribes about fire.",
+    description: "Strikes from a clear sky. Sets trees alight and teaches nearby tribes fire.",
     name: "Lightning",
     parameters: z.object({
       ignitionChance: strength(90, "Chance that a strike starts a fire."),
@@ -199,7 +199,7 @@ export const POWERS = {
       }),
       strikes: rangeParameter({
         defaultValue: 1,
-        description: "Bolts per click.",
+        description: "How many bolts fall per click.",
         label: "Strikes",
         maximum: 8,
         minimum: 1,
@@ -211,7 +211,7 @@ export const POWERS = {
   },
   lower: {
     category: "land",
-    description: "Digs the land down. Dig a basin in a valley and rain fills it with water.",
+    description: "Digs the land down. Rain fills a basin dug in a valley.",
     name: "Lower land",
     parameters: z.object({
       radius: brushRadius(70, 300),
@@ -221,12 +221,12 @@ export const POWERS = {
   },
   mammoth: {
     category: "life",
-    description: "A herd of mammoths. They love the cold and feed a tribe for days.",
+    description: "Brings a herd of mammoths. They love the cold and feed a tribe for days.",
     name: "Mammoths",
     parameters: z.object({
       herdSize: rangeParameter({
         defaultValue: 3,
-        description: "Animals in the herd.",
+        description: "How many animals come.",
         label: "Herd size",
         maximum: 7,
         minimum: 2,
@@ -238,12 +238,12 @@ export const POWERS = {
   },
   meteor: {
     category: "elements",
-    description: "A meteor falls from the sky and leaves a huge burning crater.",
+    description: "Drops a meteor that leaves a huge burning crater.",
     name: "Meteor",
     parameters: z.object({
       craterRadius: rangeParameter({
         defaultValue: 140,
-        description: "Size of the impact crater.",
+        description: "How wide the crater is.",
         label: "Crater",
         maximum: 320,
         minimum: 40,
@@ -252,7 +252,7 @@ export const POWERS = {
       }),
       fallTime: rangeParameter({
         defaultValue: 1,
-        description: "Seconds between the click and the impact.",
+        description: "How long the meteor falls.",
         label: "Fall time",
         maximum: 6,
         minimum: 0.5,
@@ -270,7 +270,7 @@ export const POWERS = {
     parameters: z.object({
       material: choiceParameter({
         defaultValue: "meadow",
-        description: "Ground to paint.",
+        description: "Which ground to paint.",
         label: "Ground",
         options: [
           { label: "Meadow", value: "meadow" },
@@ -289,7 +289,7 @@ export const POWERS = {
   },
   rain: {
     category: "elements",
-    description: "A local downpour: puts out fires and soaks the ground.",
+    description: "Brings a local downpour. It puts out fires and soaks the ground.",
     name: "Rain",
     parameters: z.object({
       intensity: strength(70, "How heavily it rains."),
@@ -299,7 +299,7 @@ export const POWERS = {
   },
   raise: {
     category: "land",
-    description: "Lifts the land. Rivers and lakes find their new way after the edit.",
+    description: "Lifts the land. Rivers and lakes find a new way.",
     name: "Raise land",
     parameters: z.object({
       radius: brushRadius(70, 300),
@@ -319,7 +319,7 @@ export const POWERS = {
   },
   snow: {
     category: "elements",
-    description: "Covers the ground with snow. It melts again where it is warm.",
+    description: "Covers the ground with snow. It melts where it is warm.",
     name: "Snow",
     parameters: z.object({
       intensity: strength(60, "How quickly snow piles up."),
@@ -329,13 +329,12 @@ export const POWERS = {
   },
   tornado: {
     category: "elements",
-    description:
-      "A twister that walks with the wind, uprooting trees, flinging people and animals and tearing huts apart.",
+    description: "Sends a twister down the wind. It uproots trees, flings people and tears huts apart.",
     name: "Tornado",
     parameters: z.object({
       lifetime: rangeParameter({
         defaultValue: 20,
-        description: "Seconds before the funnel dies out.",
+        description: "How long the twister lasts.",
         label: "Lifetime",
         maximum: 60,
         minimum: 5,
@@ -349,7 +348,7 @@ export const POWERS = {
   },
   tribe: {
     category: "life",
-    description: "A new tribe arrives and settles near water and food close to the click.",
+    description: "Brings a new tribe that settles near water and food.",
     name: "Tribe",
     parameters: z.object({
       people: rangeParameter({
@@ -366,13 +365,12 @@ export const POWERS = {
   },
   volcano: {
     category: "elements",
-    description:
-      "The ground swells into a fire mountain. Lava runs downhill and burns what it meets, then cools into rock and ash that grows back lush.",
+    description: "Raises a fire mountain. Lava burns its way downhill and cools into fertile ash.",
     name: "Volcano",
     parameters: z.object({
       radius: rangeParameter({
         defaultValue: 120,
-        description: "Width of the mountain that rises.",
+        description: "How wide the mountain rises.",
         label: "Radius",
         maximum: 260,
         minimum: 60,
@@ -385,12 +383,12 @@ export const POWERS = {
   },
   wolf: {
     category: "life",
-    description: "A wolf pack that roams far and keeps its distance from people.",
+    description: "Brings a wolf pack that roams far and avoids people.",
     name: "Wolves",
     parameters: z.object({
       herdSize: rangeParameter({
         defaultValue: 4,
-        description: "Wolves in the pack.",
+        description: "How many wolves come.",
         label: "Pack size",
         maximum: 8,
         minimum: 2,
