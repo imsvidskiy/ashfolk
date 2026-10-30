@@ -5,9 +5,18 @@ import { Island } from "../../design/island.tsx";
 import { useIsTouch } from "../../design/use-media-query.ts";
 import type { Filming } from "../../game/filming.ts";
 import { isTypingTarget } from "../../game/input/keyboard-controls.ts";
+import { TAP_TOLERANCE } from "../../game/input/pointer-controls.ts";
+import { useInterfaceStore } from "../interface/interface-store.ts";
+import { usePowerStore } from "../powers/power-store.ts";
 import { useFilming } from "./use-filming.ts";
 
 const HINT_MILLISECONDS = 2500;
+
+interface TouchTap {
+  readonly pointerId: number;
+  readonly x: number;
+  readonly y: number;
+}
 
 function isToggleKey(event: KeyboardEvent): boolean {
   if (event.code !== "KeyH" || event.repeat || event.ctrlKey || event.metaKey || event.altKey) {
@@ -41,18 +50,46 @@ function useInterfaceKey(): void {
   }, [engine]);
 }
 
-function useIsHintShown(): boolean {
+function usePutToolsDownOnTouch(): void {
   const { isInterfaceHidden } = useFilming();
-  const [isHintShown, setIsHintShown] = useState(false);
 
   useEffect(() => {
     if (!isInterfaceHidden) {
+      return;
+    }
+
+    function handlePointerDown(event: PointerEvent): void {
+      const { isHandSelected, selectedPowerId, selectPower } = usePowerStore.getState();
+
+      if (event.pointerType === "touch" && (isHandSelected || selectedPowerId !== null)) {
+        selectPower(null);
+      }
+    }
+
+    window.addEventListener("pointerdown", handlePointerDown, { capture: true });
+
+    return () => {
+      window.removeEventListener("pointerdown", handlePointerDown, { capture: true });
+    };
+  }, [isInterfaceHidden]);
+}
+
+function useIsHintShown(): boolean {
+  const { isInterfaceHidden } = useFilming();
+  const isSettingsOpen = useInterfaceStore((state) => {
+    return state.isSettingsOpen;
+  });
+  const [isHintShown, setIsHintShown] = useState(false);
+
+  useEffect(() => {
+    if (!isInterfaceHidden || isSettingsOpen) {
       setIsHintShown(false);
 
       return;
     }
 
     let timer = 0;
+    let tap: TouchTap | null = null;
 
     function showHint(): void {
       setIsHintShown(true);
@@ -63,19 +100,37 @@ function useIsHintShown(): boolean {
     }
 
     function handlePointerDown(event: PointerEvent): void {
-      if (event.pointerType === "touch") {
+      if (event.pointerType !== "touch") {
+        return;
+      }
+
+      tap = event.isPrimary ? { pointerId: event.pointerId, x: event.clientX, y: event.clientY } : null;
+    }
+
+    function handlePointerUp(event: PointerEvent): void {
+      if (tap === null || event.pointerId !== tap.pointerId) {
+        return;
+      }
+
+      const travel = Math.hypot(event.clientX - tap.x, event.clientY - tap.y);
+
+      tap = null;
+
+      if (travel < TAP_TOLERANCE) {
         showHint();
       }
     }
 
     showHint();
     window.addEventListener("pointerdown", handlePointerDown);
+    window.addEventListener("pointerup", handlePointerUp);
 
     return () => {
       window.clearTimeout(timer);
       window.removeEventListener("pointerdown", handlePointerDown);
+      window.removeEventListener("pointerup", handlePointerUp);
     };
-  }, [isInterfaceHidden]);
+  }, [isInterfaceHidden, isSettingsOpen]);
 
   return isHintShown;
 }
@@ -103,6 +158,7 @@ function HintContent({ filming }: { readonly filming: Filming }) {
 
 export function FilmingHint() {
   useInterfaceKey();
+  usePutToolsDownOnTouch();
 
   const engine = useEngine();
   const isHintShown = useIsHintShown();
@@ -112,7 +168,10 @@ export function FilmingHint() {
   }
 
   return (
-    <div className="pointer-events-none fixed inset-x-0 top-4 z-20 flex justify-center" role="status">
+    <div
+      className="pointer-events-none fixed inset-x-0 top-[max(1rem,env(safe-area-inset-top))] z-20 flex justify-center"
+      role="status"
+    >
       <HintContent filming={engine.filming} />
     </div>
   );
