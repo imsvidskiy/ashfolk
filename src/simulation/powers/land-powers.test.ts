@@ -67,6 +67,20 @@ describe("land", () => {
     expect(simulation.world.vegetation.hasPlantsInCell(cell)).toBe(false);
   });
 
+  it("paint leaves the ground past the coast alone", () => {
+    const simulation = createPowerSimulation();
+
+    const { grid, terrain } = simulation.world;
+    const cell = grid.cellAt(-20, 0);
+
+    terrain.coastDistance[cell] = -5;
+    simulation.beginStroke("paint", 0, 0, { material: "forest", radius: 40 });
+    simulation.endStroke();
+
+    expect(terrain.ground[centerCell(simulation.world)]).toBe(Ground.Forest);
+    expect(terrain.ground[cell]).toBe(Ground.Meadow);
+  });
+
   it("forest plants the chosen trees", () => {
     const simulation = createPowerSimulation();
 
