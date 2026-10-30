@@ -160,9 +160,13 @@ describe("choice field with many options and icons", () => {
     trigger.element().focus();
     await userEvent.keyboard("{Enter}");
 
-    await expect.element(screen.getByRole("option", { name: "Meadow" })).toBeVisible();
+    await expect.element(screen.getByRole("option", { name: "Meadow" })).toHaveFocus();
 
-    await userEvent.keyboard("{ArrowDown}{ArrowDown}{Enter}");
+    await userEvent.keyboard("{ArrowDown}{ArrowDown}");
+
+    await expect.element(screen.getByRole("option", { name: "Rock" })).toHaveFocus();
+
+    await userEvent.keyboard("{Enter}");
 
     await expect.element(trigger).toHaveTextContent("Rock");
     await expect.element(trigger.getByTestId("rock-icon")).toBeInTheDocument();
