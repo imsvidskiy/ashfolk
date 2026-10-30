@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { foundNeighboringTribes, idleJob, runUntil, SPRING_HARNESS } from "../../testing/test-rivalry.ts";
+import { runUntil, SPRING_HARNESS, standOff } from "../../testing/test-rivalry.ts";
 import { SocietyHarness, tickFor } from "../../testing/test-society.ts";
 import type { CarriedWeapon } from "../weapons.ts";
 import { BARE_HANDS } from "./combat-stats.ts";
@@ -14,16 +14,8 @@ describe("combat", () => {
   it("lets a spearman get the better of a bare-handed fighter", () => {
     const harness = new SocietyHarness(SPRING_HARNESS);
 
-    const [first, second] = foundNeighboringTribes(harness, 900);
-    const [spearman] = harness.society.membersOf(first);
-    const [brawler] = harness.society.membersOf(second);
+    const { far: brawler, first, near: spearman, second } = standOff(harness, 6);
 
-    for (const person of harness.society.people) {
-      person.job = idleJob();
-    }
-
-    brawler.mover.x = spearman.mover.x + 6;
-    brawler.mover.z = spearman.mover.z;
     spearman.job = new FightJob(tickFor(harness, spearman, first), personFoe(brawler), SPEAR);
     brawler.job = new FightJob(tickFor(harness, brawler, second), personFoe(spearman), BARE_HANDS);
     runUntil(harness, 40, () => {
@@ -37,17 +29,9 @@ describe("combat", () => {
   it("looses arrows that fly before they wound", () => {
     const harness = new SocietyHarness(SPRING_HARNESS);
 
-    const [first, second] = foundNeighboringTribes(harness, 900);
-    const [archer] = harness.society.membersOf(first);
-    const [target] = harness.society.membersOf(second);
-
-    for (const person of harness.society.people) {
-      person.job = idleJob();
-    }
+    const { far: target, first, near: archer } = standOff(harness, 15);
 
     first.stock.arrows = QUIVER;
-    target.mover.x = archer.mover.x + 15;
-    target.mover.z = archer.mover.z;
     archer.job = new FightJob(tickFor(harness, archer, first), personFoe(target), BOW);
     runUntil(harness, 30, () => {
       return target.health < 1;
@@ -66,17 +50,9 @@ describe("combat", () => {
   it("closes in bare-handed when the tribe has no arrows left", () => {
     const harness = new SocietyHarness(SPRING_HARNESS);
 
-    const [first, second] = foundNeighboringTribes(harness, 900);
-    const [archer] = harness.society.membersOf(first);
-    const [target] = harness.society.membersOf(second);
-
-    for (const person of harness.society.people) {
-      person.job = idleJob();
-    }
+    const { far: target, first, near: archer } = standOff(harness, 15);
 
     first.stock.arrows = 0;
-    target.mover.x = archer.mover.x + 15;
-    target.mover.z = archer.mover.z;
     archer.job = new FightJob(tickFor(harness, archer, first), personFoe(target), BOW);
     runUntil(harness, 20, () => {
       return archer.pose === "brawl";
