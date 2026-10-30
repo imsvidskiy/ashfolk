@@ -1,5 +1,4 @@
 import { type PerspectiveCamera, type Ray, Raycaster, Vector3 } from "three/webgpu";
-import { FIGURE_SCALE } from "../../models/people/human-proportions.ts";
 import { distanceToSegment } from "../../shared/math.ts";
 import type { Selection } from "../../simulation/commands.ts";
 import type { SimulationFrame } from "../../simulation/frame.ts";
@@ -7,13 +6,12 @@ import { type GrabTarget, isGrabbablePlant } from "../../simulation/hand/grab-ta
 import { ANIMAL_STRIDE, AnimalField, PERSON_STRIDE, PersonField } from "../../world/agent-buffers.ts";
 import { PlantState, type VegetationBuffers } from "../../world/vegetation-store.ts";
 import type { GroundPoint } from "../camera/god-camera.ts";
+import { type AgentBody, animalBody, measureAgentBodies, personBody } from "./agent-bodies.ts";
 import type { HeightField, ScreenPoint, ViewportSize } from "./ground-picker.ts";
 import { measureGrabbablePlants, plantHitDistance } from "./plant-volumes.ts";
 import { aimRay, normalizedToPixels, projectToNormalized } from "./screen-projection.ts";
 
 const PICK_RADIUS_PIXELS = 26;
-const PERSON_CENTER_HEIGHT = 0.9 * FIGURE_SCALE;
-const ANIMAL_CENTER_HEIGHT = 1.2;
 const BUILDING_PICK_RADIUS_PIXELS = 40;
 const BUILDING_CENTER_HEIGHT = 1.5;
 const BUILDING_PICK_PENALTY_PIXELS = 8;
@@ -34,8 +32,12 @@ interface Candidate<Target> {
   readonly target: Target;
 }
 
-export interface GrabScene {
+export interface AgentScene {
   readonly frame: SimulationFrame;
+  readonly secondsSinceTick: number;
+}
+
+export interface GrabScene extends AgentScene {
   readonly plantsNear: (spots: readonly GroundPoint[], radius: number) => Iterable<number>;
   readonly vegetation: Pick<VegetationBuffers, "count" | "height" | "species" | "state" | "x" | "z">;
 }
@@ -52,14 +54,28 @@ interface ScreenHit {
 }
 
 interface AgentLayout {
-  readonly fields: { readonly Id: number; readonly X: number; readonly Z: number };
+  readonly body: (data: Float32Array, offset: number) => AgentBody;
+  readonly fields: {
+    readonly Id: number;
+    readonly VelocityX: number;
+    readonly VelocityZ: number;
+    readonly X: number;
+    readonly Z: number;
+  };
   readonly kind: "animal" | "person";
-  readonly lift: number;
   readonly stride: number;
 }
 
-const PEOPLE: AgentLayout = { fields: PersonField, kind: "person", lift: PERSON_CENTER_HEIGHT, stride: PERSON_STRIDE };
-const ANIMALS: AgentLayout = { fields: AnimalField, kind: "animal", lift: ANIMAL_CENTER_HEIGHT, stride: ANIMAL_STRIDE };
+const PEOPLE: AgentLayout = { body: personBody, fields: PersonField, kind: "person", stride: PERSON_STRIDE };
+const ANIMALS: AgentLayout = { body: animalBody, fields: AnimalField, kind: "animal", stride: ANIMAL_STRIDE };
+
+type PixelPoint = readonly [number, number];
+
+interface StandingBody extends AgentBody {
+  readonly baseY: number;
+  readonly x: number;
+  readonly z: number;
+}
 
 interface RaySearch {
   readonly farthest: number;
@@ -112,6 +128,18 @@ function lowestClearance(ray: Ray, reach: number, reachPerMeter: number, heightA
   return lowest;
 }
 
+function screenAxis(feet: PixelPoint | null, top: PixelPoint | null): readonly [PixelPoint, PixelPoint] | null {
+  if (feet !== null && top !== null) {
+    return [feet, top];
+  }
+
+  if (feet !== null) {
+    return [feet, feet];
+  }
+
+  return top === null ? null : [top, top];
+}
+
 export class EntityPicker {
   readonly #camera: PerspectiveCamera;
   readonly #heightAt: HeightField;
@@ -123,15 +151,16 @@ export class EntityPicker {
     this.#camera = camera;
     this.#heightAt = heightAt;
     measureGrabbablePlants();
+    measureAgentBodies();
   }
 
-  pick(frame: SimulationFrame, screen: ScreenPoint, viewport: ViewportSize, ground: Vector3 | null): Selection | null {
+  pick(scene: AgentScene, screen: ScreenPoint, viewport: ViewportSize, ground: Vector3 | null): Selection | null {
     const pointer = { ground, screen, viewport };
 
     const nearest = this.#nearestCandidate(ground, [
-      ...this.#agents(frame.people, frame.personCount, PEOPLE, pointer),
-      ...this.#agents(frame.animals, frame.animalCount, ANIMALS, pointer),
-      ...this.#buildings(frame, pointer),
+      ...this.#agents(scene, PEOPLE, pointer),
+      ...this.#agents(scene, ANIMALS, pointer),
+      ...this.#buildings(scene.frame, pointer),
     ]);
 
     if (nearest !== null) {
@@ -151,13 +180,11 @@ export class EntityPicker {
     viewport: ViewportSize,
     ground: Vector3 | null
   ): GrabTarget | null {
-    const { frame } = scene;
-
     const pointer = { ground, screen, viewport };
 
     const agent = this.#nearestCandidate(ground, [
-      ...this.#agents(frame.animals, frame.animalCount, ANIMALS, pointer),
-      ...this.#agents(frame.people, frame.personCount, PEOPLE, pointer),
+      ...this.#agents(scene, ANIMALS, pointer),
+      ...this.#agents(scene, PEOPLE, pointer),
     ]);
     const plant = this.#grabbablePlant(scene, pointer);
 
@@ -183,7 +210,10 @@ export class EntityPicker {
     let nearest: Candidate<Target> | null = null;
 
     for (const candidate of candidates) {
-      const isCloser = nearest === null || candidate.distance < nearest.distance;
+      const isCloser =
+        nearest === null ||
+        candidate.distance < nearest.distance ||
+        (candidate.distance === nearest.distance && candidate.reach < nearest.reach);
 
       if (candidate.reach <= visibleReach && isCloser) {
         nearest = candidate;
@@ -194,22 +224,25 @@ export class EntityPicker {
   }
 
   #agents(
-    data: Float32Array,
-    count: number,
+    scene: AgentScene,
     layout: AgentLayout,
     pointer: PointerPick
   ): Candidate<{ id: number; kind: AgentLayout["kind"] }>[] {
-    const { fields, kind, lift, stride } = layout;
+    const { frame, secondsSinceTick } = scene;
+    const { body, fields, kind, stride } = layout;
+
+    const data = kind === "person" ? frame.people : frame.animals;
+    const count = kind === "person" ? frame.personCount : frame.animalCount;
 
     const candidates: Candidate<{ id: number; kind: AgentLayout["kind"] }>[] = [];
 
     for (let agent = 0; agent < count; agent += 1) {
       const offset = agent * stride;
 
-      const x = data[offset + fields.X];
-      const z = data[offset + fields.Z];
+      const x = data[offset + fields.X] + data[offset + fields.VelocityX] * secondsSinceTick;
+      const z = data[offset + fields.Z] + data[offset + fields.VelocityZ] * secondsSinceTick;
 
-      const hit = this.#screenHit(x, this.#heightAt(x, z) + lift, z, pointer);
+      const hit = this.#bodyHit({ ...body(data, offset), baseY: this.#heightAt(x, z), x, z }, pointer);
 
       if (hit.distance < PICK_RADIUS_PIXELS) {
         candidates.push({ ...hit, target: { id: data[offset + fields.Id], kind } });
@@ -284,6 +317,38 @@ export class EntityPicker {
     const reach = this.#camera.position.distanceTo(ground);
 
     return reach + Math.max(SMALLEST_OCCLUSION_MARGIN, reach * OCCLUSION_MARGIN_PER_METER);
+  }
+
+  #bodyHit(body: StandingBody, pointer: PointerPick): ScreenHit {
+    const { baseY, height, radius, x, z } = body;
+    const { screen, viewport } = pointer;
+
+    const reach = this.#camera.position.distanceTo(this.#point.set(x, baseY + height / 2, z));
+    const feet = this.#screenPoint(x, baseY, z, viewport);
+    const top = this.#screenPoint(x, baseY + height, z, viewport);
+
+    const axis = screenAxis(feet, top);
+
+    if (axis === null) {
+      return { distance: Number.POSITIVE_INFINITY, reach };
+    }
+
+    const pixelsPerMeter = viewport.height / (2 * Math.tan((this.#camera.fov * Math.PI) / 360) * reach);
+    const fromAxis = distanceToSegment(screen.x, screen.y, axis[0], axis[1]);
+
+    return { distance: Math.max(0, fromAxis - radius * pixelsPerMeter), reach };
+  }
+
+  #screenPoint(x: number, y: number, z: number, viewport: ViewportSize): PixelPoint | null {
+    const projected = projectToNormalized(this.#camera, x, y, z, this.#projected);
+
+    if (projected === null) {
+      return null;
+    }
+
+    const pixels = normalizedToPixels(projected, viewport);
+
+    return [pixels.x, pixels.y];
   }
 
   #screenHit(x: number, y: number, z: number, pointer: PointerPick): ScreenHit {

@@ -409,7 +409,9 @@ export class GameEngine implements EngineHandle {
   }
 
   #selectAt(point: Vector3 | null, screen: ScreenPoint): void {
-    const selection = this.#entityPicker.pick(this.session.frame, screen, this.#viewport, point);
+    const scene = { frame: this.session.frame, secondsSinceTick: this.#secondsSinceTick() };
+
+    const selection = this.#entityPicker.pick(scene, screen, this.#viewport, point);
 
     this.session.send({ selection, type: "setSelection" });
   }
@@ -422,10 +424,15 @@ export class GameEngine implements EngineHandle {
       plantsNear: (spots: readonly GroundPoint[], radius: number) => {
         return this.#world.plantsNear(spots, radius);
       },
+      secondsSinceTick: this.#secondsSinceTick(),
       vegetation,
     };
 
     return this.#entityPicker.pickGrabbable(scene, screen, this.#viewport, point);
+  }
+
+  #secondsSinceTick(): number {
+    return this.session.mirror.gameSecondsSinceTick(performance.now());
   }
 
   #resize(): void {

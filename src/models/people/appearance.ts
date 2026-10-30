@@ -4,6 +4,7 @@ import { clamp, hashToUnit, lerp, smoothstep } from "../../shared/math.ts";
 import { type RandomSource, randomFromUnitSeed } from "../../shared/random.ts";
 
 const CHILD_GROWTH_YEARS = 12;
+const ELDER_STATURE = 0.97;
 
 const SKIN_TONES: readonly number[] = [
   0xf1_cf_b5, 0xe3_b5_94, 0xd3_9f_7c, 0xc0_88_65, 0xa8_71_4f, 0x8d_5a_3d, 0x6e_43_2c, 0x57_33_22,
@@ -97,6 +98,10 @@ interface EraRolls {
   readonly torc: number;
 }
 
+function childGrowth(age: number): number {
+  return clamp(age / CHILD_GROWTH_YEARS, 0, 1);
+}
+
 function choose<Value>(random: RandomSource, choices: readonly WeightedChoice<Value>[]): Value {
   const total = choices.reduce((sum, choice) => {
     return sum + choice.weight;
@@ -138,12 +143,12 @@ function adultBody(random: RandomSource, isFemale: boolean): BodyShape {
 }
 
 function childBody(random: RandomSource, age: number): BodyShape {
-  const growth = clamp(age / CHILD_GROWTH_YEARS, 0, 1);
+  const growth = childGrowth(age);
 
   return {
     build: random.between(0.86, 1.02),
     headSize: lerp(1.42, 1.1, growth),
-    height: lerp(0.5, 0.86, growth) * random.between(0.96, 1.04),
+    height: statureAt(age) * random.between(0.96, 1.04),
     hipWidth: random.between(0.9, 0.97),
     legLength: lerp(0.86, 0.97, growth),
     shoulderWidth: random.between(0.86, 0.94),
@@ -161,7 +166,7 @@ function bodyShape(random: RandomSource, ageGroup: AgeGroup, age: number, isFema
     return adult;
   }
 
-  return { ...adult, build: adult.build * random.between(0.86, 1.08), height: adult.height * 0.97 };
+  return { ...adult, build: adult.build * random.between(0.86, 1.08), height: adult.height * statureAt(age) };
 }
 
 function skinTonePosition(random: RandomSource, tribeId: number): number {
@@ -405,6 +410,16 @@ function withEraDetails(appearance: PersonAppearance, era: number, seed: number)
     hasBoots: appearance.hasBoots || (era >= IRON_AGE && rolls.boots < 0.6),
     hasCape,
   };
+}
+
+export function statureAt(age: number): number {
+  const ageGroup = ageGroupOf(age);
+
+  if (ageGroup === "child") {
+    return lerp(0.5, 0.86, childGrowth(age));
+  }
+
+  return ageGroup === "elder" ? ELDER_STATURE : 1;
 }
 
 export function personAppearance(input: AppearanceInput): PersonAppearance {
