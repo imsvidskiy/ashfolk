@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, it } from "vitest";
 import { saturate } from "../shared/math.ts";
 import { createRandom } from "../shared/random.ts";
 import { type IslandSizeKind, islandDimensions } from "../world/island-size.ts";
@@ -6,6 +6,8 @@ import { landEverywhere, shapeTerrain, troughWithBasin } from "../world/testing/
 import { WorldGrid } from "../world/world-grid.ts";
 import { analyzeDrainage, type DrainageBasins, NO_CELL } from "./drainage.ts";
 import { digRiverLakes, easeLakeShores, fillSinks, type LakeSiting } from "./lake-basins.ts";
+import { coarseWorld, FULL_SIZE_TIMEOUT, islandsAcrossSeeds } from "./testing/generated-worlds.ts";
+import { surveyIsland } from "./testing/island-survey.ts";
 
 const grid = new WorldGrid({ cellSize: 10, cellsPerSide: 192 });
 const dryness = new Float32Array(grid.cellCount);
@@ -24,6 +26,7 @@ const GENTLE_SHORE_WIDTH = 40;
 const SLOPE_TOLERANCE = 0.01;
 const STEEPEST_RAMP_SLOPE = 0.6;
 const REACH_OF_EASING = 400;
+const HIGHEST_LAKE_SHORE = 30;
 
 function gentleValley(): Float32Array {
   return shapeTerrain(grid, (x, z) => {
@@ -276,6 +279,40 @@ describe("lake shore easing", () => {
 
     for (const slope of slopesAlong(eased, shore)) {
       expect(slope).toBeLessThan(GENTLE_SHORE_SLOPE + SLOPE_TOLERANCE);
+    }
+  });
+});
+
+describe("lakes of generated islands", () => {
+  it("covers lake cells with water at the lake level", () => {
+    for (const generated of [coarseWorld(7), coarseWorld(7, "square")]) {
+      expect(generated.water.lakes.length).toBeGreaterThan(0);
+
+      for (const lake of generated.water.lakes) {
+        const covered = generated.terrain.waterSurface.filter((surface) => {
+          return surface === lake.level;
+        });
+
+        expect(covered.length).toBeGreaterThanOrEqual(lake.cellCount);
+      }
+    }
+  });
+});
+
+describe("lakes across seeds", () => {
+  let lakeShoreRises: number[];
+
+  beforeAll(() => {
+    const { round, square } = islandsAcrossSeeds();
+
+    lakeShoreRises = [...round, ...square].map((generated) => {
+      return surveyIsland(generated).lakeShoreRise;
+    });
+  }, FULL_SIZE_TIMEOUT);
+
+  it("rises gently from the shore of every lake, with no mountain standing in the water", () => {
+    for (const rise of lakeShoreRises) {
+      expect(rise).toBeLessThan(HIGHEST_LAKE_SHORE);
     }
   });
 });
