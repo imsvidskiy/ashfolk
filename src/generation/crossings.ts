@@ -225,7 +225,7 @@ function wideningAlong(survey: CrossingSurvey, course: RiverCourse): number {
     const point = pointAlong(course, along);
     const cell = grid.cellAt(point.x, point.z);
 
-    if (cell >= 0 && isRiverWater(survey, cell) && !isBrookCell(terrain, cell)) {
+    if (isRiverWater(survey, cell) && !isBrookCell(terrain, cell)) {
       return along;
     }
   }
@@ -765,7 +765,7 @@ class CrossingPlanner {
 
     const centerCell = this.survey.grid.cellAt(center.x, center.z);
 
-    if (centerCell < 0 || isBrookCell(this.survey.terrain, centerCell)) {
+    if (isBrookCell(this.survey.terrain, centerCell)) {
       return null;
     }
 
