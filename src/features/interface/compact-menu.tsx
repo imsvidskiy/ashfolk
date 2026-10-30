@@ -1,6 +1,7 @@
 import { Menu } from "@base-ui/react/menu";
 import {
   BookOpen,
+  Download,
   Map as MapIcon,
   Maximize2,
   Menu as MenuIcon,
@@ -13,6 +14,7 @@ import type { ReactNode } from "react";
 import { IconButton } from "../../design/buttons.tsx";
 import { cn } from "../../design/cn.ts";
 import { MENU_ITEM, MENU_POPUP } from "../../design/styles.ts";
+import { useInstall } from "../install/install-store.ts";
 import { useSidePanel } from "../journal/use-side-panel.ts";
 import { useSoundToggle } from "../sound/use-sound-toggle.ts";
 import { useInterfaceStore } from "./interface-store.ts";
@@ -69,6 +71,20 @@ function FullscreenEntry() {
   );
 }
 
+function InstallEntry() {
+  const { canInstall, install } = useInstall();
+
+  if (!canInstall) {
+    return null;
+  }
+
+  return (
+    <MenuEntry icon={<Download aria-hidden="true" size={17} />} onClick={install}>
+      Install the app
+    </MenuEntry>
+  );
+}
+
 function SoundEntry() {
   const { isMuted, label, toggleSound } = useSoundToggle();
 
@@ -104,6 +120,8 @@ export function CompactMenu() {
             </MenuEntry>
 
             <SoundEntry />
+
+            <InstallEntry />
 
             <FullscreenEntry />
           </Menu.Popup>

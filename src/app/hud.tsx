@@ -4,6 +4,7 @@ import { useIsCompact } from "../design/use-media-query.ts";
 import { FilmingHint } from "../features/filming/filming-hint.tsx";
 import { useFilming } from "../features/filming/use-filming.ts";
 import { GuideCard } from "../features/guide/guide-card.tsx";
+import { InstallGuideDialog } from "../features/install/install-guide-dialog.tsx";
 import { CompactTopBar, PanelBar, StatusCard } from "../features/interface/top-bar.tsx";
 import { JournalSheet } from "../features/journal/journal-sheet.tsx";
 import { SidePanel } from "../features/journal/side-panel.tsx";
@@ -100,6 +101,8 @@ export function Hud() {
       <SettingsDialog />
 
       <LandChangedDialog />
+
+      <InstallGuideDialog />
 
       <FilmingHint />
     </>

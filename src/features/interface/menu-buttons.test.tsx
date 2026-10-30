@@ -1,6 +1,8 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, onTestFinished } from "vitest";
 import { render } from "vitest-browser-react";
+import { connectInstall } from "../install/install-store.ts";
 import { startTestEngine } from "../testing/engine-fixtures.ts";
+import { offerInstall } from "../testing/install-fixtures.ts";
 import { createAnimalInspection, showWorld } from "../testing/world-fixtures.ts";
 import { useInterfaceStore } from "./interface-store.ts";
 import { MenuButtons } from "./menu-buttons.tsx";
@@ -71,5 +73,27 @@ describe("menu buttons", () => {
 
     expect(state.isSettingsOpen).toBe(true);
     expect(state.settingsTab).toBe("world");
+  });
+
+  it("keeps the install button hidden until the browser offers it", async () => {
+    const screen = await render(<MenuButtons />);
+
+    await expect.element(screen.getByRole("button", { name: "Settings" })).toBeVisible();
+    expect(screen.getByRole("button", { name: "Install the app" }).elements()).toHaveLength(0);
+  });
+
+  it("opens the browser's install prompt from the menu", async () => {
+    onTestFinished(connectInstall(window));
+
+    const screen = await render(<MenuButtons />);
+
+    const { event, prompt } = offerInstall();
+
+    expect(event.defaultPrevented).toBe(true);
+
+    await screen.getByRole("button", { name: "Install the app" }).click();
+
+    expect(prompt).toHaveBeenCalledOnce();
+    await expect.element(screen.getByRole("button", { name: "Install the app" })).not.toBeInTheDocument();
   });
 });
