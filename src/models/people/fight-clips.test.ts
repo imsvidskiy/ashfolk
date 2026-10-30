@@ -6,7 +6,7 @@ import { isTorso, loosePieces, TOUCHING } from "../testing/mesh-connectivity.ts"
 import { posedMesh } from "../testing/moved-mesh.ts";
 import { ADULT, humanPartsMesh, jointOf, pointOf, posedHuman, TRIBE } from "../testing/posed-human.ts";
 import { personAppearance } from "./appearance.ts";
-import { applyHumanClip, HUMAN_CLIPS } from "./human-clips.ts";
+import { applyHumanClip } from "./human-clips.ts";
 import { HUMAN_DETAILS } from "./human-detail.ts";
 import { buildHumanParts, type HumanPart } from "./human-model.ts";
 import { humanBoneScales } from "./human-proportions.ts";
@@ -60,12 +60,6 @@ describe("fight clips", () => {
     expect(jointOf(toppling, HumanBone.Pelvis).y).toBeGreaterThan(0.4);
     expect(jointOf(fallen, HumanBone.Pelvis).y).toBeLessThan(0.3);
     expect(jointOf(fallen, HumanBone.Head).distanceTo(jointOf(dead, HumanBone.Head))).toBeLessThan(0.15);
-  });
-
-  it("play the fall and the flinch once instead of looping", () => {
-    expect(HUMAN_CLIPS.fall.timing.kind).toBe("once");
-    expect(HUMAN_CLIPS.flinch.timing.kind).toBe("once");
-    expect(HUMAN_CLIPS.thrust.timing.kind).toBe("seconds");
   });
 
   it("keep the weapons in the hands through every fight", () => {

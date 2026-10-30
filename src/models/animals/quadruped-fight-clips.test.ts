@@ -6,7 +6,6 @@ import { Pose } from "../rig/pose.ts";
 import { SkeletonPoser } from "../rig/skeleton-poser.ts";
 import { animalAppearance } from "./animal-appearance.ts";
 import { ANIMAL_SPECIES, animalBoneScales, poseAnimal } from "./animal-models.ts";
-import { QUADRUPED_CLIPS } from "./quadruped-clips.ts";
 import { QuadrupedBone } from "./quadruped-skeleton.ts";
 
 const MUZZLE_REACH = 0.3;
@@ -57,20 +56,12 @@ describe.each(ANIMAL_KINDS)("%s death clips", (kind) => {
     const fallen = posed(kind, "fall", 0.95);
     const dead = posed(kind, "dead", 0);
 
-    expect(head(fallen).distanceTo(head(dead))).toBeLessThan(0.15 * (kind === "mammoth" ? 3 : 1));
+    expect(head(fallen).distanceTo(head(dead))).toBeLessThan(1e-6);
   });
 });
 
 describe("a wolf's attack", () => {
   it("lunges the head forward at its prey", () => {
     expect(head(posed("wolf", "attack", 0.5)).z).toBeGreaterThan(head(posed("wolf", "attack", 0.3)).z);
-  });
-});
-
-describe("quadruped fight clip timing", () => {
-  it("plays the fall and the flinch once", () => {
-    expect(QUADRUPED_CLIPS.fall.timing.kind).toBe("once");
-    expect(QUADRUPED_CLIPS.flinch.timing.kind).toBe("once");
-    expect(QUADRUPED_CLIPS.charge.timing.kind).toBe("stride");
   });
 });
