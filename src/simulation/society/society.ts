@@ -413,7 +413,7 @@ export class SocietySystem {
     let count = 0;
 
     for (const person of this.#people) {
-      if (isLivingWithin(person, x, z, radius) && accepts(person)) {
+      if (isLivingWithin(person, x, z, radius) && !this.isHeld(person) && accepts(person)) {
         count += 1;
       }
     }

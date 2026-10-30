@@ -255,6 +255,11 @@ describe("people nearby", () => {
         return true;
       })
     ).toBeNull();
+    expect(
+      harness.society.countNear(0, 0, 50, () => {
+        return true;
+      })
+    ).toBe(1);
   });
 });
 
