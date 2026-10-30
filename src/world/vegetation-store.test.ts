@@ -192,3 +192,37 @@ describe("berry bushes", () => {
     expect(store.fruit[picked]).toBe(0.25);
   });
 });
+
+describe("vegetation snapshots", () => {
+  it("restore the cell lists, free slots, snags and berry bushes of the saved store", () => {
+    const grid = new WorldGrid({ cellSize: 10, cellsPerSide: 8 });
+    const store = new VegetationStore(grid, 16);
+
+    const oak = plantAt(store, PlantSpecies.Oak, 3);
+    const bush = plantAt(store, PlantSpecies.Bush, 5);
+    const carried = plantAt(store, PlantSpecies.Bush, 7);
+    const pine = plantAt(store, PlantSpecies.Pine, 13);
+
+    store.burn(oak, 4);
+    store.remove(pine);
+    store.detach(carried);
+
+    const restored = new VegetationStore(grid, 16);
+
+    restored.restore(store.snapshot());
+
+    const cell = grid.cellAt(3, 3);
+
+    expect(restored.exportBuffers()).toEqual(store.exportBuffers());
+    expect(restored.aliveCount).toBe(store.aliveCount);
+    expect(restored.plantsInCell(cell)).toEqual(store.plantsInCell(cell));
+    expect(restored.plantsInCell(cell)).not.toContain(carried);
+    expect(restored.takeBurntBefore(5)).toEqual([oak]);
+    expect(plantAt(restored, PlantSpecies.Boulder, 23)).toBe(pine);
+
+    restored.changeBerryFruit(-0.5);
+
+    expect(restored.fruit[bush]).toBe(0.5);
+    expect(restored.fruit[carried]).toBe(0.5);
+  });
+});
