@@ -1,7 +1,7 @@
 import { useEngineStore } from "../../app/engine-store.ts";
 import { GameSession } from "../../game/game-session.ts";
 import { LocalSimulationConnection } from "../../game/testing/local-session.ts";
-import { DEFAULT_WORLD_REQUEST } from "../../generation/generation-options.ts";
+import { DEFAULT_WORLD_REQUEST } from "../../generation/testing/world-request.ts";
 import { ignore } from "../../shared/ignore.ts";
 import type { SavedWorldState } from "../../simulation/saved-world.ts";
 import { Simulation } from "../../simulation/simulation.ts";

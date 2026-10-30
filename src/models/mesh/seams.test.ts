@@ -1,8 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { MeshBuilder } from "./mesh-builder.ts";
 import { type MeshData, vertexCount } from "./mesh-data.ts";
-import { sphere, tube } from "./shapes.ts";
+import { sphere } from "./shapes.ts";
 import { transformOf } from "./transforms.ts";
+import { tube } from "./tubes.ts";
 
 const LIMB = [0, 0.9, 1.05, 1.3, 2].map((y) => {
   return { radius: 0.3, x: 0, y, z: 0 };

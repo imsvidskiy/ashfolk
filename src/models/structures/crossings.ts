@@ -7,8 +7,9 @@ import { MaterialSlot, type MaterialSlotIndex } from "../materials.ts";
 import { MeshBuilder, type SurfacePoint } from "../mesh/mesh-builder.ts";
 import { boundsOf, type MeshData } from "../mesh/mesh-data.ts";
 import { deformShape, facetShape, type Shape } from "../mesh/shape.ts";
-import { cone, icosphere, type TubePoint, tube } from "../mesh/shapes.ts";
+import { cone, icosphere } from "../mesh/shapes.ts";
 import { segmentTransform, type Triple, transformOf } from "../mesh/transforms.ts";
+import { type TubePoint, tube } from "../mesh/tubes.ts";
 import { chiseledStone, groundShade, weatheredSlot } from "../stones.ts";
 
 export const CROSSING_DETAIL_LEVELS: readonly CrossingDetailLevel[] = ["high", "medium", "low"];

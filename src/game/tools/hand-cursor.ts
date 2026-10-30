@@ -20,7 +20,7 @@ const CURSOR_LOOKS: Readonly<Record<Exclude<HandCursor, "none">, CursorLook>> = 
   open: { fallback: "grab", hotspotX: 16, hotspotY: 18, image: openHand, sharpImage: sharpOpenHand },
 };
 
-export function handCursorStyles(cursor: HandCursor): readonly string[] {
+function handCursorStyles(cursor: HandCursor): readonly string[] {
   if (cursor === "none") {
     return [""];
   }

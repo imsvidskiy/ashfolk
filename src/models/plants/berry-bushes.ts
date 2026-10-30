@@ -10,8 +10,9 @@ import { withoutBuriedOverlaps, withoutBuriedTriangles } from "../mesh/buried-tr
 import { MeshBuilder, type VertexStyle } from "../mesh/mesh-builder.ts";
 import { type MeshData, mergeMeshes } from "../mesh/mesh-data.ts";
 import type { Shape } from "../mesh/shape.ts";
-import { blob, icosphere, pointAlong, type TubePoint, tube } from "../mesh/shapes.ts";
+import { blob, icosphere } from "../mesh/shapes.ts";
 import { transformOf } from "../mesh/transforms.ts";
+import { pointAlong, type TubePoint, tube } from "../mesh/tubes.ts";
 import { DISTANT_BERRY, type FruitLook, fruitMeshes, ROUND_FRUIT } from "./orchard-fruit.ts";
 import { BLOB_TINT, createGrowth, type Growth } from "./tree-growth.ts";
 import {

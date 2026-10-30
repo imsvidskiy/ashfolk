@@ -3,13 +3,13 @@ import { ANIMAL_KINDS, type AnimalKind } from "../../content/animals.ts";
 import type { GroundPoint } from "../../game/camera/god-camera.ts";
 import { type AnimalAppearance, animalAppearance } from "../../models/animals/animal-appearance.ts";
 import {
+  ANIMAL_BONE_COUNT,
   ANIMAL_SPECIES,
   animalBoneScales,
   buildAnimalParts,
   poseAnimal,
   visibleAnimalParts,
 } from "../../models/animals/animal-models.ts";
-import { MAMMOTH_BONE_COUNT } from "../../models/animals/mammoth-model.ts";
 import { leapPerStride, QUADRUPED_CLIPS } from "../../models/animals/quadruped-clips.ts";
 import { MaterialSlot } from "../../models/materials.ts";
 import { Pose } from "../../models/rig/pose.ts";
@@ -44,7 +44,7 @@ export const ANIMAL_BOUNDING_LIFT = 1.5;
 export const ANIMAL_BOUNDING_RADIUS = 4.6;
 
 const ANIMAL_LAYOUT: PaletteLayout = {
-  boneCount: MAMMOTH_BONE_COUNT,
+  boneCount: ANIMAL_BONE_COUNT,
   colorSlots: [MaterialSlot.Coat, MaterialSlot.CoatLight],
 };
 
@@ -139,13 +139,13 @@ function animateAnimal(input: AgentViewInput, visual: AnimalVisual, kindView: An
 
 export class AnimalView {
   readonly group = new Group();
-  readonly #blendedPose = new Pose(MAMMOTH_BONE_COUNT);
+  readonly #blendedPose = new Pose(ANIMAL_BONE_COUNT);
   readonly #bounds = new Sphere(new Vector3(), ANIMAL_BOUNDING_RADIUS);
   readonly #kinds: Readonly<Record<AnimalKind, AnimalKindView>>;
   readonly #markerAnchor = new Vector3();
   readonly #palette = new AgentPalette(ANIMAL_LAYOUT);
-  readonly #pose = new Pose(MAMMOTH_BONE_COUNT);
-  readonly #previousPose = new Pose(MAMMOTH_BONE_COUNT);
+  readonly #pose = new Pose(ANIMAL_BONE_COUNT);
+  readonly #previousPose = new Pose(ANIMAL_BONE_COUNT);
   readonly #seen = new Set<number>();
   readonly #visuals = new Map<number, AnimalVisual>();
   #hoveredSpot: GroundPoint | null = null;

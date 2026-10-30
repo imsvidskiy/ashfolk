@@ -1,9 +1,23 @@
 import { describe, expect, it } from "vitest";
-import { BROOK_STRENGTH, HOP_REACH, hopTargets, isBrookCell, NOT_CLEAR, Passage, traceHops } from "./brooks.ts";
-import { NO_WATER } from "./water.ts";
+import {
+  BROOK_STRENGTH,
+  HOP_REACH,
+  HOP_WIDTH,
+  hopTargets,
+  isBrookCell,
+  NOT_CLEAR,
+  Passage,
+  traceHops,
+} from "./brooks.ts";
+import { NO_WATER, riverCodeOfStrength, riverWidthOfStrength } from "./water.ts";
 import { WorldGrid } from "./world-grid.ts";
 
 const grid = new WorldGrid({ cellSize: 10, cellsPerSide: 32 });
+const WIDTH_PER_CODE =
+  (riverWidthOfStrength(1) - riverWidthOfStrength(0)) / (riverCodeOfStrength(1) - riverCodeOfStrength(0));
+const STRENGTH_SAMPLES = Array.from({ length: 101 }, (_, index) => {
+  return index / 100;
+});
 
 interface Stream {
   readonly fromX: number;
@@ -42,7 +56,23 @@ function passageIn(terrain: ReturnType<typeof terrainWith>): (cell: number) => P
 
 describe("brooks", () => {
   it("end at the river code hydrology writes for a stream one hop wide", () => {
-    expect(BROOK_STRENGTH).toBe(44);
+    function isBrookOfStrength(strength: number): boolean {
+      const terrain = terrainWith([{ fromX: 0, strength: riverCodeOfStrength(strength), toX: 10 }]);
+
+      return isBrookCell(terrain, grid.cellAt(5, 0));
+    }
+
+    const hoppable = STRENGTH_SAMPLES.filter((strength) => {
+      return riverWidthOfStrength(strength) <= HOP_WIDTH;
+    });
+    const wider = STRENGTH_SAMPLES.filter((strength) => {
+      return riverWidthOfStrength(strength) >= HOP_WIDTH + WIDTH_PER_CODE;
+    });
+
+    expect(hoppable.length).toBeGreaterThan(0);
+    expect(wider.length).toBeGreaterThan(0);
+    expect(hoppable.every(isBrookOfStrength)).toBe(true);
+    expect(wider.some(isBrookOfStrength)).toBe(false);
   });
 
   it("are river water no wider than a hop", () => {

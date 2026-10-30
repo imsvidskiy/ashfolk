@@ -3,12 +3,12 @@ import { MeshBuilder } from "../mesh/mesh-builder.ts";
 import { type MeshData, mergeMeshes } from "../mesh/mesh-data.ts";
 import { box, sphere } from "../mesh/shapes.ts";
 import { type Triple, transformOf } from "../mesh/transforms.ts";
-import { detachedPieces, holdsPart, meshPieces } from "./mesh-connectivity.ts";
+import { detachedPieces, meshPieces } from "./mesh-connectivity.ts";
 
 const TOLERANCE = 0.01;
 
-function boxAt(position: Triple, size: number, part = 0): MeshData {
-  const builder = new MeshBuilder({ part });
+function boxAt(position: Triple, size: number): MeshData {
+  const builder = new MeshBuilder();
 
   builder.add(box(size, size, size), { transform: transformOf({ position }) });
 
@@ -49,17 +49,5 @@ describe("mesh connectivity", () => {
 
   it("finds a lone part that hovers above the ground", () => {
     expect(detachedPieces(boxAt([0, 1, 0], 1), TOLERANCE)).toHaveLength(1);
-  });
-
-  it("can hold everything to a chosen part instead of the ground", () => {
-    const mesh = mergeMeshes([boxAt([0, 2, 0], 1, 1), boxAt([0.6, 2, 0], 0.5, 2), boxAt([4, 2, 0], 0.5, 2)]);
-
-    const detached = detachedPieces(mesh, TOLERANCE, holdsPart(mesh, 1));
-
-    expect(
-      detached.map((piece) => {
-        return piece.minimum[0];
-      })
-    ).toEqual([3.75]);
   });
 });

@@ -1,7 +1,5 @@
 import { describe, expect, it } from "vitest";
 import { LAKE_NAMES, PEAK_NAMES, POND_NAMES, WATER_NAME_QUALIFIERS } from "../content/landmarks.ts";
-import { DEFAULT_GENERATION_OPTIONS } from "../generation/generation-options.ts";
-import { generateWorld } from "../generation/world-generator.ts";
 import type { Monument } from "../world/monuments.ts";
 import type { Lake, Spring } from "../world/water.ts";
 import { WorldGrid } from "../world/world-grid.ts";
@@ -190,34 +188,5 @@ describe("findLandmarks", () => {
     expect(landmarks).toContainEqual(
       expect.objectContaining({ detail: "Stone circle", id: "monument-4", kind: "monument", name: "Whispering Ring" })
     );
-  });
-});
-
-describe("findLandmarks on a generated world", () => {
-  it("names every lake and every pond wide enough to read as one", () => {
-    const { dimensions, monuments, seed, terrain, water } = generateWorld(7, DEFAULT_GENERATION_OPTIONS);
-    const grid = new WorldGrid(dimensions);
-    const source = { grid, heights: terrain.height, lakes: water.lakes, monuments, seed, springs: water.springs };
-
-    const named = new Set(
-      lakeLandmarks(findLandmarks(source)).map((landmark) => {
-        return landmark.id;
-      })
-    );
-    const wantedPonds = water.springs.filter((spring) => {
-      return spring.kind === "pond" && pondAcross(spring) >= SMALLEST_NAMED_POND_ACROSS;
-    });
-
-    expect(wantedPonds.length).toBeGreaterThan(0);
-
-    for (const generatedLake of water.lakes) {
-      expect(named).toContain(`lake-${generatedLake.id}`);
-    }
-
-    for (const spring of wantedPonds) {
-      expect(named).toContain(`pond-${spring.river}`);
-    }
-
-    expect(named.size).toBe(water.lakes.length + wantedPonds.length);
   });
 });

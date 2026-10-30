@@ -255,13 +255,14 @@ describe("movement", () => {
     floodCells(world, world.grid.cellsInRadius(0, 0, 40), 0.6);
 
     const mover = createMover(-120, 0, 0);
+    const navigation = new NavigationGrid(world);
 
     let wasInWater = false;
 
-    setDestination(mover, { x: 0, z: 0 }, new NavigationGrid(world), { canPlanRoute: false });
+    setDestination(mover, { x: 0, z: 0 }, navigation, { canPlanRoute: false });
 
     for (let elapsed = 0; elapsed < 80; elapsed += STEP_SECONDS) {
-      walk(mover, world, STEP_SECONDS);
+      moveAlong(mover, STEP_SECONDS, 3, world, navigation);
       wasInWater = wasInWater || world.isWaterAt(mover.x, mover.z);
     }
 

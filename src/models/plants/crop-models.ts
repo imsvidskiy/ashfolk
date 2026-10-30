@@ -5,8 +5,9 @@ import { MaterialSlot, type MaterialSlotIndex } from "../materials.ts";
 import { MeshBuilder, type VertexStyle } from "../mesh/mesh-builder.ts";
 import type { MeshData } from "../mesh/mesh-data.ts";
 import type { Shape } from "../mesh/shape.ts";
-import { cylinder, lathe, type TubePoint, tube } from "../mesh/shapes.ts";
+import { cylinder, lathe } from "../mesh/shapes.ts";
 import { segmentTransform, type Triple, transformOf } from "../mesh/transforms.ts";
+import { type TubePoint, tube } from "../mesh/tubes.ts";
 import { plantSway } from "./tree-mesher.ts";
 import { GOLDEN_ANGLE } from "./tree-structure.ts";
 

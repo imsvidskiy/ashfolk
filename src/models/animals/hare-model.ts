@@ -1,10 +1,11 @@
 import type { AnimalPose } from "../../world/agent-poses.ts";
 import { alongPath, segmentsAtLeast, segmentsUpTo } from "../level-of-detail.ts";
-import { MaterialSlot } from "../materials.ts";
+import { MaterialSlot, type MaterialSlotIndex } from "../materials.ts";
 import type { MeshBuilder, SurfacePoint, VertexStyle } from "../mesh/mesh-builder.ts";
 import type { Shape } from "../mesh/shape.ts";
-import { type BodySection, type TubePoint, tube } from "../mesh/shapes.ts";
+import type { BodySection } from "../mesh/shapes.ts";
 import { combine, SIDES, sideMirror, transformOf } from "../mesh/transforms.ts";
+import { type TubePoint, tube } from "../mesh/tubes.ts";
 import { degrees, wave } from "../rig/curves.ts";
 import type { Pose } from "../rig/pose.ts";
 import { rigidStyle } from "../rig/skin-weights.ts";
@@ -12,7 +13,7 @@ import type { AnimalDetail } from "./animal-detail.ts";
 import type { GaitStyle } from "./quadruped-clips.ts";
 import { addLegs, addMuzzleFace, bodyShape, legPath, muzzleShape } from "./quadruped-parts.ts";
 import { bodyStyle, legStyle, neckStyle, tailStyle } from "./quadruped-rigging.ts";
-import { FIRST_EXTRA_BONE, QuadrupedBone, type QuadrupedFrame } from "./quadruped-skeleton.ts";
+import { FIRST_EXTRA_BONE, type LegEnd, QuadrupedBone, type QuadrupedFrame } from "./quadruped-skeleton.ts";
 
 export const HARE_FRAME: QuadrupedFrame = {
   bodyContacts: [
@@ -71,7 +72,7 @@ const BODY: readonly BodySection[] = [
   { centerY: 0.235, halfHeight: 0, halfWidth: 0, z: 0.165 },
 ];
 
-const LEGS: Readonly<Record<"front" | "hind", readonly TubePoint[]>> = {
+const LEGS: Readonly<Record<LegEnd, readonly TubePoint[]>> = {
   front: legPath(0.045, [
     [0.024, 0.2, 0.115, 0.005],
     [0.03, 0.15, 0.12],
@@ -148,7 +149,7 @@ const EAR_SEAM = 0.008;
 const TAIL_SEAM = 0.015;
 const BLEND = 0.02;
 
-function coatSlot(point: SurfacePoint): number {
+function coatSlot(point: SurfacePoint): MaterialSlotIndex {
   const { y, z } = point.position;
 
   const isBelly = y < BELLY_HEIGHT && z > -0.22 && z < 0.13;

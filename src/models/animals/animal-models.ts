@@ -1,4 +1,4 @@
-import type { AnimalKind } from "../../content/animals.ts";
+import { ANIMAL_KINDS, type AnimalKind } from "../../content/animals.ts";
 import type { AnimalPose } from "../../world/agent-poses.ts";
 import { MeshBuilder } from "../mesh/mesh-builder.ts";
 import type { MeshData } from "../mesh/mesh-data.ts";
@@ -133,6 +133,12 @@ export const ANIMAL_SPECIES: Readonly<Record<AnimalKind, AnimalSpecies>> = {
     skeleton: createQuadrupedSkeleton(WOLF_FRAME),
   },
 };
+
+export const ANIMAL_BONE_COUNT = Math.max(
+  ...ANIMAL_KINDS.map((kind) => {
+    return ANIMAL_SPECIES[kind].skeleton.bones.length;
+  })
+);
 
 function always(): boolean {
   return true;

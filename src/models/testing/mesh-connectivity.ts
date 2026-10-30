@@ -334,14 +334,6 @@ function restsOnGround(tolerance: number): PieceAnchor {
   };
 }
 
-export function holdsPart(mesh: MeshData, part: number): PieceAnchor {
-  return (piece) => {
-    return piece.vertices.some((vertex) => {
-      return mesh.channels.part[vertex] === part;
-    });
-  };
-}
-
 export function detachedPieces(
   mesh: MeshData,
   tolerance: number,

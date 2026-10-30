@@ -1,18 +1,19 @@
 import { createVolumeNoise } from "../../shared/noise.ts";
 import { createRandom } from "../../shared/random.ts";
 import { segmentsAtLeast, segmentsUpTo } from "../level-of-detail.ts";
-import { MaterialSlot } from "../materials.ts";
+import { MaterialSlot, type MaterialSlotIndex } from "../materials.ts";
 import type { MeshBuilder, SurfacePoint } from "../mesh/mesh-builder.ts";
 import { deformShape, type Shape, transformShape } from "../mesh/shape.ts";
-import { type BodySection, cone, sphere, type TubePoint, tube } from "../mesh/shapes.ts";
+import { type BodySection, cone, sphere } from "../mesh/shapes.ts";
 import { combine, SIDES, sideMirror, type Triple, transformOf } from "../mesh/transforms.ts";
+import { type TubePoint, tube } from "../mesh/tubes.ts";
 import { degrees } from "../rig/curves.ts";
 import { rigidStyle } from "../rig/skin-weights.ts";
 import type { AnimalDetail } from "./animal-detail.ts";
 import type { GaitStyle } from "./quadruped-clips.ts";
 import { addLegs, addMuzzleFace, bodyShape, legPath, muzzleShape } from "./quadruped-parts.ts";
 import { bodyStyle, legStyle, neckStyle, tailStyle } from "./quadruped-rigging.ts";
-import { LEG_ENDS, QuadrupedBone, type QuadrupedFrame } from "./quadruped-skeleton.ts";
+import { LEG_ENDS, type LegEnd, QuadrupedBone, type QuadrupedFrame } from "./quadruped-skeleton.ts";
 
 export const WOLF_FRAME: QuadrupedFrame = {
   bodyContacts: [
@@ -70,7 +71,7 @@ const BODY: readonly BodySection[] = [
   { centerY: 0.89, halfHeight: 0, halfWidth: 0, z: 0.53 },
 ];
 
-const LEGS: Readonly<Record<"front" | "hind", readonly TubePoint[]>> = {
+const LEGS: Readonly<Record<LegEnd, readonly TubePoint[]>> = {
   front: legPath(0.11, [
     [0.035, 0.84, 0.36, 0.005],
     [0.072, 0.68, 0.355],
@@ -93,7 +94,7 @@ const LEGS: Readonly<Record<"front" | "hind", readonly TubePoint[]>> = {
   ]),
 };
 
-const PAWS: Readonly<Record<"front" | "hind", Triple>> = {
+const PAWS: Readonly<Record<LegEnd, Triple>> = {
   front: [0.11, 0.026, 0.405],
   hind: [0.11, 0.026, -0.515],
 };
@@ -127,7 +128,7 @@ const RUFF: readonly TubePoint[] = [
 
 const RUFF_NOISE = createVolumeNoise(createRandom(5353));
 
-function coatSlot(point: SurfacePoint): number {
+function coatSlot(point: SurfacePoint): MaterialSlotIndex {
   const { y, z } = point.position;
 
   const isBelly = y < 0.7 && z > -0.55 && z < 0.45;

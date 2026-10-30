@@ -1,12 +1,13 @@
 import { type Matrix4, Vector3 } from "three";
 import { alongPath, alongTube, type DetailSteps, segmentsUpTo } from "../level-of-detail.ts";
-import { MaterialSlot } from "../materials.ts";
+import { MaterialSlot, type MaterialSlotIndex } from "../materials.ts";
 import type { MeshBuilder, SurfacePoint, VertexStyle } from "../mesh/mesh-builder.ts";
 import { curveBodySections } from "../mesh/path-curves.ts";
 import { type Shape, transformShape } from "../mesh/shape.ts";
-import { type BodySection, lengthwiseLoft, sphere, type TubePoint, tube } from "../mesh/shapes.ts";
+import { type BodySection, lengthwiseLoft, sphere } from "../mesh/shapes.ts";
 import { outermostHit, surfaceTransform } from "../mesh/surface-probe.ts";
 import { combine, SIDES, sideMirror, type TransformOptions, type Triple, transformOf } from "../mesh/transforms.ts";
+import { type TubePoint, tube } from "../mesh/tubes.ts";
 import { rigidStyle } from "../rig/skin-weights.ts";
 import type { AnimalDetail } from "./animal-detail.ts";
 import { legStyle } from "./quadruped-rigging.ts";
@@ -21,7 +22,7 @@ interface LegOptions {
   readonly paths: Readonly<Record<LegEnd, readonly TubePoint[]>>;
   readonly seam: number;
   readonly segments: number;
-  readonly slot: number | ((point: SurfacePoint) => number);
+  readonly slot: MaterialSlotIndex | ((point: SurfacePoint) => MaterialSlotIndex);
 }
 
 interface EyeOptions {
@@ -80,7 +81,7 @@ export function muzzleShape(points: readonly TubePoint[], detail: AnimalDetail, 
   return transformShape(muzzle, transformOf({ scale: [narrowing, 1, 1] }));
 }
 
-export function hoofBelow(height: number): (point: SurfacePoint) => number {
+export function hoofBelow(height: number): (point: SurfacePoint) => MaterialSlotIndex {
   return (point) => {
     return point.position.y < height ? MaterialSlot.Hoof : MaterialSlot.Coat;
   };

@@ -23,10 +23,6 @@ const HIGHEST_CLUSTER = 0.9;
 const LOWEST_CLUSTER = -0.05;
 const CLUSTER_COUNTS: Readonly<Record<NearLevel, number>> = { high: 8, medium: 4 };
 
-export function isBerryPart(part: number): boolean {
-  return part >= BERRY_PART;
-}
-
 function berryPart(cluster: number, berry: number): number {
   const ripening = (berry + fractionalPart(cluster * CLUSTER_RIPENING_STEP)) / BERRIES_PER_CLUSTER;
 

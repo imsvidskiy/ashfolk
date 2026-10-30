@@ -1,7 +1,8 @@
 import { FOOD_KINDS } from "../../content/resources.ts";
 import type { Building } from "../society/buildings.ts";
 import type { Job } from "../society/jobs/job.ts";
-import { createPerson } from "../society/person.ts";
+import { createPerson, type Person } from "../society/person.ts";
+import { type Relation, sideOf } from "../society/rivalry/relations.ts";
 import type { Tribe } from "../society/tribe.ts";
 import { TICK_SECONDS } from "../tick.ts";
 import { MORNING, type SocietyHarness } from "./test-society.ts";
@@ -13,6 +14,13 @@ const SPACING = 3;
 const ADULT_AGE = 22;
 const CHILD_AGE = 6;
 const ARMORY_SPEARS = 12;
+
+interface Duel {
+  readonly far: Person;
+  readonly first: Tribe;
+  readonly near: Person;
+  readonly second: Tribe;
+}
 
 interface TribeFounding {
   readonly adults: number;
@@ -80,6 +88,18 @@ export function foundNeighboringTribes(harness: SocietyHarness, distance: number
   return [first, second];
 }
 
+export function longFeud(harness: SocietyHarness, first: Tribe, second: Tribe): Relation {
+  const relation = harness.rivalry.relations.meet(first.id, second.id, false);
+
+  relation.standing = -90;
+  relation.stance = "hostile";
+  relation.feudStartDay = -12;
+  sideOf(relation, first.id).weariness = 120;
+  sideOf(relation, second.id).weariness = 40;
+
+  return relation;
+}
+
 export function idleJob(): Job {
   const job: Job = {
     kind: "idle",
@@ -89,6 +109,21 @@ export function idleJob(): Job {
   };
 
   return job;
+}
+
+export function standOff(harness: SocietyHarness, gap: number): Duel {
+  const [first, second] = foundNeighboringTribes(harness, 900);
+  const [near] = harness.society.membersOf(first);
+  const [far] = harness.society.membersOf(second);
+
+  for (const person of harness.society.people) {
+    person.job = idleJob();
+  }
+
+  far.mover.x = near.mover.x + gap;
+  far.mover.z = near.mover.z;
+
+  return { far, first, near, second };
 }
 
 export function enclosure(kind: "palisade" | "stoneWall", tribe: Tribe, extent: number): Building {

@@ -1,5 +1,16 @@
 import { describe, expect, it } from "vitest";
-import { aggrieve, isTruce, RelationBook, restingStanding, settle, sideOf, stanceFor } from "./relations.ts";
+import { createTribe, type Tribe } from "../tribe.ts";
+import { aggrieve, areKin, isTruce, RelationBook, restingStanding, settle, sideOf, stanceFor } from "./relations.ts";
+
+const IDENTITY = { color: "#c8553d", furColor: "#6b4a33", name: "Bear Clan" };
+
+function tribeFrom(id: number, originId: number | null): Tribe {
+  const tribe = createTribe({ campX: 0, campZ: 0, day: 0, id, identity: IDENTITY });
+
+  tribe.originId = originId;
+
+  return tribe;
+}
 
 describe("relations", () => {
   it("start neutral between strangers and friendly between kin", () => {
@@ -12,6 +23,20 @@ describe("relations", () => {
     expect(kin.stance).toBe("friendly");
     expect(book.meet(2, 1, false)).toBe(strangers);
     expect(book.find(4, 3)).toBe(kin);
+  });
+
+  it("count parents, offshoots and offshoots of one parent as kin, but not founding tribes", () => {
+    const parent = tribeFrom(1, null);
+    const offshoot = tribeFrom(2, 1);
+    const sibling = tribeFrom(3, 1);
+    const stranger = tribeFrom(4, null);
+    const distant = tribeFrom(5, 4);
+
+    expect(areKin(parent, offshoot)).toBe(true);
+    expect(areKin(offshoot, parent)).toBe(true);
+    expect(areKin(offshoot, sibling)).toBe(true);
+    expect(areKin(parent, stranger)).toBe(false);
+    expect(areKin(offshoot, distant)).toBe(false);
   });
 
   it("sour with each insult and remember who was wronged", () => {

@@ -1,17 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { NO_PLANT, type VegetationStore } from "../../../world/vegetation-store.ts";
 import { MORNING, runToCompletion, SocietyHarness, settle, teach, tickFor } from "../../testing/test-society.ts";
-import { addPlotIfNeeded } from "../plots.ts";
-import type { Tribe } from "../tribe.ts";
+import { addPlotIfNeeded, plantedCount } from "../plots.ts";
 import { findPlanting } from "./plant-job.ts";
-
-function plantedCount(tribe: Tribe, vegetation: VegetationStore): number {
-  return tribe.plots.flatMap((plot) => {
-    return plot.spots.filter((spot) => {
-      return spot.plant !== NO_PLANT && vegetation.isAlive(spot.plant);
-    });
-  }).length;
-}
 
 describe("planting", () => {
   it("sends two planters to different spots and counts what each planted", () => {
@@ -39,13 +29,13 @@ describe("planting", () => {
       return job;
     });
     const { knowledge } = tribe;
-    const alreadyPlanted = plantedCount(tribe, harness.world.vegetation);
+    const alreadyPlanted = plantedCount(tribe, harness.world, "orchard");
 
     for (const [index, job] of jobs.entries()) {
       expect(runToCompletion(job, ticks[index], 60)).toBe(true);
     }
 
-    expect(plantedCount(tribe, harness.world.vegetation) - alreadyPlanted).toBe(2);
+    expect(plantedCount(tribe, harness.world, "orchard") - alreadyPlanted).toBe(2);
     expect(tribe.knowledge - knowledge).toBeCloseTo(0.8 * harness.context.rules.life.learningSpeed);
   });
 });

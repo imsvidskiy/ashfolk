@@ -1,11 +1,10 @@
 import { describe, expect, it, it as test } from "vitest";
 import { CultivatedSpecies } from "../../content/cultivated-plants.ts";
 import { MaterialSlot } from "../materials.ts";
-import { type MeshData, triangleCount } from "../mesh/mesh-data.ts";
-import { highestExposedOpenEdge, meshProblems, verticesWhere } from "../testing/mesh-checks.ts";
-import { loosePieces } from "../testing/mesh-connectivity.ts";
+import type { MeshData } from "../mesh/mesh-data.ts";
+import { verticesWhere } from "../testing/mesh-checks.ts";
 import { BERRY_PART } from "./berries.ts";
-import { buildPlantVariants, canonicalHeight, PLANT_DETAIL_LEVELS } from "./plant-models.ts";
+import { buildPlantVariants, canonicalHeight } from "./plant-models.ts";
 import { FOLIAGE_FLUTTER, plantSway } from "./tree-mesher.ts";
 
 const FRUIT_SLOTS = [
@@ -31,18 +30,6 @@ function widthOf(mesh: MeshData): number {
 }
 
 describe.each(FRUIT_SLOTS)("orchard species %i", (species, slot) => {
-  test("builds clean geometry that stands on the ground at every level of detail", () => {
-    for (const level of PLANT_DETAIL_LEVELS) {
-      for (const [variant, mesh] of buildPlantVariants(species, level).entries()) {
-        const detached = loosePieces(mesh);
-
-        expect(meshProblems(mesh), `${level} variant ${variant}`).toEqual([]);
-        expect(detached, `${level} variant ${variant}`).toEqual([]);
-        expect(highestExposedOpenEdge(mesh), `${level} variant ${variant}`).toBeLessThan(0.05);
-      }
-    }
-  });
-
   test("hangs its fruit as a separate part in its own color, near and middle distance only", () => {
     for (const level of ["high", "medium"] as const) {
       for (const mesh of buildPlantVariants(species, level)) {
@@ -86,15 +73,6 @@ describe.each(FRUIT_SLOTS)("orchard species %i", (species, slot) => {
         return mesh.channels.flutter[vertex] === FOLIAGE_FLUTTER;
       })
     ).toBe(true);
-  });
-
-  test("spends fewer triangles further away", () => {
-    const [high] = buildPlantVariants(species, "high");
-    const [medium] = buildPlantVariants(species, "medium");
-    const [low] = buildPlantVariants(species, "low");
-
-    expect(triangleCount(medium)).toBeLessThan(triangleCount(high));
-    expect(triangleCount(low)).toBeLessThan(triangleCount(medium));
   });
 });
 

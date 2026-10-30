@@ -1,12 +1,13 @@
 import { Vector3 } from "three";
 import { FULL_TURN } from "../../shared/math.ts";
 import { segmentsAtLeast, segmentsUpTo } from "../level-of-detail.ts";
-import { MaterialSlot } from "../materials.ts";
+import { MaterialSlot, type MaterialSlotIndex } from "../materials.ts";
 import type { MeshBuilder, SurfacePoint } from "../mesh/mesh-builder.ts";
 import type { Shape } from "../mesh/shape.ts";
-import { type BodySection, pointAlong, sphere, type TubePoint, tube } from "../mesh/shapes.ts";
+import { type BodySection, sphere } from "../mesh/shapes.ts";
 import { outermostHit, surfaceTransform } from "../mesh/surface-probe.ts";
 import { combine, SIDES, sideMirror, type Triple, transformOf } from "../mesh/transforms.ts";
+import { pointAlong, type TubePoint, tube } from "../mesh/tubes.ts";
 import { degrees } from "../rig/curves.ts";
 import { rigidStyle } from "../rig/skin-weights.ts";
 import type { AnimalDetail } from "./animal-detail.ts";
@@ -21,7 +22,7 @@ import {
   muzzleShape,
 } from "./quadruped-parts.ts";
 import { bodyStyle, neckStyle, tailStyle } from "./quadruped-rigging.ts";
-import { QuadrupedBone, type QuadrupedFrame } from "./quadruped-skeleton.ts";
+import { type LegEnd, QuadrupedBone, type QuadrupedFrame } from "./quadruped-skeleton.ts";
 
 export const DEER_FRAME: QuadrupedFrame = {
   bodyContacts: [
@@ -79,7 +80,7 @@ const BODY: readonly BodySection[] = [
   { centerY: 1.12, halfHeight: 0, halfWidth: 0, z: 0.6 },
 ];
 
-const LEGS: Readonly<Record<"front" | "hind", readonly TubePoint[]>> = {
+const LEGS: Readonly<Record<LegEnd, readonly TubePoint[]>> = {
   front: legPath(0.115, [
     [0.05, 1.04, 0.42],
     [0.078, 0.9, 0.41],
@@ -136,7 +137,7 @@ const ANTLER_TINES: readonly AntlerTine[] = [
   { along: 0.66, reach: [0.06, 0.12, 0.07] },
 ];
 
-function coatSlot(point: SurfacePoint): number {
+function coatSlot(point: SurfacePoint): MaterialSlotIndex {
   const { y, z } = point.position;
 
   const isBelly = y < 0.9 && z > -0.62 && z < 0.5;

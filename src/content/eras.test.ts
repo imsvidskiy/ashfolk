@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { currentEra, ERAS } from "./eras.ts";
+import { currentEra, ERAS, nextEra } from "./eras.ts";
 import { TECHNOLOGIES, type TechnologyId } from "./technologies.ts";
 
 describe("eras", () => {
@@ -7,6 +7,11 @@ describe("eras", () => {
     expect(currentEra(new Set()).name).toBe("Wanderers");
     expect(currentEra(new Set<TechnologyId>(["fire", "spear"])).name).toBe("Stone Age");
     expect(currentEra(new Set<TechnologyId>(["fire", "farming", "copper", "bronze"])).name).toBe("Bronze Age");
+  });
+
+  it("lead to the following era until the last one", () => {
+    expect(nextEra(currentEra(new Set()))?.name).toBe("Stone Age");
+    expect(nextEra(currentEra(new Set<TechnologyId>(["fire", "farming", "copper", "bronze", "iron"])))).toBeNull();
   });
 
   it("climb a ladder of eras, each opened by a technology learned after the previous one", () => {

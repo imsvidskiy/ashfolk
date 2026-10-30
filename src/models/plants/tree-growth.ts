@@ -2,7 +2,7 @@ import { Vector3 } from "three";
 import { FULL_TURN, lerp, smoothstep } from "../../shared/math.ts";
 import { createVolumeNoise, type VolumeNoise } from "../../shared/noise.ts";
 import { createRandom, type RandomSource } from "../../shared/random.ts";
-import { pointAlong, type TubePoint } from "../mesh/shapes.ts";
+import { pointAlong, type TubePoint } from "../mesh/tubes.ts";
 import {
   type Branch,
   directionAlong,

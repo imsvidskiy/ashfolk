@@ -1,7 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { landEverywhere, shapeTerrain, trough, troughWithBasin } from "../world/testing/terrain-fixtures.ts";
+import { hasWater } from "../world/water.ts";
 import { WorldGrid } from "../world/world-grid.ts";
 import { analyzeDrainage } from "./drainage.ts";
+import { cellsAround } from "./testing/cell-patches.ts";
+import { coarseWorld } from "./testing/generated-worlds.ts";
+import { meanOf, median } from "./testing/statistics.ts";
+import { isRiverWater } from "./testing/water-checks.ts";
 import { carveValleys } from "./valleys.ts";
 
 function lakeLevels(heights: Float32Array, grid: WorldGrid): number[] {
@@ -49,5 +54,38 @@ describe("river valleys", () => {
 
     expect(levelsBefore.length).toBeGreaterThan(0);
     expect(lakeLevels(basin, lakeGrid)).toEqual(levelsBefore);
+  });
+});
+
+describe("river valleys of a generated island", () => {
+  it("sinks rivers into valleys below the land around them", () => {
+    const world = coarseWorld(7);
+    const { terrain } = world;
+
+    const grid = new WorldGrid(world.dimensions);
+    const depths: number[] = [];
+
+    for (let cell = 0; cell < grid.cellCount; cell += 1) {
+      if (!isRiverWater(terrain, cell)) {
+        continue;
+      }
+
+      const land = cellsAround(grid, cell, 60, 100).filter((other) => {
+        return !hasWater(terrain.waterSurface[other], terrain.height[other]);
+      });
+
+      if (land.length > 0) {
+        const meanHeight = meanOf(
+          land.map((other) => {
+            return terrain.height[other];
+          })
+        );
+
+        depths.push(meanHeight - terrain.waterSurface[cell]);
+      }
+    }
+
+    expect(depths.length).toBeGreaterThan(100);
+    expect(median(depths)).toBeGreaterThan(5);
   });
 });

@@ -167,7 +167,7 @@ function riverSources(inputs: WetlandInputs): WaterReach {
     for (const [index, point] of points.entries()) {
       const cell = grid.cellAt(point.x, point.z);
 
-      if (cell < 0 || !hasWater(waterSurface[cell], heights[cell])) {
+      if (!hasWater(waterSurface[cell], heights[cell])) {
         continue;
       }
 

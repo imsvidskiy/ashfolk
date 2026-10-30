@@ -9,8 +9,9 @@ import { ADULT, jointOf, pointOf, posedHuman } from "../testing/posed-human.ts";
 import { uniformScales } from "../testing/uniform-scales.ts";
 import { applyHumanClip, type HumanClipContext } from "./human-clips.ts";
 import { HUMAN_SKELETON, HumanBone } from "./human-skeleton.ts";
+import { RIGHT_FIST } from "./prop-placement.ts";
 
-const RIGHT_FIST = new Vector3(-0.217, 0.832, 0.018);
+const RIGHT_FIST_POINT = new Vector3(...RIGHT_FIST);
 const STICK_TIP = new Vector3(-0.217, 0.122, 0.038);
 const PLANTED = 0.02;
 const STANDING_WORK: readonly PersonPose[] = [
@@ -159,7 +160,7 @@ describe("human clips", () => {
     }
 
     expect(jointOf(posedHuman("build", 0.5), HumanBone.HandRight).y).toBeGreaterThan(1);
-    expect(pointOf(posedHuman("build", 0.64), HumanBone.HandRight, RIGHT_FIST).y).toBeLessThan(0.35);
+    expect(pointOf(posedHuman("build", 0.64), HumanBone.HandRight, RIGHT_FIST_POINT).y).toBeLessThan(0.35);
   });
 
   it("drives the digging stick down into the ground", () => {
@@ -169,7 +170,7 @@ describe("human clips", () => {
     expect(pointOf(raised, HumanBone.HandRight, STICK_TIP).y).toBeGreaterThan(0.25);
     expect(pointOf(thrust, HumanBone.HandRight, STICK_TIP).y).toBeLessThan(0.05);
     expect(pointOf(raised, HumanBone.HandRight, STICK_TIP).y).toBeLessThan(
-      pointOf(raised, HumanBone.HandRight, RIGHT_FIST).y - 0.5
+      pointOf(raised, HumanBone.HandRight, RIGHT_FIST_POINT).y - 0.5
     );
   });
 

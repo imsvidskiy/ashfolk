@@ -5,8 +5,9 @@ import { thinned } from "../level-of-detail.ts";
 import { MaterialSlot } from "../materials.ts";
 import { MeshBuilder, type SurfacePoint } from "../mesh/mesh-builder.ts";
 import type { MeshData } from "../mesh/mesh-data.ts";
-import { type LoftSection, loft, sphere, type TubePoint, tube } from "../mesh/shapes.ts";
+import { type LoftSection, loft, sphere } from "../mesh/shapes.ts";
 import { transformOf } from "../mesh/transforms.ts";
+import { type TubePoint, tube } from "../mesh/tubes.ts";
 import type { PlantDetailLevel } from "./tree-mesher.ts";
 
 export const CACTUS_FORMS = ["saguaro", "organPipe", "barrel", "pricklyPear"] as const;

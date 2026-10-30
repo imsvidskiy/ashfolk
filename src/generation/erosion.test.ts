@@ -1,8 +1,18 @@
-import { describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, it } from "vitest";
 import { createRandom } from "../shared/random.ts";
+import { slopeAt } from "../world/footing.ts";
+import type { TerrainData } from "../world/terrain-data.ts";
+import { WorldGrid } from "../world/world-grid.ts";
 import { erodeAcrossScales, limitSlopes, relaxSlopes } from "./erosion.ts";
+import { COARSE_DIMENSIONS, coarseWorld, FULL_SIZE_TIMEOUT, fullSizeWorld } from "./testing/generated-worlds.ts";
+import { meanOf, shareAbove } from "./testing/statistics.ts";
+import type { GeneratedWorld } from "./world-generator.ts";
 
 const CELL_SIZE = 10;
+const STEEP = 1;
+const CLIFF = Math.tan((55 * Math.PI) / 180);
+const TERRACE_WINDOW = 24;
+const TERRACE_STEEPNESS = 0.6;
 const NEIGHBORS: readonly (readonly [number, number])[] = [
   [1, 0],
   [0, 1],
@@ -30,6 +40,68 @@ function sumOf(heights: Float32Array): number {
   return heights.reduce((total, height) => {
     return total + height;
   }, 0);
+}
+
+function slopesOf(terrain: TerrainData, grid: WorldGrid): number[] {
+  return Array.from({ length: grid.cellCount }, (_, cell) => {
+    return slopeAt(terrain.height, grid, cell);
+  });
+}
+
+function slopeAutocorrelation(generated: GeneratedWorld, lags: number): number[] {
+  const { height } = generated.terrain;
+
+  const grid = new WorldGrid(generated.dimensions);
+  const size = grid.cellsPerSide;
+  const sums = new Array<number>(lags + 1).fill(0);
+
+  let windows = 0;
+
+  for (let row = 0; row < size; row += 1) {
+    for (let column = 0; column + TERRACE_WINDOW < size; column += TERRACE_WINDOW / 2) {
+      const steps = Array.from({ length: TERRACE_WINDOW }, (_, offset) => {
+        const cell = grid.index(column + offset, row);
+
+        return (height[cell + 1] - height[cell]) / grid.cellSize;
+      });
+
+      if (
+        steps.some((step) => {
+          return Math.abs(step) < TERRACE_STEEPNESS;
+        })
+      ) {
+        continue;
+      }
+
+      const mean = meanOf(steps);
+      const residuals = steps.map((step) => {
+        return step - mean;
+      });
+      const variance = residuals.reduce((total, residual) => {
+        return total + residual * residual;
+      }, 0);
+
+      if (variance < 1e-6) {
+        continue;
+      }
+
+      for (let lag = 0; lag <= lags; lag += 1) {
+        let product = 0;
+
+        for (let index = 0; index + lag < residuals.length; index += 1) {
+          product += residuals[index] * residuals[index + lag];
+        }
+
+        sums[lag] += product / variance;
+      }
+
+      windows += 1;
+    }
+  }
+
+  return sums.map((sum) => {
+    return sum / windows;
+  });
 }
 
 function cone(size: number, summit: number): Float32Array {
@@ -148,5 +220,41 @@ describe("erosion across scales", () => {
     }, 0);
 
     expect(largestChange).toBeLessThan(1e-3);
+  });
+});
+
+describe("slopes of a generated island", () => {
+  let fullSize: GeneratedWorld;
+
+  beforeAll(() => {
+    fullSize = fullSizeWorld(7);
+  }, FULL_SIZE_TIMEOUT);
+
+  it("keeps slopes realistic, with few cliffs", () => {
+    const slopes = slopesOf(coarseWorld(7).terrain, new WorldGrid(COARSE_DIMENSIONS));
+
+    const meanSlope = (Math.atan(meanOf(slopes)) * 180) / Math.PI;
+
+    expect(meanSlope).toBeGreaterThan(14);
+    expect(meanSlope).toBeLessThan(24);
+    expect(shareAbove(slopes, STEEP)).toBeLessThan(0.03);
+    expect(shareAbove(slopes, CLIFF)).toBeLessThan(0.001);
+  });
+
+  it("has few slopes steeper than 45 degrees and almost none steeper than 55", () => {
+    const slopes = slopesOf(fullSize.terrain, new WorldGrid(fullSize.dimensions));
+
+    expect(shareAbove(slopes, STEEP)).toBeLessThan(0.03);
+    expect(shareAbove(slopes, CLIFF)).toBeLessThan(0.0005);
+  });
+
+  it("leaves no periodic terraces on steep slopes", () => {
+    const correlation = slopeAutocorrelation(fullSize, 4);
+
+    expect(correlation[1]).toBeGreaterThan(0.6);
+
+    for (let lag = 2; lag < correlation.length; lag += 1) {
+      expect(correlation[lag]).toBeLessThan(correlation[lag - 1]);
+    }
   });
 });

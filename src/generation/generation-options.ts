@@ -33,5 +33,3 @@ export interface WorldRequest {
   options: GenerationOptions;
   seed: number;
 }
-
-export const DEFAULT_WORLD_REQUEST: WorldRequest = { options: DEFAULT_GENERATION_OPTIONS, seed: 1 };

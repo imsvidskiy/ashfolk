@@ -1,11 +1,16 @@
-import { describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, it } from "vitest";
 import { lerp, saturate } from "../shared/math.ts";
+import { isOnIsland } from "../world/coast.ts";
+import { sampleHeight } from "../world/terrain-sampling.ts";
 import { landEverywhere, shapeTerrain } from "../world/testing/terrain-fixtures.ts";
-import { hasWater, type River, type RiverPoint } from "../world/water.ts";
+import { hasWater, type Lake, NO_WATER, type River, type RiverPoint } from "../world/water.ts";
 import { NEIGHBOR_OFFSETS, WorldGrid } from "../world/world-grid.ts";
-import { DEFAULT_HYDROLOGY, NO_CELL } from "./drainage.ts";
+import { DEFAULT_HYDROLOGY, type HydrologyOptions, NO_CELL } from "./drainage.ts";
 import { computeHydrology } from "./hydrology.ts";
 import { pondShoreReach } from "./ponds.ts";
+import { coarseWorld, FULL_SIZE_TIMEOUT, fullSizeWorld } from "./testing/generated-worlds.ts";
+import { mouthFaults, riverEnd, riverFaults } from "./testing/water-checks.ts";
+import type { GeneratedWorld } from "./world-generator.ts";
 
 const VALLEY_FLOOR_HALF_WIDTH = 10;
 const GENTLE_WALLS = 0.6;
@@ -42,6 +47,12 @@ const STREAM_WALLS = 0.6;
 const STREAM_GULLY_DEPTH = 12;
 const STREAM_GULLY_SPREAD = 2 * 30 * 30;
 const DEEPENING_TOLERANCE = 1;
+const RIVER_SAMPLE_STEP = 5;
+const STRAIGHT_RUN = 150;
+const STRAIGHT_DEVIATION = 3;
+const OUTLET_REACH_PER_CELL = 12;
+const OUTLET_LEVEL_SLACK = 1.5;
+const RIVER_COUNT_SLACK = 1;
 
 interface RiverSpot {
   readonly distance: number;
@@ -54,6 +65,18 @@ interface CarvedWater {
   readonly waterSurface: Float32Array;
 }
 
+function hydrologyOf(
+  grid: WorldGrid,
+  heights: Float32Array,
+  options: Partial<HydrologyOptions>,
+  coastDistance = landEverywhere(grid.cellCount)
+) {
+  return computeHydrology(heights, grid, new Float32Array(grid.cellCount), coastDistance, {
+    ...DEFAULT_HYDROLOGY,
+    ...options,
+  });
+}
+
 function carveValley(wallSlope: number, ridgeHeight = 0) {
   const grid = new WorldGrid({ cellSize: 10, cellsPerSide: 64 });
 
@@ -62,15 +85,7 @@ function carveValley(wallSlope: number, ridgeHeight = 0) {
   });
 
   const carved = Float32Array.from(uncarved);
-  const options = { ...DEFAULT_HYDROLOGY, riverCatchmentArea: 30_000 };
-
-  const result = computeHydrology(
-    carved,
-    grid,
-    new Float32Array(grid.cellCount),
-    landEverywhere(grid.cellCount),
-    options
-  );
+  const result = hydrologyOf(grid, carved, { riverCatchmentArea: 30_000 });
 
   return { carved, grid, result, uncarved };
 }
@@ -92,16 +107,6 @@ function largestDeviation(points: readonly { x: number; z: number }[]): number {
       return Math.abs((point.x - start.x) * chordZ - (point.z - start.z) * chordX) / chord;
     })
   );
-}
-
-function riverEnd(river: River): RiverPoint {
-  const end = river.points.at(-1);
-
-  if (end === undefined) {
-    throw new Error(`River ${river.id} has no points`);
-  }
-
-  return end;
 }
 
 function nearestOnRiver(river: River, x: number, z: number): RiverSpot {
@@ -165,6 +170,91 @@ function riverLevelBeside(grid: WorldGrid, cell: number, water: CarvedWater): nu
   }
 
   return count > 0 ? total / count : Number.NaN;
+}
+
+function resampledRiver(river: River): { x: number; z: number }[] {
+  const samples = river.points.slice(0, 1).map((point) => {
+    return { x: point.x, z: point.z };
+  });
+
+  let carried = 0;
+
+  for (let index = 1; index < river.points.length; index += 1) {
+    const start = river.points[index - 1];
+    const end = river.points[index];
+    const length = Math.hypot(end.x - start.x, end.z - start.z);
+
+    let along = RIVER_SAMPLE_STEP - carried;
+
+    for (; along <= length; along += RIVER_SAMPLE_STEP) {
+      samples.push({
+        x: start.x + ((end.x - start.x) * along) / length,
+        z: start.z + ((end.z - start.z) * along) / length,
+      });
+    }
+
+    carried = length - (along - RIVER_SAMPLE_STEP);
+  }
+
+  return samples;
+}
+
+function straightSamples(samples: readonly { x: number; z: number }[]): number {
+  const window = Math.round(STRAIGHT_RUN / RIVER_SAMPLE_STEP);
+  const isStraight = new Uint8Array(samples.length);
+
+  for (let first = 0; first + window < samples.length; first += 1) {
+    const start = samples[first];
+    const end = samples[first + window];
+    const chordX = end.x - start.x;
+    const chordZ = end.z - start.z;
+    const chord = Math.hypot(chordX, chordZ);
+
+    const deviations = samples.slice(first, first + window + 1).map((sample) => {
+      return Math.abs((sample.x - start.x) * chordZ - (sample.z - start.z) * chordX) / chord;
+    });
+
+    if (Math.max(...deviations) < STRAIGHT_DEVIATION) {
+      isStraight.fill(1, first, first + window + 1);
+    }
+  }
+
+  return isStraight.reduce((total, flag) => {
+    return total + flag;
+  }, 0);
+}
+
+function straightRiverShare(generated: GeneratedWorld): number {
+  const rivers = generated.water.rivers.map(resampledRiver);
+
+  const total = rivers.reduce((sum, samples) => {
+    return sum + samples.length;
+  }, 0);
+  const straight = rivers.reduce((sum, samples) => {
+    return sum + straightSamples(samples);
+  }, 0);
+
+  return straight / total;
+}
+
+function distanceToWaterfall(generated: GeneratedWorld, grid: WorldGrid, cell: number): number {
+  const x = grid.cellCenterX(cell);
+  const z = grid.cellCenterZ(cell);
+
+  return Math.min(
+    ...generated.water.waterfalls.map((waterfall) => {
+      return Math.hypot(waterfall.x - x, waterfall.z - z);
+    })
+  );
+}
+
+function leavesLake(lake: Lake, point: RiverPoint): boolean {
+  const reach = Math.sqrt(lake.cellCount) * OUTLET_REACH_PER_CELL;
+
+  return (
+    Math.hypot(point.x - lake.centerX, point.z - lake.centerZ) < reach &&
+    Math.abs(point.surface - lake.level) < OUTLET_LEVEL_SLACK
+  );
 }
 
 describe("river carving", () => {
@@ -304,10 +394,7 @@ describe("river confluences", () => {
       return 100 + 0.05 * (z + grid.halfSize) + STREAM_WALLS * Math.abs(x) - gully;
     });
 
-    const result = computeHydrology(carved, grid, new Float32Array(grid.cellCount), landEverywhere(grid.cellCount), {
-      ...DEFAULT_HYDROLOGY,
-      riverCatchmentArea: 20_000,
-    });
+    const result = hydrologyOf(grid, carved, { riverCatchmentArea: 20_000 });
 
     return { carved, grid, result };
   }
@@ -390,15 +477,11 @@ describe("river sidehills", () => {
     });
 
     const carved = Float32Array.from(uncarved);
-    const options = { ...DEFAULT_HYDROLOGY, lakeMinimumArea, lakeMinimumCatchmentArea: 0, riverCatchmentArea: 30_000 };
-
-    const result = computeHydrology(
-      carved,
-      grid,
-      new Float32Array(grid.cellCount),
-      landEverywhere(grid.cellCount),
-      options
-    );
+    const result = hydrologyOf(grid, carved, {
+      lakeMinimumArea,
+      lakeMinimumCatchmentArea: 0,
+      riverCatchmentArea: 30_000,
+    });
 
     const points = result.features.rivers.flatMap((river) => {
       return river.points;
@@ -484,10 +567,7 @@ describe("river network", () => {
       }
     }
 
-    const result = computeHydrology(heights, grid, new Float32Array(grid.cellCount), coastDistance, {
-      ...DEFAULT_HYDROLOGY,
-      riverCatchmentArea: 40_000,
-    });
+    const result = hydrologyOf(grid, heights, { riverCatchmentArea: 40_000 }, coastDistance);
 
     return { grid, rivers: result.features.rivers };
   }
@@ -594,18 +674,131 @@ describe("river network", () => {
       return 300 + 0.3 * (z * Math.cos(PLANE_ASPECT) + x * Math.sin(PLANE_ASPECT));
     });
 
-    const { rivers } = computeHydrology(
-      heights,
-      grid,
-      new Float32Array(grid.cellCount),
-      landEverywhere(grid.cellCount),
-      { ...DEFAULT_HYDROLOGY, riverCatchmentArea: 40_000 }
-    ).features;
+    const { rivers } = hydrologyOf(grid, heights, { riverCatchmentArea: 40_000 }).features;
 
     expect(rivers.length).toBeGreaterThan(0);
 
     for (const river of rivers) {
       expect(largestDeviation(river.points)).toBeGreaterThan(5);
+    }
+  });
+});
+
+describe("rivers of coarse islands", () => {
+  let world: GeneratedWorld;
+  let squareWorld: GeneratedWorld;
+
+  beforeAll(() => {
+    world = coarseWorld(7);
+    squareWorld = coarseWorld(7, "square");
+  });
+
+  it("traces rivers that flow downhill", () => {
+    expect(world.water.rivers.length).toBeGreaterThan(0);
+
+    for (const river of world.water.rivers) {
+      const surfaces = river.points.map((point) => {
+        return point.surface;
+      });
+
+      for (let pointIndex = 1; pointIndex < surfaces.length; pointIndex += 1) {
+        expect(surfaces[pointIndex]).toBeLessThanOrEqual(surfaces[pointIndex - 1] + 1e-3);
+      }
+    }
+  });
+
+  it("lets rivers leave the island as waterfalls", () => {
+    const edgeRivers = world.water.rivers.filter((river) => {
+      return river.reachesEdge;
+    });
+
+    expect(world.water.waterfalls).toHaveLength(edgeRivers.length);
+
+    for (const waterfall of world.water.waterfalls) {
+      expect(Math.hypot(waterfall.directionX, waterfall.directionZ)).toBeCloseTo(1);
+    }
+  });
+
+  it("runs the rivers that leave the island past the coast to the top of their waterfalls", () => {
+    for (const generated of [world, squareWorld, coarseWorld(11), coarseWorld(11, "square")]) {
+      expect(generated.water.waterfalls.length).toBeGreaterThan(0);
+      expect(mouthFaults(generated)).toEqual([]);
+    }
+  });
+
+  it("points every waterfall out of the island, the way its river leaves", () => {
+    for (const generated of [world, squareWorld]) {
+      const grid = new WorldGrid(generated.dimensions);
+
+      for (const { directionX, directionZ, x, z } of generated.water.waterfalls) {
+        const upstream = sampleHeight(generated.terrain.coastDistance, grid, x - directionX * 30, z - directionZ * 30);
+
+        expect(upstream).toBeGreaterThan(sampleHeight(generated.terrain.coastDistance, grid, x, z));
+      }
+    }
+  });
+
+  it("puts water beyond the coast only where a waterfall pours off", () => {
+    const grid = new WorldGrid(world.dimensions);
+
+    const fallingWater = Array.from({ length: grid.cellCount }, (_, cell) => {
+      return cell;
+    }).filter((cell) => {
+      return !isOnIsland(world.terrain.coastDistance, cell) && world.terrain.waterSurface[cell] !== NO_WATER;
+    });
+
+    for (const cell of fallingWater) {
+      expect(distanceToWaterfall(world, grid, cell)).toBeLessThan(grid.cellSize * 2);
+    }
+  });
+});
+
+describe("rivers of full-size islands", () => {
+  const pinnedRiverCounts = new Map([
+    [7, 23],
+    [10, 29],
+  ]);
+
+  let round: GeneratedWorld;
+  let square: GeneratedWorld;
+  let pinned: (readonly [GeneratedWorld, number])[];
+
+  beforeAll(() => {
+    round = fullSizeWorld(7);
+    square = fullSizeWorld(1, "square");
+    pinned = [...pinnedRiverCounts].map(([seed, count]) => {
+      return [fullSizeWorld(seed), count] as const;
+    });
+  }, FULL_SIZE_TIMEOUT);
+
+  it("keeps full-size rivers falling all the way to the coast and their waterfalls on both shapes", () => {
+    for (const generated of [round, square]) {
+      expect(riverFaults(generated)).toEqual([]);
+      expect(mouthFaults(generated)).toEqual([]);
+    }
+  });
+
+  it("bends full-size rivers instead of running them dead straight down even slopes on both shapes", () => {
+    for (const generated of [round, square]) {
+      expect(straightRiverShare(generated)).toBeLessThan(0.05);
+    }
+  });
+
+  it("keeps close to the pinned river counts on seeds 7 and 10", () => {
+    for (const [generated, count] of pinned) {
+      expect(Math.abs(generated.water.rivers.length - count)).toBeLessThanOrEqual(RIVER_COUNT_SLACK);
+    }
+  });
+
+  it("sends a river out of every lake on seeds 7 and 10", () => {
+    for (const [generated] of pinned) {
+      const closed = generated.water.lakes.filter((lake) => {
+        return !generated.water.rivers.some((river) => {
+          return leavesLake(lake, river.points[0]);
+        });
+      });
+
+      expect(closed).toEqual([]);
     }
   });
 });

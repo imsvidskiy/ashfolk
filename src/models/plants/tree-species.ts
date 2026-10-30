@@ -2,7 +2,7 @@ import { Vector3 } from "three";
 import { PlantSpecies, type PlantSpeciesIndex } from "../../content/plants.ts";
 import { FULL_TURN, lerp } from "../../shared/math.ts";
 import type { RandomSource } from "../../shared/random.ts";
-import { pointAlong, type TubePoint } from "../mesh/shapes.ts";
+import { pointAlong, type TubePoint } from "../mesh/tubes.ts";
 import { addBlob, addLimb, addTrunk, BLOB_TINT, createGrowth, finish, type Growth, rooted } from "./tree-growth.ts";
 import {
   endedBelow,
@@ -378,7 +378,7 @@ function spruce(seed: number): TreeStructure {
     });
   }
 
-  tuckTrunk(growth, Math.min(height, skirtCeiling(growth.foliage)));
+  tuckTrunk(growth, skirtCeiling(growth.foliage));
   addSpruceStubs(growth, trunk, height);
 
   return finish(growth, height);

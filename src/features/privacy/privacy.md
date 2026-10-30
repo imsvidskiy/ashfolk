@@ -1,6 +1,6 @@
 # Privacy
 
-Last updated October 28, 2026
+Last updated October 30, 2026
 
 Dawnfolk is a free game that runs in your browser. It has no accounts, no ads, no analytics and no cookies. Your worlds and settings stay on your device. This page lists every place where data about you goes, and why.
 
@@ -13,7 +13,7 @@ Dawnfolk is made by Vlad Svidskiy, an individual developer. For any question abo
 | What | Where | How long |
 | --- | --- | --- |
 | Saved worlds and their journals | Your browser's IndexedDB | Until you delete the world or clear site data |
-| Graphics quality, labels and power settings | Your browser's local storage | Until you clear site data |
+| Graphics quality, display choices, tips progress and power settings | Your browser's local storage | Until you clear site data |
 
 None of this is sent to me or anyone else. Delete a world from the start screen, or remove everything by clearing site data for playdawnfolk.com in your browser.
 

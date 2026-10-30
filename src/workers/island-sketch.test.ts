@@ -19,9 +19,9 @@ function sketchOf(cellsPerSide: number): IslandSketch {
 
 describe("island sketch", () => {
   it("keeps a small island as it is", () => {
-    const sketch = sketchOf(64);
+    const sketch = sketchOf(640);
 
-    expect(shrinkSketch(sketch)).toEqual(sketch);
+    expect(shrinkSketch(sketch)).toBe(sketch);
   });
 
   it("samples a large island down and keeps its width in meters", () => {

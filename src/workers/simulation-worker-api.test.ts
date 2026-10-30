@@ -1,6 +1,7 @@
 import { expose, wrap } from "comlink";
 import { describe, expect, it } from "vitest";
-import { DEFAULT_WORLD_REQUEST, type WorldRequest } from "../generation/generation-options.ts";
+import type { WorldRequest } from "../generation/generation-options.ts";
+import { DEFAULT_WORLD_REQUEST } from "../generation/testing/world-request.ts";
 import { ignore } from "../shared/ignore.ts";
 import type { InitialWorld } from "../simulation/frame.ts";
 import type { SavedWorldState } from "../simulation/saved-world.ts";
@@ -99,6 +100,15 @@ describe("saving the world", () => {
     expect(world.frame.tick).toBe(saved.simulation.tick);
     expect(world.frame.tribes).toHaveLength(saved.summary.tribeCount);
     expect(hasLandChanged).toBe(false);
+  });
+
+  it("brings every plant back as the species it was saved as", () => {
+    const saved = savedWorld();
+    const savedSpecies = [...saved.simulation.world.vegetation.species];
+
+    const { world } = createApi().loadWorld(saved, ignore);
+
+    expect([...world.vegetation.species]).toEqual(savedSpecies);
   });
 
   it("saves the fingerprint of the generated land", () => {

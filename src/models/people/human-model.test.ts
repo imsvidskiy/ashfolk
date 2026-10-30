@@ -16,6 +16,7 @@ import {
   TOUCHING,
 } from "../testing/mesh-connectivity.ts";
 import { posedMesh } from "../testing/moved-mesh.ts";
+import { humanPartsMesh, TRIBE } from "../testing/posed-human.ts";
 import { type PersonAppearance, personAppearance } from "./appearance.ts";
 import { applyHumanClip } from "./human-clips.ts";
 import { HUMAN_DETAILS } from "./human-detail.ts";
@@ -33,7 +34,6 @@ import { HUMAN_BONE_COUNT, HUMAN_SKELETON, HumanBone } from "./human-skeleton.ts
 const highParts = buildHumanParts(HUMAN_DETAILS.high);
 const lowParts = buildHumanParts(HUMAN_DETAILS.low);
 const farParts = buildHumanParts(HUMAN_DETAILS.far);
-const TRIBE = { accent: 0x33_66_99, fur: 0x55_44_33, id: 2 };
 const BODIES = ["bodyChild", "bodyFemale", "bodyMale"] as const satisfies readonly HumanPart[];
 
 const ARM_BONES: ReadonlySet<number> = new Set([
@@ -80,16 +80,8 @@ function bodyPartsOf(appearance: PersonAppearance): HumanPart[] {
   });
 }
 
-function partsOf(parts: readonly MeshData[], names: readonly HumanPart[]): MeshData {
-  return mergeMeshes(
-    names.map((name) => {
-      return parts[humanPartIndex(name)];
-    })
-  );
-}
-
 function posedPartsOf(parts: readonly MeshData[], names: readonly HumanPart[], poser: SkeletonPoser): MeshData {
-  return posedMesh(partsOf(parts, names), poser);
+  return posedMesh(humanPartsMesh(parts, names), poser);
 }
 
 function poseAs(
@@ -195,7 +187,7 @@ describe("attached parts", () => {
   ] as const)("keeps every worn part and tool on the %s body standing on the ground", (_level, parts) => {
     for (const body of BODIES) {
       for (const part of HUMAN_PARTS.filter(isWorn)) {
-        expect(loosePieces(partsOf(parts, [body, ...wornWith(part)])), `${body} ${part}`).toEqual([]);
+        expect(loosePieces(humanPartsMesh(parts, [body, ...wornWith(part)])), `${body} ${part}`).toEqual([]);
       }
     }
   });

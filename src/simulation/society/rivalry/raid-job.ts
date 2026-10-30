@@ -121,7 +121,7 @@ export class RaidJob implements Job {
   }
 
   update(tick: PersonTick): Job | null {
-    const raid = tick.context.rivalry.raidOf(this.raidId);
+    const raid = tick.context.rivalry.campaigns.raidOf(this.raidId);
 
     this.#state.rations = eatRation(tick.person, this.#state.rations);
 

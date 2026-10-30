@@ -2,8 +2,8 @@ import { Vector3 } from "three";
 import { inverseLerp, lerp } from "../../shared/math.ts";
 import type { VolumeNoise } from "../../shared/noise.ts";
 import type { RandomSource } from "../../shared/random.ts";
-import { pointAlong, type TubePoint } from "../mesh/shapes.ts";
 import type { Triple } from "../mesh/transforms.ts";
+import { pointAlong, type TubePoint } from "../mesh/tubes.ts";
 
 export const GOLDEN_ANGLE = Math.PI * (3 - Math.sqrt(5));
 

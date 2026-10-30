@@ -156,26 +156,6 @@ function blendNormals(normals: Float32Array, target: Float32Array, amount: numbe
   normalizeVectors(normals);
 }
 
-export function signedVolume(shape: Pick<Shape, "indices" | "positions">): number {
-  const { indices, positions } = shape;
-
-  let volume = 0;
-
-  for (let corner = 0; corner < indices.length; corner += 3) {
-    const first = indices[corner] * 3;
-    const second = indices[corner + 1] * 3;
-    const third = indices[corner + 2] * 3;
-
-    const crossX = positions[second + 1] * positions[third + 2] - positions[second + 2] * positions[third + 1];
-    const crossY = positions[second + 2] * positions[third] - positions[second] * positions[third + 2];
-    const crossZ = positions[second] * positions[third + 1] - positions[second + 1] * positions[third];
-
-    volume += positions[first] * crossX + positions[first + 1] * crossY + positions[first + 2] * crossZ;
-  }
-
-  return volume / 6;
-}
-
 export function transformShape(shape: Shape, matrix: Matrix4): Shape {
   const positions = new Float32Array(shape.positions.length);
   const normals = new Float32Array(shape.normals.length);

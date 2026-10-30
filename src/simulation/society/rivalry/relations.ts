@@ -1,4 +1,5 @@
 import { clamp } from "../../../shared/math.ts";
+import type { Tribe } from "../tribe.ts";
 
 const LOWEST_STANDING = -100;
 const HIGHEST_STANDING = 100;
@@ -46,6 +47,13 @@ function pairKey(firstId: number, secondId: number): string {
 
 function createSide(tribeId: number): RelationSide {
   return { deaths: 0, grievance: 0, tribeId, weariness: 0 };
+}
+
+export function areKin(first: Tribe, second: Tribe): boolean {
+  const isParent = first.originId === second.id || second.originId === first.id;
+  const isSibling = first.originId !== null && first.originId === second.originId;
+
+  return isParent || isSibling;
 }
 
 export function stanceFor(standing: number, current: Stance): Stance {

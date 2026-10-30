@@ -57,7 +57,7 @@ const HILL_RIDGES: ErodedRidgedOptions = {
   slopeScale: (HILL_HEIGHT * HILL_FREQUENCY) / METERS_PER_DETAIL_UNIT,
 };
 
-interface IslandPoint {
+export interface IslandPoint {
   x: number;
   z: number;
 }

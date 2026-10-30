@@ -1,9 +1,10 @@
 import { segmentsAtLeast, segmentsUpTo } from "../level-of-detail.ts";
-import { MaterialSlot } from "../materials.ts";
+import { MaterialSlot, type MaterialSlotIndex } from "../materials.ts";
 import type { MeshBuilder, SurfacePoint } from "../mesh/mesh-builder.ts";
 import type { Shape } from "../mesh/shape.ts";
-import { type BodySection, type TubePoint, tube } from "../mesh/shapes.ts";
+import type { BodySection } from "../mesh/shapes.ts";
 import { SIDES, sideMirror, transformOf } from "../mesh/transforms.ts";
+import { type TubePoint, tube } from "../mesh/tubes.ts";
 import { degrees } from "../rig/curves.ts";
 import { rigidStyle } from "../rig/skin-weights.ts";
 import type { AnimalDetail } from "./animal-detail.ts";
@@ -18,7 +19,7 @@ import {
   muzzleShape,
 } from "./quadruped-parts.ts";
 import { bodyStyle, neckStyle, tailStyle } from "./quadruped-rigging.ts";
-import { QuadrupedBone, type QuadrupedFrame } from "./quadruped-skeleton.ts";
+import { type LegEnd, QuadrupedBone, type QuadrupedFrame } from "./quadruped-skeleton.ts";
 
 export const IBEX_FRAME: QuadrupedFrame = {
   bodyContacts: [
@@ -76,7 +77,7 @@ const BODY: readonly BodySection[] = [
   { centerY: 0.96, halfHeight: 0, halfWidth: 0, z: 0.52 },
 ];
 
-const LEGS: Readonly<Record<"front" | "hind", readonly TubePoint[]>> = {
+const LEGS: Readonly<Record<LegEnd, readonly TubePoint[]>> = {
   front: legPath(0.125, [
     [0.045, 0.88, 0.32, 0.01],
     [0.09, 0.72, 0.315],
@@ -125,7 +126,7 @@ const BEARD: readonly TubePoint[] = [
   { radius: 0, x: 0, y: 0.99, z: 0.8 },
 ];
 
-function coatSlot(point: SurfacePoint): number {
+function coatSlot(point: SurfacePoint): MaterialSlotIndex {
   const { y, z } = point.position;
 
   const isBelly = y < 0.68 && z > -0.5 && z < 0.4;

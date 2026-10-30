@@ -7,17 +7,10 @@ import { alongBody, alongPath, alongTube, segmentsAtLeast } from "../level-of-de
 import { MaterialSlot } from "../materials.ts";
 import type { MeshBuilder } from "../mesh/mesh-builder.ts";
 import { deformShape, type Shape, transformShape } from "../mesh/shape.ts";
-import {
-  type BodySection,
-  type LoftSection,
-  lengthwiseLoft,
-  loft,
-  sphere,
-  type TubePoint,
-  tube,
-} from "../mesh/shapes.ts";
+import { type BodySection, type LoftSection, lengthwiseLoft, loft, sphere } from "../mesh/shapes.ts";
 import { outermostHit, surfaceTransform } from "../mesh/surface-probe.ts";
 import { combine, SIDES, sideMirror, type Triple, transformOf } from "../mesh/transforms.ts";
+import { type TubePoint, tube } from "../mesh/tubes.ts";
 import { degrees, wave } from "../rig/curves.ts";
 import type { Pose } from "../rig/pose.ts";
 import { chainStyle, createChain, rigidStyle } from "../rig/skin-weights.ts";
@@ -25,7 +18,7 @@ import type { AnimalDetail } from "./animal-detail.ts";
 import type { GaitStyle } from "./quadruped-clips.ts";
 import { addLegs, hoofBelow, legPath } from "./quadruped-parts.ts";
 import { bodyStyle, neckStyle, tailStyle } from "./quadruped-rigging.ts";
-import { FIRST_EXTRA_BONE, QuadrupedBone, type QuadrupedFrame } from "./quadruped-skeleton.ts";
+import { FIRST_EXTRA_BONE, type LegEnd, QuadrupedBone, type QuadrupedFrame } from "./quadruped-skeleton.ts";
 
 const MammothBone = {
   TrunkBase: FIRST_EXTRA_BONE,
@@ -69,8 +62,6 @@ export const MAMMOTH_FRAME: QuadrupedFrame = {
   tail: [0, 2.15, -1.55],
 };
 
-export const MAMMOTH_BONE_COUNT = FIRST_EXTRA_BONE + MAMMOTH_FRAME.extraBones.length;
-
 export const MAMMOTH_GAIT: GaitStyle = {
   deadHeadRoll: 0,
   grazeReach: degrees(28),
@@ -110,7 +101,7 @@ const TRUNK_SEAM = 0.18;
 const EAR_SEAM = 0.08;
 const BLEND = 0.2;
 
-const LEGS: Readonly<Record<"front" | "hind", readonly TubePoint[]>> = {
+const LEGS: Readonly<Record<LegEnd, readonly TubePoint[]>> = {
   front: legPath(0.45, [
     [0.24, 2.25, 0.6],
     [0.37, 1.7, 0.6],

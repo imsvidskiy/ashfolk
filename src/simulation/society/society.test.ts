@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { worldRulesSchema } from "../../content/world-rules.ts";
 import {
+  addShelter,
   createStripHarness,
   firstMemberTick,
   isOnDryLand,
@@ -254,6 +255,11 @@ describe("people nearby", () => {
         return true;
       })
     ).toBeNull();
+    expect(
+      harness.society.countNear(0, 0, 50, () => {
+        return true;
+      })
+    ).toBe(1);
   });
 });
 
@@ -279,13 +285,7 @@ describe("progress", () => {
 
     const tribe = settle(harness, 8);
 
-    const hut = harness.buildings.add(
-      { kind: "hut", rotation: 0, tribeId: tribe.id, x: tribe.campX + 15, z: tribe.campZ },
-      harness.random
-    );
-
-    hut.progress = 1;
-    tribe.buildings.shelterIds.push(hut.id);
+    addShelter(harness, tribe, "hut", tribe.campX + 15, tribe.campZ).progress = 1;
     tribe.stock.grain = 200;
     harness.run(480);
 

@@ -1,22 +1,21 @@
 import { Vector3 } from "three";
 import { describe, expect, it } from "vitest";
-import { mergeMeshes } from "../mesh/mesh-data.ts";
 import { Pose } from "../rig/pose.ts";
 import { SkeletonPoser } from "../rig/skeleton-poser.ts";
 import { isTorso, loosePieces, TOUCHING } from "../testing/mesh-connectivity.ts";
 import { posedMesh } from "../testing/moved-mesh.ts";
-import { ADULT, jointOf, pointOf, posedHuman } from "../testing/posed-human.ts";
+import { ADULT, humanPartsMesh, jointOf, pointOf, posedHuman, TRIBE } from "../testing/posed-human.ts";
 import { personAppearance } from "./appearance.ts";
-import { applyHumanClip, HUMAN_CLIPS } from "./human-clips.ts";
+import { applyHumanClip } from "./human-clips.ts";
 import { HUMAN_DETAILS } from "./human-detail.ts";
-import { buildHumanParts, type HumanPart, humanPartIndex } from "./human-model.ts";
+import { buildHumanParts, type HumanPart } from "./human-model.ts";
 import { humanBoneScales } from "./human-proportions.ts";
 import { HUMAN_SKELETON, HumanBone } from "./human-skeleton.ts";
+import { LEFT_FIST, RIGHT_FIST } from "./prop-placement.ts";
 
-const RIGHT_FIST = new Vector3(-0.217, 0.832, 0.018);
-const LEFT_FIST = new Vector3(0.217, 0.832, 0.018);
+const RIGHT_FIST_POINT = new Vector3(...RIGHT_FIST);
+const LEFT_FIST_POINT = new Vector3(...LEFT_FIST);
 const SPEAR_TIP = new Vector3(-0.217, 0.832, 1.13);
-const TRIBE = { accent: 0x33_66_99, fur: 0x55_44_33, id: 2 };
 const parts = buildHumanParts(HUMAN_DETAILS.high);
 
 describe("fight clips", () => {
@@ -32,7 +31,7 @@ describe("fight clips", () => {
 
     const guardTip = pointOf(guard, HumanBone.HandRight, SPEAR_TIP);
     const lungeTip = pointOf(lunge, HumanBone.HandRight, SPEAR_TIP);
-    const lungeFist = pointOf(lunge, HumanBone.HandRight, RIGHT_FIST);
+    const lungeFist = pointOf(lunge, HumanBone.HandRight, RIGHT_FIST_POINT);
 
     expect(lungeTip.z).toBeGreaterThan(guardTip.z + 0.25);
     expect(lungeTip.z).toBeGreaterThan(1.2);
@@ -42,8 +41,8 @@ describe("fight clips", () => {
   it("raise the guard to parry a blow", () => {
     const parry = posedHuman("block", 0.2);
 
-    expect(pointOf(parry, HumanBone.HandLeft, LEFT_FIST).y).toBeGreaterThan(1.3);
-    expect(pointOf(parry, HumanBone.HandRight, RIGHT_FIST).y).toBeGreaterThan(1.3);
+    expect(pointOf(parry, HumanBone.HandLeft, LEFT_FIST_POINT).y).toBeGreaterThan(1.3);
+    expect(pointOf(parry, HumanBone.HandRight, RIGHT_FIST_POINT).y).toBeGreaterThan(1.3);
   });
 
   it("jerk the head back when struck and settle again", () => {
@@ -63,12 +62,6 @@ describe("fight clips", () => {
     expect(jointOf(fallen, HumanBone.Head).distanceTo(jointOf(dead, HumanBone.Head))).toBeLessThan(0.15);
   });
 
-  it("play the fall and the flinch once instead of looping", () => {
-    expect(HUMAN_CLIPS.fall.timing.kind).toBe("once");
-    expect(HUMAN_CLIPS.flinch.timing.kind).toBe("once");
-    expect(HUMAN_CLIPS.thrust.timing.kind).toBe("seconds");
-  });
-
   it("keep the weapons in the hands through every fight", () => {
     const appearance = personAppearance({ age: 30, isFemale: false, seed: 0.37, tribe: TRIBE });
     const weapons: readonly HumanPart[] = ["spear", "bow", "quiver", "warPaint"];
@@ -81,14 +74,7 @@ describe("fight clips", () => {
         poser.pose(pose, humanBoneScales(appearance.body));
 
         const names: HumanPart[] = ["bodyMale", ...weapons];
-        const mesh = posedMesh(
-          mergeMeshes(
-            names.map((name) => {
-              return parts[humanPartIndex(name)];
-            })
-          ),
-          poser
-        );
+        const mesh = posedMesh(humanPartsMesh(parts, names), poser);
 
         expect(loosePieces(mesh, TOUCHING, isTorso), `${clip} ${phase}`).toEqual([]);
       }

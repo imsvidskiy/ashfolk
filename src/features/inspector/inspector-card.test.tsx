@@ -74,7 +74,7 @@ describe("inspector card", () => {
   ])("has nothing to follow for a $inspection.kind", async ({ inspection }) => {
     const screen = await renderInspection(inspection);
 
-    await expect.element(screen.getByRole("button", { exact: true, name: "Close" })).toBeVisible();
+    await expect.element(screen.getByRole("button", { exact: true, name: "Close the card" })).toBeVisible();
     await expect.element(screen.getByRole("button", { exact: true, name: FOLLOW_LABEL })).not.toBeInTheDocument();
   });
 
@@ -93,7 +93,7 @@ describe("inspector card", () => {
 
     const screen = await render(<InspectorCard inspection={createPersonInspection()} onClose={close} />);
 
-    await screen.getByRole("button", { exact: true, name: "Close" }).click();
+    await screen.getByRole("button", { exact: true, name: "Close the card" }).click();
 
     expect(close).toHaveBeenCalledOnce();
   });

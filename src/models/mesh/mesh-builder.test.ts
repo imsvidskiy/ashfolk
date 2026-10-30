@@ -1,7 +1,7 @@
 import { Matrix4 } from "three";
 import { describe, expect, it } from "vitest";
+import { signedVolume } from "../testing/mesh-checks.ts";
 import { MeshBuilder } from "./mesh-builder.ts";
-import { signedVolume } from "./shape.ts";
 import { box, cylinder } from "./shapes.ts";
 import { MIRROR_X, segmentLength, segmentTransform, transformOf } from "./transforms.ts";
 

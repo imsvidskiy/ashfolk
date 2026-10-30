@@ -1,7 +1,7 @@
 import { MaterialSlot } from "../materials.ts";
 import type { MeshBuilder } from "../mesh/mesh-builder.ts";
-import { tube } from "../mesh/shapes.ts";
 import { SIDES, transformOf } from "../mesh/transforms.ts";
+import { tube } from "../mesh/tubes.ts";
 import { rigidStyle } from "../rig/skin-weights.ts";
 import { forEachSide, headShape, headStroke } from "./human-anatomy.ts";
 import { type HumanDetail, trimmedRing } from "./human-detail.ts";

@@ -27,7 +27,6 @@ export interface TapHandler {
 }
 
 interface TrackedPointer {
-  readonly button: number;
   readonly startX: number;
   readonly startY: number;
   x: number;
@@ -201,7 +200,6 @@ export class PointerControls {
   #down(event: PointerEvent): void {
     this.#canvas.setPointerCapture(event.pointerId);
     this.#pointers.set(event.pointerId, {
-      button: event.button,
       startX: event.offsetX,
       startY: event.offsetY,
       x: event.offsetX,

@@ -10,6 +10,7 @@ import type { Chronicle } from "../chronicle.ts";
 import type { IdentifierSource } from "../identifiers.ts";
 import type { WorldState } from "../world/world-state.ts";
 import type { BuildingSystem } from "./buildings.ts";
+import { findCampSite } from "./camp-sites.ts";
 import { handleBuildingLoss } from "./construction.ts";
 import { advanceJob, dropJob, updateMind } from "./decisions.ts";
 import { abandonFields } from "./farming.ts";
@@ -19,7 +20,6 @@ import { updateNeeds } from "./needs.ts";
 import { createPerson, type DeathCause, type Person, walkSpeed } from "./person.ts";
 import { abandonPlots } from "./plots.ts";
 import { syncEra } from "./progress.ts";
-import { findCampSite } from "./settlement.ts";
 import type { DeathAccount, PersonTick, SocietyContext } from "./society-context.ts";
 import { createTribe, type Tribe } from "./tribe.ts";
 import { updateTribe } from "./tribe-life.ts";
@@ -413,7 +413,7 @@ export class SocietySystem {
     let count = 0;
 
     for (const person of this.#people) {
-      if (isLivingWithin(person, x, z, radius) && accepts(person)) {
+      if (isLivingWithin(person, x, z, radius) && !this.isHeld(person) && accepts(person)) {
         count += 1;
       }
     }

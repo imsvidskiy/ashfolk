@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { SocietyHarness, settle } from "../testing/test-society.ts";
+import { addShelter, SocietyHarness, settle } from "../testing/test-society.ts";
 import { buildingPlans } from "./camp-plan.ts";
 
 const TRIBE_SIZE = 6;
@@ -13,13 +13,7 @@ describe("building plans", () => {
     tribe.technologies.add("bronze");
 
     for (let index = 0; index < 5; index += 1) {
-      const tent = harness.buildings.add(
-        { kind: "tent", rotation: 0, tribeId: tribe.id, x: tribe.campX + index * 12, z: tribe.campZ + 20 },
-        harness.random
-      );
-
-      tent.progress = 1;
-      tribe.buildings.shelterIds.push(tent.id);
+      addShelter(harness, tribe, "tent", tribe.campX + index * 12, tribe.campZ + 20).progress = 1;
     }
 
     const draw = vi.spyOn(harness.random, "next");

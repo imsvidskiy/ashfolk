@@ -76,14 +76,14 @@ describe("effect view", () => {
     expect(createRing).toHaveBeenCalledTimes(2);
   });
 
-  it("lets the flash of a strike fade away", () => {
+  it("lets the flash of a strike fade on the real clock, even while paused", () => {
     const { view } = createEffects();
 
     view.add([LIGHTNING]);
 
     const { flash } = view;
 
-    runFor(view, 1);
+    runFor(view, 1, 0);
 
     expect(view.flash).toBeLessThan(flash * 0.01);
   });
@@ -119,14 +119,5 @@ describe("effect view", () => {
     runFor(view, 0.3, 16);
 
     expect(glow.visible).toBe(false);
-  });
-
-  it("keeps the flash of a strike on the real clock while paused", () => {
-    const { view } = createEffects();
-
-    view.add([LIGHTNING]);
-    runFor(view, 1, 0);
-
-    expect(view.flash).toBeLessThan(0.01);
   });
 });

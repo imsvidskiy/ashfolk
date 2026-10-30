@@ -246,12 +246,12 @@ describe("grab handlers", () => {
 
     simulation.execute({ target: subject.target, type: "grab" });
 
-    expect(person?.job).toBeNull();
+    expect(person.job).toBeNull();
 
     simulation.execute({ type: "carry", ...OPEN_GROUND });
     simulation.execute({ type: "drop" });
 
-    expect(person?.mover.path).toEqual([]);
+    expect(person.mover.path).toEqual([]);
 
     advanceFor(simulation, 2);
 

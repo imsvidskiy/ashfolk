@@ -269,8 +269,8 @@ describe("volcanoes", () => {
     expect(animal).toBeDefined();
 
     for (const mover of [person.mover, animal.mover]) {
-      mover.x = grid.cellCenterX(lavaCell === undefined ? 0 : lavaCell);
-      mover.z = grid.cellCenterZ(lavaCell === undefined ? 0 : lavaCell);
+      mover.x = grid.cellCenterX(lavaCell);
+      mover.z = grid.cellCenterZ(lavaCell);
     }
 
     simulation.step();
@@ -294,10 +294,7 @@ describe("volcanoes", () => {
     expect(person).toBeDefined();
 
     simulation.grab({ id: person.id, kind: "person" });
-    simulation.carry(
-      grid.cellCenterX(lavaCell === undefined ? 0 : lavaCell),
-      grid.cellCenterZ(lavaCell === undefined ? 0 : lavaCell)
-    );
+    simulation.carry(grid.cellCenterX(lavaCell), grid.cellCenterZ(lavaCell));
     simulation.step();
 
     expect(person.isAlive).toBe(true);
@@ -309,12 +306,11 @@ describe("volcanoes", () => {
     runFor(simulation, SWELL_SECONDS + 5);
 
     const [lavaCell] = onlyVolcano(simulation).lava.keys();
-    const cell = lavaCell === undefined ? 0 : lavaCell;
 
-    plantInCell(simulation.world, cell, PlantSpecies.Oak);
+    plantInCell(simulation.world, lavaCell, PlantSpecies.Oak);
     simulation.step();
 
-    expect(simulation.world.vegetation.hasPlantsInCell(cell)).toBe(false);
+    expect(simulation.world.vegetation.hasPlantsInCell(lavaCell)).toBe(false);
   });
 
   it("goes out where water floods its lava", () => {

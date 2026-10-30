@@ -38,7 +38,7 @@ function raidingArcher(): Person {
   return person;
 }
 
-function grazingCalf(): Animal {
+function flinchingKid(): Animal {
   return {
     appearanceSeed: 0.375,
     causeOfDeath: null,
@@ -149,7 +149,7 @@ describe("packed agents", () => {
   });
 
   it("carry each field of an animal to the renderer", () => {
-    const buffer = packAnimals([grazingCalf()]);
+    const buffer = packAnimals([flinchingKid()]);
 
     expect({
       appearanceSeed: buffer[AnimalField.AppearanceSeed],

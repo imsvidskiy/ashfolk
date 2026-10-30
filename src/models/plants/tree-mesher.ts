@@ -7,8 +7,9 @@ import { MaterialSlot, type MaterialSlotIndex } from "../materials.ts";
 import { MeshBuilder, type SurfacePoint, type VertexStyle } from "../mesh/mesh-builder.ts";
 import type { MeshData } from "../mesh/mesh-data.ts";
 import { deformShape, type Shape } from "../mesh/shape.ts";
-import { blob, cone, icosphere, type LoftSection, loft, ribbon, type TubePoint, tube } from "../mesh/shapes.ts";
+import { blob, cone, icosphere, type LoftSection, loft } from "../mesh/shapes.ts";
 import { transformOf } from "../mesh/transforms.ts";
+import { ribbon, type TubePoint, tube } from "../mesh/tubes.ts";
 import {
   type Branch,
   endedBelow,
