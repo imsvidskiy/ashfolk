@@ -71,12 +71,29 @@ describe("weather system", () => {
     const weather = new WeatherSystem();
     const random = createRandom(5);
 
-    weather.state.nextChangeInDays = 0;
+    const changes = Array.from({ length: 20 }, () => {
+      weather.state.nextChangeInDays = 0;
 
-    const update = weather.update(tickOf(1), DEFAULT_WORLD_RULES, random);
+      const { changedTo } = weather.update(tickOf(1), DEFAULT_WORLD_RULES, random);
 
-    expect(weather.state.nextChangeInDays).toBeGreaterThan(0.2);
-    expect(update.changedTo === null || update.changedTo === weather.state.kind).toBe(true);
+      return { changedTo, kind: weather.state.kind, nextChangeInDays: weather.state.nextChangeInDays };
+    });
+
+    const changed = changes.filter((change) => {
+      return change.changedTo !== null;
+    });
+
+    expect(
+      changes.every((change) => {
+        return change.nextChangeInDays > 0.2;
+      })
+    ).toBe(true);
+    expect(changed.length).toBeGreaterThan(1);
+    expect(
+      changed.every((change) => {
+        return change.changedTo === change.kind;
+      })
+    ).toBe(true);
   });
 
   it("keeps a manual choice", () => {
