@@ -77,7 +77,7 @@ async function waitForFrames(page: Page, count: number): Promise<void> {
 
 async function castPower(page: Page, cast: PowerCast): Promise<void> {
   await page.evaluate((command) => {
-    Reflect.get(window, "dawnfolk").session.send({ ...command, type: "usePower" });
+    Reflect.get(window, "ashfolk").session.send({ ...command, type: "usePower" });
   }, cast);
 }
 
@@ -111,13 +111,13 @@ async function shoot(browser: Browser, address: string, scene: Scene, device: De
     await page
       .waitForFunction(
         () => {
-          return Reflect.has(window, "dawnfolk");
+          return Reflect.has(window, "ashfolk");
         },
         undefined,
         { timeout: WORLD_RISING_TIMEOUT }
       )
       .catch(() => {
-        throw new Error("Shots need a dev server, where the engine is on window.dawnfolk");
+        throw new Error("Shots need a dev server, where the engine is on window.ashfolk");
       });
     await expect(page.getByRole("status")).toBeHidden({ timeout: WORLD_RISING_TIMEOUT });
 

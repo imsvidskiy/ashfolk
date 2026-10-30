@@ -1,6 +1,5 @@
-const HOME_HOST = "playdawnfolk.com";
-// The game moves to ashfolk.com. Until the rename ships, both domains serve it.
-const SERVED_HOSTS = new Set([HOME_HOST, "ashfolk.com", "localhost"]);
+const HOME_HOST = "ashfolk.com";
+const SERVED_HOSTS = new Set([HOME_HOST, "localhost"]);
 const MEDIA_PREFIX = "/media/";
 const RANGE_PATTERN = /^bytes=(?<start>\d+)-(?<end>\d*)$/u;
 
@@ -16,7 +15,7 @@ export function homeAddressOf(request: Request): string | null {
   }
 
   url.protocol = "https:";
-  url.hostname = url.hostname === "www.ashfolk.com" ? "ashfolk.com" : HOME_HOST;
+  url.hostname = HOME_HOST;
   url.port = "";
 
   return url.toString();

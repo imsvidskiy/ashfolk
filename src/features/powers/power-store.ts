@@ -11,7 +11,7 @@ import {
   readPowerParameters,
 } from "../../content/powers.ts";
 
-const STORAGE_KEY = "dawnfolk.powers";
+const STORAGE_KEY = "ashfolk.powers";
 
 const storedSchema = z.object({ parameters: z.record(z.string(), z.unknown()).default({}) });
 

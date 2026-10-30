@@ -2,8 +2,8 @@ import { describe, expect, it, vi } from "vitest";
 import { ignore } from "../shared/ignore.ts";
 import { storedLabelsShown, storedQuality, storeLabelsShown, storeQuality } from "./preferences.ts";
 
-const QUALITY_KEY = "dawnfolk.quality";
-const LABELS_KEY = "dawnfolk.labels";
+const QUALITY_KEY = "ashfolk.quality";
+const LABELS_KEY = "ashfolk.labels";
 
 describe("saved preferences", () => {
   it("has no saved quality at first", () => {

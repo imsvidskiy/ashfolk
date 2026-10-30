@@ -25,7 +25,7 @@ describe("sound section", () => {
 
     await expect.element(sound).not.toBeChecked();
     expect(useSoundStore.getState().levels.isMuted).toBe(true);
-    expect(localStorage.getItem("dawnfolk.sound")).toContain('"isMuted":true');
+    expect(localStorage.getItem("ashfolk.sound")).toContain('"isMuted":true');
   });
 
   it("changes a volume from its slider", async () => {

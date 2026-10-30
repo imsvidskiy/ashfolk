@@ -13,7 +13,7 @@ describe("worker", () => {
   it("serves the game on its own domain", async () => {
     const assets = assetsReturning("game");
 
-    const response = await worker.fetch(new Request("https://playdawnfolk.com/?seed=7"), { ASSETS: assets });
+    const response = await worker.fetch(new Request("https://ashfolk.com/?seed=7"), { ASSETS: assets });
 
     expect(await response.text()).toBe("game");
     expect(assets.fetch).toHaveBeenCalledOnce();
@@ -27,7 +27,7 @@ describe("worker", () => {
     });
 
     expect(response.status).toBe(301);
-    expect(response.headers.get("Location")).toBe("https://playdawnfolk.com/?seed=7&shape=round");
+    expect(response.headers.get("Location")).toBe("https://ashfolk.com/?seed=7&shape=round");
     expect(assets.fetch).not.toHaveBeenCalled();
   });
 
@@ -35,7 +35,7 @@ describe("worker", () => {
     const assets = assetsReturning("0123456789");
 
     const response = await worker.fetch(
-      new Request("https://playdawnfolk.com/media/wide.mp4", { headers: { Range: "bytes=2-5" } }),
+      new Request("https://ashfolk.com/media/wide.mp4", { headers: { Range: "bytes=2-5" } }),
       { ASSETS: assets }
     );
 
@@ -46,7 +46,7 @@ describe("worker", () => {
   });
 
   it("offers ranges on a whole film", async () => {
-    const response = await worker.fetch(new Request("https://playdawnfolk.com/media/wide.mp4"), {
+    const response = await worker.fetch(new Request("https://ashfolk.com/media/wide.mp4"), {
       ASSETS: assetsReturning("0123456789"),
     });
 
@@ -57,7 +57,7 @@ describe("worker", () => {
 
   it("serves the whole film for a range it does not read", async () => {
     const response = await worker.fetch(
-      new Request("https://playdawnfolk.com/media/wide.mp4", { headers: { Range: "bytes=-3" } }),
+      new Request("https://ashfolk.com/media/wide.mp4", { headers: { Range: "bytes=-3" } }),
       { ASSETS: assetsReturning("0123456789") }
     );
 
@@ -66,13 +66,19 @@ describe("worker", () => {
   });
 
   it("drops the www prefix", () => {
-    expect(homeAddressOf(new Request("https://www.playdawnfolk.com/manifest.webmanifest"))).toBe(
-      "https://playdawnfolk.com/manifest.webmanifest"
+    expect(homeAddressOf(new Request("https://www.ashfolk.com/manifest.webmanifest"))).toBe(
+      "https://ashfolk.com/manifest.webmanifest"
     );
     expect(homeAddressOf(new Request("https://www.ashfolk.com/?seed=7"))).toBe("https://ashfolk.com/?seed=7");
   });
 
   it("serves the game on the new domain too", () => {
     expect(homeAddressOf(new Request("https://ashfolk.com/?seed=7"))).toBeNull();
+  });
+
+  it("sends the old domain to the new one with the path and query kept", () => {
+    expect(homeAddressOf(new Request("https://playdawnfolk.com/"))).toBe("https://ashfolk.com/");
+    expect(homeAddressOf(new Request("https://www.playdawnfolk.com/?seed=7"))).toBe("https://ashfolk.com/?seed=7");
+    expect(homeAddressOf(new Request("https://playdawnfolk.com/privacy/"))).toBe("https://ashfolk.com/privacy/");
   });
 });

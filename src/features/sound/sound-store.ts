@@ -4,7 +4,7 @@ import { persist } from "zustand/middleware";
 import { mergeStoredField } from "../../app/preferences.ts";
 import { DEFAULT_SOUND_LEVELS, type SoundLevels } from "../../audio/sound-engine.ts";
 
-const STORAGE_KEY = "dawnfolk.sound";
+const STORAGE_KEY = "ashfolk.sound";
 
 const volumeSchema = z.number().min(0).max(1);
 const storedSchema = z.object({

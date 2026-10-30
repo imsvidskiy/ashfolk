@@ -34,7 +34,7 @@ function savedState(): SavedWorldState {
 }
 
 async function putRawRecord(record: object): Promise<void> {
-  const opening = indexedDB.open("dawnfolk");
+  const opening = indexedDB.open("ashfolk");
 
   const database = await new Promise<IDBDatabase>((resolve, reject) => {
     opening.addEventListener("success", () => {

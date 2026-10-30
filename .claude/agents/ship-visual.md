@@ -1,6 +1,6 @@
 ---
 name: ship-visual
-description: Shoots fixed scenes of a Dawnfolk branch and of origin/main and compares them for a person. Use in the ship workflow when a change touches rendering or the interface.
+description: Shoots fixed scenes of an Ashfolk branch and of origin/main and compares them for a person. Use in the ship workflow when a change touches rendering or the interface.
 tools: Read, Bash, Grep, Glob
 ---
 

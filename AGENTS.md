@@ -1,6 +1,6 @@
-# Dawnfolk
+# Ashfolk
 
-A god game about the first tribes on a floating island, in TypeScript with three.js and React. The
+A god simulator about the first tribes on a floating island, in TypeScript with three.js and React. The
 [README](README.md#architecture) has the code map, and [CONTRIBUTING.md](CONTRIBUTING.md) has the code style,
 commits, pull requests and releases. This file lists what agents tend to miss.
 
@@ -16,7 +16,7 @@ bun run test       # unit tests in Node, browser tests in Chromium
 - Run all four before you push. Browser tests need Chromium; [Scripts and checks](CONTRIBUTING.md#scripts-and-checks)
   shows how to point them at a system one.
 - Run one area with `bunx vitest run --project unit src/generation`.
-- Merging to `main` deploys playdawnfolk.com. Leave merges and [releases](CONTRIBUTING.md#releases) to a person
+- Merging to `main` deploys ashfolk.com. Leave merges and [releases](CONTRIBUTING.md#releases) to a person
   unless they ask.
 
 ## Seeing a change
@@ -31,7 +31,7 @@ bun run test       # unit tests in Node, browser tests in Chromium
   that only shows by eye.
 - Playwright's own headless Chromium uses SwiftShader and renders in software, so colors and some WebGPU paths differ.
   Say which browser you used.
-- In development the engine is on `window.dawnfolk`: `session.frame` holds the tribes, weather and calendar, `camera`
+- In development the engine is on `window.ashfolk`: `session.frame` holds the tribes, weather and calendar, `camera`
   the view, and `powers` the active tool.
 
 ## Shipping a change

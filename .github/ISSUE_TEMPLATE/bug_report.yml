@@ -20,7 +20,7 @@ body:
       label: Steps to reproduce
       description: The page address helps, it holds the seed.
       placeholder: |
-        1. Open https://playdawnfolk.com/?seed=7
+        1. Open https://ashfolk.com/?seed=7
         2. Zoom out far
 
   - type: input

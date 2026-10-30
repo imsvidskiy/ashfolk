@@ -29,11 +29,11 @@ export function InstallGuideDialog() {
           <Dialog.Popup className={cn(DIALOG_POPUP, "w-notice")}>
             <Island className="flex flex-col gap-5 p-5 sm:p-6">
               <div className="flex flex-col gap-2">
-                <Dialog.Title className="text-ink text-lg leading-tight font-semibold">Install Dawnfolk</Dialog.Title>
+                <Dialog.Title className="text-ink text-lg leading-tight font-semibold">Install Ashfolk</Dialog.Title>
 
                 <Dialog.Description className="text-ink-soft text-sm">
                   Tap Share <Share aria-hidden="true" className="inline align-text-bottom" size={16} />, then Add to
-                  Home Screen. Dawnfolk will open from your home screen like an app, without the browser around it.
+                  Home Screen. Ashfolk will open from your home screen like an app, without the browser around it.
                 </Dialog.Description>
               </div>
 

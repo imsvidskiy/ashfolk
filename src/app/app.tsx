@@ -27,12 +27,12 @@ function GameScreen() {
   });
 
   useEffect(() => {
-    document.title = `${launch.name} · Dawnfolk`;
+    document.title = `${launch.name} · Ashfolk`;
   }, [launch.name]);
 
   return (
     <>
-      <h1 className="sr-only">Dawnfolk</h1>
+      <h1 className="sr-only">Ashfolk</h1>
 
       <GameView launch={launch} worldId={worldId} />
 

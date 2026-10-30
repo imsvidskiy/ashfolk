@@ -1,6 +1,6 @@
 export const meta = {
   name: 'ship',
-  description: 'Gate, review, verify, fix, style and look at a Dawnfolk branch before its pull request',
+  description: 'Gate, review, verify, fix, style and look at an Ashfolk branch before its pull request',
   whenToUse:
     'After a feature, fix or refactor is committed on its own branch in its own worktree, before opening the pull request. Args: "<worktree path> [auto|light|full]".',
   phases: [
@@ -143,7 +143,7 @@ function portsFor(branch) {
 function gatePrompt(path, base) {
   const fetch = base === BASE ? '\`git fetch -q origin\`, then ' : ''
 
-  return `Run the Dawnfolk checks in the worktree at ${path} (cd there first) and measure its change against ${base}. Don't edit, commit or push.
+  return `Run the Ashfolk checks in the worktree at ${path} (cd there first) and measure its change against ${base}. Don't edit, commit or push.
 
 1. Run ${fetch} \`bun run check\`, \`bun run typecheck\`, \`bun run test\`, \`bun run build\` and \`bun run knip\`. If Playwright's own Chromium is missing, set CHROMIUM_EXECUTABLE_PATH to system Chrome as CONTRIBUTING.md describes. When a browser test fails, run its file once more alone; if it passes then, list it under flaky instead of failures.
 2. passed is true only when every command succeeds apart from flaky tests. Put each failure as one line with the command and the first error.
@@ -334,7 +334,7 @@ if (gate.touchesLook) {
   const beforePath = `${path}-ship-main`
 
   look = await agent(
-    `Compare the branch in the worktree at ${path} with the commit ${base}. If ${beforePath} already exists, remove it first with git worktree remove --force by that exact path. Create the worktree for ${base} at exactly ${beforePath} and remove it by that path when done. Use port ${beforePort} for ${base} and ${afterPort} for the branch. Write shots under "$TMPDIR/dawnfolk-ship-shots/${branchSlug}/before" and ".../after". Changed files: ${gate.files.join(', ')}.`,
+    `Compare the branch in the worktree at ${path} with the commit ${base}. If ${beforePath} already exists, remove it first with git worktree remove --force by that exact path. Create the worktree for ${base} at exactly ${beforePath} and remove it by that path when done. Use port ${beforePort} for ${base} and ${afterPort} for the branch. Write shots under "$TMPDIR/ashfolk-ship-shots/${branchSlug}/before" and ".../after". Changed files: ${gate.files.join(', ')}.`,
     { agentType: 'ship-visual', label: 'look', phase: 'Look', schema: LOOK_SCHEMA }
   )
 }

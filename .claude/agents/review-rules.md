@@ -1,10 +1,10 @@
 ---
 name: review-rules
-description: Checks a Dawnfolk change against the architecture rules in AGENTS.md, without editing. Use in the ship workflow or when asked whether a branch keeps the project's rules.
+description: Checks an Ashfolk change against the architecture rules in AGENTS.md, without editing. Use in the ship workflow or when asked whether a branch keeps the project's rules.
 tools: Read, Grep, Glob, Bash
 ---
 
-You check one change to Dawnfolk against the rules that are easy to miss. You report breaks; you don't fix them, and you
+You check one change to Ashfolk against the rules that are easy to miss. You report breaks; you don't fix them, and you
 don't edit, commit or push.
 
 ## Scope

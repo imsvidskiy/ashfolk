@@ -22,7 +22,7 @@ function worldDetails(world: SavedWorldListing, now: number): string {
   const savedAt = formatSavedAt(world.savedAt, now);
 
   if (!world.isLoadable || world.summary === null) {
-    return `Saved by another version of Dawnfolk · ${savedAt}`;
+    return `Saved by another version of Ashfolk · ${savedAt}`;
   }
 
   if (world.hasLandChanged) {

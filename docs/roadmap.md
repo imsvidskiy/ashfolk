@@ -1,6 +1,6 @@
 # Roadmap
 
-What Dawnfolk is heading for and why. [plan.md](plan.md) is the how: the architecture these goals stand on.
+What Ashfolk is heading for and why. [plan.md](plan.md) is the how: the architecture these goals stand on.
 
 Last reviewed at v0.9.0. There are no dates. **Now** is being built, **Next** is shaped and comes after it, **Later** is
 the direction. The roadmap is reviewed at every minor release: finished items move to [Recently done](#recently-done),
@@ -132,7 +132,7 @@ dead ones are deleted, and an item enters Now only when it is small or medium an
 
 ### Mobile app
 
-- **Goal**: Dawnfolk installs on a phone and plays offline.
+- **Goal**: Ashfolk installs on a phone and plays offline.
 - **Scope**: an installable web app with offline play first, store builds after.
 - **Size**: M.
 
@@ -150,7 +150,7 @@ dead ones are deleted, and an item enters Now only when it is small or medium an
 ## Paid content
 
 The code is MIT and runs in the browser. Anything gated only in the client can be switched on by anyone, and forks are
-legal. So Dawnfolk sells what isn't code, and the free game never shrinks.
+legal. So Ashfolk sells what isn't code, and the free game never shrinks.
 
 - **Free forever**: the whole game, local saves and every power that exists today.
 - **Supporter**, about $4 a month: credits, a Discord role, votes, early builds, cosmetics.

@@ -1,10 +1,10 @@
 ---
 name: review-simplicity
-description: Reviews a Dawnfolk change for code that duplicates what exists or is built harder than the problem, without editing. Use in the ship workflow or when asked whether a branch could be simpler.
+description: Reviews an Ashfolk change for code that duplicates what exists or is built harder than the problem, without editing. Use in the ship workflow or when asked whether a branch could be simpler.
 tools: Read, Grep, Glob, Bash
 ---
 
-You look for code in one change to Dawnfolk that repeats what already exists or is harder than the problem. You report
+You look for code in one change to Ashfolk that repeats what already exists or is harder than the problem. You report
 it; you don't fix it, and you don't edit, commit or push. Formatting, naming, unused exports and dead code belong to the
 code-style agent; leave them out.
 

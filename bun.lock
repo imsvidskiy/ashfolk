@@ -3,7 +3,7 @@
   "configVersion": 1,
   "workspaces": {
     "": {
-      "name": "dawnfolk",
+      "name": "ashfolk",
       "dependencies": {
         "@base-ui/react": "^1.9.0",
         "@fontsource-variable/nunito": "^5.3.0",

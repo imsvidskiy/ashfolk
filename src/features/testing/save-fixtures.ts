@@ -3,7 +3,7 @@ import { ignore } from "../../shared/ignore.ts";
 import { SAVE_VERSION, type SavedWorldState } from "../../simulation/saved-world.ts";
 import { deleteSavedWorld, listSavedWorlds, type SavedWorldRecord } from "../saves/save-database.ts";
 
-const DATABASE_NAME = "dawnfolk";
+const DATABASE_NAME = "ashfolk";
 
 function deleteDatabase(): Promise<void> {
   const request = indexedDB.deleteDatabase(DATABASE_NAME);

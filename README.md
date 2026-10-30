@@ -1,16 +1,16 @@
 <p align="center">
-  <img src=".github/logo.svg" alt="" width="96" height="96">
+  <img src="public/logo.svg" alt="" width="96" height="96">
 </p>
 
-<h1 align="center">Dawnfolk</h1>
+<h1 align="center">Ashfolk</h1>
 
-<p align="center">A god game about the first tribes on a floating island</p>
+<p align="center">A god simulator about the first tribes on a floating island</p>
 
 <p align="center">
   <a
-    href="https://github.com/imsvidskiy/dawnfolk/actions/workflows/ci.yml"
+    href="https://github.com/imsvidskiy/ashfolk/actions/workflows/ci.yml"
   ><img
-    src="https://github.com/imsvidskiy/dawnfolk/actions/workflows/ci.yml/badge.svg"
+    src="https://github.com/imsvidskiy/ashfolk/actions/workflows/ci.yml/badge.svg"
     alt="CI"
   ></a>
   <a
@@ -32,7 +32,7 @@
 </p>
 
 <p align="center">
-  <a href="https://playdawnfolk.com">Play</a> ·
+  <a href="https://ashfolk.com">Play</a> ·
   <a href="#features">Features</a> ·
   <a href="#getting-started">Getting started</a> ·
   <a href="#architecture">Architecture</a> ·
@@ -43,7 +43,7 @@
 
 https://github.com/user-attachments/assets/bc99af11-0acd-4cca-85cc-39c3b5a4b256
 
-Shape the land, call rain, fire and lightning, and watch small tribes grow from the Stone Age to the Iron Age.
+Ashfolk is a free god simulator in your browser. Shape a floating island, call rain and fire, and watch its first tribes grow from the Stone Age to the Iron Age.
 
 ## Features
 
@@ -68,8 +68,8 @@ Shape the land, call rain, fire and lightning, and watch small tribes grow from 
 You need [Bun](https://bun.sh) 1.4 or later and a browser with WebGPU.
 
 ```sh
-git clone https://github.com/imsvidskiy/dawnfolk.git
-cd dawnfolk
+git clone https://github.com/imsvidskiy/ashfolk.git
+cd ashfolk
 bun install
 bun run dev                                           # http://localhost:5173
 ```
@@ -100,20 +100,20 @@ The simulation runs in a Web Worker. The renderer and the HUD read its frames an
 
 ## Sponsor
 
-Dawnfolk is free and open source. If you enjoy it, you can support its development on
+Ashfolk is free and open source. If you enjoy it, you can support its development on
 [GitHub Sponsors](https://github.com/sponsors/imsvidskiy).
 
 ## Star history
 
-<a href="https://www.star-history.com/?type=date&repos=imsvidskiy%2Fdawnfolk">
+<a href="https://www.star-history.com/?type=date&repos=imsvidskiy%2Fashfolk">
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/chart?repos=imsvidskiy/dawnfolk&type=date&theme=dark&legend=top-left" />
-    <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/chart?repos=imsvidskiy/dawnfolk&type=date&legend=top-left" />
-    <img alt="Star history of Dawnfolk" src="https://api.star-history.com/chart?repos=imsvidskiy/dawnfolk&type=date&legend=top-left" />
+    <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/chart?repos=imsvidskiy/ashfolk&type=date&theme=dark&legend=top-left" />
+    <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/chart?repos=imsvidskiy/ashfolk&type=date&legend=top-left" />
+    <img alt="Star history of Ashfolk" src="https://api.star-history.com/chart?repos=imsvidskiy/ashfolk&type=date&legend=top-left" />
   </picture>
 </a>
 
 ## License
 
 The code is [MIT](LICENSE). The sounds and music in `src/audio/sounds` are not covered by it: they were made for
-Dawnfolk with ElevenLabs, and all rights to them are reserved.
+Ashfolk with ElevenLabs, and all rights to them are reserved.
