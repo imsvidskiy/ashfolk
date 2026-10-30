@@ -59,9 +59,13 @@ function usePutToolsDownOnTouch(): void {
     }
 
     function handlePointerDown(event: PointerEvent): void {
+      if (event.pointerType !== "touch") {
+        return;
+      }
+
       const { isHandSelected, selectedPowerId, selectPower } = usePowerStore.getState();
 
-      if (event.pointerType === "touch" && (isHandSelected || selectedPowerId !== null)) {
+      if (isHandSelected || selectedPowerId !== null) {
         selectPower(null);
       }
     }

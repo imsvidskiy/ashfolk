@@ -66,8 +66,11 @@ describe("filming hint", () => {
     const screen = await render(<FilmingHint />);
 
     engine.filming.set({ isInterfaceHidden: true });
+
     await expect.element(screen.getByText(HINT_TEXT)).toBeVisible();
+
     vi.advanceTimersByTime(HINT_MILLISECONDS);
+
     await expect.element(screen.getByText(HINT_TEXT)).not.toBeInTheDocument();
 
     press("pointerdown", "touch", 1, 0);
@@ -78,7 +81,7 @@ describe("filming hint", () => {
     press("pointerup", "touch", 2, 60);
     await nextFrame();
 
-    expect(screen.getByText(HINT_TEXT).query()).toBeNull();
+    expect(screen.getByText(HINT_TEXT).elements()).toHaveLength(0);
 
     press("pointerdown", "touch", 1, 0);
     press("pointerup", "touch", 1, 2);
@@ -99,7 +102,7 @@ describe("filming hint", () => {
     await nextFrame();
     vi.advanceTimersByTime(HINT_MILLISECONDS);
 
-    expect(screen.getByText(HINT_TEXT).query()).toBeNull();
+    expect(screen.getByText(HINT_TEXT).elements()).toHaveLength(0);
 
     useInterfaceStore.getState().setSettingsOpen(false);
 
@@ -114,6 +117,7 @@ describe("filming hint", () => {
     const screen = await render(<FilmingHint />);
 
     engine.filming.set({ isInterfaceHidden: true });
+
     await expect.element(screen.getByText(HINT_TEXT)).toBeVisible();
 
     press("pointerdown", "mouse", 1, 0);
