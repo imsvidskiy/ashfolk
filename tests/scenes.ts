@@ -19,7 +19,7 @@ export const SCENES: readonly Scene[] = [
   { name: "far-square", query: "seed=7&shape=square&quality=high&paused=1&hours=11&camera=0,0,1800,0.8,0" },
   {
     name: "markers-over-forest",
-    query: "seed=7&shape=round&quality=high&paused=1&hours=11&camera=-1236,1023,140,0.45,0.13",
+    query: "seed=7&shape=round&quality=high&paused=1&hours=11&camera=1480,1360,140,0.45,0.13",
   },
   {
     name: "island-edge",
