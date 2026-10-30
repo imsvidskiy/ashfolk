@@ -53,6 +53,7 @@ const ROUGH_STARTS: readonly (readonly [IslandShapeKind, number])[] = [
 const CAMP_SURROUNDINGS = 80;
 const CAMP_WOODS = 100;
 const RAID_TICKS_AFTER_LOAD = 40;
+const RAIDER_HOMECOMING_TICKS = 2000;
 
 interface Walker {
   readonly id: number;
@@ -628,6 +629,37 @@ describe("world snapshots", () => {
     expect(raidersOf(copy, raid.id).length).toBeGreaterThan(0);
   });
 
+  it("brings a raider's plunder home after the world loads", { timeout: 60_000 }, () => {
+    const snapshot = snapshotOf(raidingSimulation());
+    const [raider, ...others] = snapshot.rivalry.raiders ?? [];
+
+    if (raider === undefined) {
+      throw new Error("Expected a raider in the save");
+    }
+
+    const homeward = { ...raider, leg: "homeward" as const, loot: { ...raider.loot, bronze: 3 }, rations: 1 };
+
+    const copy = restored({ ...snapshot, rivalry: { ...snapshot.rivalry, raiders: [homeward, ...others] } });
+
+    expect(snapshotOf(copy).rivalry.raiders).toContainEqual(homeward);
+
+    const person = copy.society.findPerson(raider.personId);
+    const tribe = person === null ? null : copy.society.findTribe(person.tribeId);
+
+    if (person === null || tribe === null) {
+      throw new Error("Expected the raider and its tribe after loading");
+    }
+
+    const { bronze } = tribe.stock;
+
+    for (let tick = 0; tick < RAIDER_HOMECOMING_TICKS && person.job instanceof RaidJob; tick += 1) {
+      copy.runTicks(1);
+    }
+
+    expect(person.job).not.toBeInstanceOf(RaidJob);
+    expect(tribe.stock.bronze).toBe(bronze + 3);
+  });
+
   it("ends a raid loaded from a save that kept no raiders", { timeout: 60_000 }, () => {
     const snapshot = snapshotOf(raidingSimulation());
     const { raiders, ...olderRivalry } = snapshot.rivalry;
@@ -793,6 +825,16 @@ describe("first camps", () => {
       expect(meanSlopeAround(simulation, tribe.campX, tribe.campZ)).toBeLessThan(0.26);
       expect(treesAround(simulation, tribe.campX, tribe.campZ)).toBeLessThan(200);
     }
+  });
+
+  it("settle rough ground once a small round island of seed 13 runs out of open ground", { timeout: 60_000 }, () => {
+    const simulation = new Simulation(
+      generateWorld(13, { ...DEFAULT_GENERATION_OPTIONS, dimensions: islandDimensions("small"), shape: "round" })
+    );
+
+    simulation.populate();
+
+    expect(simulation.society.tribes()).toHaveLength(3);
   });
 });
 

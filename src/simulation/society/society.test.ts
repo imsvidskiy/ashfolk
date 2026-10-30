@@ -232,6 +232,29 @@ describe("people nearby", () => {
       })
     ).toBe(1);
   });
+
+  it("pass over the person held in the hand", () => {
+    const harness = new SocietyHarness();
+
+    const tribe = settle(harness, 3);
+    const [first, second, third] = harness.society.membersOf(tribe);
+
+    placeOnAxis(first, 10);
+    placeOnAxis(second, -20);
+    placeOnAxis(third, 500);
+    harness.society.hold(first);
+
+    expect(
+      harness.society.nearestPerson(0, 0, 50, () => {
+        return true;
+      })
+    ).toBe(second);
+    expect(
+      harness.society.nearestPerson(0, 0, 15, () => {
+        return true;
+      })
+    ).toBeNull();
+  });
 });
 
 describe("progress", () => {

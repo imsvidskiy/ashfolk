@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { NO_PLANT } from "../../world/vegetation-store.ts";
 import { WorldGrid } from "../../world/world-grid.ts";
 import {
   completeStructure,
@@ -13,17 +14,19 @@ import {
 import { depositAround } from "../testing/test-world.ts";
 import { ERA_WORK_OPTIONS } from "./era-work.ts";
 import { MineJob } from "./jobs/mine-job.ts";
+import { findPlanting } from "./jobs/plant-job.ts";
+import { addPlotIfNeeded } from "./plots.ts";
 
 const DIMENSIONS = { cellSize: 10, cellsPerSide: 96 };
 const NO_CONSTRUCTION = {};
 
-function mineOption() {
+function eraOption(kind: string) {
   const option = ERA_WORK_OPTIONS.find((candidate) => {
-    return candidate.kind === "mine";
+    return candidate.kind === kind;
   });
 
   if (option === undefined) {
-    throw new Error("Expected a mining option");
+    throw new Error(`Expected a ${kind} option`);
   }
 
   return option;
@@ -61,7 +64,7 @@ describe("mining work", () => {
     moveToSeason(harness, 1);
 
     const tick = firstMemberTick(harness, tribe);
-    const option = mineOption();
+    const option = eraOption("mine");
 
     expect(option.weight(tick, NO_CONSTRUCTION)).toBeCloseTo(2.4);
 
@@ -71,5 +74,38 @@ describe("mining work", () => {
 
     expect(option.weight(tick, NO_CONSTRUCTION)).toBeCloseTo(2.4);
     expect(option.start(tick, NO_CONSTRUCTION)).toMatchObject({ ore: "tin" });
+  });
+});
+
+describe("planting work", () => {
+  it("is not chosen when another planter already holds the only empty spot", () => {
+    const harness = new SocietyHarness({ day: MORNING });
+
+    const tribe = teach(settle(harness, 4), ["farming", "orchards"]);
+
+    addPlotIfNeeded(tribe, harness.context);
+    moveToSeason(harness, 0.3);
+
+    const [plot] = tribe.plots;
+    const spot = plot?.spots.find((candidate) => {
+      return candidate.plant === NO_PLANT;
+    });
+
+    if (plot === undefined || spot === undefined) {
+      throw new Error("Expected a plot with an empty spot");
+    }
+
+    tribe.plots = [{ ...plot, spots: [spot] }];
+
+    const [, planter] = harness.society.membersOf(tribe);
+    const tick = firstMemberTick(harness, tribe);
+    const option = eraOption("plant");
+
+    expect(option.weight(tick, NO_CONSTRUCTION)).toBeCloseTo(1.3);
+
+    planter.job = findPlanting({ ...tick, person: planter });
+
+    expect(planter.job).not.toBeNull();
+    expect(option.weight(tick, NO_CONSTRUCTION)).toBe(0);
   });
 });

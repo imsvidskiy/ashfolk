@@ -118,6 +118,31 @@ describe("wolves", () => {
     expect(harness.fauna.snapshot().instincts.strikes.size).toBe(0);
   });
 
+  it("forget their strikes when their prey dies before they reach it", () => {
+    const harness = beastHarness(NIGHT);
+
+    const wanderer = loneWanderer(harness, 260);
+    const wolves = spawnPack(harness, 330, 40, 4);
+
+    runUntil(harness, 120, () => {
+      return wolves.some((wolf) => {
+        return harness.fauna.isMenacing(wolf);
+      });
+    });
+
+    expect(harness.fauna.snapshot().instincts.strikes.size).toBeGreaterThan(0);
+
+    harness.society.kill(wanderer, "age");
+    harness.run(1);
+
+    expect(
+      wolves.some((wolf) => {
+        return harness.fauna.isMenacing(wolf);
+      })
+    ).toBe(false);
+    expect(harness.fauna.snapshot().instincts.strikes.size).toBe(0);
+  });
+
   it("break off when one of the pack is badly hurt", () => {
     const harness = beastHarness(NIGHT);
 
