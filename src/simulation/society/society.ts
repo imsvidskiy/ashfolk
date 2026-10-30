@@ -76,6 +76,18 @@ function savedPerson(person: Person): Person {
   return saved;
 }
 
+function savedTribe(tribe: Tribe, people: readonly Person[]): Tribe {
+  const saved: Tribe = structuredClone({ ...tribe, claimedPlants: new Set<number>() });
+
+  for (const person of people) {
+    if (person.tribeId === tribe.id) {
+      person.job?.cancel?.(saved);
+    }
+  }
+
+  return saved;
+}
+
 function deathAccountOf(person: Person, tribe: Tribe, cause: DeathCause, account: DeathAccount | null): DeathAccount {
   if (account !== null) {
     return account;
@@ -143,7 +155,7 @@ export class SocietySystem {
       people: this.#people.map(savedPerson),
       tribeNumber: this.#tribeNumber,
       tribes: this.#tribes.map((tribe) => {
-        return structuredClone({ ...tribe, claimedPlants: new Set<number>() });
+        return savedTribe(tribe, this.#people);
       }),
       trodden: this.#trodden.snapshot(),
     };

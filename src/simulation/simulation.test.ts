@@ -10,7 +10,11 @@ import { islandDimensions } from "../world/island-size.ts";
 import { isHopping } from "./agents/hops.ts";
 import { setDestination } from "./agents/movement.ts";
 import { Simulation, type SimulationSnapshot } from "./simulation.ts";
+import { takeUpJob } from "./society/decisions.ts";
+import { CraftJob } from "./society/jobs/craft-job.ts";
 import { personFoe } from "./society/rivalry/foes.ts";
+import { RaidJob } from "./society/rivalry/raid-job.ts";
+import type { CraftOrder } from "./society/workshops.ts";
 import { generateSimulation, snapshotOf } from "./testing/test-simulation.ts";
 import { createVegetatedWorld, floodCells, floodStrip } from "./testing/test-world.ts";
 import { TICK_SECONDS } from "./tick.ts";
@@ -38,6 +42,7 @@ const TICKS_BETWEEN_COMPARISONS = 10;
 const COMPARISONS = 40;
 const ARROWS_IN_FLIGHT = 8;
 const SETTLING_STEP = 0.25;
+const RAID_TICKS_AFTER_LOAD = 40;
 
 interface Walker {
   readonly id: number;
@@ -108,6 +113,22 @@ function raidingSimulation(): Simulation {
   simulation.runTicks(200);
 
   return simulation;
+}
+
+function raidsOf(simulation: Simulation): number[] {
+  return simulation.rivalry.raids.map((raid) => {
+    return raid.id;
+  });
+}
+
+function raidersOf(simulation: Simulation, raidId: number): number[] {
+  return simulation.society.people
+    .filter((person) => {
+      return person.job instanceof RaidJob && person.job.raidId === raidId;
+    })
+    .map((person) => {
+      return person.id;
+    });
 }
 
 function looseArrows(simulation: Simulation): void {
@@ -552,6 +573,62 @@ describe("world snapshots", () => {
 
       expect(snapshotOf(copy)).toStrictEqual(snapshotOf(original));
     }
+  });
+
+  it("keeps a raid going after the world loads", { timeout: 60_000 }, () => {
+    const original = raidingSimulation();
+    const [raid] = original.rivalry.raids;
+
+    const copy = restored(snapshotOf(original));
+
+    original.runTicks(RAID_TICKS_AFTER_LOAD);
+    copy.runTicks(RAID_TICKS_AFTER_LOAD);
+
+    expect(raidsOf(copy)).toEqual([raid.id]);
+    expect(raidsOf(copy)).toEqual(raidsOf(original));
+    expect(raidersOf(copy, raid.id)).toEqual(raidersOf(original, raid.id));
+    expect(raidersOf(copy, raid.id).length).toBeGreaterThan(0);
+  });
+
+  it("ends a raid loaded from a save that kept no raiders", { timeout: 60_000 }, () => {
+    const snapshot = snapshotOf(raidingSimulation());
+    const { raiders, ...olderRivalry } = snapshot.rivalry;
+
+    const copy = restored({ ...snapshot, rivalry: olderRivalry });
+
+    expect(raiders?.length).toBeGreaterThan(0);
+
+    copy.runTicks(1);
+
+    expect(copy.rivalry.raids).toHaveLength(0);
+  });
+
+  it("gives back the inputs of a craft in progress", () => {
+    const simulation = generateSimulation();
+
+    simulation.populate();
+
+    const [tribe] = simulation.society.tribes();
+    const [crafter] = simulation.society.membersOf(tribe);
+    const order: CraftOrder = {
+      inputs: { wood: 4 },
+      material: null,
+      outputs: { spears: 1 },
+      recipe: "spears",
+      station: null,
+    };
+
+    tribe.stock.wood = 10;
+    takeUpJob(crafter, tribe, simulation.services, (tick) => {
+      return new CraftJob(tick, order);
+    });
+
+    const saved = snapshotOf(simulation).society.tribes.find((candidate) => {
+      return candidate.id === tribe.id;
+    });
+
+    expect(tribe.stock.wood).toBe(6);
+    expect(saved?.stock.wood).toBe(10);
   });
 
   it("leaves the running world whole when the save's buffers move to another thread", () => {

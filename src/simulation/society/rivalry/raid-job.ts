@@ -5,7 +5,7 @@ import { type Building, setAlight } from "../buildings.ts";
 import { headTo, type Job, standStill, walk } from "../jobs/job.ts";
 import { runSpeed, walkSpeed } from "../person.ts";
 import type { PersonTick } from "../society-context.ts";
-import { emptyStock, type Stock } from "../stock.ts";
+import type { Stock } from "../stock.ts";
 import type { Tribe } from "../tribe.ts";
 import { campPoint, completedBuilding } from "../tribe-places.ts";
 import type { CarriedWeapon } from "../weapons.ts";
@@ -37,6 +37,15 @@ const STARVING_HUNGER = 0.85;
 type Destination = "home" | "objective" | "rally" | "target";
 
 type Leg = "homeward" | "outward";
+
+export interface RaiderState {
+  leg: Leg;
+  readonly loot: Stock;
+  readonly personId: number;
+  readonly raidId: number;
+  rations: number;
+  readonly slot: number;
+}
 
 function plunderSpot(tribe: Tribe, tick: PersonTick): Waypoint {
   const storehouse = completedBuilding(tick.context.buildings, tribe.buildings.storehouseId);
@@ -93,30 +102,34 @@ function nearestFoe(tick: PersonTick, raid: Raid, radius: number): Foe | null {
 
 export class RaidJob implements Job {
   readonly kind = "raid";
-  readonly raidId: number;
   readonly #engagement: Engagement;
-  readonly #loot: Stock = emptyStock();
   readonly #offset: Waypoint;
+  readonly #state: RaiderState;
   readonly #weapon: CarriedWeapon;
   #destination: Destination | null = null;
-  #leg: Leg = "outward";
-  #rations: number;
   #workSeconds = 0;
 
-  constructor(tick: PersonTick, raid: Raid, weapon: CarriedWeapon, slot: number, rations: number) {
-    this.raidId = raid.id;
+  constructor(state: RaiderState, weapon: CarriedWeapon, firstDelay: number) {
+    this.#state = state;
     this.#weapon = weapon;
-    this.#engagement = new Engagement(weapon, tick.context.rivalry.random.next());
-    this.#offset = formationOffset(slot);
-    this.#rations = rations;
+    this.#engagement = new Engagement(weapon, firstDelay);
+    this.#offset = formationOffset(state.slot);
+  }
+
+  get raidId(): number {
+    return this.#state.raidId;
+  }
+
+  saved(): RaiderState {
+    return structuredClone(this.#state);
   }
 
   update(tick: PersonTick): Job | null {
     const raid = tick.context.rivalry.raidOf(this.raidId);
 
-    this.#rations = eatRation(tick.person, this.#rations);
+    this.#state.rations = eatRation(tick.person, this.#state.rations);
 
-    if (raid === null || this.#leg === "homeward" || raid.phase === "retreat") {
+    if (raid === null || this.#state.leg === "homeward" || raid.phase === "retreat") {
       return this.#goHome(tick);
     }
 
@@ -124,7 +137,7 @@ export class RaidJob implements Job {
 
     if (health < BROKEN_HEALTH || hunger > STARVING_HUNGER || warmth < FREEZING_WARMTH) {
       raid.routedIds.add(tick.person.id);
-      this.#leg = "homeward";
+      this.#state.leg = "homeward";
 
       return this;
     }
@@ -187,7 +200,7 @@ export class RaidJob implements Job {
     const { person } = tick;
 
     if (raid.struckIds.has(person.id)) {
-      this.#leg = "homeward";
+      this.#state.leg = "homeward";
 
       return;
     }
@@ -205,7 +218,7 @@ export class RaidJob implements Job {
     const victims = tick.context.people.findTribe(raid.defenderId);
 
     if (victims === null) {
-      this.#leg = "homeward";
+      this.#state.leg = "homeward";
 
       return;
     }
@@ -230,7 +243,7 @@ export class RaidJob implements Job {
     const taken = plunderSurplus(victims.stock, PLUNDER_SHARE, victims.memberCount * SPARED_FOOD);
 
     unpack(raid.loot, { ...taken });
-    unpack(this.#loot, taken);
+    unpack(this.#state.loot, taken);
   }
 
   #workAt(tick: PersonTick, raid: Raid, spot: Waypoint, seconds: number, finish: () => void): void {
@@ -256,7 +269,7 @@ export class RaidJob implements Job {
 
     finish();
     raid.struckIds.add(person.id);
-    this.#leg = "homeward";
+    this.#state.leg = "homeward";
   }
 
   #reach(tick: PersonTick, spot: Waypoint): boolean {
@@ -283,14 +296,14 @@ export class RaidJob implements Job {
       headTo(person, offsetFrom(campPoint(tribe), this.#offset, HOME_SPREAD), tick.context);
     }
 
-    const isLoaded = totalGoods(this.#loot) > 0;
+    const isLoaded = totalGoods(this.#state.loot) > 0;
     const speed = isLoaded ? walkSpeed(person) * LOADED_SPEED_SHARE : runSpeed(person);
 
     if (!walk(tick, speed)) {
       return this;
     }
 
-    unpack(tribe.stock, this.#loot);
+    unpack(tribe.stock, this.#state.loot);
 
     return null;
   }

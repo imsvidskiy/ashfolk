@@ -281,7 +281,7 @@ export class Simulation {
       identifiers: this.identifiers.upcoming,
       isPaused: this.#isPaused,
       random: this.random.state(),
-      rivalry: this.rivalry.snapshot(),
+      rivalry: this.rivalry.snapshot(this.society.people),
       rules: structuredClone(this.rules),
       society: this.society.snapshot(),
       speed: this.#speed,
@@ -314,7 +314,7 @@ export class Simulation {
     this.buildings.restore(snapshot.buildings);
     this.society.restore(snapshot.society);
     this.fauna.restore(snapshot.fauna);
-    this.rivalry.restore(snapshot.rivalry);
+    this.rivalry.restore(snapshot.rivalry, this.society);
     this.volcanoes.restore(snapshot.volcanoes === undefined ? [] : snapshot.volcanoes);
     this.setRules(readWorldRules(snapshot.rules));
     this.services.environment = describeEnvironment(this.calendar, this.weather);
