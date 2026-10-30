@@ -49,7 +49,7 @@ const FRAME_TOGGLES: readonly FilmingToggle[] = [
     label: "Hide markers",
   },
   {
-    description: "The panels, dock and minimap. Press H anywhere to hide or show them.",
+    description: "The panels, dock and minimap. Bring them back with H, or tap the screen and press Show.",
     key: "isInterfaceHidden",
     label: "Hide interface",
   },
@@ -115,7 +115,9 @@ function FilmingControls({ filming }: { readonly filming: Filming }) {
   return (
     <>
       <div className="flex items-center justify-between gap-3 pb-4">
-        <p className="text-ink-soft text-sm">Turn off optimizations to film the island. Changes apply at once.</p>
+        <p className="text-ink-soft text-sm">
+          Turn off optimizations for photos and video. Changes apply at once, and the game may run slower.
+        </p>
 
         <TextButton className="-mr-3 h-8 px-3" onClick={handleToggleAll} tone="quiet">
           {isAllOn ? "All off" : "All on"}
@@ -139,7 +141,7 @@ function FilmingControls({ filming }: { readonly filming: Filming }) {
       />
 
       <FilmingGroup
-        description="A clean frame. Scripts can use ?filming=1 or window.dawnfolk.filming.set()."
+        description="A clean frame for the picture."
         filming={filming}
         settings={settings}
         title="Frame"
