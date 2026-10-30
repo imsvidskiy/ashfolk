@@ -131,9 +131,16 @@ export class GameEngine implements EngineHandle {
       quality: RENDER_QUALITY[parts.quality],
       renderer: parts.renderer,
     });
-    this.#entityPicker = new EntityPicker(perspective, heightAt, (kind, x, z) => {
-      return standingHeight(mirror, x, z, kind === "person" ? PERSON_WADING_DEPTH : ANIMAL_WADING_DEPTH);
-    });
+    this.#entityPicker = new EntityPicker(
+      perspective,
+      heightAt,
+      (kind, x, z) => {
+        return standingHeight(mirror, x, z, kind === "person" ? PERSON_WADING_DEPTH : ANIMAL_WADING_DEPTH);
+      },
+      (kind, id) => {
+        return this.#world.drawnHeading(kind, id);
+      }
+    );
     this.#labels = new LabelProjector(
       perspective,
       {

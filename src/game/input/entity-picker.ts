@@ -59,6 +59,8 @@ export interface GrabScene extends AgentScene {
 
 export type AgentFooting = (kind: "animal" | "person", x: number, z: number) => number;
 
+export type DrawnHeading = (kind: "animal" | "person", id: number) => number | null;
+
 interface PointerPick {
   readonly ground: Vector3 | null;
   readonly ray: Ray;
@@ -148,14 +150,16 @@ function screenAxis(feet: PixelPoint | null, top: PixelPoint | null): readonly [
 
 export class EntityPicker {
   readonly #camera: PerspectiveCamera;
+  readonly #drawnHeading: DrawnHeading;
   readonly #heightAt: HeightField;
   readonly #standingAt: AgentFooting;
   readonly #point = new Vector3();
   readonly #projected = new Vector3();
   readonly #raycaster = new Raycaster();
 
-  constructor(camera: PerspectiveCamera, heightAt: HeightField, standingAt: AgentFooting) {
+  constructor(camera: PerspectiveCamera, heightAt: HeightField, standingAt: AgentFooting, drawnHeading: DrawnHeading) {
     this.#camera = camera;
+    this.#drawnHeading = drawnHeading;
     this.#heightAt = heightAt;
     this.#standingAt = standingAt;
     measureGrabbablePlants();
@@ -254,11 +258,12 @@ export class EntityPicker {
         continue;
       }
 
-      const heading = data[offset + fields.Heading];
+      const id = data[offset + fields.Id];
+      const heading = this.#drawnHeading(kind, id) ?? data[offset + fields.Heading];
       const hit = this.#bodyHit({ ...body(data, offset), baseY, heading, x, z }, pointer);
 
       if (hit.distance < PICK_RADIUS_PIXELS) {
-        candidates.push({ ...hit, target: { id: data[offset + fields.Id], kind } });
+        candidates.push({ ...hit, target: { id, kind } });
       }
     }
 

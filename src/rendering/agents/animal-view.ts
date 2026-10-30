@@ -167,6 +167,12 @@ export class AnimalView {
     return this.#hoveredSpot;
   }
 
+  drawnHeading(id: number): number | null {
+    const visual = this.#visuals.get(id);
+
+    return visual === undefined ? null : visual.motion.heading;
+  }
+
   update(input: AgentViewInput): void {
     const { frame } = input.mirror;
 
