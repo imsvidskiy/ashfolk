@@ -54,7 +54,7 @@ const GEAR_COLORS: Readonly<Record<ToolMaterial, number>> = {
   copper: 0xc0_6c_3a,
   iron: 0x5a_60_6a,
   stone: 0x7a_76_70,
-  wood: 0x7a_76_70,
+  wood: 0x7a_5d_3f,
 };
 
 const LEVEL_DISTANCES: LevelDistances = { far: 420 * FIGURE_SCALE, high: 70 * FIGURE_SCALE, low: 120 * FIGURE_SCALE };
