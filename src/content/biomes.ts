@@ -38,7 +38,7 @@ export const BIOMES: readonly BiomeDefinition[] = [
   { index: Biome.Desert, name: "Desert" },
   { index: Biome.Swamp, name: "Swamp" },
   { index: Biome.Beach, name: "Shore" },
-  { index: Biome.Mesa, name: "Mesas" },
+  { index: Biome.Mesa, name: "Mesa" },
 ];
 
 export function isBiomeIndex(value: number): value is BiomeIndex {
