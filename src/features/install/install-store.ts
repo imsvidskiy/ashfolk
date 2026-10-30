@@ -16,7 +16,9 @@ function isInstallPrompt(event: Event): event is InstallPrompt {
 }
 
 function canAddToHomeScreen(target: Window): boolean {
-  return Reflect.get(target.navigator, "standalone") === false;
+  const { navigator } = target;
+
+  return Reflect.get(navigator, "standalone") === false && navigator.userAgent.includes(" Safari/");
 }
 
 export const useInstallStore = create<InstallStore>()((set) => {
