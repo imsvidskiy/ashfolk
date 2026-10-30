@@ -15,6 +15,11 @@ import { createVegetatedWorld } from "../../simulation/testing/test-world.ts";
 
 const TEST_CAMERA: CameraState = { distance: 300, pitch: 0.6, targetX: 0, targetZ: 0, yaw: 0.8 };
 
+interface Renders {
+  readonly renderFrame: () => void;
+  readonly subscribeToRenders: (listener: () => void) => () => void;
+}
+
 interface TestEngine {
   readonly clearSelection: Mock<() => void>;
   readonly engine: EngineHandle;
@@ -33,6 +38,25 @@ interface TestEngineOptions {
   readonly landmarks?: readonly Landmark[];
 }
 
+function createRenders(): Renders {
+  const listeners = new Set<() => void>();
+
+  return {
+    renderFrame: () => {
+      for (const listener of listeners) {
+        listener();
+      }
+    },
+    subscribeToRenders: (listener) => {
+      listeners.add(listener);
+
+      return () => {
+        listeners.delete(listener);
+      };
+    },
+  };
+}
+
 export async function createTestSession(): Promise<GameSession> {
   const simulation = new Simulation(createVegetatedWorld({ dimensions: { cellSize: 10, cellsPerSide: 64 } }));
   const { session } = await createLocalSession(simulation);
@@ -45,7 +69,7 @@ export async function startTestEngine(options: TestEngineOptions = {}): Promise<
   let { landmarks = [] } = options;
 
   const session = await createTestSession();
-  const renderListeners = new Set<() => void>();
+  const { renderFrame, subscribeToRenders } = createRenders();
   const camera = {
     camera: { matrixWorld: new Matrix4() },
     groundFootprint: () => {
@@ -79,20 +103,6 @@ export async function startTestEngine(options: TestEngineOptions = {}): Promise<
   const stopFollowing = vi.fn<() => void>(() => {
     setFollowing(false);
   });
-
-  function subscribeToRenders(listener: () => void): () => void {
-    renderListeners.add(listener);
-
-    return () => {
-      renderListeners.delete(listener);
-    };
-  }
-
-  function renderFrame(): void {
-    for (const listener of renderListeners) {
-      listener();
-    }
-  }
 
   const engine: EngineHandle = {
     camera,
