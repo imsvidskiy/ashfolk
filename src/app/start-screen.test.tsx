@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 import { render } from "vitest-browser-react";
 import { useSavesStore } from "../features/saves/saves-store.ts";
 import { blockSavedWorlds } from "../features/testing/save-fixtures.ts";
@@ -9,14 +9,11 @@ const initialLaunch = useLaunchStore.getState();
 const initialSaves = useSavesStore.getState();
 
 afterEach(() => {
-  vi.restoreAllMocks();
   useSavesStore.setState(initialSaves, true);
 });
 
 describe("start screen", () => {
   it("offers a named round world from a random seed", async () => {
-    useLaunchStore.setState({ isChoosingWorld: true });
-
     const screen = await render(<StartScreen />);
 
     await expect.element(screen.getByRole("textbox", { name: "Name" })).toHaveValue(initialLaunch.launch.name);
@@ -38,8 +35,6 @@ describe("start screen", () => {
   });
 
   it("grows the world at the chosen size", async () => {
-    useLaunchStore.setState({ isChoosingWorld: true });
-
     const screen = await render(<StartScreen />);
 
     await screen.getByRole("button", { name: "Large" }).click();
