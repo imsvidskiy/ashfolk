@@ -6,9 +6,8 @@ import { useInterfaceStore } from "../interface/interface-store.ts";
 import { createTestSession } from "../testing/engine-fixtures.ts";
 import { deleteSavedWorld, listSavedWorlds } from "./save-database.ts";
 import { SavesGroup } from "./saves-group.tsx";
-import { connectAutosave, useSavesStore } from "./saves-store.ts";
+import { connectAutosave } from "./saves-store.ts";
 
-const initialSaves = useSavesStore.getState();
 const disconnects: (() => void)[] = [];
 
 async function connectWorld() {
@@ -25,7 +24,6 @@ afterEach(async () => {
     disconnect();
   }
 
-  useSavesStore.setState(initialSaves, true);
   await deleteSavedWorld(useLaunchStore.getState().worldId);
 });
 

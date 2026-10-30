@@ -43,7 +43,7 @@ export function MenuButtons({ className }: { readonly className?: string | undef
 
   return (
     <nav aria-label="Panels" className={cn("flex items-center gap-1", className)}>
-      <WithTooltip content="Tribes and chronicle" side="bottom">
+      <WithTooltip content="Tribes, relations and chronicle" side="bottom">
         <IconButton
           icon={<BookOpen aria-hidden="true" size={18} />}
           isPressed={isJournalOpen}

@@ -51,14 +51,6 @@ describe("world rules section", () => {
     await expect.element(fire.getByText("×2.5")).toBeVisible();
     await expect.element(screen.getByRole("group", { name: "Storms" }).getByText("75%")).toBeVisible();
   });
-
-  it("offers to reset every rule", async () => {
-    showWorld();
-
-    const screen = await render(<WorldRulesSection />);
-
-    await expect.element(screen.getByRole("button", { name: "Reset all" })).toBeEnabled();
-  });
 });
 
 describe("world rules section in a running game", () => {

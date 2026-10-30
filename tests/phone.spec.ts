@@ -5,7 +5,7 @@ test("the phone layout opens the journal sheet and the settings from the menu", 
   await openIsland(page);
 
   await page.getByRole("button", { exact: true, name: "Menu" }).click();
-  await page.getByRole("menuitem", { name: "Tribes and chronicle" }).click();
+  await page.getByRole("menuitem", { name: "Journal" }).click();
 
   const sheet = page.getByRole("dialog", { name: "Journal" });
 

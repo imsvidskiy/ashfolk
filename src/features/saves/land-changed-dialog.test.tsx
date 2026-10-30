@@ -2,14 +2,12 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { page } from "vitest/browser";
 import { render } from "vitest-browser-react";
 import { useLaunchStore } from "../../app/launch-store.ts";
-import { SAVE_VERSION } from "../../simulation/saved-world.ts";
 import { CHANGED_HEIGHT, startLoadedWorld, UNCHANGED_HEIGHT } from "../testing/land-change-fixtures.ts";
-import { deleteAllSavedWorlds } from "../testing/save-fixtures.ts";
+import { createSavedRecord, deleteAllSavedWorlds } from "../testing/save-fixtures.ts";
 import { LandChangedDialog } from "./land-changed-dialog.tsx";
 import { listSavedWorlds, writeSavedWorld } from "./save-database.ts";
 import { useSavesStore } from "./saves-store.ts";
 
-const initialSaves = useSavesStore.getState();
 const initialLaunch = useLaunchStore.getState();
 
 interface ShownWorldOptions {
@@ -26,9 +24,6 @@ async function showLoadedWorld(regrownHeight: number, { isSavedPaused = false }:
 }
 
 afterEach(async () => {
-  useSavesStore.setState(initialSaves, true);
-  useLaunchStore.setState(initialLaunch, true);
-
   await deleteAllSavedWorlds();
 });
 
@@ -81,22 +76,7 @@ describe("the land changed dialog", () => {
     const { worldId } = useLaunchStore.getState();
     const { saved } = await startLoadedWorld({ regrownHeight: CHANGED_HEIGHT });
 
-    await writeSavedWorld(
-      {
-        generationFingerprint: saved.generationFingerprint,
-        id: worldId,
-        isLandChanged: false,
-        name: "Old Ford",
-        savedAt: Date.now(),
-        seed: saved.request.seed,
-        shape: saved.request.options.shape,
-        size: "normal",
-        summary: saved.summary,
-        version: SAVE_VERSION,
-      },
-      saved,
-      []
-    );
+    await writeSavedWorld(createSavedRecord(worldId, saved), saved, []);
     await render(<LandChangedDialog />);
 
     await expect

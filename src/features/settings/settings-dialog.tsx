@@ -110,7 +110,7 @@ export function SettingsDialog() {
                       <IconButton
                         className="-mt-1.5 -mr-2 size-9 pointer-coarse:size-10"
                         icon={<X aria-hidden="true" size={18} />}
-                        label="Close settings"
+                        label="Close the settings"
                       />
                     }
                   />

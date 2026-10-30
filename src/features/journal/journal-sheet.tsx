@@ -1,7 +1,8 @@
 import { Drawer } from "@base-ui/react/drawer";
 import { useRef, useState } from "react";
 import { titleOf } from "../inspector/inspector-card.tsx";
-import { type PanelContents, SidePanelContent, usePanelFocus } from "./side-panel.tsx";
+import { type PanelContents, SidePanelContent } from "./side-panel.tsx";
+import { usePanelFocus } from "./use-panel-focus.ts";
 import { useSidePanel } from "./use-side-panel.ts";
 
 function useShownContents(contents: PanelContents, isOpen: boolean): PanelContents {
