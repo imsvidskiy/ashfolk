@@ -3,6 +3,7 @@ import { isShrubSpecies, isTreeSpecies } from "../../content/plants.ts";
 import { FULL_TURN, hashToUnit, lerp, smoothstep } from "../../shared/math.ts";
 import { NEIGHBOR_OFFSETS } from "../../world/world-grid.ts";
 import { cellsInArea, swellCone } from "../world/terrain-editing.ts";
+import type { WorldState } from "../world/world-state.ts";
 import type { PowerServices } from "./power-handler.ts";
 
 export const SWELL_SECONDS = 6;
@@ -78,6 +79,10 @@ export interface VolcanoView {
   z: number;
 }
 
+function isDryIsland(world: WorldState, cell: number): boolean {
+  return world.isOnIsland(cell) && !world.isWater(cell);
+}
+
 function headOf(tongue: LavaTongue): number {
   const head = tongue.cells.at(-1);
 
@@ -150,7 +155,9 @@ function beginEruption(volcano: Volcano, services: PowerServices): void {
   const { chronicle, world } = services;
 
   for (const { cell } of cellsInArea(world, { ...volcano, radius: craterRadius(volcano) * CRATER_LAVA_SHARE })) {
-    cover(volcano, cell, services);
+    if (isDryIsland(world, cell)) {
+      cover(volcano, cell, services);
+    }
   }
 
   fallAsh(volcano, services);
@@ -176,7 +183,7 @@ function fallAsh(volcano: Volcano, services: PowerServices): void {
   for (const { cell, column, distance, row } of cellsInArea(world, { ...volcano, radius: reach })) {
     const depth = 1 - smoothstep(volcano.radius * 0.8, reach, distance);
 
-    if (world.isWater(cell) || volcano.lava.has(cell) || hashToUnit(column, row, ASH_SALT) >= depth) {
+    if (!isDryIsland(world, cell) || volcano.lava.has(cell) || hashToUnit(column, row, ASH_SALT) >= depth) {
       continue;
     }
 
@@ -215,7 +222,7 @@ function planTongues(volcano: Volcano, services: PowerServices): LavaTongue[] {
     const angle = firstAngle + (tongue / count) * FULL_TURN + random.signed() * TONGUE_JITTER;
     const start = grid.cellAt(volcano.x + Math.cos(angle) * rim, volcano.z + Math.sin(angle) * rim);
 
-    if (start < 0 || world.isWater(start)) {
+    if (!isDryIsland(world, start)) {
       continue;
     }
 
@@ -325,7 +332,7 @@ function widen(volcano: Volcano, from: number, cell: number, services: PowerServ
     const isSpreading = hashToUnit(neighbor, SPLIT_SALT) < WIDENING_CHANCE * (0.5 + volcano.strength * 0.5);
     const isLevel = terrain.height[neighbor] <= terrain.height[cell] + POOLING_RISE;
 
-    if (isSpreading && isLevel && !volcano.lava.has(neighbor) && !world.isWater(neighbor)) {
+    if (isSpreading && isLevel && !volcano.lava.has(neighbor) && isDryIsland(world, neighbor)) {
       cover(volcano, neighbor, services);
     }
   }
@@ -400,13 +407,13 @@ function endanger(volcano: Volcano, seconds: number, services: PowerServices): v
   const extent = volcano.radius * (1 + LONGEST_TONGUE_REACH);
 
   for (const person of people.livingWithin(volcano.x, volcano.z, extent)) {
-    if (isHot(volcano, grid.cellAt(person.mover.x, person.mover.z))) {
+    if (!people.isHeld(person) && isHot(volcano, grid.cellAt(person.mover.x, person.mover.z))) {
       people.kill(person, "lava");
     }
   }
 
   for (const animal of fauna.livingWithin(volcano.x, volcano.z, extent)) {
-    if (isHot(volcano, grid.cellAt(animal.mover.x, animal.mover.z))) {
+    if (!fauna.isHeld(animal) && isHot(volcano, grid.cellAt(animal.mover.x, animal.mover.z))) {
       fauna.kill(animal, "fire");
     }
   }
@@ -437,6 +444,14 @@ function endanger(volcano: Volcano, seconds: number, services: PowerServices): v
 
   fauna.scare(volcano.x, volcano.z, volcano.radius * SCARE_REACH);
   hazards.addZone({ radius: volcano.radius * CRATER_DANGER, remainingSeconds: seconds, x: volcano.x, z: volcano.z });
+}
+
+function burnPlantsOnLava(volcano: Volcano, services: PowerServices): void {
+  for (const cell of volcano.lava.keys()) {
+    if (isHot(volcano, cell)) {
+      services.world.clearPlants(cell, false);
+    }
+  }
 }
 
 function isHot(volcano: Volcano, cell: number): boolean {
@@ -533,6 +548,7 @@ export class VolcanoSystem {
         cool(volcano, seconds);
       }
 
+      burnPlantsOnLava(volcano, services);
       endanger(volcano, seconds, services);
     }
 
