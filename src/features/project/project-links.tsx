@@ -2,7 +2,9 @@ import { Heart, Star } from "lucide-react";
 import { type ReactNode, useEffect } from "react";
 import { cn } from "../../design/cn.ts";
 import { FOCUS_RING } from "../../design/styles.ts";
-import { formatStars, REPOSITORY_ADDRESS, requestStars, SPONSOR_ADDRESS, useStarStore } from "./github-stars.ts";
+import { formatStars, REPOSITORY_ADDRESS, requestStars, useStarStore } from "./github-stars.ts";
+
+const SUPPORT_ADDRESS = "https://whop.com/ashfolk-supporter/";
 
 const LINK_CLASS = cn(
   FOCUS_RING,
@@ -68,7 +70,7 @@ export function ProjectLinks({ className, hasPrivacy = true }: ProjectLinksProps
 
       <ExternalLink
         className="bg-dawn/15 text-dawn-strong hover:bg-dawn/25 hover:text-dawn-strong"
-        href={SPONSOR_ADDRESS}
+        href={SUPPORT_ADDRESS}
         label="Sponsor Ashfolk"
       >
         <Heart aria-hidden="true" className="fill-dawn/25" size={16} />

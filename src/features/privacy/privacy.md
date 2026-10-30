@@ -1,6 +1,6 @@
 # Privacy
 
-Last updated October 30, 2026
+Last updated October 31, 2026
 
 Ashfolk is a free god simulator that runs in your browser. It has no accounts, no ads, no analytics and no cookies. Your worlds and settings stay on your device. This page lists every place where data about you goes, and why.
 
@@ -33,7 +33,7 @@ The legal basis is legitimate interest in showing the project's current star cou
 
 ### Links you follow
 
-GitHub and Sponsor open github.com in a new tab, where GitHub's privacy statement applies. If you sponsor Ashfolk, GitHub handles the payment. I see your GitHub username and tier unless you sponsor privately, and never your payment details.
+GitHub opens github.com in a new tab, where GitHub's privacy statement applies. Sponsor opens Ashfolk's page on Whop, where Whop's [privacy policy](https://whop.com/privacy/) applies. If you become a supporter, Whop handles the payment. I see what Whop shows sellers, such as your username, email and plan, and never your card details.
 
 The game loads no other third-party scripts, fonts or images.
 
@@ -47,7 +47,7 @@ Ashfolk collects no personal information from anyone, including children under 1
 
 ## Your rights
 
-You can ask to see, correct or delete personal data, object to how it's used, or complain to the data protection authority where you live. Since I hold no personal data about players, there's usually nothing for me to hand over or delete. For data held by Cloudflare or GitHub, contact them directly, or ask me and I'll help.
+You can ask to see, correct or delete personal data, object to how it's used, or complain to the data protection authority where you live. Since I hold no personal data about players, there's usually nothing for me to hand over or delete. For data held by Cloudflare, GitHub or Whop, contact them directly, or ask me and I'll help.
 
 ## Changes
 
