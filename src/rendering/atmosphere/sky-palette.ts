@@ -124,9 +124,8 @@ function clearSkyPalette(sunHeight: number): SkyPalette {
 export function skyPaletteAt(sunHeight: number, overcast: number, gloom: number): SkyPalette {
   const clear = clearSkyPalette(sunHeight);
   const daylight = saturate(inverseLerp(-0.2, 0.25, sunHeight));
-  const darkness = saturate(gloom);
 
-  const gloomy = mixPalettes(NIGHT, mixPalettes(OVERCAST, RAINY, darkness), daylight);
+  const gloomy = mixPalettes(NIGHT, mixPalettes(OVERCAST, RAINY, gloom), daylight);
 
-  return mixPalettes(clear, gloomy, saturate(Math.max(overcast, darkness)) * 0.85 + darkness * 0.1);
+  return mixPalettes(clear, gloomy, Math.max(overcast, gloom) * 0.85 + gloom * 0.1);
 }
