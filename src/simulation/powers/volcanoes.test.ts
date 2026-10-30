@@ -1,9 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { Ground } from "../../content/grounds.ts";
+import { PlantSpecies } from "../../content/plants.ts";
 import type { LavaView } from "../frame.ts";
 import { Simulation } from "../simulation.ts";
 import { snapshotOf } from "../testing/test-simulation.ts";
-import { createVegetatedWorld, floodCells } from "../testing/test-world.ts";
+import { createVegetatedWorld, floodCells, plantInCell } from "../testing/test-world.ts";
 import { TICK_SECONDS } from "../tick.ts";
 import { COOLING_SECONDS, SWELL_SECONDS, type Volcano } from "./volcanoes.ts";
 
@@ -277,6 +278,85 @@ describe("volcanoes", () => {
     expect(person.isAlive).toBe(false);
     expect(person.causeOfDeath).toBe("lava");
     expect(animal.isAlive).toBe(false);
+  });
+
+  it("spares a person the hand carries over hot lava", () => {
+    const simulation = erupt({ hasRiver: false });
+
+    simulation.execute({ parameters: { people: 3 }, powerId: "tribe", type: "usePower", x: -300, z: 300 });
+    runFor(simulation, SWELL_SECONDS + 5);
+
+    const [lavaCell] = onlyVolcano(simulation).lava.keys();
+    const [person] = simulation.society.people;
+    const { grid } = simulation.world;
+
+    expect(lavaCell).toBeDefined();
+    expect(person).toBeDefined();
+
+    simulation.grab({ id: person.id, kind: "person" });
+    simulation.carry(
+      grid.cellCenterX(lavaCell === undefined ? 0 : lavaCell),
+      grid.cellCenterZ(lavaCell === undefined ? 0 : lavaCell)
+    );
+    simulation.step();
+
+    expect(person.isAlive).toBe(true);
+  });
+
+  it("burns plants set down on hot lava", () => {
+    const simulation = erupt({ hasRiver: false });
+
+    runFor(simulation, SWELL_SECONDS + 5);
+
+    const [lavaCell] = onlyVolcano(simulation).lava.keys();
+    const cell = lavaCell === undefined ? 0 : lavaCell;
+
+    plantInCell(simulation.world, cell, PlantSpecies.Oak);
+    simulation.step();
+
+    expect(simulation.world.vegetation.hasPlantsInCell(cell)).toBe(false);
+  });
+
+  it("goes out where water floods its lava", () => {
+    const simulation = erupt({ hasRiver: false });
+
+    runFor(simulation, SWELL_SECONDS + 5);
+
+    const flooded = [...onlyVolcano(simulation).lava.keys()].slice(0, 5);
+
+    floodCells(simulation.world, flooded, 2);
+    simulation.step();
+
+    expect(
+      flooded.filter((cell) => {
+        return onlyVolcano(simulation).lava.has(cell);
+      })
+    ).toEqual([]);
+  });
+
+  it("keeps its lava and ash on the island", () => {
+    const simulation = createSimulation({ hasRiver: false });
+    const { grid, terrain } = simulation.world;
+
+    for (let cell = 0; cell < grid.cellCount; cell += 1) {
+      if (grid.cellCenterX(cell) < -RADIUS * 0.1) {
+        terrain.coastDistance[cell] = -5;
+      }
+    }
+
+    simulation.execute({ parameters: { radius: RADIUS }, powerId: "volcano", type: "usePower", x: 0, z: 0 });
+    runFor(simulation, SWELL_SECONDS + 10);
+
+    const offIsland = grid.cellsInRadius(0, 0, RADIUS * 2).filter((cell) => {
+      return !simulation.world.isOnIsland(cell);
+    });
+
+    expect(onlyVolcano(simulation).lava.size).toBeGreaterThan(0);
+    expect(
+      offIsland.filter((cell) => {
+        return onlyVolcano(simulation).lava.has(cell) || terrain.ground[cell] !== Ground.Meadow;
+      })
+    ).toEqual([]);
   });
 
   it("warns people off all of the hot lava until it cools", () => {

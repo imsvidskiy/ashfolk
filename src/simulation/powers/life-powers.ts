@@ -70,7 +70,7 @@ function ripenBushes(services: PowerServices, x: number, z: number, radius: numb
 
   for (const { cell } of cellsInArea(services.world, { radius, x, z })) {
     for (let plant = vegetation.firstPlantInCell(cell); plant !== NO_PLANT; plant = vegetation.nextPlantInCell(plant)) {
-      if (plantSpeciesDefinition(vegetation.species[plant]).givesBerries) {
+      if (vegetation.isAlive(plant) && plantSpeciesDefinition(vegetation.species[plant]).givesBerries) {
         vegetation.setFruit(plant, 1);
         hasBushes = true;
       }

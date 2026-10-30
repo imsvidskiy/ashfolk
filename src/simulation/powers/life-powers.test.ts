@@ -130,6 +130,22 @@ describe("life", () => {
     expect(simulation.takeNotices()).toEqual(["There is nothing nearby to bless."]);
   });
 
+  it("explains when abundance finds only burnt bushes", () => {
+    const simulation = createPowerSimulation();
+
+    const { grid, vegetation } = simulation.world;
+
+    for (const cell of grid.cellsInRadius(0, 0, 200)) {
+      for (const plant of vegetation.plantsInCell(cell)) {
+        vegetation.burn(plant, 0);
+      }
+    }
+
+    simulation.usePower("abundance", 0, 0, { radius: 120 });
+
+    expect(simulation.takeNotices()).toEqual(["There is nothing nearby to bless."]);
+  });
+
   it("inspiration brings the next discovery closer", () => {
     const simulation = createPowerSimulation();
 

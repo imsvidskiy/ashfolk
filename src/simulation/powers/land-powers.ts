@@ -193,13 +193,13 @@ export function forestPower(
 }
 
 function paintCell(world: WorldState, cell: number, ground: GroundIndex): void {
-  if (world.isWater(cell) || world.terrain.ground[cell] === ground) {
+  if (!world.isOnIsland(cell) || world.isWater(cell) || world.terrain.ground[cell] === ground) {
     return;
   }
 
   world.setGround(cell, ground);
 
-  if (groundDefinition(ground).fuel === 0 || ground === Ground.Snow) {
+  if (groundDefinition(ground).fuel === 0) {
     world.clearPlants(cell, false);
     world.fields.fire[cell] = 0;
   }

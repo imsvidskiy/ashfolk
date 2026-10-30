@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { LightningEffect } from "../effects.ts";
 import { brush, createPowerSimulation } from "../testing/test-powers.ts";
-import { centerCell, livingCount } from "../testing/test-world.ts";
+import { centerCell, floodCells, livingCount } from "../testing/test-world.ts";
 
 describe("elements", () => {
   it("rain puts out fire and soaks the ground", () => {
@@ -46,6 +46,21 @@ describe("elements", () => {
 
     expect(simulation.advance(0).effects).toEqual([expect.objectContaining({ isNatural: false, kind: "lightning" })]);
     expect(simulation.fire.burningCount).toBeGreaterThan(0);
+  });
+
+  it("lightning starts no fire on water", () => {
+    const simulation = createPowerSimulation();
+
+    const { grid } = simulation.world;
+
+    floodCells(simulation.world, grid.cellsInRadius(0, 0, 60), 2);
+    simulation.usePower("lightning", 0, 0, { ignitionChance: 100 });
+
+    expect(
+      grid.cellsInRadius(0, 0, 60).filter((cell) => {
+        return simulation.world.isBurning(cell);
+      })
+    ).toEqual([]);
   });
 
   it("lightning scatters several strikes around the target", () => {

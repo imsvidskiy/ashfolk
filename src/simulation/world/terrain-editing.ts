@@ -94,7 +94,13 @@ export function raiseTerrain(
     return brushFalloff(distance, area.radius);
   }
 ): void {
-  for (const areaCell of editableCells(world, area)) {
+  const cells = editableCells(world, area);
+
+  if (cells.length === 0) {
+    return;
+  }
+
+  for (const areaCell of cells) {
     const { cell } = areaCell;
 
     world.setHeight(cell, world.terrain.height[cell] + amount * profile(areaCell.distance));
@@ -134,7 +140,13 @@ function firmUpDriedLakebed(world: WorldState, cell: number, amount: number): vo
 }
 
 export function flattenTerrain(world: WorldState, area: CircleArea, targetHeight: number, strength: number): void {
-  for (const areaCell of editableCells(world, area)) {
+  const cells = editableCells(world, area);
+
+  if (cells.length === 0) {
+    return;
+  }
+
+  for (const areaCell of cells) {
     const height = world.terrain.height[areaCell.cell];
     const amount = saturate(brushFalloff(areaCell.distance, area.radius) * strength);
 
@@ -172,7 +184,13 @@ export function smoothTerrain(world: WorldState, area: CircleArea, strength: num
   const heights = world.terrain.height;
   const { cellsPerSide } = world.grid;
 
-  const targets = editableCells(world, area).map((areaCell) => {
+  const cells = editableCells(world, area);
+
+  if (cells.length === 0) {
+    return;
+  }
+
+  const targets = cells.map((areaCell) => {
     const { cell } = areaCell;
 
     const average =
@@ -254,10 +272,15 @@ function riverBreach(world: WorldState, crater: CircleArea, rimReach: number): M
 
 export function carveCrater(world: WorldState, crater: CircleArea, depth: number): void {
   const reach: CircleArea = { ...crater, radius: crater.radius * CRATER_RIM_REACH };
+  const cells = editableCells(world, reach);
+
+  if (cells.length === 0) {
+    return;
+  }
 
   const breach = riverBreach(world, crater, reach.radius);
 
-  for (const areaCell of editableCells(world, reach)) {
+  for (const areaCell of cells) {
     const relativeDistance = areaCell.distance / crater.radius;
 
     const bowl = -depth * Math.max(0, 1 - relativeDistance * relativeDistance);
@@ -267,12 +290,12 @@ export function carveCrater(world: WorldState, crater: CircleArea, depth: number
     world.setHeight(areaCell.cell, world.terrain.height[areaCell.cell] + bowl + standingRim);
   }
 
-  bareCraterWalls(world, reach);
+  bareCraterWalls(world, cells);
   world.finishSuddenHeightEdit(areaRegion(world, reach));
 }
 
-function bareCraterWalls(world: WorldState, reach: CircleArea): void {
-  for (const { cell } of editableCells(world, reach)) {
+function bareCraterWalls(world: WorldState, cells: readonly AreaCell[]): void {
+  for (const { cell } of cells) {
     if (world.slope(cell) > CRATER_WALL_SLOPE) {
       world.setGround(cell, world.terrain.dryness[cell] > DESERT_DRYNESS ? Ground.RedRock : Ground.Rock);
     }
@@ -280,9 +303,13 @@ function bareCraterWalls(world: WorldState, reach: CircleArea): void {
 }
 
 export function shakeTerrain(world: WorldState, area: CircleArea, magnitude: number, random: RandomSource): void {
-  const region = areaRegion(world, area);
   const cells = editableCells(world, area);
 
+  if (cells.length === 0) {
+    return;
+  }
+
+  const region = areaRegion(world, area);
   const width = region.lastColumn - region.firstColumn + 1;
   const jolts = new Float32Array(width * (region.lastRow - region.firstRow + 1));
 

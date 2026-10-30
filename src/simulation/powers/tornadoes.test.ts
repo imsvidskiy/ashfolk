@@ -106,6 +106,24 @@ describe("tornadoes", () => {
     expect(texts).toContainEqual(expect.stringContaining("swept away by a tornado"));
   });
 
+  it("leaves a person the hand holds in the hand", () => {
+    const simulation = createPowerSimulation();
+
+    simulation.usePower("tribe", 0, 0, { people: 3 });
+
+    const [person] = simulation.society.people;
+
+    simulation.grab({ id: person.id, kind: "person" });
+    simulation.carry(person.mover.x + 5, person.mover.z);
+    simulation.usePower("tornado", person.mover.x, person.mover.z, { lifetime: 5, strength: 100 });
+
+    const held = { x: person.mover.x, z: person.mover.z };
+
+    simulation.runTicks(5);
+
+    expect({ x: person.mover.x, z: person.mover.z }).toEqual(held);
+  });
+
   it("blows out the fire on its way", () => {
     const simulation = createPowerSimulation();
 

@@ -64,6 +64,21 @@ describe("terrain editing", () => {
     expect(world.terrain.height[world.grid.index(2, 2)]).toBeGreaterThan(100);
   });
 
+  it("leaves the land alone when the brush misses the map", () => {
+    const world = createTestWorld();
+
+    const outside = { radius: 60, x: world.grid.worldSize * 2, z: 0 };
+
+    raiseTerrain(world, outside, 10);
+    flattenTerrain(world, outside, 50, 1);
+    smoothTerrain(world, outside, 1);
+    carveCrater(world, outside, 12);
+    shakeTerrain(world, outside, 1, createRandom(4));
+
+    expect(world.heightVersion).toBe(0);
+    expect(world.takeSuddenHeightEdit()).toBe(false);
+  });
+
   it("flattens towards the target height", () => {
     const world = createTestWorld({
       heightAt: (x) => {
