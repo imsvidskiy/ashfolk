@@ -5,5 +5,5 @@
     "tsBuildInfoFile": "./node_modules/.tmp/node.tsbuildinfo",
     "types": ["node"]
   },
-  "include": ["playwright.config.ts", "tests", "vite.config.ts", "worker"]
+  "include": ["playwright.config.ts", "scripts", "tests", "vite.config.ts", "worker"]
 }

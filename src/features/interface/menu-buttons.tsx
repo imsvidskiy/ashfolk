@@ -1,8 +1,9 @@
-import { BookOpen, Map as MapIcon, Maximize2, Minimize2, Settings } from "lucide-react";
+import { BookOpen, Map as MapIcon, Maximize2, Minimize2, Settings, Volume2, VolumeX } from "lucide-react";
 import { IconButton } from "../../design/buttons.tsx";
 import { cn } from "../../design/cn.ts";
 import { WithTooltip } from "../../design/tooltip.tsx";
 import { useSidePanel } from "../journal/use-side-panel.ts";
+import { useSoundToggle } from "../sound/use-sound-toggle.ts";
 import { useInterfaceStore } from "./interface-store.ts";
 import { useFullscreen } from "./use-fullscreen.ts";
 
@@ -38,6 +39,18 @@ function FullscreenButton() {
   );
 }
 
+function SoundButton() {
+  const { isMuted, label, toggleSound } = useSoundToggle();
+
+  const Icon = isMuted ? VolumeX : Volume2;
+
+  return (
+    <WithTooltip content={label} side="bottom">
+      <IconButton icon={<Icon aria-hidden="true" size={18} />} label={label} onClick={toggleSound} />
+    </WithTooltip>
+  );
+}
+
 export function MenuButtons({ className }: { readonly className?: string | undefined }) {
   const { isJournalOpen, isMapOpen, openSettings, toggleJournal, toggleMap } = useMenuActions();
 
@@ -61,7 +74,9 @@ export function MenuButtons({ className }: { readonly className?: string | undef
         />
       </WithTooltip>
 
-      <WithTooltip content="World, weather, time and graphics" side="bottom">
+      <SoundButton />
+
+      <WithTooltip content="World, weather, time, graphics and sound" side="bottom">
         <IconButton icon={<Settings aria-hidden="true" size={18} />} label="Settings" onClick={openSettings} />
       </WithTooltip>
 

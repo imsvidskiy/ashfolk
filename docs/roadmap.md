@@ -2,7 +2,7 @@
 
 What Dawnfolk is heading for and why. [plan.md](plan.md) is the how: the architecture these goals stand on.
 
-Last reviewed at v0.8.3. There are no dates. **Now** is being built, **Next** is shaped and comes after it, **Later** is
+Last reviewed at v0.9.0. There are no dates. **Now** is being built, **Next** is shaped and comes after it, **Later** is
 the direction. The roadmap is reviewed at every minor release: finished items move to [Recently done](#recently-done),
 dead ones are deleted, and an item enters Now only when it is small or medium and says when it's done.
 
@@ -69,14 +69,6 @@ dead ones are deleted, and an item enters Now only when it is small or medium an
   Out: player-written rules.
 - **Done when**: each system has its own tests, shows in the journal and the chronicle, and a save keeps it.
 - **Depends on**: the restructure (systems and saves). Size: M each.
-
-### Sound
-
-- **Goal**: the island sounds alive: wind, water, rain, fire, people at work, a quiet score.
-- **Scope**: the [Sound](plan.md#sound) section of the plan: ambience by place and weather, cues for powers and events,
-  a volume setting. Out: voices.
-- **Done when**: every power and weather has a sound, and muting works on every page.
-- **Depends on**: the restructure. Size: M.
 
 ### Better models and animation
 
@@ -200,6 +192,8 @@ Rules:
 
 ## Recently done
 
+- **0.9**: sound: calm music, nature that follows the place, the weather and the hour, sounds for every power,
+  people at work and the interface, and volume settings.
 - **0.8.3**: objects dissolve around a close camera, the hand grabs animals up close, plainer people, shorter power
   descriptions, a clean loading island.
 - **0.8.0–0.8.2**: three cleanup passes, raids that survive loading, tribes that settle on open ground, far rivers

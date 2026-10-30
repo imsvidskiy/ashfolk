@@ -87,6 +87,7 @@ src/
   simulation/  nature, animals and tribes
   workers/     simulation worker
   game/        session, camera, input
+  audio/       sound engine, ambience, cues and music
   models/      procedural meshes and animation
   rendering/   WebGPU renderer
   design/      design system
@@ -114,4 +115,5 @@ Dawnfolk is free and open source. If you enjoy it, you can support its developme
 
 ## License
 
-[MIT](LICENSE)
+The code is [MIT](LICENSE). The sounds and music in `src/audio/sounds` are not covered by it: they were made for
+Dawnfolk with ElevenLabs, and all rights to them are reserved.

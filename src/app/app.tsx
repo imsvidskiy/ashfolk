@@ -1,5 +1,6 @@
 import { lazy, Suspense, useEffect } from "react";
 import { TooltipProvider } from "../design/tooltip.tsx";
+import { connectSound } from "../features/sound/sound.ts";
 import { loadHud } from "./engine-launcher.ts";
 import { useEngineStore } from "./engine-store.ts";
 import { GameView } from "./game-view.tsx";
@@ -49,6 +50,10 @@ export function App() {
   const isChoosingWorld = useLaunchStore((state) => {
     return state.isChoosingWorld;
   });
+
+  useEffect(() => {
+    return connectSound(window);
+  }, []);
 
   return (
     <TooltipProvider>
