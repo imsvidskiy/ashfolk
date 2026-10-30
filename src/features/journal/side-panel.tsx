@@ -128,11 +128,11 @@ export function usePanelFocus({ isOpeningManaged, panelReference, view }: PanelF
   }, [isOpeningManaged, panelReference, view]);
 }
 
-function useCloseOnEscape(panelReference: RefObject<HTMLElement | null>, close: () => void): void {
+function useCloseOnEscape(panelReference: RefObject<HTMLElement | null>, isOpen: boolean, close: () => void): void {
   useEffect(() => {
     const panel = panelReference.current;
 
-    if (panel === null) {
+    if (!isOpen || panel === null) {
       return;
     }
 
@@ -150,7 +150,7 @@ function useCloseOnEscape(panelReference: RefObject<HTMLElement | null>, close: 
     return () => {
       panel.removeEventListener("keydown", handleKeyDown);
     };
-  });
+  }, [close, isOpen, panelReference]);
 }
 
 function JournalSection({ isHidden, onClose }: JournalSectionProps) {
@@ -188,7 +188,7 @@ export function SidePanel() {
   const panelReference = useRef<HTMLDivElement>(null);
 
   usePanelFocus({ isOpeningManaged: true, panelReference, view });
-  useCloseOnEscape(panelReference, close);
+  useCloseOnEscape(panelReference, view !== "closed", close);
 
   if (view === "closed") {
     return null;
