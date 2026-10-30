@@ -8,7 +8,7 @@ export const STONE_SPEAR: Weapon = { kind: "spear", material: "stone" };
 export const WORK_SPOT_TOLERANCE = 0.35;
 export const FACING_TOLERANCE = 0.05;
 
-export interface WorkPlacement {
+interface WorkPlacement {
   readonly missedBy: number;
   readonly turnedAwayBy: number;
 }

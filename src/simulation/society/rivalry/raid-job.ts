@@ -83,10 +83,6 @@ function marchPace(tick: PersonTick, raid: Raid): number {
     }
   }
 
-  if (count === 0) {
-    return 1;
-  }
-
   return clamp(1 + (ownDistance - total / count) / CATCH_UP_DISTANCE, SLOWEST_PACE, FASTEST_PACE);
 }
 

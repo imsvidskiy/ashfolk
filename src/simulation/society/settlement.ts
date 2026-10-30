@@ -259,10 +259,6 @@ export function updateMigration(tribe: Tribe, members: readonly Person[], contex
 }
 
 function settleWhereTheyStand(tribe: Tribe, members: readonly Person[]): void {
-  if (members.length === 0) {
-    return;
-  }
-
   const centerX =
     members.reduce((sum, person) => {
       return sum + person.mover.x;

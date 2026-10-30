@@ -20,7 +20,7 @@ describe("mining", () => {
 
     teach(tribe, THROUGH_MINING, 2);
 
-    const mine = completeStructure(
+    completeStructure(
       tribe,
       harness.buildings.add(
         { depositId: 0, kind: "mine", rotation: 0, tribeId: tribe.id, x: 150, z: 40 },
@@ -30,7 +30,6 @@ describe("mining", () => {
 
     const job = findMineWork(tick, "copper");
 
-    expect(mine.kind).toBe("mine");
     expect(job?.kind).toBe("mine");
 
     if (job === null) {

@@ -295,7 +295,7 @@ describe("staying dry", () => {
     const tick = firstMemberTick(harness, settle(harness, 1));
     const { person } = tick;
 
-    const job = findBerries({ ...tick, person });
+    const job = findBerries(tick);
 
     if (job === null) {
       throw new Error("Expected berries to gather");

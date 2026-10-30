@@ -50,7 +50,7 @@ describe("deciding what to do", () => {
 
     const tick = firstMemberTick(harness, tribe);
 
-    tick.person.hunger = 0.8;
+    tick.person.hunger = 0.6;
     tribe.stock.berries = 5;
 
     expect(decideJob(tick).kind).toBe("eat");
