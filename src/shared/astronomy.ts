@@ -11,7 +11,21 @@ export interface Direction {
   z: number;
 }
 
-export function sunDeclination(season: number): number {
+function directionOf(azimuth: number, altitude: number): Direction {
+  const horizontal = Math.cos(altitude);
+
+  return { x: Math.sin(azimuth) * horizontal, y: Math.sin(altitude), z: -Math.cos(azimuth) * horizontal };
+}
+
+function afternoonAzimuth(azimuth: number, hourAngle: number): number {
+  if (hourAngle > 0) {
+    return FULL_TURN - azimuth;
+  }
+
+  return azimuth;
+}
+
+function sunDeclination(season: number): number {
   return AXIAL_TILT * Math.sin((FULL_TURN * season) / 4);
 }
 
@@ -31,20 +45,6 @@ export function sunDirection(hours: number, season: number): Direction {
   const morningAzimuth = Math.acos(clamp(cosineOfAzimuth, -1, 1));
 
   return directionOf(afternoonAzimuth(morningAzimuth, hourAngle), altitude);
-}
-
-function directionOf(azimuth: number, altitude: number): Direction {
-  const horizontal = Math.cos(altitude);
-
-  return { x: Math.sin(azimuth) * horizontal, y: Math.sin(altitude), z: -Math.cos(azimuth) * horizontal };
-}
-
-function afternoonAzimuth(azimuth: number, hourAngle: number): number {
-  if (hourAngle > 0) {
-    return FULL_TURN - azimuth;
-  }
-
-  return azimuth;
 }
 
 export function moonDirection(hours: number): Direction {
