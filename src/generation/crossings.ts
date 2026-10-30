@@ -325,7 +325,7 @@ function crossWater(survey: CrossingSurvey, center: Point, directionX: number, d
   for (let distance = 0; distance <= WIDEST_HALF_SPAN; distance += MARCH_STEP) {
     const cell = grid.cellAt(center.x + directionX * distance, center.z + directionZ * distance);
 
-    if (cell < 0 || !isOnIsland(terrain.coastDistance, cell)) {
+    if (!isOnIsland(terrain.coastDistance, cell)) {
       return null;
     }
 
@@ -546,7 +546,7 @@ function wadingAlong(survey: CrossingSurvey, crossing: Crossing): Wading | null 
     const point = pointOnCrossing(crossing, along, 0);
     const cell = grid.cellAt(point.x, point.z);
 
-    if (cell < 0 || !isOnIsland(terrain.coastDistance, cell) || isBlocked(cell)) {
+    if (!isOnIsland(terrain.coastDistance, cell) || isBlocked(cell)) {
       return null;
     }
 
