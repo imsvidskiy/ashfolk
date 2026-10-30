@@ -10,6 +10,7 @@ import {
   PLANTING_RULES,
   PlantSpecies,
   regrowingSpecies,
+  woodlandShare,
 } from "./plants.ts";
 
 const STEEPEST_FOOTING = 1.05;
@@ -80,6 +81,13 @@ describe("plants", () => {
     for (const building of Object.values(BUILDINGS)) {
       expect(building.steepestSlope).toBeLessThan(steepestTree);
     }
+  });
+
+  it("thins trees with the woodland but keeps some undergrowth in clearings", () => {
+    expect(woodlandShare(PlantSpecies.Oak, 0.2)).toBe(0.2);
+    expect(woodlandShare(PlantSpecies.Bush, 0)).toBeGreaterThan(0);
+    expect(woodlandShare(PlantSpecies.Bush, 0)).toBeLessThan(1);
+    expect(woodlandShare(PlantSpecies.Boulder, 0)).toBe(1);
   });
 
   it("keeps warm-weather trees out of cold places", () => {
