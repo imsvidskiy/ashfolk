@@ -259,7 +259,8 @@ export class EntityPicker {
       }
 
       const id = data[offset + fields.Id];
-      const heading = this.#drawnHeading(kind, id) ?? data[offset + fields.Heading];
+      const drawnHeading = this.#drawnHeading(kind, id);
+      const heading = drawnHeading === null ? data[offset + fields.Heading] : drawnHeading;
       const hit = this.#bodyHit({ ...body(data, offset), baseY, heading, x, z }, pointer);
 
       if (hit.distance < PICK_RADIUS_PIXELS) {
