@@ -11,6 +11,7 @@ import {
 import type { CellRegion } from "../../world/change-tracking.ts";
 import type { WorldGrid } from "../../world/world-grid.ts";
 import { toInstancedGeometry } from "../instancing.ts";
+import { HIDDEN_LEVEL, levelWithin } from "../view-input.ts";
 import {
   createPatchGeometry,
   PATCH_CELLS,
@@ -73,15 +74,13 @@ function isPatchVisible(patch: Patch, frustum: Frustum): boolean {
 }
 
 function patchLevelFor(distance: number, detail: number): number {
-  const index = PATCH_LEVEL_DISTANCES.findIndex((limit) => {
-    return distance < limit * detail;
-  });
+  const level = levelWithin(distance, PATCH_LEVEL_DISTANCES, detail);
 
-  if (index === -1) {
+  if (level === HIDDEN_LEVEL) {
     return PATCH_STEPS.length - 1;
   }
 
-  return index;
+  return level;
 }
 
 export class PatchGrid {
@@ -93,6 +92,8 @@ export class PatchGrid {
   readonly #measure: PatchMeasure;
   readonly #patches: Patch[] = [];
   readonly #previousLevels: Int8Array;
+  #piecesVersion = 0;
+  #placedPiecesVersion = -1;
 
   constructor(grid: WorldGrid, measure: PatchMeasure, options: PatchGridOptions) {
     const patchesPerSide = Math.ceil(grid.cellsPerSide / PATCH_CELLS);
@@ -156,9 +157,11 @@ export class PatchGrid {
       }
     }
 
-    const hasChanged = this.#chosenLevels.some((level, index) => {
-      return level !== this.#previousLevels[index];
-    });
+    const hasNewOrigins =
+      this.#piecesVersion !== this.#placedPiecesVersion ||
+      this.#chosenLevels.some((level, index) => {
+        return level !== this.#previousLevels[index];
+      });
 
     for (const [material, levels] of this.#levels.entries()) {
       for (const [index, level] of levels.entries()) {
@@ -167,11 +170,15 @@ export class PatchGrid {
         level.geometry.instanceCount = count;
         level.mesh.visible = count > 0;
 
-        if (hasChanged) {
+        if (hasNewOrigins && count > 0) {
+          level.origins.clearUpdateRanges();
+          level.origins.addUpdateRange(0, count * level.origins.itemSize);
           level.origins.needsUpdate = true;
         }
       }
     }
+
+    this.#placedPiecesVersion = this.#piecesVersion;
   }
 
   dispose(): void {
@@ -230,11 +237,7 @@ export class PatchGrid {
   #measurePatch(patch: Patch): void {
     const content = this.#measure(patch.region);
 
-    for (const levels of this.#levels) {
-      for (const level of levels) {
-        level.origins.needsUpdate = true;
-      }
-    }
+    this.#piecesVersion += 1;
 
     if (content === null) {
       patch.pieces = [];

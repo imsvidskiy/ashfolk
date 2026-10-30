@@ -19,6 +19,7 @@ interface LavaLook {
 export class LavaField {
   readonly texture: DataTexture;
   readonly #data: Uint8Array;
+  #applied: LavaView | null = null;
   #lit: Int32Array = new Int32Array(0);
 
   constructor(cellsPerSide: number) {
@@ -27,9 +28,11 @@ export class LavaField {
   }
 
   update(lava: LavaView | null): void {
-    if (lava === null || (lava.cells.length === 0 && this.#lit.length === 0)) {
+    if (lava === null || lava === this.#applied || (lava.cells.length === 0 && this.#lit.length === 0)) {
       return;
     }
+
+    this.#applied = lava;
 
     for (const cell of this.#lit) {
       this.#data[cell] = 0;

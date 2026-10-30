@@ -148,6 +148,7 @@ export class Simulation {
   readonly world: WorldState;
   readonly #faunaThreats: FaunaThreats;
   readonly #frameBuilder: FrameBuilder;
+  readonly #vegetationGrowth: VegetationGrowthSystem;
   #grab: Grab | null = null;
   #isPaused: boolean;
   #notices: string[] = [];
@@ -157,7 +158,6 @@ export class Simulation {
   #tasks: ScheduledTask[] = [];
   #tick = 0;
   #tickBacklog = 0;
-  readonly #vegetationGrowth: VegetationGrowthSystem;
   #viewFocus: Waypoint = { x: 0, z: 0 };
   #waterUpdate: WaterUpdate | null = null;
 
@@ -177,6 +177,7 @@ export class Simulation {
       buildings: this.buildings,
       chronicle: this.chronicle,
       identifiers: this.identifiers,
+      world: this.world,
     });
     this.rivalry = new RivalrySystem({ chronicle: this.chronicle, effects: this.effects, seed: generated.seed });
     this.services = this.#createServices();
@@ -244,20 +245,22 @@ export class Simulation {
   populate(): void {
     const { halfSize, squareKilometers } = this.world.grid;
 
-    let settled = 0;
+    const unsettledSpots = new Set(STARTING_SPOTS);
 
-    for (const spot of STARTING_SPOTS) {
-      if (settled >= STARTING_TRIBES) {
-        break;
-      }
+    for (const canSettleRoughGround of [false, true]) {
+      for (const spot of unsettledSpots) {
+        if (unsettledSpots.size <= STARTING_SPOTS.length - STARTING_TRIBES) {
+          break;
+        }
 
-      if (this.#spawnTribe(spot.x * halfSize, spot.z * halfSize)) {
-        settled += 1;
+        if (this.#spawnTribe(spot.x * halfSize, spot.z * halfSize, canSettleRoughGround)) {
+          unsettledSpots.delete(spot);
+        }
       }
     }
 
-    if (settled === 0) {
-      this.#spawnTribe(0, 0);
+    if (unsettledSpots.size === STARTING_SPOTS.length) {
+      this.#spawnTribe(0, 0, true);
     }
 
     this.fauna.populate(Math.round(HERDS_PER_SQUARE_KILOMETER * squareKilometers), this.random);
@@ -281,7 +284,7 @@ export class Simulation {
       identifiers: this.identifiers.upcoming,
       isPaused: this.#isPaused,
       random: this.random.state(),
-      rivalry: this.rivalry.snapshot(),
+      rivalry: this.rivalry.snapshot(this.society.people),
       rules: structuredClone(this.rules),
       society: this.society.snapshot(),
       speed: this.#speed,
@@ -314,7 +317,7 @@ export class Simulation {
     this.buildings.restore(snapshot.buildings);
     this.society.restore(snapshot.society);
     this.fauna.restore(snapshot.fauna);
-    this.rivalry.restore(snapshot.rivalry);
+    this.rivalry.restore(snapshot.rivalry, this.society);
     this.volcanoes.restore(snapshot.volcanoes === undefined ? [] : snapshot.volcanoes);
     this.setRules(readWorldRules(snapshot.rules));
     this.services.environment = describeEnvironment(this.calendar, this.weather);
@@ -606,8 +609,9 @@ export class Simulation {
     };
   }
 
-  #spawnTribe(x: number, z: number): boolean {
+  #spawnTribe(x: number, z: number, canSettleRoughGround: boolean): boolean {
     const tribe = this.society.spawnTribe({
+      canSettleRoughGround,
       context: this.services,
       people: STARTING_TRIBE_SIZE,
       technologies: [],

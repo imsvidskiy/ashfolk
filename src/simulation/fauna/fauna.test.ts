@@ -4,6 +4,7 @@ import { Biome } from "../../content/biomes.ts";
 import { DEFAULT_WORLD_RULES } from "../../content/world-rules.ts";
 import { ignore } from "../../shared/ignore.ts";
 import { createRandom } from "../../shared/random.ts";
+import { placeMover } from "../agents/movement.ts";
 import { NavigationGrid, type Waypoint } from "../agents/navigation.ts";
 import { IdentifierSource } from "../identifiers.ts";
 import { createTestWorld, floodCells, livingCount } from "../testing/test-world.ts";
@@ -97,6 +98,12 @@ function edgedFauna() {
   return createFauna(world);
 }
 
+function chasedPreyIds(fauna: FaunaSystem): number[] {
+  return [...fauna.snapshot().instincts.moods.values()].flatMap((mood) => {
+    return mood.chase === null ? [] : [mood.chase.preyId];
+  });
+}
+
 function hares(fauna: FaunaSystem): Animal[] {
   return fauna.animals.filter((animal) => {
     return animal.kind === "hare";
@@ -188,6 +195,20 @@ describe("animals", () => {
 
     expect(fauna.animals).toHaveLength(0);
     expect(fauna.herds).toHaveLength(0);
+  });
+
+  it("spare the animal held in the hand from a blast", () => {
+    const { fauna } = createFauna();
+
+    fauna.spawnHerd("deer", 0, 0, 3, createRandom(1));
+
+    const [held] = fauna.animals;
+
+    fauna.hold(held);
+    fauna.damageArea(0, 0, 100, 10, "blast");
+
+    expect(held.isAlive).toBe(true);
+    expect(livingCount(fauna)).toBe(1);
   });
 
   it("swim ashore when the water rises around them as they graze", () => {
@@ -446,6 +467,34 @@ describe("hares", () => {
           return hare.causeOfDeath;
         })
     ).toEqual(["prey"]);
+  });
+
+  it("are safe from a chasing pack while the hand holds them", () => {
+    const { fauna } = createFauna();
+
+    fauna.spawnHerd("wolf", -40, 0, 4, createRandom(1));
+    fauna.spawnHerd("hare", 40, 0, 1, createRandom(1));
+
+    const tick = tickOf();
+    const [hare] = hares(fauna);
+    const [wolf] = fauna.animals.filter((animal) => {
+      return animal.kind === "wolf";
+    });
+
+    for (let step = 0; step < 3000 && chasedPreyIds(fauna).length === 0; step += 1) {
+      fauna.update(tick);
+    }
+
+    expect(chasedPreyIds(fauna)).toEqual([hare.id]);
+
+    fauna.hold(hare);
+
+    for (let step = 0; step < 600; step += 1) {
+      placeMover(hare.mover, wolf.mover.x + 0.5, wolf.mover.z);
+      fauna.update(tick);
+    }
+
+    expect(hare.isAlive).toBe(true);
   });
 
   it("are left alone by tame wolves", () => {

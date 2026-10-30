@@ -6,7 +6,20 @@ const STARTING_HASH = 0x81_1c_9d_c5;
 const STEPS_PER_UNIT = 100;
 const LARGEST_STEP = 1_000_000_000;
 const UNSIGNED_RANGE = 2 ** 32;
-const FINGERPRINT_LAYERS = ["baseTemperature", "carving", "ground", "height", "riverStrength", "waterSurface"] as const;
+const FINGERPRINT_LAYERS = [
+  "baseTemperature",
+  "biome",
+  "carving",
+  "dryness",
+  "ground",
+  "height",
+  "moisture",
+  "riverStrength",
+  "variation",
+  "waterSurface",
+  "woodland",
+] as const;
+const FINGERPRINT_PLANT_CHANNELS = ["height", "species", "state", "x", "z"] as const;
 
 function mixed(hash: number, value: number): number {
   const step = Math.round(value * STEPS_PER_UNIT);
@@ -29,7 +42,7 @@ function mixedAll(hash: number, values: ArrayLike<number> & Iterable<number>): n
 }
 
 export function generationFingerprint(world: GeneratedWorld): number {
-  const { crossings, deposits, monuments, terrain, water } = world;
+  const { crossings, deposits, monuments, terrain, vegetation, water } = world;
 
   const features = [
     water.rivers.length,
@@ -67,6 +80,10 @@ export function generationFingerprint(world: GeneratedWorld): number {
 
   for (const layer of FINGERPRINT_LAYERS) {
     hash = mixedAll(hash, terrain[layer]);
+  }
+
+  for (const channel of FINGERPRINT_PLANT_CHANNELS) {
+    hash = mixedAll(hash, vegetation[channel].subarray(0, vegetation.count));
   }
 
   const fingerprint = mixedAll(hash, features);

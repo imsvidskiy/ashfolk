@@ -1,8 +1,8 @@
 import { describe, expect, it, it as test } from "vitest";
 import { CROP_KINDS } from "../../content/crops.ts";
 import { MaterialSlot } from "../materials.ts";
-import { type MeshData, triangleCount, vertexCount } from "../mesh/mesh-data.ts";
-import { meshProblems } from "../testing/mesh-checks.ts";
+import { type MeshData, triangleCount } from "../mesh/mesh-data.ts";
+import { meshProblems, verticesWhere } from "../testing/mesh-checks.ts";
 import { loosePieces } from "../testing/mesh-connectivity.ts";
 import { buildCropModel, buildFenceModel, CROP_DETAIL_LEVELS, CROP_HEAD_PART, CROP_HEIGHTS } from "./crop-models.ts";
 
@@ -18,9 +18,7 @@ const HEAD_SLOTS = {
 } as const;
 
 function headsOf(mesh: MeshData): number[] {
-  return Array.from({ length: vertexCount(mesh) }, (_, vertex) => {
-    return vertex;
-  }).filter((vertex) => {
+  return verticesWhere(mesh, (vertex) => {
     return mesh.channels.part[vertex] === CROP_HEAD_PART;
   });
 }

@@ -4,7 +4,7 @@ import { createRandom } from "../shared/random.ts";
 import { type IslandSizeKind, islandDimensions } from "../world/island-size.ts";
 import { landEverywhere, shapeTerrain, troughWithBasin } from "../world/testing/terrain-fixtures.ts";
 import { WorldGrid } from "../world/world-grid.ts";
-import { analyzeDrainage, type DrainageBasins, NO_CELL } from "./hydrology.ts";
+import { analyzeDrainage, type DrainageBasins, NO_CELL } from "./drainage.ts";
 import { digRiverLakes, easeLakeShores, fillSinks, type LakeSiting } from "./lake-basins.ts";
 
 const grid = new WorldGrid({ cellSize: 10, cellsPerSide: 192 });

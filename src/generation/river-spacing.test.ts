@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { WorldGrid } from "../world/world-grid.ts";
-import { NO_CELL, type RiverChain } from "./hydrology.ts";
+import { NO_CELL } from "./drainage.ts";
+import type { RiverChain } from "./river-chains.ts";
 import { type RiverLand, spaceRiverChains } from "./river-spacing.ts";
 
 const TRUNK_COLUMN = 50;

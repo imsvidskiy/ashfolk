@@ -184,6 +184,12 @@ export function walk(tick: PersonTick, speed: number): boolean {
   return isThere;
 }
 
+export function isAtGoal(person: Person): boolean {
+  const { mover } = person;
+
+  return Math.hypot(mover.goalX - mover.x, mover.goalZ - mover.z) <= WORKPLACE_TOLERANCE;
+}
+
 export function standStill(person: Person, pose: PersonPose): void {
   person.pose = pose;
   person.speed = 0;
@@ -246,10 +252,6 @@ export class Errand {
       return;
     }
 
-    const { mover } = tick.person;
-
-    const isThere = Math.hypot(mover.goalX - mover.x, mover.goalZ - mover.z) <= WORKPLACE_TOLERANCE;
-
-    this.#phase = isThere ? "work" : "abandoned";
+    this.#phase = isAtGoal(tick.person) ? "work" : "abandoned";
   }
 }

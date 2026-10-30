@@ -7,10 +7,10 @@ import { isExpeditionSeason } from "./jobs/build-job.ts";
 import { findClay } from "./jobs/clay-job.ts";
 import { findCraftWork } from "./jobs/craft-job.ts";
 import { findFruit } from "./jobs/gather-job.ts";
-import { findMineWork } from "./jobs/mine-job.ts";
-import { findPlanting } from "./jobs/plant-job.ts";
+import { findMineWork, MineJob } from "./jobs/mine-job.ts";
+import { findPlanting, freeSpot } from "./jobs/plant-job.ts";
 import { carriedAmount } from "./person.ts";
-import { emptySpot, ripestFruitTree } from "./plots.ts";
+import { ripestFruitTree } from "./plots.ts";
 import type { PersonTick } from "./society-context.ts";
 import { amountOf } from "./stock.ts";
 import { knows } from "./tribe.ts";
@@ -71,7 +71,7 @@ export const ERA_WORK_OPTIONS: readonly WorkOption[] = [
     kind: "plant",
     start: findPlanting,
     weight: (tick) => {
-      if (isWinter(tick.context.environment.season) || emptySpot(tick.tribe, tick.context.world) === null) {
+      if (isWinter(tick.context.environment.season) || freeSpot(tick) === null) {
         return 0;
       }
 
@@ -118,7 +118,7 @@ function oreOnTheWay(tick: PersonTick, kind: DepositKind): number {
   const { resource } = DEPOSITS[kind];
 
   return tick.context.people.membersOf(tick.tribe).reduce((total, person) => {
-    return total + carriedAmount(person, resource) + (person.job?.kind === "mine" ? 1 : 0);
+    return total + carriedAmount(person, resource) + (person.job instanceof MineJob && person.job.ore === kind ? 1 : 0);
   }, 0);
 }
 

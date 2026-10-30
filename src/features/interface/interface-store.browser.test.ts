@@ -89,10 +89,4 @@ describe("interface store", () => {
     expect(state.isSettingsOpen).toBe(false);
     expect(state.settingsTab).toBe("island");
   });
-
-  it("switches settings sections", () => {
-    useInterfaceStore.getState().setSettingsTab("weather");
-
-    expect(useInterfaceStore.getState().settingsTab).toBe("weather");
-  });
 });

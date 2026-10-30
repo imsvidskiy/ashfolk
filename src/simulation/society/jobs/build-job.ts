@@ -6,13 +6,13 @@ import { walkSpeed } from "../person.ts";
 import type { PersonTick } from "../society-context.ts";
 import { workSpeed } from "../tools.ts";
 import type { Tribe } from "../tribe.ts";
-import { headTo, type Job, standStill, walk } from "./job.ts";
+import { headTo, isAtGoal, type Job, standStill, walk } from "./job.ts";
 
 const EXPEDITION_DISTANCE = 220;
 const FIRST_SEASON_FOR_EXPEDITIONS = 0.3;
 const LAST_SEASON_FOR_EXPEDITIONS = 2.4;
 
-type BuildPhase = "travel" | "work";
+type BuildPhase = "abandoned" | "travel" | "work";
 
 export function isFarSite(tribe: Tribe, site: Building): boolean {
   return Math.hypot(site.x - tribe.campX, site.z - tribe.campZ) > EXPEDITION_DISTANCE;
@@ -45,7 +45,13 @@ export class BuildJob implements Job {
 
     if (this.#phase === "travel") {
       this.#travel(tick);
+    }
 
+    if (this.#phase === "abandoned") {
+      return null;
+    }
+
+    if (this.#phase === "travel") {
       return this;
     }
 
@@ -64,7 +70,7 @@ export class BuildJob implements Job {
 
   #travel(tick: PersonTick): void {
     if (walk(tick, walkSpeed(tick.person))) {
-      this.#phase = "work";
+      this.#phase = isAtGoal(tick.person) ? "work" : "abandoned";
     }
   }
 }

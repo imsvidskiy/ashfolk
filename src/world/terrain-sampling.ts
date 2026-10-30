@@ -70,6 +70,20 @@ export function sampleSurface(terrain: SampledTerrain, grid: WorldGrid, x: numbe
   return waterSurface;
 }
 
+export function isWaterCell(terrain: SampledTerrain, cell: number): boolean {
+  return hasWater(terrain.waterSurface[cell], terrain.height[cell]);
+}
+
+export function isWaterAtPoint(terrain: SampledTerrain, grid: WorldGrid, x: number, z: number): boolean {
+  const cell = grid.cellAt(x, z);
+
+  if (cell < 0) {
+    return false;
+  }
+
+  return isWaterCell(terrain, cell);
+}
+
 export function sampleWaterLevel(terrain: SampledTerrain, grid: WorldGrid, x: number, z: number): number {
   if (!isWaterAtPoint(terrain, grid, x, z)) {
     return NO_WATER;
@@ -96,20 +110,6 @@ export function sampleWaterLevel(terrain: SampledTerrain, grid: WorldGrid, x: nu
   addCorner(below + 1, amountX * amountZ);
 
   return weight > 0 ? level / weight : NO_WATER;
-}
-
-export function isWaterCell(terrain: SampledTerrain, cell: number): boolean {
-  return hasWater(terrain.waterSurface[cell], terrain.height[cell]);
-}
-
-export function isWaterAtPoint(terrain: SampledTerrain, grid: WorldGrid, x: number, z: number): boolean {
-  const cell = grid.cellAt(x, z);
-
-  if (cell < 0) {
-    return false;
-  }
-
-  return isWaterCell(terrain, cell);
 }
 
 export function touchesWaterCell(terrain: SampledTerrain, grid: WorldGrid, cell: number): boolean {

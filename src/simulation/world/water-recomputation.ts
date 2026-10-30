@@ -1,5 +1,6 @@
 import { refreshCrossings } from "../../generation/crossings.ts";
-import { computeHydrology, RESHAPED_LAND_HYDROLOGY } from "../../generation/hydrology.ts";
+import { RESHAPED_LAND_HYDROLOGY } from "../../generation/drainage.ts";
+import { computeHydrology } from "../../generation/hydrology.ts";
 import { type CellRegion, regionOfCells } from "../../world/change-tracking.ts";
 import { hasWater, type Lake, NO_WATER } from "../../world/water.ts";
 import { NEIGHBOR_OFFSETS } from "../../world/world-grid.ts";

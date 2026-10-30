@@ -157,7 +157,7 @@ export class FaunaSystem {
       navigation,
       prey: {
         find: (id) => {
-          return this.findAnimal(id);
+          return id === this.#heldId ? null : this.findAnimal(id);
         },
         kill: (animal) => {
           this.kill(animal, "prey");
@@ -309,7 +309,7 @@ export class FaunaSystem {
 
   livingWithin(x: number, z: number, radius: number): Animal[] {
     return this.#animals.filter((animal) => {
-      return animal.isAlive && Math.hypot(animal.mover.x - x, animal.mover.z - z) < radius;
+      return animal.isAlive && Math.hypot(animal.mover.x - x, animal.mover.z - z) < radius && !this.isHeld(animal);
     });
   }
 
@@ -687,7 +687,7 @@ export class FaunaSystem {
     if (animal.pose !== "run" || animal.poseSeconds <= 0) {
       const random = this.#randomFor(animal.kind, tick);
 
-      setDestination(mover, escapeRoute(this.#world, animal, random), this.#navigation, { mayPlanRoute: false });
+      setDestination(mover, escapeRoute(this.#world, animal, random), this.#navigation, { canPlanRoute: false });
       animal.pose = "run";
       animal.poseSeconds = ANIMALS[animal.kind].isSmallGame ? SKITTISH_REPLAN_SECONDS : FLEE_REPLAN_SECONDS;
     }

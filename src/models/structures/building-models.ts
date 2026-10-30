@@ -333,12 +333,12 @@ function addHutDoor(context: StructureContext): void {
   );
 }
 
-function addHut(context: StructureContext): void {
-  const { builder } = context;
+function hutSegments(context: StructureContext): number {
+  return detail(context, 18, 8);
+}
 
-  const segments = detail(context, 18, 8);
-
-  builder.add(
+function addHutWall(context: StructureContext): void {
+  context.builder.add(
     loft(
       [
         { radiusX: 0, radiusZ: 0, y: 0.6 },
@@ -362,7 +362,7 @@ function addHut(context: StructureContext): void {
         { radiusX: HUT_RADIUS - 0.04, radiusZ: HUT_RADIUS - 0.04, y: 1.75 },
         { radiusX: 0, radiusZ: 0, y: 1.8 },
       ],
-      segments
+      hutSegments(context)
     ),
     {
       style: {
@@ -378,7 +378,10 @@ function addHut(context: StructureContext): void {
       },
     }
   );
+}
 
+function addHutThatch(context: StructureContext): void {
+  const segments = hutSegments(context);
   const tiers = detail(context, 3, 1);
 
   for (let tier = 0; tier < tiers; tier += 1) {
@@ -389,7 +392,7 @@ function addHut(context: StructureContext): void {
       return 1 + 0.03 * Math.sin(around * segments * 3);
     });
 
-    builder.add(loft(thatch, segments), {
+    context.builder.add(loft(thatch, segments), {
       style: {
         buildOrder: 0.55 + tier * 0.15,
         shade: (point) => {
@@ -399,7 +402,11 @@ function addHut(context: StructureContext): void {
       },
     });
   }
+}
 
+function addHut(context: StructureContext): void {
+  addHutWall(context);
+  addHutThatch(context);
   addHutDoor(context);
   addFlag(context, [0, 0, 0], { bottom: 3.75, height: 0.35, turn: 0.3, width: 0.5 });
   addLog(context, [0, 3.4, 0], [0, 4.2, 0], 0.03, 0.98);
@@ -422,7 +429,7 @@ function gableShape(): Shape {
   );
 }
 
-function addStorehouse(context: StructureContext): void {
+function addStorehouseBody(context: StructureContext): void {
   const { builder } = context;
 
   for (const [x, z] of [
@@ -451,17 +458,21 @@ function addStorehouse(context: StructureContext): void {
     transform: transformOf({ position: [0, 1.7, 0] }),
   });
   builder.add(gableShape(), { style: { buildOrder: 0.72, shade: 0.97, slot: MaterialSlot.Daub } });
+}
 
+function addStorehouseRoof(context: StructureContext): void {
   for (const side of [-1, 1]) {
-    builder.add(box(1.75, 0.12, 2.7), {
+    context.builder.add(box(1.75, 0.12, 2.7), {
       style: { buildOrder: 0.85, shade: 0.92, slot: MaterialSlot.Thatch },
       transform: transformOf({ position: [side * 0.68, 2.62, 0], rotation: [0, 0, -side * 0.6] }),
     });
   }
 
   addLog(context, [0, RIDGE_HEIGHT, -1.38], [0, RIDGE_HEIGHT, 1.38], 0.075, 0.88);
+}
 
-  builder.add(card(0.7, 0.9), {
+function addStorehouseLadder(context: StructureContext): void {
+  context.builder.add(card(0.7, 0.9), {
     style: { buildOrder: 0.6, slot: MaterialSlot.Ash },
     transform: transformOf({ position: [0, 1.15, 0.91] }),
   });
@@ -478,12 +489,14 @@ function addStorehouse(context: StructureContext): void {
 
     addLog(context, [-0.25, y, z], [0.25, y, z], 0.022, 0.5);
   }
+}
 
+function addStorehouseJars(context: StructureContext): void {
   for (const [x, z, height] of [
     [1.6, 0.6, 0.55],
     [1.75, 0.05, 0.45],
   ] as const) {
-    builder.add(
+    context.builder.add(
       lathe(
         [
           { radius: 0, y: 0 },
@@ -498,7 +511,13 @@ function addStorehouse(context: StructureContext): void {
       { style: { buildOrder: 0.9, slot: MaterialSlot.Daub }, transform: transformOf({ position: [x, 0, z] }) }
     );
   }
+}
 
+function addStorehouse(context: StructureContext): void {
+  addStorehouseBody(context);
+  addStorehouseRoof(context);
+  addStorehouseLadder(context);
+  addStorehouseJars(context);
   addFlag(context, [0, 0, 1.2], { bottom: 3.55, height: 0.4, turn: 0, width: 0.6 });
   addLog(context, [0, 3, 1.2], [0, 4, 1.2], 0.025, 0.99);
 }

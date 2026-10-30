@@ -188,10 +188,10 @@ function isSpotEmpty(spot: PlotSpot, world: WorldState): boolean {
   return spot.plant === NO_PLANT || !world.vegetation.isAlive(spot.plant);
 }
 
-export function emptySpot(tribe: Tribe, world: WorldState): PlotSpot | null {
+export function emptySpot(tribe: Tribe, world: WorldState, taken: ReadonlySet<PlotSpot>): PlotSpot | null {
   for (const plot of tribe.plots) {
     const spot = plot.spots.find((candidate) => {
-      return isSpotEmpty(candidate, world);
+      return isSpotEmpty(candidate, world) && !taken.has(candidate);
     });
 
     if (spot !== undefined) {
@@ -236,13 +236,13 @@ function plotOfSpot(tribe: Tribe, spot: PlotSpot): Plot | null {
   return plot;
 }
 
-export function plantSpot(tribe: Tribe, spot: PlotSpot, context: SocietyContext): void {
+export function plantSpot(tribe: Tribe, spot: PlotSpot, context: SocietyContext): boolean {
   const { environment, random, world } = context;
 
   const plot = plotOfSpot(tribe, spot);
 
   if (plot === null || !isSpotEmpty(spot, world)) {
-    return;
+    return false;
   }
 
   const plant = world.plant({
@@ -257,6 +257,8 @@ export function plantSpot(tribe: Tribe, spot: PlotSpot, context: SocietyContext)
 
   spot.plant = plant;
   spot.plantedDay = environment.day;
+
+  return true;
 }
 
 function plotAge(spot: PlotSpot, plotKind: PlotKind, day: number): number {

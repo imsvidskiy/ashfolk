@@ -1,8 +1,8 @@
 import { describe, expect, it, it as test } from "vitest";
 import { CultivatedSpecies } from "../../content/cultivated-plants.ts";
 import { MaterialSlot } from "../materials.ts";
-import { type MeshData, triangleCount, vertexCount } from "../mesh/mesh-data.ts";
-import { highestExposedOpenEdge, meshProblems } from "../testing/mesh-checks.ts";
+import { type MeshData, triangleCount } from "../mesh/mesh-data.ts";
+import { highestExposedOpenEdge, meshProblems, verticesWhere } from "../testing/mesh-checks.ts";
 import { loosePieces } from "../testing/mesh-connectivity.ts";
 import { BERRY_PART } from "./berries.ts";
 import { buildPlantVariants, canonicalHeight, PLANT_DETAIL_LEVELS } from "./plant-models.ts";
@@ -17,14 +17,8 @@ const FRUIT_SLOTS = [
   [CultivatedSpecies.Currant, MaterialSlot.Currant],
 ] as const;
 
-function verticesOf(mesh: MeshData, accepts: (vertex: number) => boolean): number[] {
-  return Array.from({ length: vertexCount(mesh) }, (_, vertex) => {
-    return vertex;
-  }).filter(accepts);
-}
-
 function fruitOf(mesh: MeshData): number[] {
-  return verticesOf(mesh, (vertex) => {
+  return verticesWhere(mesh, (vertex) => {
     return mesh.channels.part[vertex] === BERRY_PART;
   });
 }
@@ -82,7 +76,7 @@ describe.each(FRUIT_SLOTS)("orchard species %i", (species, slot) => {
   test("dresses the crown in seasonal leaves", () => {
     const [mesh] = buildPlantVariants(species, "high");
 
-    const leaves = verticesOf(mesh, (vertex) => {
+    const leaves = verticesWhere(mesh, (vertex) => {
       return mesh.channels.slot[vertex] === MaterialSlot.Leaf;
     });
 

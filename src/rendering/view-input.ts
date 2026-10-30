@@ -10,6 +10,16 @@ export interface ViewInput {
   readonly mirror: WorldMirror;
 }
 
+export function levelWithin(distance: number, limits: readonly number[], detail: number): number {
+  for (const [level, limit] of limits.entries()) {
+    if (distance < limit * detail) {
+      return level;
+    }
+  }
+
+  return HIDDEN_LEVEL;
+}
+
 export function assignSphereLevels(
   items: Iterable<{ readonly bounds: Sphere; level: number }>,
   camera: PerspectiveCamera,
@@ -22,11 +32,7 @@ export function assignSphereLevels(
   for (const item of items) {
     const distance = Math.max(0, camera.position.distanceTo(item.bounds.center) - item.bounds.radius);
 
-    const level = frustum.intersectsSphere(item.bounds)
-      ? limits.findIndex((limit) => {
-          return distance < limit * detail;
-        })
-      : HIDDEN_LEVEL;
+    const level = frustum.intersectsSphere(item.bounds) ? levelWithin(distance, limits, detail) : HIDDEN_LEVEL;
 
     if (level !== item.level) {
       item.level = level;

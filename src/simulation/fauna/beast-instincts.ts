@@ -63,7 +63,7 @@ export interface Quarry {
   readonly z: number;
 }
 
-export type BlowKind = "bite" | "gore" | "trample";
+type BlowKind = "bite" | "gore" | "trample";
 
 export interface BeastBlow {
   readonly attacker: Animal;
@@ -93,14 +93,14 @@ export interface Pack {
   readonly memberIds: readonly number[];
 }
 
-export interface PackHunt {
+interface PackHunt {
   hasDrawnBlood: boolean;
   readonly preyId: number;
   seconds: number;
   readonly startingSize: number;
 }
 
-export interface PreySense {
+interface PreySense {
   find: (id: number) => Animal | null;
   kill: (animal: Animal) => void;
   nearest: (x: number, z: number, radius: number) => Animal | null;
@@ -226,33 +226,6 @@ function holdStill(animal: Animal, pose: Animal["pose"]): void {
   animal.pose = pose;
   animal.speed = 0;
   stopMoving(animal.mover);
-}
-
-function followHunt(mood: PackMood, hunt: PackHunt, members: readonly Animal[], tick: FaunaTick): void {
-  hunt.seconds += tick.seconds;
-
-  const prey = tick.threats.people.locate(hunt.preyId);
-
-  if (prey === null) {
-    mood.hunt = null;
-    mood.hunger = hunt.hasDrawnBlood ? 0 : mood.hunger;
-    mood.restDays = hunt.hasDrawnBlood ? REST_AFTER_FEAST_DAYS : REST_AFTER_FAILURE_DAYS;
-
-    return;
-  }
-
-  const isBroken =
-    members.length < hunt.startingSize ||
-    members.some((member) => {
-      return isHurt(member);
-    });
-  const isGuarded = prey.isSheltered || prey.companions >= GROUP_COMPANIONS;
-
-  if (isGuarded || isBroken || hunt.seconds > LONGEST_HUNT_SECONDS) {
-    mood.hunt = null;
-    mood.restDays = REST_AFTER_FAILURE_DAYS;
-    scatter(members, prey);
-  }
 }
 
 function scatter(animals: readonly Animal[], from: Waypoint): void {
@@ -434,6 +407,7 @@ export class BeastInstincts {
 
     mood.hunt = null;
     mood.restDays = REST_AFTER_FAILURE_DAYS;
+    this.#forgetStrikes(members);
     scatter(members, from);
   }
 
@@ -444,7 +418,7 @@ export class BeastInstincts {
     mood.restDays -= tick.days;
 
     if (mood.hunt !== null) {
-      followHunt(mood, mood.hunt, members, tick);
+      this.#followHunt(mood, mood.hunt, members, tick);
 
       return;
     }
@@ -469,6 +443,35 @@ export class BeastInstincts {
     }
 
     prowl(pack, mood, members, tick);
+  }
+
+  #followHunt(mood: PackMood, hunt: PackHunt, members: readonly Animal[], tick: FaunaTick): void {
+    hunt.seconds += tick.seconds;
+
+    const prey = tick.threats.people.locate(hunt.preyId);
+
+    if (prey === null) {
+      mood.hunt = null;
+      mood.hunger = hunt.hasDrawnBlood ? 0 : mood.hunger;
+      mood.restDays = hunt.hasDrawnBlood ? REST_AFTER_FEAST_DAYS : REST_AFTER_FAILURE_DAYS;
+      this.#forgetStrikes(members);
+
+      return;
+    }
+
+    const isBroken =
+      members.length < hunt.startingSize ||
+      members.some((member) => {
+        return isHurt(member);
+      });
+    const isGuarded = prey.isSheltered || prey.companions >= GROUP_COMPANIONS;
+
+    if (isGuarded || isBroken || hunt.seconds > LONGEST_HUNT_SECONDS) {
+      mood.hunt = null;
+      mood.restDays = REST_AFTER_FAILURE_DAYS;
+      this.#forgetStrikes(members);
+      scatter(members, prey);
+    }
   }
 
   #trackPrey(pack: Pack, mood: PackMood, members: readonly Animal[], tick: FaunaTick): boolean {
@@ -517,9 +520,9 @@ export class BeastInstincts {
     mood.hunger = chase.hasCaught ? Math.max(0, mood.hunger - SMALL_PREY_MEAL) : mood.hunger;
     mood.restDays = chase.hasCaught ? REST_AFTER_SMALL_PREY_DAYS : REST_AFTER_ESCAPE_DAYS;
 
-    for (const member of members) {
-      this.#strikes.delete(member.id);
+    this.#forgetStrikes(members);
 
+    for (const member of members) {
       if (member.pose === "charge" || member.pose === "attack") {
         member.pose = "walk";
       }
@@ -687,6 +690,12 @@ export class BeastInstincts {
 
   #startCharge(animal: Animal, targetId: number, blow: BlowKind): void {
     this.#charges.set(animal.id, { blow, hasStruck: false, seconds: 0, targetId });
+  }
+
+  #forgetStrikes(members: readonly Animal[]): void {
+    for (const member of members) {
+      this.#strikes.delete(member.id);
+    }
   }
 
   #runAt(animal: Animal, target: Waypoint, strike: Strike, speed: number, tick: FaunaTick): void {

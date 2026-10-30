@@ -178,6 +178,19 @@ describe("danger", () => {
     expect(harness.society.tribes()).toHaveLength(0);
     expect(harness.society.findTribe(tribe.id)).toBeNull();
   });
+
+  it("spares the person held in the hand from a blast", () => {
+    const harness = new SocietyHarness({ day: MORNING });
+
+    const tribe = settle(harness, 4);
+    const [held] = harness.society.membersOf(tribe);
+
+    harness.society.hold(held);
+    harness.society.damageArea(tribe.campX, tribe.campZ, 200, 5, "blast");
+
+    expect(held.isAlive).toBe(true);
+    expect(harness.society.population).toBe(1);
+  });
 });
 
 describe("people nearby", () => {
@@ -218,6 +231,29 @@ describe("people nearby", () => {
         return person === second;
       })
     ).toBe(1);
+  });
+
+  it("pass over the person held in the hand", () => {
+    const harness = new SocietyHarness();
+
+    const tribe = settle(harness, 3);
+    const [first, second, third] = harness.society.membersOf(tribe);
+
+    placeOnAxis(first, 10);
+    placeOnAxis(second, -20);
+    placeOnAxis(third, 500);
+    harness.society.hold(first);
+
+    expect(
+      harness.society.nearestPerson(0, 0, 50, () => {
+        return true;
+      })
+    ).toBe(second);
+    expect(
+      harness.society.nearestPerson(0, 0, 15, () => {
+        return true;
+      })
+    ).toBeNull();
   });
 });
 
@@ -295,7 +331,7 @@ describe("staying dry", () => {
     const tick = firstMemberTick(harness, settle(harness, 1));
     const { person } = tick;
 
-    const job = findBerries({ ...tick, person });
+    const job = findBerries(tick);
 
     if (job === null) {
       throw new Error("Expected berries to gather");

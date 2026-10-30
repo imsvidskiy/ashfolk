@@ -24,12 +24,12 @@ export function findMineWork(tick: PersonTick, kind: DepositKind): MineJob | nul
   return new MineJob(tick, mine, kind);
 }
 
-class MineJob implements Job {
+export class MineJob implements Job {
   readonly isExpedition = true;
   readonly kind = "mine";
+  readonly ore: DepositKind;
   readonly #errand: Errand;
   readonly #mineId: number;
-  readonly #ore: DepositKind;
 
   constructor(tick: PersonTick, mine: Building, ore: DepositKind) {
     const target: WorkTarget = {
@@ -40,7 +40,7 @@ class MineJob implements Job {
     };
 
     this.#mineId = mine.id;
-    this.#ore = ore;
+    this.ore = ore;
     this.#errand = new Errand(workSeconds(tick.tribe, MINING_SECONDS), "mine", target);
     headToWork(tick.person, target, tick.context);
   }
@@ -56,7 +56,7 @@ class MineJob implements Job {
       return progress === "abandoned" ? null : this;
     }
 
-    pickUp(tick.person, DEPOSITS[this.#ore].resource, ORE_PER_TRIP, "ore");
+    pickUp(tick.person, DEPOSITS[this.ore].resource, ORE_PER_TRIP, "ore");
     learn(tick.tribe, 0.5, tick.context.rules);
 
     return new DeliverJob(tick);

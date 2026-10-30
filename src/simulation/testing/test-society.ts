@@ -183,6 +183,7 @@ export class SocietyHarness {
       buildings: this.buildings,
       chronicle: this.chronicle,
       identifiers: this.identifiers,
+      world: this.world,
     });
     this.rivalry = new RivalrySystem({ chronicle: this.chronicle, effects: this.effects, seed: SEED });
     this.weather.setKind("clear");
@@ -259,6 +260,13 @@ export class SocietyHarness {
   }
 
   spawnTribe(people: number): Tribe | null {
-    return this.society.spawnTribe({ context: this.context, people, technologies: [], x: 0, z: 0 });
+    return this.society.spawnTribe({
+      canSettleRoughGround: false,
+      context: this.context,
+      people,
+      technologies: [],
+      x: 0,
+      z: 0,
+    });
   }
 }

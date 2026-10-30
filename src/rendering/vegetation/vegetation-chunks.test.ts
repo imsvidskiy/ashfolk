@@ -9,6 +9,7 @@ import {
   FLOATS_PER_PLANT,
   PLANT_BUCKETS,
   PLANT_SINKING,
+  SPARSE_SHARE,
   VegetationChunks,
 } from "./vegetation-chunks.ts";
 
@@ -52,6 +53,32 @@ describe("vegetation chunks", () => {
 
     expect(alivePlantCount(mirror)).toBeGreaterThan(0);
     expect(packedPlantCount(chunks)).toBe(alivePlantCount(mirror));
+  });
+
+  it("packs about a third of the plants first for the sparse far level", () => {
+    const mirror = createVegetatedMirror();
+    const chunks = new VegetationChunks(mirror);
+
+    chunks.repackDirty();
+
+    const sparseCount = chunks.chunks.reduce((total, chunk) => {
+      return (
+        total +
+        chunk.sparseCounts.reduce((sum, count) => {
+          return sum + count;
+        }, 0)
+      );
+    }, 0);
+    const share = sparseCount / packedPlantCount(chunks);
+
+    expect(share).toBeGreaterThan(SPARSE_SHARE - 0.1);
+    expect(share).toBeLessThan(SPARSE_SHARE + 0.1);
+
+    for (const chunk of chunks.chunks) {
+      for (const [bucket, count] of chunk.sparseCounts.entries()) {
+        expect(count * FLOATS_PER_PLANT).toBeLessThanOrEqual(chunk.buckets[bucket].length);
+      }
+    }
   });
 
   it("keeps one bucket per species and variant", () => {

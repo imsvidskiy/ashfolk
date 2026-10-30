@@ -196,7 +196,7 @@ function chooseMother(tick: TribeTick, elapsedDays: number): Person | null {
   }).length;
 
   const isFed = totalFood(tribe.stock) > members.length * FOOD_PER_PERSON_FOR_BIRTHS;
-  const hasRoom = members.length < housingCapacity(tribe, context);
+  const hasRoom = members.length < housingCapacity(tribe, context.buildings);
   const hasEnoughAdults = children <= members.length - children;
 
   if (mothers.length === 0 || !hasFather || !isFed || !hasRoom || !hasEnoughAdults) {
@@ -241,7 +241,7 @@ function giveBirth(tick: TribeTick, mother: Person): void {
   mother.lastBirthDay = context.environment.day;
   tribe.births += 1;
   context.people.addPerson(tribe, child);
-  assignHomes(tribe, context);
+  assignHomes(tribe, context.buildings, context.people.membersOf(tribe));
   context.chronicle.record({
     category: "birth",
     text: `${child.name} was born to ${tribe.name}`,

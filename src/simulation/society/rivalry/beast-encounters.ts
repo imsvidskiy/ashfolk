@@ -92,10 +92,10 @@ export class BeastEncounters implements PeopleSense {
   }
 
   findQuarry(x: number, z: number, radius: number): Quarry | null {
+    const context = this.#context;
+
     let best: Quarry | null = null;
     let bestScore = 0;
-
-    const context = this.#context;
 
     for (const person of context.people.livingWithin(x, z, radius)) {
       const tribe = context.people.findTribe(person.tribeId);

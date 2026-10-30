@@ -72,4 +72,17 @@ describe("lava field", () => {
     expect(cleared).not.toBe(version);
     expect(field.texture.version).toBe(cleared);
   });
+
+  it("uploads a lava view once while frames repeat it", () => {
+    const field = new LavaField(CELLS_PER_SIDE);
+    const flow = lava([FIRST], [200]);
+
+    field.update(flow);
+
+    const { version } = field.texture;
+
+    field.update(flow);
+
+    expect(field.texture.version).toBe(version);
+  });
 });

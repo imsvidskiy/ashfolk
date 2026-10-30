@@ -2,6 +2,7 @@ import { Ground } from "../../content/grounds.ts";
 import { isShrubSpecies, isTreeSpecies } from "../../content/plants.ts";
 import { FULL_TURN, hashToUnit, lerp, smoothstep } from "../../shared/math.ts";
 import { NEIGHBOR_OFFSETS } from "../../world/world-grid.ts";
+import { isDryLand } from "../agents/navigation.ts";
 import { cellsInArea, swellCone } from "../world/terrain-editing.ts";
 import type { PowerServices } from "./power-handler.ts";
 
@@ -150,7 +151,9 @@ function beginEruption(volcano: Volcano, services: PowerServices): void {
   const { chronicle, world } = services;
 
   for (const { cell } of cellsInArea(world, { ...volcano, radius: craterRadius(volcano) * CRATER_LAVA_SHARE })) {
-    cover(volcano, cell, services);
+    if (isDryLand(world, cell)) {
+      cover(volcano, cell, services);
+    }
   }
 
   fallAsh(volcano, services);
@@ -176,7 +179,7 @@ function fallAsh(volcano: Volcano, services: PowerServices): void {
   for (const { cell, column, distance, row } of cellsInArea(world, { ...volcano, radius: reach })) {
     const depth = 1 - smoothstep(volcano.radius * 0.8, reach, distance);
 
-    if (world.isWater(cell) || volcano.lava.has(cell) || hashToUnit(column, row, ASH_SALT) >= depth) {
+    if (!isDryLand(world, cell) || volcano.lava.has(cell) || hashToUnit(column, row, ASH_SALT) >= depth) {
       continue;
     }
 
@@ -215,7 +218,7 @@ function planTongues(volcano: Volcano, services: PowerServices): LavaTongue[] {
     const angle = firstAngle + (tongue / count) * FULL_TURN + random.signed() * TONGUE_JITTER;
     const start = grid.cellAt(volcano.x + Math.cos(angle) * rim, volcano.z + Math.sin(angle) * rim);
 
-    if (start < 0 || world.isWater(start)) {
+    if (!isDryLand(world, start)) {
       continue;
     }
 
@@ -325,7 +328,7 @@ function widen(volcano: Volcano, from: number, cell: number, services: PowerServ
     const isSpreading = hashToUnit(neighbor, SPLIT_SALT) < WIDENING_CHANCE * (0.5 + volcano.strength * 0.5);
     const isLevel = terrain.height[neighbor] <= terrain.height[cell] + POOLING_RISE;
 
-    if (isSpreading && isLevel && !volcano.lava.has(neighbor) && !world.isWater(neighbor)) {
+    if (isSpreading && isLevel && !volcano.lava.has(neighbor) && isDryLand(world, neighbor)) {
       cover(volcano, neighbor, services);
     }
   }
@@ -439,6 +442,18 @@ function endanger(volcano: Volcano, seconds: number, services: PowerServices): v
   hazards.addZone({ radius: volcano.radius * CRATER_DANGER, remainingSeconds: seconds, x: volcano.x, z: volcano.z });
 }
 
+function settleLava(volcano: Volcano, services: PowerServices): void {
+  const { world } = services;
+
+  for (const cell of volcano.lava.keys()) {
+    if (world.isWater(cell)) {
+      volcano.lava.delete(cell);
+    } else if (isHot(volcano, cell)) {
+      world.clearPlants(cell, false);
+    }
+  }
+}
+
 function isHot(volcano: Volcano, cell: number): boolean {
   const heat = volcano.lava.get(cell);
 
@@ -533,6 +548,7 @@ export class VolcanoSystem {
         cool(volcano, seconds);
       }
 
+      settleLava(volcano, services);
       endanger(volcano, seconds, services);
     }
 

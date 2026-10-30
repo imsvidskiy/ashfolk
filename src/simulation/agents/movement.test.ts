@@ -196,7 +196,7 @@ describe("movement", () => {
 
     let longestStuck = 0;
 
-    setDestination(mover, { x: 25, z: -30 }, navigation, { mayPlanRoute: false });
+    setDestination(mover, { x: 25, z: -30 }, navigation, { canPlanRoute: false });
     mover.path = [
       { x: 25, z: 25 },
       { x: 25, z: -30 },
@@ -220,7 +220,7 @@ describe("movement", () => {
 
     let enteredRuin = false;
 
-    setDestination(mover, { x: 80, z: 3 }, navigation, { mayPlanRoute: false });
+    setDestination(mover, { x: 80, z: 3 }, navigation, { canPlanRoute: false });
 
     for (let elapsed = 0; elapsed < 90 && !hasArrived(mover); elapsed += STEP_SECONDS) {
       moveAlong(mover, STEP_SECONDS, 3, world, navigation);
@@ -243,7 +243,7 @@ describe("movement", () => {
 
     const mover = createMover(-120, 0, 0);
 
-    setDestination(mover, { x: 0, z: 0 }, new NavigationGrid(world), { mayPlanRoute: false });
+    setDestination(mover, { x: 0, z: 0 }, new NavigationGrid(world), { canPlanRoute: false });
     walk(mover, world, 30);
 
     expect(world.isWaterAt(mover.x, mover.z)).toBe(false);
@@ -258,7 +258,7 @@ describe("movement", () => {
 
     let wasInWater = false;
 
-    setDestination(mover, { x: 0, z: 0 }, new NavigationGrid(world), { mayPlanRoute: false });
+    setDestination(mover, { x: 0, z: 0 }, new NavigationGrid(world), { canPlanRoute: false });
 
     for (let elapsed = 0; elapsed < 80; elapsed += STEP_SECONDS) {
       walk(mover, world, STEP_SECONDS);
@@ -300,7 +300,7 @@ describe("unreachable destinations", () => {
 
     const mover = createMover(-60, 0, 0);
 
-    setDestination(mover, { x: 0, z: 0 }, new NavigationGrid(world), { mayPlanRoute: false });
+    setDestination(mover, { x: 0, z: 0 }, new NavigationGrid(world), { canPlanRoute: false });
 
     expect(walk(mover, world, 60, 5)).toBe(true);
     expect(world.isWaterAt(mover.x, mover.z)).toBe(false);
@@ -316,7 +316,7 @@ describe("leaving water", () => {
 
     const startingDepth = depthAt(world, mover);
 
-    setDestination(mover, { x: 0, z: 0 }, navigation, { mayPlanRoute: false });
+    setDestination(mover, { x: 0, z: 0 }, navigation, { canPlanRoute: false });
 
     let deepest = startingDepth;
 
@@ -334,7 +334,7 @@ describe("leaving water", () => {
 
     const mover = createMover(-50, 0, 0);
 
-    setDestination(mover, { x: -150, z: 0 }, new NavigationGrid(world), { mayPlanRoute: false });
+    setDestination(mover, { x: -150, z: 0 }, new NavigationGrid(world), { canPlanRoute: false });
 
     expect(walk(mover, world, 60)).toBe(true);
     expect(depthAt(world, mover)).toBe(0);
@@ -345,7 +345,7 @@ describe("leaving water", () => {
 
     const mover = createMover(-5, -45, 0);
 
-    setDestination(mover, { x: 60, z: -45 }, new NavigationGrid(world), { mayPlanRoute: false });
+    setDestination(mover, { x: 60, z: -45 }, new NavigationGrid(world), { canPlanRoute: false });
 
     expect(world.slope(world.grid.cellAt(mover.x, mover.z))).toBeGreaterThan(1.2);
     expect(secondsToLand(mover, world, 90)).toBeLessThan(60);
@@ -515,7 +515,7 @@ describe("obstacles", () => {
 
     let closest = Number.POSITIVE_INFINITY;
 
-    setDestination(mover, { x: 30, z: 0.1 }, navigation, { mayPlanRoute: false });
+    setDestination(mover, { x: 30, z: 0.1 }, navigation, { canPlanRoute: false });
 
     for (let elapsed = 0; elapsed < 40 && !hasArrived(mover); elapsed += STEP_SECONDS) {
       moveAlong(mover, STEP_SECONDS, 3, world, navigation);
@@ -561,7 +561,7 @@ describe("obstacles", () => {
 
     let closest = Number.POSITIVE_INFINITY;
 
-    setDestination(passer, { x: 30, z: 0 }, navigation, { mayPlanRoute: false });
+    setDestination(passer, { x: 30, z: 0 }, navigation, { canPlanRoute: false });
     setDestination(owner, { x: 0, z: 0 }, navigation);
 
     for (let elapsed = 0; elapsed < 40 && !hasArrived(passer); elapsed += STEP_SECONDS) {

@@ -38,6 +38,7 @@ import { assignSphereLevels, HIDDEN_LEVEL } from "../view-input.ts";
 import { gustAt, type PlantWeather } from "./plant-material.ts";
 
 const BYTE = 255;
+const NO_CROP = -1;
 const FLOATS_PER_PLANT = 8;
 const GROWTH_OFFSET = 4;
 const LEVEL_DISTANCES: readonly number[] = [150, 480];
@@ -427,7 +428,7 @@ export class CropField {
       bounds: new Sphere(center, grid.cellSize * CELL_RADIUS_SHARE + 1),
       fences: this.#fenceInstances(fences),
       growth,
-      kind: plants === null ? HIDDEN_LEVEL : CROP_KINDS.indexOf(plants.kind),
+      kind: plants === null ? NO_CROP : CROP_KINDS.indexOf(plants.kind),
       layout,
       level: HIDDEN_LEVEL,
       plants: plants === null ? new Float32Array(0) : this.#plantInstances(plants),

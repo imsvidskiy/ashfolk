@@ -6,7 +6,7 @@ import { Logo } from "../design/logo.tsx";
 import { useWorldDraft } from "../features/new-world/use-world-draft.ts";
 import { NameField, SeedField, ShapeChoice, SizeChoice } from "../features/new-world/world-fields.tsx";
 import { ProjectLinks } from "../features/project/project-links.tsx";
-import { SavedWorldList } from "../features/saves/saved-world-list.tsx";
+import { SavedWorldList, SavesUnavailableNote } from "../features/saves/saved-world-list.tsx";
 import { useSavesStore } from "../features/saves/saves-store.ts";
 import { ignore } from "../shared/ignore.ts";
 import { loadGameEngine, loadHud } from "./engine-launcher.ts";
@@ -120,6 +120,8 @@ function TitleCard() {
     return (
       <Subview onBack={hasWorlds ? handleBack : null} title="New world">
         <NewWorldForm />
+
+        <SavesUnavailableNote />
       </Subview>
     );
   }

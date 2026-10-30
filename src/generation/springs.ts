@@ -9,7 +9,7 @@ import {
   type Spring,
 } from "../world/water.ts";
 import type { WorldGrid } from "../world/world-grid.ts";
-import { isNearLake } from "./hydrology.ts";
+import { isNearLake } from "./drainage.ts";
 import { pondCut, pondFits, pondShoreReach } from "./ponds.ts";
 import { SOURCE_REACH } from "./river-spacing.ts";
 

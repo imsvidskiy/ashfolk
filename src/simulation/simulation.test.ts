@@ -1,4 +1,5 @@
 import { describe, expect, it, it as test, vi } from "vitest";
+import { isLivingTreeSpecies } from "../content/plants.ts";
 import type { TechnologyId } from "../content/technologies.ts";
 import { DEFAULT_GENERATION_OPTIONS } from "../generation/generation-options.ts";
 import { generateWorld } from "../generation/world-generator.ts";
@@ -7,10 +8,15 @@ import { ignore } from "../shared/ignore.ts";
 import { ANIMAL_STRIDE, AnimalField, PERSON_STRIDE, PersonField } from "../world/agent-buffers.ts";
 import type { IslandShapeKind } from "../world/island-shape.ts";
 import { islandDimensions } from "../world/island-size.ts";
+import { NO_PLANT } from "../world/vegetation-store.ts";
 import { isHopping } from "./agents/hops.ts";
 import { setDestination } from "./agents/movement.ts";
 import { Simulation, type SimulationSnapshot } from "./simulation.ts";
+import { takeUpJob } from "./society/decisions.ts";
+import { CraftJob } from "./society/jobs/craft-job.ts";
 import { personFoe } from "./society/rivalry/foes.ts";
+import { RaidJob } from "./society/rivalry/raid-job.ts";
+import type { CraftOrder } from "./society/workshops.ts";
 import { generateSimulation, snapshotOf } from "./testing/test-simulation.ts";
 import { createVegetatedWorld, floodCells, floodStrip } from "./testing/test-world.ts";
 import { TICK_SECONDS } from "./tick.ts";
@@ -38,6 +44,16 @@ const TICKS_BETWEEN_COMPARISONS = 10;
 const COMPARISONS = 40;
 const ARROWS_IN_FLIGHT = 8;
 const SETTLING_STEP = 0.25;
+const ROUGH_STARTS: readonly (readonly [IslandShapeKind, number])[] = [
+  ["round", 3],
+  ["round", 9],
+  ["square", 1],
+  ["square", 21],
+];
+const CAMP_SURROUNDINGS = 80;
+const CAMP_WOODS = 100;
+const RAID_TICKS_AFTER_LOAD = 40;
+const RAIDER_HOMECOMING_TICKS = 2000;
 
 interface Walker {
   readonly id: number;
@@ -53,6 +69,34 @@ function createSimulation(): Simulation {
   simulation.weather.setKind("clear");
 
   return simulation;
+}
+
+function meanSlopeAround(simulation: Simulation, x: number, z: number): number {
+  const { world } = simulation;
+
+  const land = world.grid.cellsInRadius(x, z, CAMP_SURROUNDINGS).filter((cell) => {
+    return !world.isWater(cell);
+  });
+
+  return (
+    land.reduce((sum, cell) => {
+      return sum + world.slope(cell);
+    }, 0) / land.length
+  );
+}
+
+function treesAround(simulation: Simulation, x: number, z: number): number {
+  const { grid, vegetation } = simulation.world;
+
+  let trees = 0;
+
+  for (const cell of grid.cellsInRadius(x, z, CAMP_WOODS)) {
+    for (let plant = vegetation.firstPlantInCell(cell); plant !== NO_PLANT; plant = vegetation.nextPlantInCell(plant)) {
+      trees += vegetation.isAlive(plant) && isLivingTreeSpecies(vegetation.species[plant]) ? 1 : 0;
+    }
+  }
+
+  return trees;
 }
 
 function advanceFor(simulation: Simulation, seconds: number): void {
@@ -108,6 +152,22 @@ function raidingSimulation(): Simulation {
   simulation.runTicks(200);
 
   return simulation;
+}
+
+function raidsOf(simulation: Simulation): number[] {
+  return simulation.rivalry.raids.map((raid) => {
+    return raid.id;
+  });
+}
+
+function raidersOf(simulation: Simulation, raidId: number): number[] {
+  return simulation.society.people
+    .filter((person) => {
+      return person.job instanceof RaidJob && person.job.raidId === raidId;
+    })
+    .map((person) => {
+      return person.id;
+    });
 }
 
 function looseArrows(simulation: Simulation): void {
@@ -554,6 +614,94 @@ describe("world snapshots", () => {
     }
   });
 
+  it("keeps a raid going after the world loads", { timeout: 60_000 }, () => {
+    const original = raidingSimulation();
+    const [raid] = original.rivalry.raids;
+
+    const copy = restored(snapshotOf(original));
+
+    original.runTicks(RAID_TICKS_AFTER_LOAD);
+    copy.runTicks(RAID_TICKS_AFTER_LOAD);
+
+    expect(raidsOf(copy)).toEqual([raid.id]);
+    expect(raidsOf(copy)).toEqual(raidsOf(original));
+    expect(raidersOf(copy, raid.id)).toEqual(raidersOf(original, raid.id));
+    expect(raidersOf(copy, raid.id).length).toBeGreaterThan(0);
+  });
+
+  it("brings a raider's plunder home after the world loads", { timeout: 60_000 }, () => {
+    const snapshot = snapshotOf(raidingSimulation());
+    const { raiders } = snapshot.rivalry;
+    const [raider, ...others] = raiders === undefined ? [] : raiders;
+
+    if (raider === undefined) {
+      throw new Error("Expected a raider in the save");
+    }
+
+    const homeward = { ...raider, leg: "homeward" as const, loot: { ...raider.loot, bronze: 3 }, rations: 1 };
+
+    const copy = restored({ ...snapshot, rivalry: { ...snapshot.rivalry, raiders: [homeward, ...others] } });
+
+    expect(snapshotOf(copy).rivalry.raiders).toContainEqual(homeward);
+
+    const person = copy.society.findPerson(raider.personId);
+    const tribe = person === null ? null : copy.society.findTribe(person.tribeId);
+
+    if (person === null || tribe === null) {
+      throw new Error("Expected the raider and its tribe after loading");
+    }
+
+    const { bronze } = tribe.stock;
+
+    for (let tick = 0; tick < RAIDER_HOMECOMING_TICKS && person.job instanceof RaidJob; tick += 1) {
+      copy.runTicks(1);
+    }
+
+    expect(person.job).not.toBeInstanceOf(RaidJob);
+    expect(tribe.stock.bronze).toBe(bronze + 3);
+  });
+
+  it("ends a raid loaded from a save that kept no raiders", { timeout: 60_000 }, () => {
+    const snapshot = snapshotOf(raidingSimulation());
+    const { raiders, ...olderRivalry } = snapshot.rivalry;
+
+    const copy = restored({ ...snapshot, rivalry: olderRivalry });
+
+    expect(raiders?.length).toBeGreaterThan(0);
+
+    copy.runTicks(1);
+
+    expect(copy.rivalry.raids).toHaveLength(0);
+  });
+
+  it("gives back the inputs of a craft in progress", () => {
+    const simulation = generateSimulation();
+
+    simulation.populate();
+
+    const [tribe] = simulation.society.tribes();
+    const [crafter] = simulation.society.membersOf(tribe);
+    const order: CraftOrder = {
+      inputs: { wood: 4 },
+      material: null,
+      outputs: { spears: 1 },
+      recipe: "spears",
+      station: null,
+    };
+
+    tribe.stock.wood = 10;
+    takeUpJob(crafter, tribe, simulation.services, (tick) => {
+      return new CraftJob(tick, order);
+    });
+
+    const saved = snapshotOf(simulation).society.tribes.find((candidate) => {
+      return candidate.id === tribe.id;
+    });
+
+    expect(tribe.stock.wood).toBe(6);
+    expect(saved?.stock.wood).toBe(10);
+  });
+
   it("leaves the running world whole when the save's buffers move to another thread", () => {
     const original = grownSimulation();
     const snapshot = snapshotOf(original);
@@ -663,6 +811,31 @@ describe("arrival on islands of every layout", () => {
 
       expect(simulation.society.tribes()).toHaveLength(3);
     }
+  });
+});
+
+describe("first camps", () => {
+  it.each(ROUGH_STARTS)("stand on open ground on a %s island of seed %i", { timeout: 60_000 }, (shape, seed) => {
+    const simulation = new Simulation(generateWorld(seed, { ...DEFAULT_GENERATION_OPTIONS, shape }));
+
+    simulation.populate();
+
+    expect(simulation.society.tribes()).toHaveLength(3);
+
+    for (const tribe of simulation.society.tribes()) {
+      expect(meanSlopeAround(simulation, tribe.campX, tribe.campZ)).toBeLessThan(0.26);
+      expect(treesAround(simulation, tribe.campX, tribe.campZ)).toBeLessThan(200);
+    }
+  });
+
+  it("settle rough ground once a small round island of seed 13 runs out of open ground", { timeout: 60_000 }, () => {
+    const simulation = new Simulation(
+      generateWorld(13, { ...DEFAULT_GENERATION_OPTIONS, dimensions: islandDimensions("small"), shape: "round" })
+    );
+
+    simulation.populate();
+
+    expect(simulation.society.tribes()).toHaveLength(3);
   });
 });
 

@@ -135,7 +135,7 @@ function shelterPlan(tribe: Tribe, context: SocietyContext): BuildingPlan | null
     return null;
   }
 
-  if (housingCapacity(tribe, context) >= tribe.memberCount + SPARE_BEDS) {
+  if (housingCapacity(tribe, context.buildings) >= tribe.memberCount + SPARE_BEDS) {
     return null;
   }
 
@@ -228,7 +228,7 @@ function upgradePlan(tribe: Tribe, context: SocietyContext): BuildingPlan | null
 
   const rank = DWELLING_LADDER.indexOf(best);
 
-  const outdated = completedShelters(tribe, context).find((shelter) => {
+  const outdated = completedShelters(tribe, context.buildings).find((shelter) => {
     return DWELLING_LADDER.indexOf(shelter.kind) < rank && !shelter.isRetiring;
   });
 

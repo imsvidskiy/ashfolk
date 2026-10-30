@@ -1,7 +1,7 @@
 import { Biome } from "../content/biomes.ts";
 import { Ground } from "../content/grounds.ts";
 import { clamp, hashToUnit, lerp } from "../shared/math.ts";
-import { bordersBrook, hopTargets, isBrookCell, Passage } from "../world/brooks.ts";
+import { isBrookCell, Passage } from "../world/brooks.ts";
 import { isOnIsland } from "../world/coast.ts";
 import {
   type Crossing,
@@ -19,7 +19,8 @@ import { isWalkableGround, slopeAt } from "../world/footing.ts";
 import { isWaterCell, sampleHeight } from "../world/terrain-sampling.ts";
 import type { River, WaterFeatures } from "../world/water.ts";
 import type { WorldGrid } from "../world/world-grid.ts";
-import { isNearLake, NO_CELL } from "./hydrology.ts";
+import { BankRegions } from "./bank-regions.ts";
+import { isNearLake, NO_CELL } from "./drainage.ts";
 
 const SHORTEST_RIVER = 220;
 const SOURCE_MARGIN = 30;
@@ -36,7 +37,6 @@ const LINK_WINDOW = 200;
 const LINK_SPACING = 120;
 const BANK_SEARCH = 60;
 const BANK_SEARCH_STEP = 2.5;
-const SMALLEST_LINKED_REGION = 30;
 const ON_RIVER = 18;
 const TANGENT_REACH = 10;
 const MARCH_STEP = 0.5;
@@ -175,6 +175,49 @@ function passageIn(survey: CrossingSurvey, cell: number): Passage {
   return isWalkableGround(terrain, grid, cell) && !isBlocked(cell) ? Passage.Ground : Passage.Blocked;
 }
 
+function segmentAt(course: RiverCourse, along: number): number {
+  const { lengths } = course;
+
+  let low = 0;
+  let high = lengths.length - 1;
+
+  while (high - low > 1) {
+    const middle = Math.floor((low + high) / 2);
+
+    if (lengths[middle] <= along) {
+      low = middle;
+    } else {
+      high = middle;
+    }
+  }
+
+  return low;
+}
+
+function interpolationAt(course: RiverCourse, along: number): { amount: number; index: number } {
+  const { lengths } = course;
+
+  const clamped = clamp(along, 0, course.length);
+  const index = segmentAt(course, clamped);
+  const span = lengths[index + 1] - lengths[index];
+
+  return { amount: span > 0 ? (clamped - lengths[index]) / span : 0, index };
+}
+
+function pointAlong(course: RiverCourse, along: number): Point {
+  const { amount, index } = interpolationAt(course, along);
+  const start = course.river.points[index];
+  const end = course.river.points[index + 1];
+
+  return { x: lerp(start.x, end.x, amount), z: lerp(start.z, end.z, amount) };
+}
+
+function isRiverWater(survey: CrossingSurvey, cell: number): boolean {
+  const { lakeIds, terrain } = survey;
+
+  return isWaterCell(terrain, cell) && terrain.riverStrength[cell] > 0 && lakeIds[cell] === NO_CELL;
+}
+
 function wideningAlong(survey: CrossingSurvey, course: RiverCourse): number {
   const { grid, terrain } = survey;
 
@@ -248,43 +291,6 @@ function riverCourse(river: River): RiverCourse {
   return { length, lengths, river };
 }
 
-function segmentAt(course: RiverCourse, along: number): number {
-  const { lengths } = course;
-
-  let low = 0;
-  let high = lengths.length - 1;
-
-  while (high - low > 1) {
-    const middle = Math.floor((low + high) / 2);
-
-    if (lengths[middle] <= along) {
-      low = middle;
-    } else {
-      high = middle;
-    }
-  }
-
-  return low;
-}
-
-function interpolationAt(course: RiverCourse, along: number): { amount: number; index: number } {
-  const { lengths } = course;
-
-  const clamped = clamp(along, 0, course.length);
-  const index = segmentAt(course, clamped);
-  const span = lengths[index + 1] - lengths[index];
-
-  return { amount: span > 0 ? (clamped - lengths[index]) / span : 0, index };
-}
-
-function pointAlong(course: RiverCourse, along: number): Point {
-  const { amount, index } = interpolationAt(course, along);
-  const start = course.river.points[index];
-  const end = course.river.points[index + 1];
-
-  return { x: lerp(start.x, end.x, amount), z: lerp(start.z, end.z, amount) };
-}
-
 function nearestAlong(course: RiverCourse, point: Point): { along: number; distance: number } {
   const { lengths, river } = course;
 
@@ -309,12 +315,6 @@ function nearestAlong(course: RiverCourse, point: Point): { along: number; dista
   return best;
 }
 
-function isRiverWater(survey: CrossingSurvey, cell: number): boolean {
-  const { lakeIds, terrain } = survey;
-
-  return isWaterCell(terrain, cell) && terrain.riverStrength[cell] > 0 && lakeIds[cell] === NO_CELL;
-}
-
 function crossWater(survey: CrossingSurvey, center: Point, directionX: number, directionZ: number): WaterSpan | null {
   const { grid, terrain } = survey;
 
@@ -325,7 +325,7 @@ function crossWater(survey: CrossingSurvey, center: Point, directionX: number, d
   for (let distance = 0; distance <= WIDEST_HALF_SPAN; distance += MARCH_STEP) {
     const cell = grid.cellAt(center.x + directionX * distance, center.z + directionZ * distance);
 
-    if (cell < 0 || !isOnIsland(terrain.coastDistance, cell)) {
+    if (!isOnIsland(terrain.coastDistance, cell)) {
       return null;
     }
 
@@ -546,7 +546,7 @@ function wadingAlong(survey: CrossingSurvey, crossing: Crossing): Wading | null 
     const point = pointOnCrossing(crossing, along, 0);
     const cell = grid.cellAt(point.x, point.z);
 
-    if (cell < 0 || !isOnIsland(terrain.coastDistance, cell) || isBlocked(cell)) {
+    if (!isOnIsland(terrain.coastDistance, cell) || isBlocked(cell)) {
       return null;
     }
 
@@ -684,7 +684,12 @@ class CrossingPlanner {
   }
 
   linkBanks(courses: readonly RiverCourse[]): void {
-    const regions = new BankRegions(this.survey, this.placed);
+    const { grid } = this.survey;
+
+    const passages = Array.from({ length: grid.cellCount }, (_, cell) => {
+      return passageIn(this.survey, cell);
+    });
+    const regions = new BankRegions(grid, passages, this.placed);
 
     for (const course of courses) {
       for (let along = SOURCE_MARGIN; along <= course.length - MOUTH_MARGIN; along += LINK_STEP) {
@@ -814,148 +819,6 @@ class CrossingPlanner {
 
       return Math.hypot(middle.x - point.x, middle.z - point.z) >= spacing;
     });
-  }
-}
-
-class BankRegions {
-  readonly #grid: WorldGrid;
-  readonly #isGround: Uint8Array;
-  readonly #parent: Int32Array;
-  readonly #size: Int32Array;
-
-  constructor(survey: CrossingSurvey, crossings: readonly Crossing[]) {
-    const { grid } = survey;
-
-    const passages = Array.from({ length: grid.cellCount }, (_, cell) => {
-      return passageIn(survey, cell);
-    });
-
-    function passageOf(cell: number): Passage {
-      return passages[cell];
-    }
-
-    this.#grid = grid;
-    this.#isGround = new Uint8Array(grid.cellCount);
-    this.#parent = new Int32Array(grid.cellCount);
-    this.#size = new Int32Array(grid.cellCount).fill(1);
-
-    for (let cell = 0; cell < grid.cellCount; cell += 1) {
-      this.#parent[cell] = cell;
-      this.#isGround[cell] = passages[cell] === Passage.Ground ? 1 : 0;
-    }
-
-    for (let cell = 0; cell < grid.cellCount; cell += 1) {
-      if (this.#isGround[cell] === 0) {
-        continue;
-      }
-
-      this.#joinNeighbors(cell);
-
-      if (!bordersBrook(grid, cell, passageOf)) {
-        continue;
-      }
-
-      for (const target of hopTargets(grid, cell, passageOf)) {
-        this.#union(cell, target);
-      }
-    }
-
-    for (const crossing of crossings) {
-      this.join(crossing);
-    }
-  }
-
-  isGround(cell: number): boolean {
-    return cell >= 0 && this.#isGround[cell] === 1;
-  }
-
-  separates(first: number, second: number): boolean {
-    const firstRoot = this.#find(first);
-    const secondRoot = this.#find(second);
-
-    if (firstRoot === secondRoot) {
-      return false;
-    }
-
-    return Math.min(this.#size[firstRoot], this.#size[secondRoot]) >= SMALLEST_LINKED_REGION;
-  }
-
-  wouldJoin(crossing: Crossing): boolean {
-    const start = this.#grid.cellAt(crossing.startX, crossing.startZ);
-    const end = this.#grid.cellAt(crossing.endX, crossing.endZ);
-
-    return this.isGround(start) && this.isGround(end) && this.separates(start, end);
-  }
-
-  join(crossing: Crossing): void {
-    const start = this.#grid.cellAt(crossing.startX, crossing.startZ);
-    const end = this.#grid.cellAt(crossing.endX, crossing.endZ);
-
-    if (this.isGround(start) && this.isGround(end)) {
-      this.#union(start, end);
-    }
-  }
-
-  #joinNeighbors(cell: number): void {
-    const grid = this.#grid;
-
-    const column = grid.columnOf(cell);
-    const row = grid.rowOf(cell);
-
-    if (column + 1 < grid.cellsPerSide && this.#isGround[cell + 1] === 1) {
-      this.#union(cell, cell + 1);
-    }
-
-    if (row + 1 >= grid.cellsPerSide) {
-      return;
-    }
-
-    const below = cell + grid.cellsPerSide;
-    const isBelowGround = this.#isGround[below] === 1;
-
-    if (isBelowGround) {
-      this.#union(cell, below);
-    }
-
-    for (const side of [-1, 1]) {
-      const sideColumn = column + side;
-
-      if (sideColumn < 0 || sideColumn >= grid.cellsPerSide) {
-        continue;
-      }
-
-      const isOpen = this.#isGround[cell + side] === 1 && isBelowGround;
-
-      if (isOpen && this.#isGround[below + side] === 1) {
-        this.#union(cell, below + side);
-      }
-    }
-  }
-
-  #find(cell: number): number {
-    let root = cell;
-
-    while (this.#parent[root] !== root) {
-      this.#parent[root] = this.#parent[this.#parent[root]];
-      root = this.#parent[root];
-    }
-
-    return root;
-  }
-
-  #union(first: number, second: number): void {
-    const firstRoot = this.#find(first);
-    const secondRoot = this.#find(second);
-
-    if (firstRoot === secondRoot) {
-      return;
-    }
-
-    const [larger, smaller] =
-      this.#size[firstRoot] >= this.#size[secondRoot] ? [firstRoot, secondRoot] : [secondRoot, firstRoot];
-
-    this.#parent[smaller] = larger;
-    this.#size[larger] += this.#size[smaller];
   }
 }
 
