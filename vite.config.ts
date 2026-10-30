@@ -64,6 +64,13 @@ export default defineConfig({
         runtimeCaching: [
           {
             handler: "NetworkOnly",
+            options: { precacheFallback: { fallbackURL: "privacy/index.html" } },
+            urlPattern: ({ request, url }) => {
+              return request.mode === "navigate" && url.pathname.startsWith("/privacy/");
+            },
+          },
+          {
+            handler: "NetworkOnly",
             options: { precacheFallback: { fallbackURL: "index.html" } },
             urlPattern: ({ request }) => {
               return request.mode === "navigate";
