@@ -1,6 +1,6 @@
 import { MaterialSlot, type MaterialSlotIndex } from "../materials.ts";
 import type { MeshBuilder, VertexStyle } from "../mesh/mesh-builder.ts";
-import { box, cone, cylinder, lathe, type TubePoint, tube } from "../mesh/shapes.ts";
+import { box, cone, cylinder, lathe } from "../mesh/shapes.ts";
 import {
   lerpTriple,
   type Side,
@@ -9,6 +9,7 @@ import {
   type Triple,
   transformOf,
 } from "../mesh/transforms.ts";
+import { type TubePoint, tube } from "../mesh/tubes.ts";
 import { type HumanDetail, trimSegments } from "./human-detail.ts";
 import { HumanBone } from "./human-skeleton.ts";
 import { addRod, inLeftHand, inRightHand, LEFT_FIST, onChest, RIGHT_FIST } from "./prop-placement.ts";

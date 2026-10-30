@@ -3,22 +3,8 @@ import { createVolumeNoise } from "../../shared/noise.ts";
 import { createRandom } from "../../shared/random.ts";
 import { shapeProblems } from "../testing/mesh-checks.ts";
 import { facetShape, type Shape, shapeVertexCount, signedVolume } from "./shape.ts";
-import {
-  blob,
-  box,
-  card,
-  cone,
-  cylinder,
-  disc,
-  icosphere,
-  lathe,
-  loft,
-  panel,
-  ribbon,
-  sphere,
-  torus,
-  tube,
-} from "./shapes.ts";
+import { blob, box, card, cone, cylinder, disc, icosphere, lathe, loft, panel, sphere, torus } from "./shapes.ts";
+import { ribbon, tube } from "./tubes.ts";
 
 function centroid(shape: Shape): [number, number, number] {
   const sum: [number, number, number] = [0, 0, 0];

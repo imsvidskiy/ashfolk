@@ -1,8 +1,9 @@
 import { FULL_TURN, saturate, smoothstep } from "../../shared/math.ts";
 import { MaterialSlot, type MaterialSlotIndex } from "../materials.ts";
 import type { SurfacePoint } from "../mesh/mesh-builder.ts";
-import { card, cylinder, lathe, loft, tube } from "../mesh/shapes.ts";
+import { card, cylinder, lathe, loft } from "../mesh/shapes.ts";
 import { type Triple, transformOf } from "../mesh/transforms.ts";
+import { tube } from "../mesh/tubes.ts";
 import {
   addBlock,
   addFlag,

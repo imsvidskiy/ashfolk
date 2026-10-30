@@ -1,5 +1,6 @@
 import { curveBodySections, curveSections, curveTube } from "./mesh/path-curves.ts";
-import type { BodySection, LoftSection, TubePoint } from "./mesh/shapes.ts";
+import type { BodySection, LoftSection } from "./mesh/shapes.ts";
+import type { TubePoint } from "./mesh/tubes.ts";
 
 export interface DetailSteps {
   readonly curveSteps: number;

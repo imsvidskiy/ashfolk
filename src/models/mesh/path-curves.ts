@@ -1,4 +1,5 @@
-import type { BodySection, LoftSection, TubePoint } from "./shapes.ts";
+import type { BodySection, LoftSection } from "./shapes.ts";
+import type { TubePoint } from "./tubes.ts";
 
 const CENTRIPETAL = 0.5;
 const SHORTEST_KNOT = 1e-6;

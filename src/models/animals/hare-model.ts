@@ -3,8 +3,9 @@ import { alongPath, segmentsAtLeast, segmentsUpTo } from "../level-of-detail.ts"
 import { MaterialSlot } from "../materials.ts";
 import type { MeshBuilder, SurfacePoint, VertexStyle } from "../mesh/mesh-builder.ts";
 import type { Shape } from "../mesh/shape.ts";
-import { type BodySection, type TubePoint, tube } from "../mesh/shapes.ts";
+import type { BodySection } from "../mesh/shapes.ts";
 import { combine, SIDES, sideMirror, transformOf } from "../mesh/transforms.ts";
+import { type TubePoint, tube } from "../mesh/tubes.ts";
 import { degrees, wave } from "../rig/curves.ts";
 import type { Pose } from "../rig/pose.ts";
 import { rigidStyle } from "../rig/skin-weights.ts";

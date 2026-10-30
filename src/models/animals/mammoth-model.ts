@@ -7,17 +7,10 @@ import { alongBody, alongPath, alongTube, segmentsAtLeast } from "../level-of-de
 import { MaterialSlot } from "../materials.ts";
 import type { MeshBuilder } from "../mesh/mesh-builder.ts";
 import { deformShape, type Shape, transformShape } from "../mesh/shape.ts";
-import {
-  type BodySection,
-  type LoftSection,
-  lengthwiseLoft,
-  loft,
-  sphere,
-  type TubePoint,
-  tube,
-} from "../mesh/shapes.ts";
+import { type BodySection, type LoftSection, lengthwiseLoft, loft, sphere } from "../mesh/shapes.ts";
 import { outermostHit, surfaceTransform } from "../mesh/surface-probe.ts";
 import { combine, SIDES, sideMirror, type Triple, transformOf } from "../mesh/transforms.ts";
+import { type TubePoint, tube } from "../mesh/tubes.ts";
 import { degrees, wave } from "../rig/curves.ts";
 import type { Pose } from "../rig/pose.ts";
 import { chainStyle, createChain, rigidStyle } from "../rig/skin-weights.ts";

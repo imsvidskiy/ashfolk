@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { curveBodySections, curveSections, curveTube } from "./path-curves.ts";
-import type { TubePoint } from "./shapes.ts";
+import type { TubePoint } from "./tubes.ts";
 
 const BENT: readonly TubePoint[] = [
   { radius: 0, x: 0, y: 1, z: 0 },
