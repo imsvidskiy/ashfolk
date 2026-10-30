@@ -17,6 +17,7 @@ const ERA_SALT = 7919;
 const NEOLITHIC = 2;
 const BRONZE_AGE = 4;
 const IRON_AGE = 5;
+const RETIRED_ACCESSORY_DRAWS = 5;
 
 export type HairStyle = "bald" | "braids" | "bun" | "fringe" | "long" | "ponytail" | "short" | "wild";
 
@@ -353,6 +354,10 @@ export function personAppearance(input: AppearanceInput): PersonAppearance {
   const isCloakRolled = random.chance(0.45);
   const skin = colorFromPalette(SKIN_TONES, skinDarkness);
   const hair = mixColors(hairColor(random.derive(1), ageGroup, skinDarkness), ELDER_HAIR[1], elderGray * 0.3);
+
+  for (let draw = 0; draw < RETIRED_ACCESSORY_DRAWS; draw += 1) {
+    random.next();
+  }
 
   const appearance: PersonAppearance = {
     ageGroup,
