@@ -45,7 +45,7 @@ function depthAt(simulation: Simulation, x: number, z: number): number {
   return simulation.world.waterDepth(simulation.world.grid.cellAt(x, z));
 }
 
-describe("water after a blast", () => {
+describe("water after the land changes", () => {
   it("runs a river down the valley before anything happens", () => {
     const simulation = createValley();
 
@@ -127,6 +127,38 @@ describe("water after a blast", () => {
 
     expect(simulation.world.isWaterAt(5, 80)).toBe(true);
     expect(simulation.buildings.all).not.toContain(shelter);
+  });
+
+  it("puts out the fire and clears the shore where lowered land floods", () => {
+    const simulation = createValley();
+    const { world } = simulation;
+
+    const area = world.grid.cellsInRadius(5, 0, 200);
+    const before = waterCellsWithin(simulation, 5, 0, 120);
+    const burningWater = new Set<number>();
+
+    simulation.beginStroke("lower", 5, 0, { radius: 100, strength: 100 });
+    settle(simulation, 2);
+    simulation.endStroke();
+    simulation.usePower("fire", 5, 0, { intensity: 100, radius: 120 });
+
+    for (let elapsed = 0; elapsed < 8; elapsed += 0.1) {
+      simulation.advance(0.1);
+
+      for (const cell of area) {
+        if (world.isWater(cell) && world.isBurning(cell)) {
+          burningWater.add(cell);
+        }
+      }
+    }
+
+    const plantsAtTheWater = area.filter((cell) => {
+      return world.touchesWater(cell) && world.vegetation.countTreesInCell(cell) > 0;
+    });
+
+    expect(waterCellsWithin(simulation, 5, 0, 120)).toBeGreaterThan(before + 10);
+    expect([...burningWater]).toEqual([]);
+    expect(plantsAtTheWater).toEqual([]);
   });
 
   it("drowns the plants that the rising water reaches", () => {
