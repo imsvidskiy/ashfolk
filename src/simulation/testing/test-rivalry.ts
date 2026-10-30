@@ -16,10 +16,10 @@ const CHILD_AGE = 6;
 const ARMORY_SPEARS = 12;
 
 interface Duel {
-  far: Person;
-  first: Tribe;
-  near: Person;
-  second: Tribe;
+  readonly far: Person;
+  readonly first: Tribe;
+  readonly near: Person;
+  readonly second: Tribe;
 }
 
 interface TribeFounding {

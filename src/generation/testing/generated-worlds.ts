@@ -13,7 +13,7 @@ const SQUARE_VARIETY_SEEDS = VARIETY_SEEDS.slice(0, 6);
 
 const generated = new Map<string, GeneratedWorld>();
 
-export interface IslandsAcrossSeeds {
+interface IslandsAcrossSeeds {
   readonly round: readonly GeneratedWorld[];
   readonly square: readonly GeneratedWorld[];
 }
