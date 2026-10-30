@@ -142,9 +142,9 @@ describe("relief of a full-size island", () => {
   }, FULL_SIZE_TIMEOUT);
 
   it("meets the square cliff at a moderate height without steps that could open gaps", () => {
-    const grid = new WorldGrid(square.dimensions);
-
     const { height } = square.terrain;
+
+    const grid = new WorldGrid(square.dimensions);
 
     for (const side of edgeSides(grid)) {
       const heights = side.map((cell) => {

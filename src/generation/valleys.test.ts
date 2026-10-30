@@ -5,7 +5,7 @@ import { WorldGrid } from "../world/world-grid.ts";
 import { analyzeDrainage } from "./drainage.ts";
 import { cellsAround } from "./testing/cell-patches.ts";
 import { coarseWorld } from "./testing/generated-worlds.ts";
-import { median } from "./testing/statistics.ts";
+import { meanOf, median } from "./testing/statistics.ts";
 import { isRiverWater } from "./testing/water-checks.ts";
 import { carveValleys } from "./valleys.ts";
 
@@ -75,13 +75,13 @@ describe("river valleys of a generated island", () => {
       });
 
       if (land.length > 0) {
-        depths.push(
-          land.reduce((total, other) => {
-            return total + terrain.height[other];
-          }, 0) /
-            land.length -
-            terrain.waterSurface[cell]
+        const meanHeight = meanOf(
+          land.map((other) => {
+            return terrain.height[other];
+          })
         );
+
+        depths.push(meanHeight - terrain.waterSurface[cell]);
       }
     }
 

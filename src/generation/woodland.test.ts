@@ -5,13 +5,13 @@ import type { TerrainData } from "../world/terrain-data.ts";
 import { hasWater } from "../world/water.ts";
 import { WorldGrid } from "../world/world-grid.ts";
 import { coarseWorld } from "./testing/generated-worlds.ts";
-import { meanOf } from "./testing/statistics.ts";
+import { meanOf, shareAbove } from "./testing/statistics.ts";
 
 function isWooded(terrain: TerrainData, cell: number): boolean {
   return terrain.biome[cell] === Biome.Forest || terrain.biome[cell] === Biome.Taiga;
 }
 
-function nearWater(terrain: TerrainData, grid: WorldGrid, cell: number, radius: number): boolean {
+function isNearWater(terrain: TerrainData, grid: WorldGrid, cell: number, radius: number): boolean {
   return grid.cellsInRadius(grid.cellCenterX(cell), grid.cellCenterZ(cell), radius).some((other) => {
     return hasWater(terrain.waterSurface[other], terrain.height[other]);
   });
@@ -33,11 +33,10 @@ describe("woodland of a generated island", () => {
       return terrain.woodland[cell];
     });
     const mean = meanOf(densities);
-
     const bankMean = meanOf(
       wooded
         .filter((cell) => {
-          return nearWater(terrain, grid, cell, 50);
+          return isNearWater(terrain, grid, cell, 50);
         })
         .map((cell) => {
           return terrain.woodland[cell];
@@ -52,11 +51,7 @@ describe("woodland of a generated island", () => {
         return density < 0.05;
       }).length / densities.length
     ).toBeGreaterThan(0.025);
-    expect(
-      densities.filter((density) => {
-        return density > 0.85;
-      }).length / densities.length
-    ).toBeGreaterThan(0.2);
+    expect(shareAbove(densities, 0.85)).toBeGreaterThan(0.2);
     expect(bankMean).toBeLessThan(mean * 0.7);
 
     for (const cell of wooded.filter((woodedCell) => {

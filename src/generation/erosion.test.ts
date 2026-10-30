@@ -5,7 +5,7 @@ import type { TerrainData } from "../world/terrain-data.ts";
 import { WorldGrid } from "../world/world-grid.ts";
 import { erodeAcrossScales, limitSlopes, relaxSlopes } from "./erosion.ts";
 import { COARSE_DIMENSIONS, coarseWorld, FULL_SIZE_TIMEOUT, fullSizeWorld } from "./testing/generated-worlds.ts";
-import { shareAbove } from "./testing/statistics.ts";
+import { meanOf, shareAbove } from "./testing/statistics.ts";
 import type { GeneratedWorld } from "./world-generator.ts";
 
 const CELL_SIZE = 10;
@@ -73,10 +73,7 @@ function slopeAutocorrelation(generated: GeneratedWorld, lags: number): number[]
         continue;
       }
 
-      const mean =
-        steps.reduce((total, step) => {
-          return total + step;
-        }, 0) / steps.length;
+      const mean = meanOf(steps);
       const residuals = steps.map((step) => {
         return step - mean;
       });
@@ -236,14 +233,7 @@ describe("slopes of a generated island", () => {
   it("keeps slopes realistic, with few cliffs", () => {
     const slopes = slopesOf(coarseWorld(7).terrain, new WorldGrid(COARSE_DIMENSIONS));
 
-    const meanSlope =
-      (Math.atan(
-        slopes.reduce((total, slope) => {
-          return total + slope;
-        }, 0) / slopes.length
-      ) *
-        180) /
-      Math.PI;
+    const meanSlope = (Math.atan(meanOf(slopes)) * 180) / Math.PI;
 
     expect(meanSlope).toBeGreaterThan(14);
     expect(meanSlope).toBeLessThan(24);

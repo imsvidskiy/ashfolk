@@ -51,7 +51,6 @@ function bankRises(generated: GeneratedWorld): number[] {
   for (let cell = 0; cell < grid.cellCount; cell += 1) {
     const isDryLand =
       isOnIsland(terrain.coastDistance, cell) && !hasWater(terrain.waterSurface[cell], terrain.height[cell]);
-
     const water = isDryLand ? waterLevelBesideRiver(terrain, grid, cell) : Number.NaN;
 
     if (Number.isFinite(water)) {

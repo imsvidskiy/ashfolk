@@ -289,9 +289,6 @@ function headFaults(generated: GeneratedWorld): string[] {
       return candidate.river === river.id;
     });
     const [head] = river.points;
-    const ahead = river.points.find((riverPoint) => {
-      return Math.hypot(riverPoint.x - head.x, riverPoint.z - head.z) >= 25;
-    });
 
     if (spring === undefined) {
       if (!isFedByLake(generated, grid, river)) {
@@ -300,6 +297,10 @@ function headFaults(generated: GeneratedWorld): string[] {
 
       continue;
     }
+
+    const ahead = river.points.find((riverPoint) => {
+      return Math.hypot(riverPoint.x - head.x, riverPoint.z - head.z) >= 25;
+    });
 
     if (ahead === undefined) {
       continue;

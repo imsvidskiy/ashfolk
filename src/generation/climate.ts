@@ -381,7 +381,7 @@ function shapeSwamps(inputs: WetlandInputs, result: ClimateResult, wetness: Floa
 }
 
 function cellClimate(fields: ClimateFields, column: number, row: number, point: IslandPoint): CellClimate {
-  const { inputs, noise, profile, slopes, waterDistance } = fields;
+  const { inputs, noise, profile, riverBanks, rockStrength, slopes, waterDistance, wetness } = fields;
 
   const cell = inputs.grid.index(column, row);
   const height = inputs.heights[cell];
@@ -407,11 +407,11 @@ function cellClimate(fields: ClimateFields, column: number, row: number, point: 
     desert,
     height,
     isNearShore,
-    isRiverBank: fields.riverBanks[cell] === 1,
+    isRiverBank: riverBanks[cell] === 1,
     isWater,
-    isWetland: isWetland(fields.wetness[cell]),
+    isWetland: isWetland(wetness[cell]),
     moisture,
-    rockSlope: bareRockSlope(temperature, fields.rockStrength[cell], desert),
+    rockSlope: bareRockSlope(temperature, rockStrength[cell], desert),
     slope: slopes.slope[cell],
     temperature,
   };

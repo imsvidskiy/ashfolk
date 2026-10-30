@@ -233,7 +233,6 @@ describe("climate of a generated island", () => {
         const isLow = terrain.height[bank] < terrain.waterSurface[cell] + 1.5;
         const isGentle = slopeAt(terrain.height, islandGrid, bank) < 0.25;
         const isWarm = terrain.baseTemperature[bank] > 4;
-
         const isWetland = terrain.ground[bank] === Ground.Swamp || terrain.ground[bank] === Ground.Bog;
 
         if (isLow && isGentle && isWarm && !isWetland && !hasWater(terrain.waterSurface[bank], terrain.height[bank])) {
