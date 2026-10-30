@@ -71,6 +71,12 @@ const LOW_CURTAIN_RINGS: readonly CurtainRing[] = [
 ];
 
 function sectionAt(sections: readonly LoftSection[], y: number): LoftSection {
+  const top = sections.at(-1);
+
+  if (top !== undefined && y > top.y) {
+    return top;
+  }
+
   const upperIndex = sections.findIndex((section) => {
     return section.y >= y;
   });
