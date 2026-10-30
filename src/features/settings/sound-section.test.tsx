@@ -9,7 +9,7 @@ describe("sound section", () => {
     const screen = await render(<SoundSection />);
 
     await Promise.all(
-      ["Volume", "Music", "Nature", "World", "Interface"].map((name) => {
+      ["Volume", "Music", "Nature", "Effects", "Interface"].map((name) => {
         return expect.element(screen.getByRole("slider", { name })).toBeInTheDocument();
       })
     );

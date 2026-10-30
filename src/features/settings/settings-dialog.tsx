@@ -44,7 +44,7 @@ function isSettingsTab(value: unknown): value is SettingsTab {
 
 function SectionTab({ section }: { readonly section: SettingsSection }) {
   return (
-    <Tabs.Tab className={cn(SEGMENT, "flex-1 text-sm pointer-coarse:h-10")} value={section.value}>
+    <Tabs.Tab className={cn(SEGMENT, "flex-1 px-1.5 text-sm sm:px-3 pointer-coarse:h-10")} value={section.value}>
       {section.label}
     </Tabs.Tab>
   );
@@ -103,7 +103,7 @@ export function SettingsDialog() {
                     <Dialog.Title className="text-ink text-lg leading-tight font-semibold">Settings</Dialog.Title>
 
                     <Dialog.Description className="text-ink-soft text-sm">
-                      Shape how the world of {worldName} behaves.
+                      Shape how the world of {worldName} looks, sounds and behaves.
                     </Dialog.Description>
                   </div>
 

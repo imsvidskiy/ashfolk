@@ -13,7 +13,7 @@ interface VolumeField {
 const MIX: readonly VolumeField[] = [
   { key: "music", label: "Music" },
   { key: "ambience", label: "Nature" },
-  { key: "effects", label: "World" },
+  { key: "effects", label: "Effects" },
   { key: "interface", label: "Interface" },
 ];
 
