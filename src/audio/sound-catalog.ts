@@ -328,16 +328,6 @@ export const SOUNDS = {
     referenceDistance: 40,
     volume: 0.55,
   },
-  steam: {
-    bus: "effects",
-    files: [
-      new URL("./sounds/steam-1.webm", import.meta.url).href,
-      new URL("./sounds/steam-2.webm", import.meta.url).href,
-    ],
-    priority: 2,
-    referenceDistance: 40,
-    volume: 0.5,
-  },
   thunderFar: {
     bus: "effects",
     files: [
@@ -355,16 +345,6 @@ export const SOUNDS = {
     priority: 0,
     referenceDistance: 200,
     volume: 0.85,
-  },
-  treeFall: {
-    bus: "effects",
-    files: [
-      new URL("./sounds/tree-fall-1.webm", import.meta.url).href,
-      new URL("./sounds/tree-fall-2.webm", import.meta.url).href,
-    ],
-    priority: 1,
-    referenceDistance: 40,
-    volume: 0.55,
   },
   tribeArrive: {
     bus: "effects",
@@ -437,16 +417,6 @@ export const SOUNDS = {
     referenceDistance: 0,
     volume: 0.55,
   },
-  uiSave: {
-    bus: "interface",
-    files: [
-      new URL("./sounds/ui-save-1.webm", import.meta.url).href,
-      new URL("./sounds/ui-save-2.webm", import.meta.url).href,
-    ],
-    priority: 1,
-    referenceDistance: 0,
-    volume: 0.5,
-  },
   uiTab: {
     bus: "interface",
     files: [
@@ -495,16 +465,6 @@ export const SOUNDS = {
     priority: 0,
     referenceDistance: 20,
     volume: 0.3,
-  },
-  workForge: {
-    bus: "effects",
-    files: [
-      new URL("./sounds/work-forge-1.webm", import.meta.url).href,
-      new URL("./sounds/work-forge-2.webm", import.meta.url).href,
-    ],
-    priority: 0,
-    referenceDistance: 20,
-    volume: 0.35,
   },
   workMine: {
     bus: "effects",

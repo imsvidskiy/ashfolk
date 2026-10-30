@@ -1,9 +1,10 @@
 import { spawnSync } from "node:child_process";
 import { mkdirSync, readdirSync, readFileSync, rmSync } from "node:fs";
 import { join, parse } from "node:path";
+import { fileURLToPath } from "node:url";
 import { z } from "zod";
 
-const OUTPUT = new URL("../src/audio/sounds/", import.meta.url).pathname;
+const OUTPUT = fileURLToPath(new URL("../src/audio/sounds/", import.meta.url));
 const SHORT_SECONDS = 1.5;
 const PEAK_CEILING = -1;
 const SILENT_PEAK = -45;
