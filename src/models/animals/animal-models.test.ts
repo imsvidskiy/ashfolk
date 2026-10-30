@@ -17,7 +17,7 @@ import {
 } from "../testing/mesh-connectivity.ts";
 import { posedMesh } from "../testing/moved-mesh.ts";
 import { animalAppearance } from "./animal-appearance.ts";
-import { ANIMAL_SPECIES, animalBoneScales, buildAnimalParts, poseAnimal } from "./animal-models.ts";
+import { ANIMAL_BONE_COUNT, ANIMAL_SPECIES, animalBoneScales, buildAnimalParts, poseAnimal } from "./animal-models.ts";
 import { leapPerStride } from "./quadruped-clips.ts";
 import { QuadrupedBone } from "./quadruped-skeleton.ts";
 
@@ -41,6 +41,21 @@ function posedAnimal(kind: (typeof ANIMAL_KINDS)[number], clip: (typeof ANIMAL_P
 function joint(poser: SkeletonPoser, bone: number): Vector3 {
   return poser.jointPosition(bone, new Vector3());
 }
+
+describe("animal skeletons", () => {
+  it("size the shared pose buffer by the largest rig", () => {
+    const boneCounts = ANIMAL_KINDS.map((kind) => {
+      return ANIMAL_SPECIES[kind].skeleton.bones.length;
+    });
+
+    expect(
+      boneCounts.every((count) => {
+        return count <= ANIMAL_BONE_COUNT;
+      })
+    ).toBe(true);
+    expect(boneCounts).toContain(ANIMAL_BONE_COUNT);
+  });
+});
 
 describe.each(ANIMAL_KINDS)("%s model", (kind) => {
   const species = ANIMAL_SPECIES[kind];

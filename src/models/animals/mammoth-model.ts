@@ -62,8 +62,6 @@ export const MAMMOTH_FRAME: QuadrupedFrame = {
   tail: [0, 2.15, -1.55],
 };
 
-export const MAMMOTH_BONE_COUNT = FIRST_EXTRA_BONE + MAMMOTH_FRAME.extraBones.length;
-
 export const MAMMOTH_GAIT: GaitStyle = {
   deadHeadRoll: 0,
   grazeReach: degrees(28),
