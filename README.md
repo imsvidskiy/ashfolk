@@ -30,7 +30,7 @@
     alt="Sponsor on GitHub"
   ></a>
   <a
-    href="https://whop.com/ashfolk-supporter/"
+    href="https://whop.com/ashfolk/ashfolk-supporter/"
   ><img
     src="https://img.shields.io/badge/Support-on%20Whop-ec6839"
     alt="Support on Whop"
@@ -108,7 +108,7 @@ The simulation runs in a Web Worker. The renderer and the HUD read its frames an
 
 Ashfolk is free and open source. If you enjoy it, you can support it in two ways:
 
-- [Supporter membership on Whop](https://whop.com/ashfolk-supporter/), $9 a month. It pays for development, hosting,
+- [Supporter membership on Whop](https://whop.com/ashfolk/ashfolk-supporter/), $9 a month. It pays for development, hosting,
   art and sound. Cancel any time.
 - [GitHub Sponsors](https://github.com/sponsors/imsvidskiy), with your GitHub account.
 
