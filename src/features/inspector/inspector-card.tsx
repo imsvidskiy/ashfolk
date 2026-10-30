@@ -141,7 +141,7 @@ function FollowButton({ inspection }: { readonly inspection: Inspection }) {
 }
 
 function CloseButton({ onClose }: { readonly onClose: () => void }) {
-  return <IconButton icon={<X aria-hidden="true" size={18} />} label="Close" onClick={onClose} />;
+  return <IconButton icon={<X aria-hidden="true" size={18} />} label="Close the card" onClick={onClose} />;
 }
 
 function BackRow({ onBack, onClose }: { readonly onBack: () => void; readonly onClose: () => void }) {

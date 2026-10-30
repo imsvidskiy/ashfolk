@@ -57,7 +57,7 @@ describe("settings dialog", () => {
 
     const screen = await render(<SettingsDialog />);
 
-    await screen.getByRole("button", { name: "Close settings" }).click();
+    await screen.getByRole("button", { name: "Close the settings" }).click();
 
     await expect.element(screen.getByRole("dialog")).not.toBeInTheDocument();
     expect(useInterfaceStore.getState().isSettingsOpen).toBe(false);

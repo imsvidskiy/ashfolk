@@ -70,7 +70,7 @@ export function CompactMenu() {
         <Menu.Positioner align="end" className="z-50" sideOffset={10}>
           <Menu.Popup className={cn(MENU_POPUP, "min-w-52")}>
             <MenuEntry icon={<BookOpen aria-hidden="true" size={17} />} onClick={handleJournal}>
-              Tribes and chronicle
+              Journal
             </MenuEntry>
 
             <MenuEntry icon={<MapIcon aria-hidden="true" size={17} />} onClick={toggleMap}>

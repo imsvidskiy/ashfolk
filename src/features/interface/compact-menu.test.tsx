@@ -23,7 +23,7 @@ describe("compact menu", () => {
 
     await screen.getByRole("button", { name: "Menu" }).click();
 
-    await expect.element(screen.getByRole("menuitem", { name: "Tribes and chronicle" })).toBeVisible();
+    await expect.element(screen.getByRole("menuitem", { name: "Journal" })).toBeVisible();
     await expect.element(screen.getByRole("menuitem", { name: "Show the map" })).toBeVisible();
     await expect.element(screen.getByRole("menuitem", { name: "Settings" })).toBeVisible();
   });
@@ -34,7 +34,7 @@ describe("compact menu", () => {
     const screen = await render(<CompactMenu />);
 
     await screen.getByRole("button", { name: "Menu" }).click();
-    await screen.getByRole("menuitem", { name: "Tribes and chronicle" }).click();
+    await screen.getByRole("menuitem", { name: "Journal" }).click();
 
     const state = useInterfaceStore.getState();
 

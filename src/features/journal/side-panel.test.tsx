@@ -109,7 +109,7 @@ describe("side panel in a running game", () => {
 
     const screen = await render(<SidePanel />);
 
-    await screen.getByRole("button", { exact: true, name: "Close" }).click();
+    await screen.getByRole("button", { exact: true, name: "Close the card" }).click();
 
     expect(clearSelection).toHaveBeenCalledOnce();
     expect(useInterfaceStore.getState().isJournalOpen).toBe(false);
