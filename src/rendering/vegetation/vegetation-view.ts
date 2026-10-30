@@ -37,7 +37,7 @@ import {
 
 const LEVEL_DISTANCES: readonly number[] = [160, 600, 1600, 4200];
 const FAR_LEVEL_DISTANCES: readonly number[] = [160, 600, 1600, Number.POSITIVE_INFINITY];
-const SHADOW_LEVEL_COUNT = 2;
+const SHADOW_LEVEL_COUNT = 3;
 const BURN_DETAIL_FADE = { end: 1300, start: 500 } as const;
 const FAR_BURN_DETAIL_FADE = { end: 24_000, start: 16_000 } as const;
 const NEAREST_LEVEL = 0;
