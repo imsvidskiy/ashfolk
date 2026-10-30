@@ -177,6 +177,7 @@ export class Simulation {
       buildings: this.buildings,
       chronicle: this.chronicle,
       identifiers: this.identifiers,
+      world: this.world,
     });
     this.rivalry = new RivalrySystem({ chronicle: this.chronicle, effects: this.effects, seed: generated.seed });
     this.services = this.#createServices();

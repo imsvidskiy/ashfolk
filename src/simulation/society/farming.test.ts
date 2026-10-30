@@ -10,7 +10,7 @@ import {
   settle,
   teach,
 } from "../testing/test-society.ts";
-import { PLOT_GROUND } from "../world/world-state.ts";
+import { NO_BUILDING, PLOT_GROUND } from "../world/world-state.ts";
 import { addFieldIfNeeded, fieldTask, sowField, updateFields } from "./farming.ts";
 import { FarmJob } from "./jobs/farm-job.ts";
 import type { Field } from "./tribe.ts";
@@ -29,6 +29,26 @@ function sownField(cell: number): Field {
 }
 
 describe("fields", () => {
+  it("are given back to the land when their tribe dies out", () => {
+    const harness = new SocietyHarness({ day: MORNING });
+
+    const tribe = teach(settle(harness, 6), ["farming"]);
+
+    addFieldIfNeeded(tribe, harness.context);
+
+    const [field] = tribe.fields;
+
+    if (field === undefined) {
+      throw new Error("Expected a field");
+    }
+
+    harness.society.damageArea(tribe.campX, tribe.campZ, 200, 5, "blast");
+
+    expect(harness.society.findTribe(tribe.id)).toBeNull();
+    expect(harness.world.terrain.ground[field.cell]).toBe(field.previousGround);
+    expect(harness.world.occupancy[field.cell]).toBe(NO_BUILDING);
+  });
+
   it("are opened on fertile ground and sown with grain in spring", () => {
     const harness = new SocietyHarness({ day: MORNING });
 
