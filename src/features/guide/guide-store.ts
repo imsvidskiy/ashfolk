@@ -18,7 +18,7 @@ const storedSchema = z.object({
   isOff: z.boolean().default(false),
 });
 
-export interface GuideStore {
+interface GuideStore {
   readonly dismiss: () => void;
   readonly progress: GuideProgress;
   readonly record: (event: GuideEvent) => void;

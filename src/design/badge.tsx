@@ -28,6 +28,7 @@ export function Badge({ children, icon, tone }: BadgeProps) {
       )}
     >
       {icon === undefined ? null : <GameIcon name={icon} size={18} />}
+
       {children}
     </span>
   );
