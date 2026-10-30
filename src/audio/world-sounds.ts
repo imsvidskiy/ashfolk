@@ -178,16 +178,16 @@ export function connectWorldSounds(engine: WorldEngine, sound: SoundEngine): () 
     }
 
     story.hear(next.chronicle, view, now);
+    fires.update(
+      groupCells(mirror.grid, next.burningCells, { bucketSize: FIRE_BUCKET, ...view, limit: FIRE_EMITTERS })
+    );
+    lavas.update(lavaEmitters(mirror.grid, knownLava, next.volcanoes, view));
 
     if (!sound.isAudible) {
       return;
     }
 
     work.listen(next.people, next.personCount, view);
-    fires.update(
-      groupCells(mirror.grid, next.burningCells, { bucketSize: FIRE_BUCKET, ...view, limit: FIRE_EMITTERS })
-    );
-    lavas.update(lavaEmitters(mirror.grid, knownLava, next.volcanoes, view));
   }
 
   function hearRender(): void {
