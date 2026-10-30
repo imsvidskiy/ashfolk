@@ -13,12 +13,15 @@ export function formatSavedAt(savedAt: number, now: number): string {
     return "just now";
   }
 
-  if (elapsed < HOUR) {
-    return relativeTime.format(-Math.max(1, Math.round(elapsed / MINUTE)), "minute");
+  const minutes = Math.max(1, Math.round(elapsed / MINUTE));
+  const hours = Math.round(elapsed / HOUR);
+
+  if (minutes < HOUR / MINUTE) {
+    return relativeTime.format(-minutes, "minute");
   }
 
-  if (elapsed < DAY) {
-    return relativeTime.format(-Math.round(elapsed / HOUR), "hour");
+  if (hours < DAY / HOUR) {
+    return relativeTime.format(-hours, "hour");
   }
 
   return relativeTime.format(-Math.round(elapsed / DAY), "day");
