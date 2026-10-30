@@ -8,7 +8,7 @@ const CAMERA_FADE_BAND = 3;
 
 export const CAMERA_FADE_REACH = CAMERA_FADE_MARGIN + CAMERA_FADE_BAND;
 
-const OUTLINE_FADE_START = 0.6;
+const DISSOLVE_START = 0.6;
 const NOISE_SCALE = 52.982_918_9;
 const NOISE_STEP = vec2(0.067_110_56, 0.005_837_15);
 
@@ -29,15 +29,6 @@ export function extentOf(positions: Float32Array): ObjectExtent {
   return { height, radius };
 }
 
-export function widestExtent(extents: readonly ObjectExtent[]): ObjectExtent {
-  return extents.reduce(
-    (widest, extent) => {
-      return { height: Math.max(widest.height, extent.height), radius: Math.max(widest.radius, extent.radius) };
-    },
-    { height: 0, radius: 0 }
-  );
-}
-
 export function columnVisibility(camera: Vector3, base: Vector3, extent: ObjectExtent): number {
   const sideways = Math.max(Math.hypot(camera.x - base.x, camera.z - base.z) - extent.radius, 0);
   const above = Math.max(camera.y - base.y - extent.height, 0);
@@ -56,8 +47,8 @@ export function columnVisibilityNode(base: Node<"vec3">, radius: Node<"float">, 
 export function fadeNearCamera(material: MeshStandardNodeMaterial, visibility: Node<"float">): void {
   const threshold = fract(float(NOISE_SCALE).mul(fract(dot(screenCoordinate.xy, NOISE_STEP))));
 
-  material.maskNode = threshold.lessThan(visibility);
+  material.maskNode = threshold.lessThan(visibility.div(DISSOLVE_START));
   material.maskShadowNode = bool(true);
 
-  markOutlined(material, smoothstep(OUTLINE_FADE_START, 1, visibility));
+  markOutlined(material, smoothstep(DISSOLVE_START, 1, visibility));
 }

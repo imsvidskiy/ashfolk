@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { PlantSpecies } from "../../content/plants.ts";
+import { PLANT_SPECIES, PlantSpecies } from "../../content/plants.ts";
 import type { WorldMirror } from "../../game/world-mirror.ts";
+import { canonicalHeight } from "../../models/plants/plant-models.ts";
 import { NO_PLANT, PlantState } from "../../world/vegetation-store.ts";
 import { createVegetatedMirror } from "../testing/vegetated-mirror.ts";
 import {
@@ -170,6 +171,20 @@ describe("vegetation chunks", () => {
 
     expect(chunkOf(chunks, 0)).toBe(destination);
     expect(packedPlantCount(chunks)).toBe(alivePlantCount(mirror));
+  });
+
+  it("widens a chunk's bounds to the crowns of its plants", () => {
+    const mirror = createVegetatedMirror();
+    const crowns = PLANT_SPECIES.map((definition) => {
+      return { height: 0, radius: canonicalHeight(definition.index) * 100 };
+    });
+    const chunks = new VegetationChunks(mirror, crowns);
+
+    chunks.repackDirty();
+
+    const { bounds } = chunks.chunks[chunkOf(chunks, 0)];
+
+    expect(bounds.max.x).toBeGreaterThanOrEqual(mirror.vegetation.x[0] + mirror.vegetation.height[0] * 99);
   });
 
   it("finds plants by the chunks around a spot", () => {
