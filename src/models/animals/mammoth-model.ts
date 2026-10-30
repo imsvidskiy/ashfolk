@@ -18,7 +18,7 @@ import type { AnimalDetail } from "./animal-detail.ts";
 import type { GaitStyle } from "./quadruped-clips.ts";
 import { addLegs, hoofBelow, legPath } from "./quadruped-parts.ts";
 import { bodyStyle, neckStyle, tailStyle } from "./quadruped-rigging.ts";
-import { FIRST_EXTRA_BONE, QuadrupedBone, type QuadrupedFrame } from "./quadruped-skeleton.ts";
+import { FIRST_EXTRA_BONE, type LegEnd, QuadrupedBone, type QuadrupedFrame } from "./quadruped-skeleton.ts";
 
 const MammothBone = {
   TrunkBase: FIRST_EXTRA_BONE,
@@ -103,7 +103,7 @@ const TRUNK_SEAM = 0.18;
 const EAR_SEAM = 0.08;
 const BLEND = 0.2;
 
-const LEGS: Readonly<Record<"front" | "hind", readonly TubePoint[]>> = {
+const LEGS: Readonly<Record<LegEnd, readonly TubePoint[]>> = {
   front: legPath(0.45, [
     [0.24, 2.25, 0.6],
     [0.37, 1.7, 0.6],
