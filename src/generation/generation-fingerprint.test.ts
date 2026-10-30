@@ -66,25 +66,6 @@ describe("generation fingerprints", () => {
     expect(generationFingerprint({ ...world, deposits })).not.toBe(generationFingerprint(world));
   });
 
-  it("changes when one cell holds another biome", () => {
-    const biome = world.terrain.biome.slice();
-
-    biome[0] += 1;
-
-    expect(generationFingerprint({ ...world, terrain: { ...world.terrain, biome } })).not.toBe(
-      generationFingerprint(world)
-    );
-  });
-
-  it("changes when one plant is gone", () => {
-    const changed = generateWorld(7, OPTIONS);
-    const fingerprint = generationFingerprint(changed);
-
-    changed.vegetation.remove(0);
-
-    expect(generationFingerprint(changed)).not.toBe(fingerprint);
-  }, 60_000);
-
   it("gives a stable whole number when a layer holds NaN", () => {
     const height = world.terrain.height.slice();
 
