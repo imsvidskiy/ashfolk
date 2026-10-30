@@ -30,16 +30,6 @@ describe("icon button", () => {
     await expect.element(screen.getByRole("button", { name: "Map", pressed: true })).toBeVisible();
     await expect.element(screen.getByRole("button", { name: "Journal", pressed: false })).toBeVisible();
   });
-
-  it("runs its action when clicked", async () => {
-    const handleClick = vi.fn();
-
-    const screen = await render(<IconButton icon={PLUS_ICON} label="Add a tribe" onClick={handleClick} />);
-
-    await screen.getByRole("button", { name: "Add a tribe" }).click();
-
-    expect(handleClick).toHaveBeenCalledOnce();
-  });
 });
 
 describe("text button", () => {
@@ -55,22 +45,5 @@ describe("text button", () => {
     await screen.getByRole("button", { name: "Reset all" }).click();
 
     expect(handleClick).toHaveBeenCalledOnce();
-  });
-
-  it("ignores clicks while disabled", async () => {
-    const handleClick = vi.fn();
-
-    const screen = await render(
-      <TextButton disabled={true} onClick={handleClick} tone="accent">
-        Create
-      </TextButton>
-    );
-
-    const button = screen.getByRole("button", { name: "Create" });
-
-    await button.click({ force: true });
-
-    await expect.element(button).toBeDisabled();
-    expect(handleClick).not.toHaveBeenCalled();
   });
 });

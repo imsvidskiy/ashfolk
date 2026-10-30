@@ -1,5 +1,5 @@
 import { PerspectiveCamera, type Vector3 } from "three/webgpu";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { GodCamera } from "../camera/god-camera.ts";
 import { GroundPicker } from "./ground-picker.ts";
 import { PointerControls, type TapHandler, type ToolGestures } from "./pointer-controls.ts";
@@ -127,13 +127,15 @@ function lastMovedPoint(tool: ToolSpy): Vector3 {
   return call[0];
 }
 
-function wait(milliseconds: number): Promise<void> {
-  return new Promise((resolve) => {
-    window.setTimeout(resolve, milliseconds);
-  });
+function wait(milliseconds: number): void {
+  vi.advanceTimersByTime(milliseconds);
 }
 
 describe("pointer controls", () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+
   afterEach(() => {
     for (const rig of rigs.splice(0)) {
       rig.controls.dispose();
@@ -164,16 +166,16 @@ describe("pointer controls", () => {
     expect(rig.camera.state.distance).toBeGreaterThan(before);
   });
 
-  it("ignores a pinch whose second finger lands after a short pause", async () => {
+  it("ignores a pinch whose second finger lands after a short pause", () => {
     const rig = createRig();
 
     touch(rig, "pointerdown", 1, 150, 420);
-    await wait(60);
+    wait(60);
     touch(rig, "pointerdown", 2, 240, 420);
     touch(rig, "pointermove", 1, 170, 420);
     touch(rig, "pointermove", 2, 220, 420);
     touch(rig, "pointerup", 1, 170, 420);
-    await wait(HOLD_MILLISECONDS);
+    wait(HOLD_MILLISECONDS);
     touch(rig, "pointerup", 2, 220, 420);
 
     expect(rig.tool.begin).not.toHaveBeenCalled();
@@ -190,14 +192,14 @@ describe("pointer controls", () => {
     expect(rig.tool.tap).not.toHaveBeenCalled();
   });
 
-  it("starts a stroke once one finger has stayed down alone", async () => {
+  it("starts a stroke once one finger has stayed down alone", () => {
     const rig = createRig();
 
     touch(rig, "pointerdown", 1, 195, 420);
 
     expect(rig.tool.begin).not.toHaveBeenCalled();
 
-    await wait(HOLD_MILLISECONDS);
+    wait(HOLD_MILLISECONDS);
 
     expect(rig.tool.begin).toHaveBeenCalledTimes(1);
 
@@ -210,12 +212,12 @@ describe("pointer controls", () => {
     expect(rig.tool.end).toHaveBeenCalledTimes(1);
   });
 
-  it("drops a waiting touch that the browser cancels", async () => {
+  it("drops a waiting touch that the browser cancels", () => {
     const rig = createRig();
 
     touch(rig, "pointerdown", 1, 195, 420);
     touch(rig, "pointercancel", 1, 195, 420);
-    await wait(HOLD_MILLISECONDS);
+    wait(HOLD_MILLISECONDS);
 
     expect(rig.tool.begin).not.toHaveBeenCalled();
   });
@@ -223,9 +225,7 @@ describe("pointer controls", () => {
   it("starts at once with a mouse", () => {
     const rig = createRig();
 
-    rig.canvas.dispatchEvent(
-      new PointerEvent("pointerdown", { button: 0, clientX: 195, clientY: 420, pointerId: 1, pointerType: "mouse" })
-    );
+    mouse(rig, "pointerdown", 195, 420);
 
     expect(rig.tool.begin).toHaveBeenCalledTimes(1);
   });
@@ -295,13 +295,13 @@ describe("pointer controls", () => {
     expect(rig.tool.end).not.toHaveBeenCalled();
   });
 
-  it("keeps carrying through a pinch and zooms the camera with it", async () => {
+  it("keeps carrying through a pinch and zooms the camera with it", () => {
     const rig = createRig();
 
     const before = rig.camera.state;
 
     touch(rig, "pointerdown", 1, 195, 420);
-    await wait(HOLD_MILLISECONDS);
+    wait(HOLD_MILLISECONDS);
     touch(rig, "pointerdown", 2, 260, 520);
 
     for (let step = 1; step <= 10; step += 1) {
@@ -320,23 +320,23 @@ describe("pointer controls", () => {
     expect(rig.camera.state.yaw).toBeCloseTo(before.yaw);
   });
 
-  it("cancels a tool that cannot hold through a pinch", async () => {
+  it("cancels a tool that cannot hold through a pinch", () => {
     const brush = { ...createTool(isAlwaysTrue, isAlwaysTrue), canHoldThroughPinch: false };
     const rig = createRig(isAlwaysTrue, brush);
 
     touch(rig, "pointerdown", 1, 195, 420);
-    await wait(HOLD_MILLISECONDS);
+    wait(HOLD_MILLISECONDS);
     touch(rig, "pointerdown", 2, 260, 520);
 
     expect(brush.begin).toHaveBeenCalledTimes(1);
     expect(brush.cancel).toHaveBeenCalledTimes(1);
   });
 
-  it("drops what it carries when the holding finger lifts during a pinch", async () => {
+  it("drops what it carries when the holding finger lifts during a pinch", () => {
     const rig = createRig();
 
     touch(rig, "pointerdown", 1, 195, 420);
-    await wait(HOLD_MILLISECONDS);
+    wait(HOLD_MILLISECONDS);
     touch(rig, "pointerdown", 2, 260, 520);
     touch(rig, "pointerup", 1, 195, 420);
     touch(rig, "pointermove", 2, 280, 520);
@@ -346,11 +346,11 @@ describe("pointer controls", () => {
     expect(rig.tool.tap).not.toHaveBeenCalled();
   });
 
-  it("returns what it carries when the browser cancels the holding finger during a pinch", async () => {
+  it("returns what it carries when the browser cancels the holding finger during a pinch", () => {
     const rig = createRig();
 
     touch(rig, "pointerdown", 1, 195, 420);
-    await wait(HOLD_MILLISECONDS);
+    wait(HOLD_MILLISECONDS);
     touch(rig, "pointerdown", 2, 260, 520);
     touch(rig, "pointercancel", 1, 195, 420);
     touch(rig, "pointerup", 2, 260, 520);
@@ -359,11 +359,11 @@ describe("pointer controls", () => {
     expect(rig.tool.end).not.toHaveBeenCalled();
   });
 
-  it("keeps the holding finger in charge when a third finger comes and goes during a pinch", async () => {
+  it("keeps the holding finger in charge when a third finger comes and goes during a pinch", () => {
     const rig = createRig();
 
     touch(rig, "pointerdown", 1, 195, 420);
-    await wait(HOLD_MILLISECONDS);
+    wait(HOLD_MILLISECONDS);
     touch(rig, "pointerdown", 2, 260, 520);
     touch(rig, "pointerdown", 3, 120, 600);
     touch(rig, "pointerup", 3, 120, 600);

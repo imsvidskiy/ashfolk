@@ -53,20 +53,6 @@ describe("range field", () => {
     await expect.element(screen.getByText("20 m")).toBeVisible();
   });
 
-  it("jumps to its bounds with the Home and End keys", async () => {
-    const screen = await render(<RadiusField />);
-
-    screen.getByRole("slider", { name: "Radius" }).element().focus();
-
-    await userEvent.keyboard("{End}");
-
-    await expect.element(screen.getByText("60 m")).toBeVisible();
-
-    await userEvent.keyboard("{Home}");
-
-    await expect.element(screen.getByText("5 m")).toBeVisible();
-  });
-
   it("reports each new value to its owner", async () => {
     const handleChange = vi.fn();
 

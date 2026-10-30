@@ -24,8 +24,8 @@ describe("launch options", () => {
     });
   });
 
-  it("reads the world name and shape from the address", () => {
-    const options = readLaunchOptions("?seed=7&name=%20Old%20Ford%20&shape=square");
+  it("reads the world name as the new-world form does and the shape from the address", () => {
+    const options = readLaunchOptions("?seed=7&name=%20Old%20%20%20Ford%20&shape=square");
 
     expect(options.name).toBe("Old Ford");
     expect(options.shape).toBe("square");
@@ -41,10 +41,6 @@ describe("launch options", () => {
 
     expect(readLaunchOptions("?seed=7").size).toBe("normal");
     expect(readLaunchOptions("?seed=7&size=huge").size).toBe("normal");
-  });
-
-  it("reads a world name from the address as the new-world form does", () => {
-    expect(readLaunchOptions("?seed=7&name=Old%20%20%20Ford").name).toBe("Old Ford");
   });
 
   it("names a world after its seed until it is given a name", () => {

@@ -145,7 +145,7 @@ describe("advancing", () => {
     expect(listener).toHaveBeenCalledOnce();
     expect(listener).toHaveBeenCalledWith(session.frame);
     expect(session.frame.tick).toBe(2);
-    expect(session.mirror.frameReceivedAt).toBe(900);
+    expect(session.mirror.gameSecondsSinceTick(950)).toBeCloseTo(session.frame.secondsSinceTick + 0.05);
   });
 
   it("stops telling a subscriber that left", async () => {
@@ -244,6 +244,20 @@ describe("failures and closing", () => {
     session.close();
 
     expect(dispose).toHaveBeenCalledOnce();
+  });
+
+  it("stays closed when the request in flight fails after closing", async () => {
+    const { connection, session } = await createSession();
+
+    const logError = vi.spyOn(console, "error").mockImplementation(ignore);
+
+    vi.spyOn(connection, "advance").mockRejectedValueOnce(new Error("The worker was stopped"));
+    session.update(0.1);
+    session.close();
+    await session.whenIdle();
+
+    expect(session.status).toEqual({ kind: "closed" });
+    expect(logError).not.toHaveBeenCalled();
   });
 
   it("ignores the frame that arrives after closing", async () => {
