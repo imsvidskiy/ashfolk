@@ -4,7 +4,7 @@ import { cn } from "../../design/cn.ts";
 import { FOCUS_RING } from "../../design/styles.ts";
 import { formatStars, REPOSITORY_ADDRESS, requestStars, useStarStore } from "./github-stars.ts";
 
-const SUPPORT_ADDRESS = "https://whop.com/ashfolk-supporter/";
+const SUPPORT_ADDRESS = "https://whop.com/ashfolk/ashfolk-supporter/";
 
 const LINK_CLASS = cn(
   FOCUS_RING,

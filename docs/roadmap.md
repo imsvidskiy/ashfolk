@@ -53,7 +53,7 @@ dead ones are deleted, and an item enters Now only when it is small or medium an
 
 - **Goal**: players who want to support the game can join a membership and get recognition and early builds.
 - **Why**: Sponsors reaches developers. Players need a simple checkout.
-- **Scope**: the membership is live at $9 a month on [Whop](https://whop.com/ashfolk-supporter/), and Sponsor in the
+- **Scope**: the membership is live at $9 a month on [Whop](https://whop.com/ashfolk/ashfolk-supporter/), and Sponsor in the
   game opens it. Left: a Discord role, names in the credits, votes on what comes next. Out: accounts in the game,
   anything that locks a feature.
 - **Done when**: a purchase gives the Discord role, and supporters' names show in the credits.

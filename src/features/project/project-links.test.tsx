@@ -19,7 +19,7 @@ describe("project links", () => {
     await expect.element(screen.getByText("1.2K")).toBeVisible();
     await expect
       .element(screen.getByRole("link", { name: "Sponsor Ashfolk" }))
-      .toHaveAttribute("href", "https://whop.com/ashfolk-supporter/");
+      .toHaveAttribute("href", "https://whop.com/ashfolk/ashfolk-supporter/");
     await expect.element(screen.getByRole("link", { name: "Privacy" })).toHaveAttribute("href", "/privacy/");
   });
 
