@@ -1,10 +1,20 @@
 import { Menu } from "@base-ui/react/menu";
-import { BookOpen, Map as MapIcon, Maximize2, Menu as MenuIcon, Minimize2, Settings } from "lucide-react";
+import {
+  BookOpen,
+  Map as MapIcon,
+  Maximize2,
+  Menu as MenuIcon,
+  Minimize2,
+  Settings,
+  Volume2,
+  VolumeX,
+} from "lucide-react";
 import type { ReactNode } from "react";
 import { IconButton } from "../../design/buttons.tsx";
 import { cn } from "../../design/cn.ts";
 import { MENU_ITEM, MENU_POPUP } from "../../design/styles.ts";
 import { useSidePanel } from "../journal/use-side-panel.ts";
+import { useSoundToggle } from "../sound/use-sound-toggle.ts";
 import { useInterfaceStore } from "./interface-store.ts";
 import { useFullscreen } from "./use-fullscreen.ts";
 
@@ -59,6 +69,18 @@ function FullscreenEntry() {
   );
 }
 
+function SoundEntry() {
+  const { isMuted, label, toggleSound } = useSoundToggle();
+
+  const Icon = isMuted ? VolumeX : Volume2;
+
+  return (
+    <MenuEntry icon={<Icon aria-hidden="true" size={17} />} onClick={toggleSound}>
+      {label}
+    </MenuEntry>
+  );
+}
+
 export function CompactMenu() {
   const { handleJournal, isMapOpen, openSettings, toggleMap } = useCompactMenu();
 
@@ -80,6 +102,8 @@ export function CompactMenu() {
             <MenuEntry icon={<Settings aria-hidden="true" size={17} />} onClick={openSettings}>
               Settings
             </MenuEntry>
+
+            <SoundEntry />
 
             <FullscreenEntry />
           </Menu.Popup>

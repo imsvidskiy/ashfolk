@@ -15,6 +15,7 @@
     "prepare": "lefthook install",
     "preview": "vite preview",
     "shots": "bun tests/shoot-scenes.ts",
+    "sounds": "bun scripts/encode-sounds.ts",
     "test": "vitest run",
     "test:e2e": "playwright test",
     "test:watch": "vitest",

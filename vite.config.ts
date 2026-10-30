@@ -22,9 +22,18 @@ function assetFileName(asset: BuiltAsset): string {
   return "assets/[name]-[hash][extname]";
 }
 
+function inlineLimit(file: string): boolean | undefined {
+  if (file.endsWith(".webm")) {
+    return false;
+  }
+
+  return undefined;
+}
+
 export default defineConfig({
   base: "./",
   build: {
+    assetsInlineLimit: inlineLimit,
     chunkSizeWarningLimit: 1600,
     rollupOptions: {
       input: {

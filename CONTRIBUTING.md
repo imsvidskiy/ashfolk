@@ -27,6 +27,7 @@ and pre-push runs `bun run typecheck`, `bun run knip` and `bun run test`.
 | `bun run build` | Builds for production; `bun run preview` serves the build |
 | `bun run test:e2e` | Runs Playwright smoke tests of the wide and phone layouts against the production build |
 | `bun run shots` | Screenshots scenes from `tests/scenes.ts` in headless system Chrome on the GPU, for comparing a change by eye |
+| `bun run sounds <folder>` | Trims, levels and encodes the masters in `<folder>/masters`, listed in `<folder>/cues.json`, into `src/audio/sounds` with `ffmpeg` |
 | `bun run deploy` | Builds and deploys to Cloudflare Workers: the static build and `worker/`, which redirects other hosts and serves films in ranges |
 
 CI runs `check`, `typecheck`, `knip`, `test` and `build` on every pull request and

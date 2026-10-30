@@ -12,6 +12,7 @@ import { FilmingSection } from "../filming/filming-section.tsx";
 import { type SettingsTab, useInterfaceStore } from "../interface/interface-store.ts";
 import { ProjectLinks } from "../project/project-links.tsx";
 import { IslandSection } from "./island-section.tsx";
+import { SoundSection } from "./sound-section.tsx";
 import { TimeSection } from "./time-section.tsx";
 import { WeatherSection } from "./weather-section.tsx";
 import { WorldRulesSection } from "./world-rules-section.tsx";
@@ -31,6 +32,7 @@ const SECTIONS: readonly SettingsSection[] = [
   { Content: WeatherSection, label: "Weather", value: "weather" },
   { Content: TimeSection, label: "Time", value: "time" },
   { Content: IslandSection, label: "Island", value: "island" },
+  { Content: SoundSection, label: "Sound", value: "sound" },
   ...DEVELOPER_SECTIONS,
 ];
 

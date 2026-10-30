@@ -76,7 +76,7 @@ The source is 469 files and about 81 000 lines, with 249 test files next to them
    `simulation/society/rivalry/rivalry-system.ts` (1003). Functions are mostly fine; the longest are
    `createGrassMaterial` (119 lines) and `WorldRenderer.render` (100).
 8. **Saves depend on generation, and nothing guards it.** See the next section.
-9. **No sound.** There is no audio code or asset.
+9. **No sound.** There was no audio code or asset. Sound landed in 0.9; see [Sound](#sound).
 
 ## Saves come first
 
@@ -510,45 +510,53 @@ would match; we don't do it.
 
 ## Sound
 
-Sound lives on the main thread in `src/audio`. The worker never plays sound; it already sends `frame.effects`
-(`lightning`, `meteor`, `explosion`, `splash`) and the state loops need (burning cells, weather, lava, water).
-Reaction events (`extinguished`, `steam`) join the effect log.
+Sound landed in 0.9. It lives on the main thread in `src/audio`; the worker never plays sound. Cues read what
+frames, commands and the camera already carry: `frame.effects`, the chronicle, notices, `held`, burning cells, lava,
+volcanoes, weather, the calendar and people's poses. Cues move into modules later.
 
-It can ship at any time, as a pure addition: a central cue table that reads `frame.effects`. Cues move into
-modules later. Core cues (building finished, tree felled, interface clicks) live in `src/audio/core-cues.ts`.
-
-- **Plain Web Audio, no library.** One `AudioContext`, created and `resume()`d on the first `pointerdown`,
-  `pointerup`, `touchend` or `keydown`; not on `pointermove` or `wheel`, which don't count as gestures. Until then,
-  nothing loads.
-- **Buses.** `GainNode`s: `master` feeds `effects`, `ambience`, `music` and `interface`. Volumes are saved in
-  preferences and set in a sound section of settings.
+- **Plain Web Audio, no library.** One `AudioContext` in `sound-engine.ts`, created and `resume()`d on the first
+  `pointerdown`, `pointerup`, `touchend` or `keydown`; not on `pointermove` or `wheel`, which don't count as
+  gestures. Until then, nothing loads. A hidden tab or muted sound suspends the context. The default `ambient`
+  audio session is kept, so the iPhone mute switch silences the game.
+- **Buses.** `GainNode`s: `master` feeds `effects`, `ambience`, `music` and `interface`. Levels are saved in
+  preferences, set in the Sound section of settings and squared, so a slider feels even. A button in the menu
+  mutes.
 - **Voices.** `AudioBufferSourceNode` into a `PannerNode` (`inverse` distance, `equalpower` panning), capped at 24;
-  a new sound takes the quietest voice if its priority times loudness is higher. The listener follows the camera
-  through its `AudioParam`s, with `setPosition` as the fallback; check Firefox.
-- **First version.** One-shots and ambience beds. Beds are mixed from biome weights sampled around the view focus,
-  the weather and the hour, smoothed over seconds. Positional loops (fire, lava, rivers) come later; fire groups
-  burning cells into at most four emitters per received frame, not per rendered frame.
-- **Assets.** Opus in WebM only. Support is detected by decoding a tiny probe; on failure the game stays silent.
-  AAC is added only if players on older Safari ask (WebKit bugs 226922 and 245428 track Opus decoding there).
-  One-shots mono, 48 kbps, under 30 kB. Beds mono. Only beds in use are decoded; long beds may stream through
-  `MediaElementAudioSourceNode`. Masters stay outside the repository; `scripts/encode-sounds.ts` runs `ffmpeg`.
+  a new sound takes the weakest voice if its priority times loudness is higher (`voices.ts`). Sounds too quiet to
+  hear are skipped. The listener sits on the camera ray, closer to the ground than the camera, and follows it
+  through its `AudioParam`s, with `setPosition` as the Firefox fallback. Effects vary their pitch slightly.
+- **Layers.** Every sound is one isolated layer and the game mixes them: rain has no thunder, thunder has no rain,
+  wind has no birds. `ambience-levels.ts` sets fifteen beds (winds, rain, birds by biome and hour, crickets, frogs,
+  cicadas, waves, streams) from biome shares, water and brooks sampled on a 7×7 grid around the view, the weather
+  with the renderer's snow rule, the hour, the season and the view distance. Levels are smoothed over seconds; a
+  silent bed stops after half a minute.
+- **Positional loops.** Burning cells and hot lava group into at most four and three emitters per received frame;
+  active craters are emitters too. Tornadoes follow their path; brushes play a loop at the brush.
+- **Cues.** `effect-sounds.ts` for effects, with thunder delayed by distance; `power-sounds.ts` for casts, which
+  wait for the next frame and stay silent when the power was refused; `story-sounds.ts` for the chronicle, one
+  jingle at a time; `work-sounds.ts` for the closest three people chopping, mining, building, digging or fighting,
+  timed to their animation's strike; `interface-sounds.ts` for clicks, tabs, panels and the chosen power.
+- **Music.** `music-player.ts` streams one track at a time through `MediaElementAudioSourceNode`, picked by the
+  hour, never the same twice, with a fade in and a rest of 45 to 120 seconds between tracks.
+- **Assets.** Opus in WebM only; WebGPU already needs Safari 26, which decodes it. A sound that fails to decode
+  stays silent. One-shots are mono at 48 kbps, music stereo at 64 kbps. Masters and their prompts stay outside the
+  repository; `bun run sounds <folder>` trims, levels by loudness and encodes them with `ffmpeg`, and the catalog in
+  `sound-catalog.ts` uses `new URL("./sounds/x.webm", import.meta.url).href`, so Vite hashes the files. The sounds
+  are not under the MIT license.
 
 ```ts
 export interface SoundDefinition {
-  readonly id: string;
-  readonly bus: "effects" | "ambience" | "music" | "interface";
+  readonly bus: SoundBus;
   readonly files: readonly string[];
-  readonly volume: number;
+  readonly isLoop: boolean;
   readonly priority: number;
   readonly referenceDistance: number;
+  readonly volume: number;
 }
-
-export type PlaySound = (sound: SoundDefinition, x: number, y: number, z: number) => void;
 ```
 
-`play` takes the definition object, so a typo is a type error. `files` come from
-`new URL("./eruption.webm", import.meta.url).href`, so Vite hashes them. Variations are picked with `Math.random`,
-which effects may use.
+`play` takes the definition object, so a typo is a type error. A `referenceDistance` of zero means the sound is not
+placed. Variations are picked with `Math.random`, which effects may use.
 
 Not three.js `PositionalAudio`: it ties sounds to scene-graph objects. Not Howler.js: its unlock and HTML5 fallback
 are not needed for short buffers, and it has no voice cap. Not Tone.js: it is for synthesized music.
@@ -647,14 +655,15 @@ out differently from the same seed.
 14. **Stores out of `app`, features apart.** M. Shared stores to `stores`; game-aware pieces such as `tribe-dot`
     and `stock-list` to `design/game`.
 15. **Pages list.** S. Verify: `/` and `/privacy/` on `bun run preview`; privacy screenshots at the three sizes.
-16. **Sound, first version.** M. Core, buses, settings, unlock, the cue table, beds. Verify: no `AudioContext`
-    before a gesture (a browser test); each cue in Chrome, Safari and Firefox; first-load size unchanged.
+16. **Sound, first version.** Done in 0.9: core, buses, settings, unlock, cues, beds and music. Verify: no
+    `AudioContext` before a gesture (a browser test); each cue in Chrome, Safari and Firefox; first-load size
+    unchanged.
 17. **Thing kinds.** M. When the next grabbable kind arrives, not before.
 18. **Module folders.** New powers go into `src/modules` from now on. The tornado and the volcano move when they are
     next changed. dependency-cruiser's module rule lands with the second module.
 19. **Terrain and water layers.** M. Lava as the first terrain layer.
-20. **Positional sound loops.** M. Fire, lava, rivers, waterfalls. Verify: a burning forest stays under the voice
-    cap; no allocation per frame.
+20. **Positional sound loops.** Fire, lava and craters done in 0.9; rivers and waterfalls are left. Verify: a
+    burning forest stays under the voice cap; no allocation per frame.
 21. **Split large files.** S each, when a file is next changed; the override list tracks what is left.
 
 ## Checklists

@@ -31,7 +31,7 @@
   },
   "overrides": [
     {
-      "includes": ["src/game/**", "src/models/**", "src/rendering/**"],
+      "includes": ["src/audio/**", "src/game/**", "src/models/**", "src/rendering/**"],
       "linter": {
         "rules": {
           "style": {

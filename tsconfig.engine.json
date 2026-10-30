@@ -10,6 +10,7 @@
     "tsBuildInfoFile": "./node_modules/.tmp/engine.tsbuildinfo"
   },
   "include": [
+    "src/audio",
     "src/content",
     "src/game",
     "src/generation",
