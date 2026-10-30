@@ -2,8 +2,7 @@ import { smoothstep } from "../../shared/math.ts";
 import { NO_PLANT, type PlantPlacement } from "../../world/vegetation-store.ts";
 import type { WorldState } from "../world/world-state.ts";
 
-export const SEEDLING_SHARE = 0.2;
-
+const SEEDLING_SHARE = 0.2;
 const GROWTH_STEP_DAYS = 0.1;
 const VISIBLE_GROWTH = 0.03;
 

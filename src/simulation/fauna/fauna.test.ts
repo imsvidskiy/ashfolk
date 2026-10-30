@@ -9,22 +9,9 @@ import { NavigationGrid, type Waypoint } from "../agents/navigation.ts";
 import { IdentifierSource } from "../identifiers.ts";
 import { createTestWorld, floodCells, livingCount } from "../testing/test-world.ts";
 import type { WorldState } from "../world/world-state.ts";
-import type { PeopleSense } from "./beast-instincts.ts";
 import { type Animal, FaunaSystem, type FaunaThreats, type FaunaTick } from "./fauna.ts";
 
 const DIMENSIONS = { cellSize: 10, cellsPerSide: 96 };
-const NO_PEOPLE: PeopleSense = {
-  findQuarry: () => {
-    return null;
-  },
-  locate: () => {
-    return null;
-  },
-  nearest: () => {
-    return null;
-  },
-  wound: ignore,
-};
 const NO_THREATS: FaunaThreats = {
   dangerNear: () => {
     return null;
@@ -32,7 +19,18 @@ const NO_THREATS: FaunaThreats = {
   hunterNear: () => {
     return null;
   },
-  people: NO_PEOPLE,
+  people: {
+    findQuarry: () => {
+      return null;
+    },
+    locate: () => {
+      return null;
+    },
+    nearest: () => {
+      return null;
+    },
+    wound: ignore,
+  },
 };
 const SUMMER = 1.6;
 const SPRING = 0.5;
@@ -55,6 +53,15 @@ function tickOf(overrides: Partial<FaunaTick> = {}): FaunaTick {
     seconds: 0.1,
     threats: NO_THREATS,
     ...overrides,
+  };
+}
+
+function dangerAt(danger: Waypoint): FaunaThreats {
+  return {
+    ...NO_THREATS,
+    dangerNear: () => {
+      return danger;
+    },
   };
 }
 
@@ -163,15 +170,7 @@ describe("animals", () => {
     const danger: Waypoint = { x: deer.mover.x - 30, z: deer.mover.z };
 
     runFor(fauna, 3, {
-      threats: {
-        dangerNear: () => {
-          return danger;
-        },
-        hunterNear: () => {
-          return null;
-        },
-        people: NO_PEOPLE,
-      },
+      threats: dangerAt(danger),
     });
 
     expect(deer.pose).toBe("run");
@@ -287,15 +286,7 @@ describe("kinds of animals", () => {
 
   it("send a chased ibex bounding uphill while a deer runs straight away", () => {
     const danger: Waypoint = { x: 0, z: 40 };
-    const threats: FaunaThreats = {
-      dangerNear: () => {
-        return danger;
-      },
-      hunterNear: () => {
-        return null;
-      },
-      people: NO_PEOPLE,
-    };
+    const threats = dangerAt(danger);
 
     const climbers = slopedFauna();
     const runners = slopedFauna();

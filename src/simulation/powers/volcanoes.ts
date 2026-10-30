@@ -160,11 +160,7 @@ function beginEruption(volcano: Volcano, services: PowerServices): void {
   volcano.tongues = planTongues(volcano, services);
 
   for (const tongue of volcano.tongues) {
-    const [start] = tongue.cells;
-
-    if (start !== undefined) {
-      cover(volcano, start, services);
-    }
+    cover(volcano, tongue.cells[0], services);
   }
 
   chronicle.record({ category: "warning", text: "A volcano erupted", tribeId: null, x: volcano.x, z: volcano.z });

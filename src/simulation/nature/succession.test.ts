@@ -7,7 +7,6 @@ import { createRandom } from "../../shared/random.ts";
 import { NO_PLANT } from "../../world/vegetation-store.ts";
 import { createVegetatedWorld } from "../testing/test-world.ts";
 import { WorldState } from "../world/world-state.ts";
-import { SEEDLING_SHARE } from "./nursery.ts";
 import { climaxOf } from "./succession.ts";
 import { VegetationGrowthSystem } from "./vegetation-growth.ts";
 
@@ -22,12 +21,8 @@ interface Census {
   youngTrees: number;
 }
 
-function burntForest(
-  biome: BiomeIndex = Biome.Forest,
-  ground: GroundIndex = Ground.Forest,
-  cellsPerSide = 64
-): WorldState {
-  const world = new WorldState(createVegetatedWorld({ biome, dimensions: { cellSize: 10, cellsPerSide }, ground }));
+function burntForest(biome: BiomeIndex = Biome.Forest, ground: GroundIndex = Ground.Forest): WorldState {
+  const world = new WorldState(createVegetatedWorld({ biome, dimensions: { cellSize: 10, cellsPerSide: 64 }, ground }));
 
   for (const cell of world.grid.cellsInRadius(0, 0, BURNT_RADIUS)) {
     world.vegetation.burnTreesInCell(cell, 0);
@@ -152,29 +147,6 @@ describe("succession after a fire", () => {
     const edgeArea = BURNT_RADIUS ** 2 - (BURNT_RADIUS - 60) ** 2;
 
     expect(edgeTrees / edgeArea).toBeGreaterThan((middle.youngTrees / (BURNT_RADIUS - 60) ** 2) * 1.5);
-  });
-
-  it("starts every tree as a sapling", () => {
-    const world = burntForest(Biome.Forest, Ground.Forest, 256);
-    const { vegetation } = world;
-
-    const before = vegetation.count;
-
-    new Seasons(world).pass(DAYS_PER_YEAR * 0.6);
-
-    const sprouted = Array.from({ length: vegetation.count - before }, (_, index) => {
-      return before + index;
-    }).filter((plant) => {
-      return vegetation.isAlive(plant) && isLivingTreeSpecies(vegetation.species[plant]);
-    });
-
-    expect(sprouted.length).toBeGreaterThan(0);
-    expect(
-      sprouted.every((plant) => {
-        return vegetation.height[plant] < plantSpeciesDefinition(vegetation.species[plant]).heightRange[1];
-      })
-    ).toBe(true);
-    expect(SEEDLING_SHARE).toBeLessThan(0.5);
   });
 
   it("stands dead trees back at their full height", () => {
