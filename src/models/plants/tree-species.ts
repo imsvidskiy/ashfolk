@@ -378,7 +378,7 @@ function spruce(seed: number): TreeStructure {
     });
   }
 
-  tuckTrunk(growth, Math.min(height, skirtCeiling(growth.foliage)));
+  tuckTrunk(growth, skirtCeiling(growth.foliage));
   addSpruceStubs(growth, trunk, height);
 
   return finish(growth, height);
