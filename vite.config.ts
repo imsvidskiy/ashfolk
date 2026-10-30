@@ -3,6 +3,7 @@ import babel from "@rolldown/plugin-babel";
 import tailwindcss from "@tailwindcss/vite";
 import react, { reactCompilerPreset } from "@vitejs/plugin-react";
 import { playwright } from "@vitest/browser-playwright";
+import { VitePWA } from "vite-plugin-pwa";
 import { configDefaults, defineConfig } from "vitest/config";
 import { createChromiumLaunchOptions } from "./tests/chromium.ts";
 
@@ -46,7 +47,40 @@ export default defineConfig({
     },
     target: "es2023",
   },
-  plugins: [react(), babel({ presets: [reactCompilerPreset()] }), tailwindcss()],
+  plugins: [
+    react(),
+    babel({ presets: [reactCompilerPreset()] }),
+    tailwindcss(),
+    VitePWA({
+      base: "/",
+      injectRegister: "script-defer",
+      manifest: false,
+      workbox: {
+        clientsClaim: true,
+        directoryIndex: null,
+        globPatterns: ["**/*.{css,html,js,png,svg,webp,woff2}"],
+        navigateFallback: null,
+        navigationPreload: true,
+        runtimeCaching: [
+          {
+            handler: "NetworkOnly",
+            options: { precacheFallback: { fallbackURL: "index.html" } },
+            urlPattern: ({ request }) => {
+              return request.mode === "navigate";
+            },
+          },
+          {
+            handler: "CacheFirst",
+            options: { cacheName: "sounds", expiration: { maxEntries: 150 } },
+            urlPattern: ({ request, url }) => {
+              return url.pathname.endsWith(".webm") && !request.headers.has("range");
+            },
+          },
+        ],
+        skipWaiting: true,
+      },
+    }),
+  ],
   test: {
     projects: [
       {

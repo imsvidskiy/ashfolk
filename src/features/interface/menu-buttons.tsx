@@ -1,7 +1,8 @@
-import { BookOpen, Map as MapIcon, Maximize2, Minimize2, Settings, Volume2, VolumeX } from "lucide-react";
+import { BookOpen, Download, Map as MapIcon, Maximize2, Minimize2, Settings, Volume2, VolumeX } from "lucide-react";
 import { IconButton } from "../../design/buttons.tsx";
 import { cn } from "../../design/cn.ts";
 import { WithTooltip } from "../../design/tooltip.tsx";
+import { useInstall } from "../install/install-store.ts";
 import { useSidePanel } from "../journal/use-side-panel.ts";
 import { useSoundToggle } from "../sound/use-sound-toggle.ts";
 import { useInterfaceStore } from "./interface-store.ts";
@@ -35,6 +36,20 @@ function FullscreenButton() {
   return (
     <WithTooltip content={label} side="bottom">
       <IconButton icon={<Icon aria-hidden="true" size={18} />} label={label} onClick={toggleFullscreen} />
+    </WithTooltip>
+  );
+}
+
+function InstallButton() {
+  const { canInstall, install } = useInstall();
+
+  if (!canInstall) {
+    return null;
+  }
+
+  return (
+    <WithTooltip content="Play from your home screen or desktop" side="bottom">
+      <IconButton icon={<Download aria-hidden="true" size={18} />} label="Install the app" onClick={install} />
     </WithTooltip>
   );
 }
@@ -79,6 +94,8 @@ export function MenuButtons({ className }: { readonly className?: string | undef
       <WithTooltip content="World, weather, time, graphics and sound" side="bottom">
         <IconButton icon={<Settings aria-hidden="true" size={18} />} label="Settings" onClick={openSettings} />
       </WithTooltip>
+
+      <InstallButton />
 
       <FullscreenButton />
     </nav>

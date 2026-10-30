@@ -1,5 +1,6 @@
 import { lazy, Suspense, useEffect } from "react";
 import { TooltipProvider } from "../design/tooltip.tsx";
+import { connectInstall } from "../features/install/install-store.ts";
 import { connectSound } from "../features/sound/sound.ts";
 import { loadHud } from "./engine-launcher.ts";
 import { useEngineStore } from "./engine-store.ts";
@@ -53,6 +54,10 @@ export function App() {
 
   useEffect(() => {
     return connectSound(window);
+  }, []);
+
+  useEffect(() => {
+    return connectInstall(window);
   }, []);
 
   return (
