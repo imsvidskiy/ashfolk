@@ -1,0 +1,34 @@
+<svg viewBox="69.75 48 116.5 160" xmlns="http://www.w3.org/2000/svg">
+  <title>Ashfolk</title>
+  <defs>
+    <clipPath id="flame">
+      <path
+        clip-rule="evenodd"
+        d="M137 53.8C150.7 86.5 186.3 105 186.3 146.2C186.3 181.5 159.8 208 128 208C96.2 208 69.7 181.5 69.7 149.7C69.7 127.4 78.5 110.1 90.8 95.7C94.9 90.9 98.3 92.2 99.8 98.4C101.7 106.3 104.9 112.9 109.6 118.1C112.8 121.6 114.8 120.2 113.9 115.5C110.4 94.6 114.2 72.2 126.3 52.2C130.1 45.8 134.2 47 137 53.8ZM135.6 142.5C141.9 151 151 157.7 151 168.3C151 179.7 142.1 185.9 129.8 185.9C117.4 185.9 108.6 179.7 108.6 168.3C108.6 156.8 119.1 150.6 126.8 142C130 138.4 132.7 138.6 135.6 142.5Z"
+      />
+    </clipPath>
+    <radialGradient cx="69.75" cy="48" gradientUnits="userSpaceOnUse" id="shade" r="143.75">
+      <stop offset="0" stop-color="#18171a" />
+      <stop offset="1" stop-color="#18171a" stop-opacity="0" />
+    </radialGradient>
+    <radialGradient cx="186.25" cy="48" gradientUnits="userSpaceOnUse" id="ash" r="181.25">
+      <stop offset="0" stop-color="#8b8e99" stop-opacity="0.85" />
+      <stop offset="1" stop-color="#8b8e99" stop-opacity="0" />
+    </radialGradient>
+    <radialGradient cx="69.75" cy="208" gradientUnits="userSpaceOnUse" id="ember" r="156.25">
+      <stop offset="0" stop-color="#cf4436" stop-opacity="0.75" />
+      <stop offset="1" stop-color="#cf4436" stop-opacity="0" />
+    </radialGradient>
+    <radialGradient cx="186.25" cy="208" gradientUnits="userSpaceOnUse" id="dawn" r="143.75">
+      <stop offset="0" stop-color="#ec6839" stop-opacity="0.95" />
+      <stop offset="1" stop-color="#ec6839" stop-opacity="0" />
+    </radialGradient>
+  </defs>
+  <g clip-path="url(#flame)">
+    <rect fill="#26252a" height="160" width="116.5" x="69.75" y="48" />
+    <rect fill="url(#shade)" height="160" width="116.5" x="69.75" y="48" />
+    <rect fill="url(#ash)" height="160" width="116.5" x="69.75" y="48" />
+    <rect fill="url(#ember)" height="160" width="116.5" x="69.75" y="48" />
+    <rect fill="url(#dawn)" height="160" width="116.5" x="69.75" y="48" />
+  </g>
+</svg>
