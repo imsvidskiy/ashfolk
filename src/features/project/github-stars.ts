@@ -2,7 +2,6 @@ import { z } from "zod";
 import { create } from "zustand";
 
 export const REPOSITORY_ADDRESS = "https://github.com/imsvidskiy/ashfolk";
-export const SPONSOR_ADDRESS = "https://github.com/sponsors/imsvidskiy";
 
 const REPOSITORY_API = "https://api.github.com/repos/imsvidskiy/ashfolk";
 
