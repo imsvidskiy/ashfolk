@@ -1,6 +1,6 @@
 export const meta = {
   name: 'ship',
-  description: 'Gate, review, verify, fix, style and look at a Ashfolk branch before its pull request',
+  description: 'Gate, review, verify, fix, style and look at an Ashfolk branch before its pull request',
   whenToUse:
     'After a feature, fix or refactor is committed on its own branch in its own worktree, before opening the pull request. Args: "<worktree path> [auto|light|full]".',
   phases: [

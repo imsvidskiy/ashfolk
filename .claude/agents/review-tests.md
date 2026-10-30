@@ -1,6 +1,6 @@
 ---
 name: review-tests
-description: Reviews the tests of a Ashfolk change for gaps and tests that prove nothing, without editing. Use in the ship workflow or when asked whether a branch is tested well enough.
+description: Reviews the tests of an Ashfolk change for gaps and tests that prove nothing, without editing. Use in the ship workflow or when asked whether a branch is tested well enough.
 tools: Read, Grep, Glob, Bash
 ---
 

@@ -1,6 +1,6 @@
 ---
 name: review-rules
-description: Checks a Ashfolk change against the architecture rules in AGENTS.md, without editing. Use in the ship workflow or when asked whether a branch keeps the project's rules.
+description: Checks an Ashfolk change against the architecture rules in AGENTS.md, without editing. Use in the ship workflow or when asked whether a branch keeps the project's rules.
 tools: Read, Grep, Glob, Bash
 ---
 

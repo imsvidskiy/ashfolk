@@ -1,6 +1,6 @@
 ---
 name: review-performance
-description: Reviews a Ashfolk change for frame-time, memory and load-time costs, without editing. Use in the ship workflow or when asked whether a branch makes the game slower.
+description: Reviews an Ashfolk change for frame-time, memory and load-time costs, without editing. Use in the ship workflow or when asked whether a branch makes the game slower.
 tools: Read, Grep, Glob, Bash
 ---
 

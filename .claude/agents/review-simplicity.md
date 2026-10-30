@@ -1,6 +1,6 @@
 ---
 name: review-simplicity
-description: Reviews a Ashfolk change for code that duplicates what exists or is built harder than the problem, without editing. Use in the ship workflow or when asked whether a branch could be simpler.
+description: Reviews an Ashfolk change for code that duplicates what exists or is built harder than the problem, without editing. Use in the ship workflow or when asked whether a branch could be simpler.
 tools: Read, Grep, Glob, Bash
 ---
 

@@ -1,6 +1,6 @@
 ---
 name: review-bugs
-description: Reads a Ashfolk change and reports bugs, without editing. Use in the ship workflow or when asked to find what a branch breaks.
+description: Reads an Ashfolk change and reports bugs, without editing. Use in the ship workflow or when asked to find what a branch breaks.
 tools: Read, Grep, Glob, Bash
 ---
 

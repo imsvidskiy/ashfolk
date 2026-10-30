@@ -1,6 +1,6 @@
 ---
 name: ship-fixer
-description: Applies confirmed review findings to a Ashfolk branch and commits them. Use in the ship workflow after findings are verified.
+description: Applies confirmed review findings to an Ashfolk branch and commits them. Use in the ship workflow after findings are verified.
 tools: Read, Edit, Write, Bash, Grep, Glob
 ---
 
