@@ -7,6 +7,13 @@ const JINGLE_GAP_SECONDS = 4;
 const NEARBY_REACH = 150;
 const NEARBY_VIEW_SHARE = 1.5;
 
+interface StoryCue {
+  readonly isNearbyOnly: boolean;
+  readonly isPlaced: boolean;
+  readonly rank: number;
+  readonly sound: SoundDefinition;
+}
+
 const CUES: ReadonlyMap<ChronicleCategory, StoryCue> = new Map([
   ["arrival", { isNearbyOnly: false, isPlaced: false, rank: 1, sound: SOUNDS.uiNotice }],
   ["beast", { isNearbyOnly: false, isPlaced: false, rank: 1, sound: SOUNDS.uiNotice }],
@@ -21,13 +28,6 @@ const CUES: ReadonlyMap<ChronicleCategory, StoryCue> = new Map([
   ["split", { isNearbyOnly: false, isPlaced: false, rank: 1, sound: SOUNDS.uiNotice }],
   ["warning", { isNearbyOnly: false, isPlaced: false, rank: 1, sound: SOUNDS.uiNotice }],
 ]);
-
-interface StoryCue {
-  readonly isNearbyOnly: boolean;
-  readonly isPlaced: boolean;
-  readonly rank: number;
-  readonly sound: SoundDefinition;
-}
 
 interface Heard {
   readonly cue: StoryCue;

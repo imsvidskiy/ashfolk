@@ -5,17 +5,17 @@ import { useSoundStore, type VolumeKey } from "../sound/sound-store.ts";
 import { useSoundToggle } from "../sound/use-sound-toggle.ts";
 import { FIELD_GRID, SettingsGroup } from "./settings-group.tsx";
 
+interface VolumeField {
+  readonly key: VolumeKey;
+  readonly label: string;
+}
+
 const MIX: readonly VolumeField[] = [
   { key: "music", label: "Music" },
   { key: "ambience", label: "Nature" },
   { key: "effects", label: "World" },
   { key: "interface", label: "Interface" },
 ];
-
-interface VolumeField {
-  readonly key: VolumeKey;
-  readonly label: string;
-}
 
 function useVolume(key: VolumeKey) {
   const volume = useSoundStore((state) => {

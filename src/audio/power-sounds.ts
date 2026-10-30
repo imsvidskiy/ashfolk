@@ -17,6 +17,12 @@ const CASTS: ReadonlyMap<PowerId, readonly SoundDefinition[]> = new Map([
   ["wolf", [SOUNDS.spawn, SOUNDS.animalWolves]],
 ]);
 
+interface Brush {
+  readonly begin: SoundDefinition | null;
+  readonly held: SoundDefinition | null;
+  readonly repeated: SoundDefinition | null;
+}
+
 const BRUSHES: ReadonlyMap<PowerId, Brush> = new Map([
   ["fire", { begin: SOUNDS.fireIgnite, held: null, repeated: null }],
   ["flatten", { begin: null, held: SOUNDS.landSmooth, repeated: null }],
@@ -28,12 +34,6 @@ const BRUSHES: ReadonlyMap<PowerId, Brush> = new Map([
   ["smooth", { begin: null, held: SOUNDS.landSmooth, repeated: null }],
   ["snow", { begin: SOUNDS.snowStart, held: AMBIENCE_LAYERS.windSnowy, repeated: null }],
 ]);
-
-interface Brush {
-  readonly begin: SoundDefinition | null;
-  readonly held: SoundDefinition | null;
-  readonly repeated: SoundDefinition | null;
-}
 
 interface Stroke {
   readonly brush: Brush;

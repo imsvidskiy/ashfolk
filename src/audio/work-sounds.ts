@@ -10,6 +10,12 @@ const HEARING_VIEW_DISTANCE = 350;
 const HEARING_REACH = 120;
 const LOUDEST_WORKERS = 3;
 
+interface Strike {
+  readonly at: number;
+  readonly cycleSeconds: number;
+  readonly sound: SoundDefinition;
+}
+
 const STRIKES: ReadonlyMap<PersonPose, Strike> = new Map([
   ["brawl", strike(SOUNDS.fight, "brawl", 0.5)],
   ["build", strike(SOUNDS.workBuild, "build", 0.64)],
@@ -18,12 +24,6 @@ const STRIKES: ReadonlyMap<PersonPose, Strike> = new Map([
   ["mine", strike(SOUNDS.workMine, "mine", 0.56)],
   ["thrust", strike(SOUNDS.fight, "thrust", 0.5)],
 ]);
-
-interface Strike {
-  readonly at: number;
-  readonly cycleSeconds: number;
-  readonly sound: SoundDefinition;
-}
 
 interface Worker {
   readonly id: number;

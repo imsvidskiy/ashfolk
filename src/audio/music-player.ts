@@ -8,13 +8,13 @@ const RETRY_SECONDS = 5;
 const FADE_IN_SECONDS = 4;
 const FADE_OUT_SECONDS = 3;
 
+export type Mood = "day" | "dusk" | "night";
+
 const MOODS: Readonly<Record<Mood, readonly string[]>> = {
   day: [...MUSIC_TRACKS.cozyDay, ...MUSIC_TRACKS.arcadeDay],
   dusk: [...MUSIC_TRACKS.cozyDusk],
   night: [...MUSIC_TRACKS.cozyNight, ...MUSIC_TRACKS.arcadeNight],
 };
-
-export type Mood = "day" | "dusk" | "night";
 
 interface Output {
   readonly element: HTMLAudioElement;

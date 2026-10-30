@@ -11,9 +11,6 @@ const SHORTEST_SECONDS = 0.15;
 const LOUDNESS_PATTERN = /I:\s+(?<value>-?[\d.]+) LUFS/u;
 const PEAK_PATTERN = /Peak:\s+(?<value>-?[\d.]+) dBFS/u;
 
-const LOUDNESS: Readonly<Record<SoundGroup, number>> = { ambience: -26, effects: -20, interface: -24, music: -20 };
-const SHORT_PEAK: Readonly<Record<SoundGroup, number>> = { ambience: -6, effects: -6, interface: -10, music: -6 };
-
 const cueSchema = z.object({
   group: z.enum(["ambience", "effects", "interface", "music"]),
   id: z.string(),
@@ -24,6 +21,9 @@ const cueSchema = z.object({
 type Cue = z.output<typeof cueSchema>;
 
 type SoundGroup = Cue["group"];
+
+const LOUDNESS: Readonly<Record<SoundGroup, number>> = { ambience: -26, effects: -20, interface: -24, music: -20 };
+const SHORT_PEAK: Readonly<Record<SoundGroup, number>> = { ambience: -6, effects: -6, interface: -10, music: -6 };
 
 interface Measurement {
   readonly loudness: number;
