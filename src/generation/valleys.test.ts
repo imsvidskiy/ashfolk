@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { landEverywhere, shapeTerrain, trough, troughWithBasin } from "../world/testing/terrain-fixtures.ts";
 import { WorldGrid } from "../world/world-grid.ts";
-import { analyzeDrainage } from "./hydrology.ts";
+import { analyzeDrainage } from "./drainage.ts";
 import { carveValleys } from "./valleys.ts";
 
 function lakeLevels(heights: Float32Array, grid: WorldGrid): number[] {

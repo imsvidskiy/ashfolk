@@ -19,7 +19,7 @@ import { isWalkableGround, slopeAt } from "../world/footing.ts";
 import { isWaterCell, sampleHeight } from "../world/terrain-sampling.ts";
 import type { River, WaterFeatures } from "../world/water.ts";
 import type { WorldGrid } from "../world/world-grid.ts";
-import { isNearLake, NO_CELL } from "./hydrology.ts";
+import { isNearLake, NO_CELL } from "./drainage.ts";
 
 const SHORTEST_RIVER = 220;
 const SOURCE_MARGIN = 30;

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { pondEdgeReach, type River, type RiverPoint, type Spring } from "../world/water.ts";
 import { WorldGrid } from "../world/world-grid.ts";
-import { NO_CELL } from "./hydrology.ts";
+import { NO_CELL } from "./drainage.ts";
 import { SOURCE_REACH } from "./river-spacing.ts";
 import { placeSprings } from "./springs.ts";
 
