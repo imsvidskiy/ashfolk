@@ -135,9 +135,7 @@ export class MusicPlayer {
     output.gain.gain.cancelScheduledValues(context.currentTime);
     output.gain.gain.setValueAtTime(0, context.currentTime);
     output.gain.gain.setTargetAtTime(1, context.currentTime, FADE_IN_SECONDS / 3);
-    output.element.play().catch(() => {
-      this.#startsAt = now + RETRY_SECONDS;
-    });
+    this.#play(output, now);
   }
 
   #resume(output: Output, now: number): void {
@@ -145,6 +143,10 @@ export class MusicPlayer {
       return;
     }
 
+    this.#play(output, now);
+  }
+
+  #play(output: Output, now: number): void {
     output.element.play().catch(() => {
       this.#startsAt = now + RETRY_SECONDS;
     });

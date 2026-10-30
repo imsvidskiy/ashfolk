@@ -548,7 +548,6 @@ volcanoes, weather, the calendar and people's poses. Cues move into modules late
 export interface SoundDefinition {
   readonly bus: SoundBus;
   readonly files: readonly string[];
-  readonly isLoop: boolean;
   readonly priority: number;
   readonly referenceDistance: number;
   readonly volume: number;

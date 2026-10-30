@@ -1,6 +1,6 @@
 import { ignore } from "../shared/ignore.ts";
 import type { SoundBus, SoundDefinition } from "./sound-catalog.ts";
-import { heardLoudness, voiceToReplace } from "./voices.ts";
+import { heardLoudness, ROLLOFF, voiceToReplace } from "./voices.ts";
 
 const MAXIMUM_VOICES = 24;
 const QUIETEST_HEARD = 0.01;
@@ -110,7 +110,7 @@ function createPanner(context: AudioContext, sound: SoundDefinition, point: Soun
     positionY: point.y,
     positionZ: point.z,
     refDistance: sound.referenceDistance,
-    rolloffFactor: 1,
+    rolloffFactor: ROLLOFF,
   });
 }
 
@@ -231,17 +231,6 @@ export class SoundEngine {
     listener.upZ.setTargetAtTime(up.z, now, LISTENER_SMOOTHING_SECONDS);
   }
 
-  heardAt(sound: SoundDefinition, point: SoundPoint | null): number {
-    if (!isPlaced(sound, point)) {
-      return sound.volume;
-    }
-
-    const listener = this.#listener;
-    const distance = Math.hypot(point.x - listener.x, point.y - listener.y, point.z - listener.z);
-
-    return heardLoudness(sound.volume, sound.referenceDistance, distance);
-  }
-
   preload(sounds: readonly SoundDefinition[]): void {
     for (const sound of sounds) {
       for (const url of sound.files) {
@@ -265,7 +254,7 @@ export class SoundEngine {
 
     const { delaySeconds = 0, volume = 1 } = options;
 
-    if (this.heardAt(sound, point) * volume < QUIETEST_HEARD) {
+    if (this.#heardAt(sound, point) * volume < QUIETEST_HEARD) {
       return;
     }
 
@@ -345,7 +334,7 @@ export class SoundEngine {
       return;
     }
 
-    const loudness = this.heardAt(sound, point) * volume;
+    const loudness = this.#heardAt(sound, point) * volume;
     const slot = voiceToReplace(this.#voices, { loudness, priority: sound.priority }, MAXIMUM_VOICES);
 
     if (slot < 0) {
@@ -353,7 +342,7 @@ export class SoundEngine {
     }
 
     if (slot < this.#voices.length) {
-      this.#release(this.#voices[slot]);
+      this.#release(graph, this.#voices[slot]);
     }
 
     const { context } = graph;
@@ -381,19 +370,23 @@ export class SoundEngine {
     source.start(Math.max(startAt, context.currentTime));
   }
 
-  #release(voice: Voice): void {
-    const graph = this.#graph;
-
-    this.#forget(voice);
-
-    if (graph === null) {
-      return;
-    }
-
+  #release(graph: Graph, voice: Voice): void {
     const now = graph.context.currentTime;
 
+    this.#forget(voice);
     voice.gain.gain.setTargetAtTime(0, now, STEAL_FADE_SECONDS / 3);
     voice.source.stop(now + STEAL_FADE_SECONDS);
+  }
+
+  #heardAt(sound: SoundDefinition, point: SoundPoint | null): number {
+    if (!isPlaced(sound, point)) {
+      return sound.volume;
+    }
+
+    const listener = this.#listener;
+    const distance = Math.hypot(point.x - listener.x, point.y - listener.y, point.z - listener.z);
+
+    return heardLoudness(sound.volume, sound.referenceDistance, distance);
   }
 
   #forget(voice: Voice): void {
@@ -440,16 +433,18 @@ export class SoundEngine {
   }
 
   #unlock(): void {
-    if (this.#graph === null) {
-      if (typeof AudioContext === "undefined") {
-        return;
-      }
+    if (this.#graph !== null) {
+      this.#applyRunning();
 
-      this.#graph = createGraph();
-      this.setLevels(this.#levels);
+      return;
     }
 
-    this.#applyRunning();
+    if (typeof AudioContext === "undefined") {
+      return;
+    }
+
+    this.#graph = createGraph();
+    this.setLevels(this.#levels);
   }
 
   #applyRunning(): void {

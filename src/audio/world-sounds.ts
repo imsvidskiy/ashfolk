@@ -179,7 +179,12 @@ export function connectWorldSounds(engine: WorldEngine, sound: SoundEngine): () 
 
     story.hear(next.chronicle, view, now);
     fires.update(
-      groupCells(mirror.grid, next.burningCells, { bucketSize: FIRE_BUCKET, ...view, limit: FIRE_EMITTERS })
+      groupCells(mirror.grid, next.burningCells, {
+        bucketSize: FIRE_BUCKET,
+        focusX: view.focusX,
+        focusZ: view.focusZ,
+        limit: FIRE_EMITTERS,
+      })
     );
     lavas.update(lavaEmitters(mirror.grid, knownLava, next.volcanoes, view));
 

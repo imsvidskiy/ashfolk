@@ -1,4 +1,4 @@
-const ROLLOFF = 1;
+export const ROLLOFF = 1;
 
 export interface VoiceWeight {
   readonly loudness: number;

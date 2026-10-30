@@ -52,7 +52,8 @@ export function ambienceLevels(sample: AmbienceSample): AmbienceLevels {
   const day = daylight(hours);
   const night = 1 - day;
   const shelter = 1 - 0.85 * Math.max(rain, snow, sample.storm);
-  const life = seasonLife(sample.season) * shelter * nearness;
+  const seasonal = seasonLife(sample.season);
+  const life = seasonal * shelter * nearness;
   const warmth = seasonName(sample.season) === "Summer" ? 1 : 0.6;
 
   return {
@@ -62,7 +63,7 @@ export function ambienceLevels(sample: AmbienceSample): AmbienceLevels {
     birdsTaiga: day * land.cold * life,
     cicadas: day * Math.max(sample.isHot ? 1 : 0, land.dry * 0.7) * warmth * life,
     crickets: night * Math.min(1, land.open + land.forest + land.dry) * warmth * life,
-    frogs: land.swamp * (0.4 + 0.6 * night) * seasonLife(sample.season) * nearness,
+    frogs: land.swamp * (0.4 + 0.6 * night) * seasonal * nearness,
     rainHeavy: smoothstep(0.6, 1, rain) * Math.max(0.6, nearness),
     rainLight: rain * (1 - smoothstep(0.6, 1, rain) * 0.7) * Math.max(0.5, nearness),
     stream: Math.min(1, sample.brook * 3) * nearness,

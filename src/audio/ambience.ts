@@ -11,6 +11,7 @@ import { AMBIENCE_LAYERS } from "./sound-catalog.ts";
 import type { SoundEngine, SoundLoop } from "./sound-engine.ts";
 
 const SAMPLES_PER_SIDE = 7;
+const SAMPLE_COUNT = SAMPLES_PER_SIDE * SAMPLES_PER_SIDE;
 const LEVEL_SMOOTHING_SECONDS = 2.5;
 const STARTING_LEVEL = 0.02;
 const RELEASE_SECONDS = 30;
@@ -99,18 +100,16 @@ function landAround(world: AmbienceWorld, view: AmbienceView): LandAround {
     }
   }
 
-  const count = SAMPLES_PER_SIDE * SAMPLES_PER_SIDE;
-
   return {
-    brook: brook / count,
+    brook: brook / SAMPLE_COUNT,
     land: {
-      cold: shares.cold / count,
-      dry: shares.dry / count,
-      forest: shares.forest / count,
-      open: shares.open / count,
-      swamp: shares.swamp / count,
+      cold: shares.cold / SAMPLE_COUNT,
+      dry: shares.dry / SAMPLE_COUNT,
+      forest: shares.forest / SAMPLE_COUNT,
+      open: shares.open / SAMPLE_COUNT,
+      swamp: shares.swamp / SAMPLE_COUNT,
     },
-    water: water / count,
+    water: water / SAMPLE_COUNT,
   };
 }
 

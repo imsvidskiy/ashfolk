@@ -26,6 +26,7 @@ const STRIKES: ReadonlyMap<PersonPose, Strike> = new Map([
 ]);
 
 interface Worker {
+  readonly distance: number;
   readonly id: number;
   readonly phase: number;
   readonly strike: Strike;
@@ -54,14 +55,21 @@ export function nearestWorkers(people: Float32Array, count: number, view: Hearin
     const offset = index * PERSON_STRIDE;
     const pose = PERSON_POSES[people[offset + PersonField.Pose]];
     const found = pose === undefined ? undefined : STRIKES.get(pose);
+
+    if (found === undefined) {
+      continue;
+    }
+
     const x = people[offset + PersonField.X];
     const z = people[offset + PersonField.Z];
+    const distance = Math.hypot(x - view.focusX, z - view.focusZ);
 
-    if (found === undefined || Math.hypot(x - view.focusX, z - view.focusZ) > HEARING_REACH) {
+    if (distance > HEARING_REACH) {
       continue;
     }
 
     workers.push({
+      distance,
       id: people[offset + PersonField.Id],
       phase: people[offset + PersonField.Phase],
       strike: found,
@@ -72,10 +80,7 @@ export function nearestWorkers(people: Float32Array, count: number, view: Hearin
 
   return workers
     .toSorted((first, second) => {
-      return (
-        Math.hypot(first.x - view.focusX, first.z - view.focusZ) -
-        Math.hypot(second.x - view.focusX, second.z - view.focusZ)
-      );
+      return first.distance - second.distance;
     })
     .slice(0, LOUDEST_WORKERS);
 }
