@@ -49,6 +49,26 @@ describe("fields", () => {
     expect(harness.world.occupancy[field.cell]).toBe(NO_BUILDING);
   });
 
+  it("keep the lava that covered them when their tribe dies out", () => {
+    const harness = new SocietyHarness({ day: MORNING });
+
+    const tribe = teach(settle(harness, 6), ["farming"]);
+
+    addFieldIfNeeded(tribe, harness.context);
+
+    const [field] = tribe.fields;
+
+    if (field === undefined) {
+      throw new Error("Expected a field");
+    }
+
+    harness.world.setGround(field.cell, Ground.Basalt);
+    harness.society.damageArea(tribe.campX, tribe.campZ, 200, 5, "blast");
+
+    expect(harness.society.findTribe(tribe.id)).toBeNull();
+    expect(harness.world.terrain.ground[field.cell]).toBe(Ground.Basalt);
+  });
+
   it("are opened on fertile ground and sown with grain in spring", () => {
     const harness = new SocietyHarness({ day: MORNING });
 

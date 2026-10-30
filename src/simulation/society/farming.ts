@@ -149,7 +149,10 @@ function openField(tribe: Tribe, cell: number, world: WorldState): void {
 function abandonField(field: Field, world: WorldState): void {
   world.setCrop(field.cell, 0);
   world.setCropCode(field.cell, CROP_CODE_NONE);
-  world.setGround(field.cell, field.previousGround);
+
+  if (world.terrain.ground[field.cell] === Ground.Farm) {
+    world.setGround(field.cell, field.previousGround);
+  }
 
   if (world.occupancy[field.cell] === PLOT_GROUND) {
     world.occupancy[field.cell] = NO_BUILDING;
