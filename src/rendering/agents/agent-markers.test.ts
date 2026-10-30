@@ -101,7 +101,7 @@ describe("agent markers", () => {
     expect(markers.count).toBe(0);
   });
 
-  it("keeps agents under trees but hides them behind a ridge", () => {
+  it("shows agents in the open but hides them behind a ridge", () => {
     const ridge: SightGround = {
       grid: { halfSize: 5000 },
       heightAt: (_x, z) => {

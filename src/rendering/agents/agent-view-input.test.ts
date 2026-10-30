@@ -8,6 +8,7 @@ import {
   floodStrip,
   fordAcross,
   riverStrip,
+  type TestWorldOptions,
 } from "../../simulation/testing/test-world.ts";
 import { BROOK_STRENGTH } from "../../world/brooks.ts";
 import { type Crossing, STONE_RISE } from "../../world/crossings.ts";
@@ -15,15 +16,20 @@ import { standingHeight } from "./agent-view-input.ts";
 
 const WADING_DEPTH = 1.1;
 
-function mirrorWithPool(depth: number) {
-  const simulation = new Simulation(
+function flatSimulation(overrides: Partial<TestWorldOptions> = {}): Simulation {
+  return new Simulation(
     createVegetatedWorld({
       dimensions: { cellSize: 10, cellsPerSide: 64 },
       heightAt: () => {
         return 100;
       },
+      ...overrides,
     })
   );
+}
+
+function mirrorWithPool(depth: number) {
+  const simulation = flatSimulation();
 
   const pool = centerCell(simulation.world);
 
@@ -60,14 +66,7 @@ describe("standing height", () => {
 
 describe("standing over brooks", () => {
   it("runs over a brook ankle-deep in the water, not on its bed", () => {
-    const simulation = new Simulation(
-      createVegetatedWorld({
-        dimensions: { cellSize: 10, cellsPerSide: 64 },
-        heightAt: () => {
-          return 100;
-        },
-      })
-    );
+    const simulation = flatSimulation();
 
     riverStrip(simulation.world, -20, 0, BROOK_STRENGTH);
     riverStrip(simulation.world, 40, 60, BROOK_STRENGTH + 20);
@@ -81,15 +80,7 @@ describe("standing over brooks", () => {
 
 describe("standing on crossings", () => {
   function mirrorWithRiver(crossing: Crossing): WorldMirror {
-    const simulation = new Simulation(
-      createVegetatedWorld({
-        crossings: [crossing],
-        dimensions: { cellSize: 10, cellsPerSide: 64 },
-        heightAt: () => {
-          return 100;
-        },
-      })
-    );
+    const simulation = flatSimulation({ crossings: [crossing] });
 
     floodStrip(simulation.world, 20, 1.5);
 

@@ -251,11 +251,7 @@ export class AgentMarkers {
 
     const herd = this.#herds.get(staged.herd);
 
-    if (herd === undefined) {
-      return null;
-    }
-
-    return herd;
+    return herd === undefined ? null : herd;
   }
 
   #emit(position: Vector3, staged: StagedMarker, presence: number, growth: number): void {
