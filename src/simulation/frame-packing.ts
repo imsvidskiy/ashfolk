@@ -32,7 +32,7 @@ import type {
 } from "./frame.ts";
 import type { Environment } from "./nature/environment.ts";
 import type { WeatherSystem } from "./nature/weather.ts";
-import type { Building, BuildingSystem } from "./society/buildings.ts";
+import { type Building, type BuildingSystem, isComplete } from "./society/buildings.ts";
 import { tribeBuildings } from "./society/camp-plan.ts";
 import type { JobKind } from "./society/jobs/job.ts";
 import { carriedItem, isChild, type Person } from "./society/person.ts";
@@ -292,7 +292,7 @@ function buildingCounts(tribe: Tribe, sources: TribeSources): BuildingCount[] {
   return BUILDING_KINDS.map((kind) => {
     return {
       count: buildings.filter((building) => {
-        return building.kind === kind && building.progress >= 1;
+        return building.kind === kind && isComplete(building);
       }).length,
       kind,
       name: BUILDINGS[kind].name,

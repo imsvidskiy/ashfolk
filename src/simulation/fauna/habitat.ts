@@ -72,14 +72,14 @@ function isHomeGround(world: WorldState, kind: AnimalKind, cell: number): boolea
   );
 }
 
-function isOpenPasture(world: WorldState, kind: AnimalKind, x: number, z: number, acceptsAnyBiome: boolean): boolean {
+function isOpenPasture(world: WorldState, kind: AnimalKind, x: number, z: number, isAnyBiome: boolean): boolean {
   const cell = world.grid.cellAt(x, z);
 
   if (!canStand(world, kind, x, z) || world.isBurning(cell)) {
     return false;
   }
 
-  return acceptsAnyBiome || isHomeGround(world, kind, cell);
+  return isAnyBiome || isHomeGround(world, kind, cell);
 }
 
 function groundHeight(world: WorldState, point: Waypoint): number {

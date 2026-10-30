@@ -84,15 +84,15 @@ describe("relations between tribes", () => {
     const [first] = foundNeighboringTribes(harness, 900);
     const vanishedId = first.id + 1000;
 
-    const snapshot = harness.rivalry.snapshot();
+    const snapshot = harness.rivalry.snapshot(harness.society.people);
 
     snapshot.mourningUntil.set(vanishedId, 50);
     snapshot.restingUntil.set(vanishedId, 50);
     snapshot.restingUntil.set(first.id, 50);
-    harness.rivalry.restore(snapshot);
+    harness.rivalry.restore(snapshot, harness.society);
     harness.run(3);
 
-    const { mourningUntil, restingUntil } = harness.rivalry.snapshot();
+    const { mourningUntil, restingUntil } = harness.rivalry.snapshot(harness.society.people);
 
     expect([...mourningUntil.keys()]).toEqual([]);
     expect([...restingUntil.keys()]).toEqual([first.id]);

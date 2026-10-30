@@ -254,12 +254,12 @@ export class BuildingSystem {
     return incidents;
   }
 
-  damageArea(x: number, z: number, radius: number, damage: number, ignites: boolean): void {
+  damageArea(x: number, z: number, radius: number, damage: number, shouldIgnite: boolean): void {
     for (const building of [...this.#buildings]) {
       const closeness = 1 - Math.hypot(building.x - x, building.z - z) / radius;
 
       if (closeness > 0) {
-        this.#damage(building, damage * closeness, ignites && closeness > 0.2);
+        this.#damage(building, damage * closeness, shouldIgnite && closeness > 0.2);
       }
     }
   }
@@ -288,10 +288,10 @@ export class BuildingSystem {
     }
   }
 
-  #damage(building: Building, damage: number, ignites: boolean): void {
+  #damage(building: Building, damage: number, shouldIgnite: boolean): void {
     building.health -= damage;
 
-    if (ignites) {
+    if (shouldIgnite) {
       setAlight(building);
     }
 

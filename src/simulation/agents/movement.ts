@@ -50,7 +50,7 @@ export interface Mover {
 
 interface RouteOptions {
   readonly arrivalDistance?: number;
-  readonly mayPlanRoute?: boolean;
+  readonly canPlanRoute?: boolean;
 }
 
 interface StepAttempt {
@@ -87,12 +87,12 @@ export function createMover(x: number, z: number, heading: number, radius = PERS
   };
 }
 
-export function savedMover(mover: Mover, keepsRoute: boolean): Mover {
+export function savedMover(mover: Mover, shouldKeepRoute: boolean): Mover {
   const saved: Mover = structuredClone({ ...mover, nearbyObstacles: [] });
 
   forgetObstacles(saved);
 
-  if (keepsRoute) {
+  if (shouldKeepRoute) {
     return saved;
   }
 
@@ -115,22 +115,22 @@ export function setDestination(
   navigation: NavigationGrid,
   options: RouteOptions = {}
 ): void {
-  const { arrivalDistance = FINAL_ARRIVAL_DISTANCE, mayPlanRoute = true } = options;
+  const { arrivalDistance = FINAL_ARRIVAL_DISTANCE, canPlanRoute = true } = options;
 
   const landing = navigation.reachableSpot(mover, navigation.landingSpot(destination));
 
   mover.arrivalDistance = arrivalDistance;
   mover.goalX = landing.x;
   mover.goalZ = landing.z;
-  mover.path = planRoute(mover, landing, navigation, mayPlanRoute);
+  mover.path = planRoute(mover, landing, navigation, canPlanRoute);
   mover.pathIndex = 0;
   forgetReplans(mover);
   forgetObstacles(mover);
   mover.stuckSeconds = 0;
 }
 
-function planRoute(mover: Mover, destination: Waypoint, navigation: NavigationGrid, mayPlanRoute: boolean): Waypoint[] {
-  const route = mayPlanRoute ? navigation.findPath(mover, destination) : null;
+function planRoute(mover: Mover, destination: Waypoint, navigation: NavigationGrid, canPlanRoute: boolean): Waypoint[] {
+  const route = canPlanRoute ? navigation.findPath(mover, destination) : null;
 
   if (route === null) {
     return [{ x: destination.x, z: destination.z }];

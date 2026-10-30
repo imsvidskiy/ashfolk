@@ -16,13 +16,13 @@ describe("staying dry", () => {
     person.mover.x = STRIP_HALF_WIDTH - 2;
     assignJob(tick, new FleeJob(tick, { x: person.mover.x - 30, z: person.mover.z }));
 
-    let wasInWater = false;
+    let hasEnteredWater = false;
 
     for (let step = 0; step < 200 && person.job !== null; step += 1) {
       person.job = person.job.update(tick);
-      wasInWater = wasInWater || harness.world.isWaterAt(person.mover.x, person.mover.z);
+      hasEnteredWater = hasEnteredWater || harness.world.isWaterAt(person.mover.x, person.mover.z);
     }
 
-    expect(wasInWater).toBe(false);
+    expect(hasEnteredWater).toBe(false);
   });
 });

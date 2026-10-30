@@ -1,4 +1,4 @@
-import { clamp } from "../../../shared/math.ts";
+import { clamp, hashToUnit } from "../../../shared/math.ts";
 import { createRandom, type RandomSource, type RandomState } from "../../../shared/random.ts";
 import type { Waypoint } from "../../agents/navigation.ts";
 import type { Chronicle } from "../../chronicle.ts";
@@ -7,6 +7,7 @@ import type { PeopleSense } from "../../fauna/beast-instincts.ts";
 import { isComplete } from "../buildings.ts";
 import { takeUpJob } from "../decisions.ts";
 import type { Person } from "../person.ts";
+import type { SocietySystem } from "../society.ts";
 import type { SocietyContext } from "../society-context.ts";
 import { emptyStock, type Stock, takeFood, totalFood } from "../stock.ts";
 import { knows, type Tribe } from "../tribe.ts";
@@ -20,7 +21,7 @@ import type { Foe } from "./foes.ts";
 import { chafeAtBorders, watchTrespass } from "./land-friction.ts";
 import { agreeTruce, isEnvoyOnTheWay, peacePressure, sendEnvoy } from "./peace.ts";
 import { FOOD_RESERVE, totalGoods, unpack } from "./provisions.ts";
-import { RaidJob } from "./raid-job.ts";
+import { type RaiderState, RaidJob } from "./raid-job.ts";
 import { advancePhase, enterPhase, RALLY_DISTANCE } from "./raid-phases.ts";
 import {
   burnableBuilding,
@@ -105,6 +106,7 @@ export interface RivalrySnapshot {
   ledger: Map<number, FighterRecord>;
   mourningUntil: Map<number, number>;
   nextRaidId: number;
+  raiders?: RaiderState[];
   raids: Raid[];
   random: RandomState;
   relations: Map<string, Relation>;
@@ -211,6 +213,16 @@ function towards(from: Waypoint, to: Tribe, distance: number): Waypoint {
   return { x: from.x + (awayX / length) * distance, z: from.z + (awayZ / length) * distance };
 }
 
+function rejoinRaids(people: SocietySystem, raiders: readonly RaiderState[]): void {
+  for (const state of raiders) {
+    const person = people.findPerson(state.personId);
+
+    if (person?.isAlive === true) {
+      person.job = new RaidJob(state, carriedWeapon(person), hashToUnit(state.personId, state.raidId));
+    }
+  }
+}
+
 export class RivalrySystem implements Battleground {
   readonly ledger = new CombatLedger();
   readonly random: RandomSource;
@@ -236,12 +248,15 @@ export class RivalrySystem implements Battleground {
     return this.#raids;
   }
 
-  snapshot(): RivalrySnapshot {
+  snapshot(people: readonly Person[]): RivalrySnapshot {
     return {
       claims: structuredClone(this.#claims),
       ledger: this.ledger.snapshot(),
       mourningUntil: new Map(this.#mourningUntil),
       nextRaidId: this.#nextRaidId,
+      raiders: people.flatMap((person) => {
+        return person.job instanceof RaidJob ? [person.job.saved()] : [];
+      }),
       raids: structuredClone(this.#raids),
       random: this.random.state(),
       relations: this.relations.snapshot(),
@@ -251,7 +266,7 @@ export class RivalrySystem implements Battleground {
     };
   }
 
-  restore(snapshot: RivalrySnapshot): void {
+  restore(snapshot: RivalrySnapshot, people: SocietySystem): void {
     this.#arrows.clear();
     this.#claims = snapshot.claims;
     this.ledger.restore(snapshot.ledger);
@@ -263,6 +278,7 @@ export class RivalrySystem implements Battleground {
     copyDates(this.#restingUntil, snapshot.restingUntil);
     this.#surveyDays = snapshot.surveyDays;
     this.#surveySeconds = snapshot.surveySeconds;
+    rejoinRaids(people, snapshot.raiders === undefined ? [] : snapshot.raiders);
   }
 
   raidOf(id: number): Raid | null {
@@ -401,8 +417,17 @@ export class RivalrySystem implements Battleground {
 
       const weapon = carriedWeapon(warrior);
 
-      takeUpJob(warrior, attacker, context, (tick) => {
-        return new RaidJob(tick, raid, weapon, slot, rations);
+      takeUpJob(warrior, attacker, context, () => {
+        const state: RaiderState = {
+          leg: "outward",
+          loot: emptyStock(),
+          personId: warrior.id,
+          raidId: raid.id,
+          rations,
+          slot,
+        };
+
+        return new RaidJob(state, weapon, this.random.next());
       });
     }
 

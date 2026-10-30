@@ -148,6 +148,7 @@ export class Simulation {
   readonly world: WorldState;
   readonly #faunaThreats: FaunaThreats;
   readonly #frameBuilder: FrameBuilder;
+  readonly #vegetationGrowth: VegetationGrowthSystem;
   #grab: Grab | null = null;
   #isPaused: boolean;
   #notices: string[] = [];
@@ -157,7 +158,6 @@ export class Simulation {
   #tasks: ScheduledTask[] = [];
   #tick = 0;
   #tickBacklog = 0;
-  readonly #vegetationGrowth: VegetationGrowthSystem;
   #viewFocus: Waypoint = { x: 0, z: 0 };
   #waterUpdate: WaterUpdate | null = null;
 
@@ -177,6 +177,7 @@ export class Simulation {
       buildings: this.buildings,
       chronicle: this.chronicle,
       identifiers: this.identifiers,
+      world: this.world,
     });
     this.rivalry = new RivalrySystem({ chronicle: this.chronicle, effects: this.effects, seed: generated.seed });
     this.services = this.#createServices();
@@ -283,7 +284,7 @@ export class Simulation {
       identifiers: this.identifiers.upcoming,
       isPaused: this.#isPaused,
       random: this.random.state(),
-      rivalry: this.rivalry.snapshot(),
+      rivalry: this.rivalry.snapshot(this.society.people),
       rules: structuredClone(this.rules),
       society: this.society.snapshot(),
       speed: this.#speed,
@@ -316,7 +317,7 @@ export class Simulation {
     this.buildings.restore(snapshot.buildings);
     this.society.restore(snapshot.society);
     this.fauna.restore(snapshot.fauna);
-    this.rivalry.restore(snapshot.rivalry);
+    this.rivalry.restore(snapshot.rivalry, this.society);
     this.volcanoes.restore(snapshot.volcanoes === undefined ? [] : snapshot.volcanoes);
     this.setRules(readWorldRules(snapshot.rules));
     this.services.environment = describeEnvironment(this.calendar, this.weather);

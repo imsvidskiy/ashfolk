@@ -89,7 +89,11 @@ const snapshotShapeSchema = z.looseObject({
   identifiers: z.number().int().positive(),
   isPaused: z.boolean(),
   random: z.array(z.number()),
-  rivalry: z.looseObject({ raids: z.array(z.unknown()), relations: z.instanceof(Map) }),
+  rivalry: z.looseObject({
+    raiders: z.array(z.looseObject({ personId: z.number(), raidId: z.number() })).optional(),
+    raids: z.array(z.unknown()),
+    relations: z.instanceof(Map),
+  }),
   rules: z.looseObject({}),
   society: z.looseObject({
     people: z.array(z.looseObject({ id: z.number(), mover: z.looseObject({ x: z.number(), z: z.number() }) })),

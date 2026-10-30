@@ -236,7 +236,9 @@ export class MournJob implements Job {
   }
 
   update(tick: PersonTick): Job | null {
-    if (this.#errand.update(tick) === "finished") {
+    const progress = this.#errand.update(tick);
+
+    if (progress === "finished" || progress === "abandoned") {
       return null;
     }
 

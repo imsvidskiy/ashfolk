@@ -1,4 +1,4 @@
-import { clamp, distanceSquared } from "../../shared/math.ts";
+import { clamp, distanceSquared, FULL_TURN } from "../../shared/math.ts";
 import type { WorldState } from "../world/world-state.ts";
 import type { Waypoint } from "./navigation.ts";
 
@@ -24,7 +24,7 @@ export function dryStandSpot(world: WorldState, target: Waypoint, standOff: numb
 
   for (let turn = 0; turn < STAND_DIRECTIONS; turn += 1) {
     const side = turn % 2 === 0 ? 1 : -1;
-    const angle = approach + side * Math.ceil(turn / 2) * ((2 * Math.PI) / STAND_DIRECTIONS);
+    const angle = approach + side * Math.ceil(turn / 2) * (FULL_TURN / STAND_DIRECTIONS);
 
     const spot = { x: target.x + Math.sin(angle) * standOff, z: target.z + Math.cos(angle) * standOff };
 

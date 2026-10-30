@@ -8,12 +8,15 @@ import type { Waypoint } from "../agents/navigation.ts";
 import { nearestWalkableSpot } from "../agents/walkable-ground.ts";
 import type { Chronicle } from "../chronicle.ts";
 import type { IdentifierSource } from "../identifiers.ts";
+import type { WorldState } from "../world/world-state.ts";
 import type { BuildingSystem } from "./buildings.ts";
 import { handleBuildingLoss } from "./construction.ts";
 import { advanceJob, dropJob, updateMind } from "./decisions.ts";
+import { abandonFields } from "./farming.ts";
 import { walk } from "./jobs/job.ts";
 import { updateNeeds } from "./needs.ts";
 import { createPerson, type DeathCause, type Person, walkSpeed } from "./person.ts";
+import { abandonPlots } from "./plots.ts";
 import { syncEra } from "./progress.ts";
 import { findCampSite } from "./settlement.ts";
 import type { DeathAccount, PersonTick, SocietyContext } from "./society-context.ts";
@@ -55,6 +58,7 @@ interface SocietyDependencies {
   buildings: BuildingSystem;
   chronicle: Chronicle;
   identifiers: IdentifierSource;
+  world: WorldState;
 }
 
 interface TribeArrival {
@@ -72,6 +76,18 @@ function savedPerson(person: Person): Person {
   if (saved.isAlive && saved.mover.hop === null) {
     saved.pose = "idle";
     saved.speed = 0;
+  }
+
+  return saved;
+}
+
+function savedTribe(tribe: Tribe, people: readonly Person[]): Tribe {
+  const saved: Tribe = structuredClone({ ...tribe, claimedPlants: new Set<number>() });
+
+  for (const person of people) {
+    if (person.tribeId === tribe.id) {
+      person.job?.cancel?.(saved);
+    }
   }
 
   return saved;
@@ -144,7 +160,7 @@ export class SocietySystem {
       people: this.#people.map(savedPerson),
       tribeNumber: this.#tribeNumber,
       tribes: this.#tribes.map((tribe) => {
-        return structuredClone({ ...tribe, claimedPlants: new Set<number>() });
+        return savedTribe(tribe, this.#people);
       }),
       trodden: this.#trodden.snapshot(),
     };
@@ -384,7 +400,7 @@ export class SocietySystem {
 
   livingWithin(x: number, z: number, radius: number): Person[] {
     return this.#people.filter((person) => {
-      return isLivingWithin(person, x, z, radius);
+      return isLivingWithin(person, x, z, radius) && !this.isHeld(person);
     });
   }
 
@@ -414,7 +430,7 @@ export class SocietySystem {
 
       const distance = Math.hypot(offsetX, offsetZ);
 
-      if (distance < nearestDistance && accepts(person)) {
+      if (distance < nearestDistance && !this.isHeld(person) && accepts(person)) {
         nearest = person;
         nearestDistance = distance;
       }
@@ -482,9 +498,11 @@ export class SocietySystem {
   }
 
   #dissolve(tribe: Tribe): void {
-    const { buildings, chronicle } = this.#dependencies;
+    const { buildings, chronicle, world } = this.#dependencies;
 
     buildings.abandonTribe(tribe.id);
+    abandonFields(tribe, world);
+    abandonPlots(tribe, world);
     this.#tribes = this.#tribes.filter((candidate) => {
       return candidate !== tribe;
     });

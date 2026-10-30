@@ -29,14 +29,14 @@ describe("staying dry", () => {
     assignJob(tick, job);
 
     let fishingSpots = 0;
-    let wasInWater = false;
+    let hasEnteredWater = false;
 
     for (let step = 0; step < 900 && fisher.job !== null; step += 1) {
       fisher.job = fisher.job.update(tick);
 
       const { x, z } = fisher.mover;
 
-      wasInWater = wasInWater || harness.world.isWaterAt(x, z);
+      hasEnteredWater = hasEnteredWater || harness.world.isWaterAt(x, z);
 
       if (fisher.pose !== "fish") {
         continue;
@@ -51,6 +51,6 @@ describe("staying dry", () => {
     }
 
     expect(fishingSpots).toBeGreaterThan(0);
-    expect(wasInWater).toBe(false);
+    expect(hasEnteredWater).toBe(false);
   });
 });

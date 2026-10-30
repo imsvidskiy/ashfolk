@@ -183,6 +183,7 @@ export class SocietyHarness {
       buildings: this.buildings,
       chronicle: this.chronicle,
       identifiers: this.identifiers,
+      world: this.world,
     });
     this.rivalry = new RivalrySystem({ chronicle: this.chronicle, effects: this.effects, seed: SEED });
     this.weather.setKind("clear");

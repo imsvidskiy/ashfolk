@@ -3,6 +3,7 @@ import type { Building } from "../society/buildings.ts";
 import type { Job } from "../society/jobs/job.ts";
 import { createPerson } from "../society/person.ts";
 import type { Tribe } from "../society/tribe.ts";
+import { TICK_SECONDS } from "../tick.ts";
 import { MORNING, type SocietyHarness } from "./test-society.ts";
 
 export const SPRING_HARNESS = { day: MORNING, world: { dimensions: { cellSize: 10, cellsPerSide: 96 } } };
@@ -13,7 +14,7 @@ const ADULT_AGE = 22;
 const CHILD_AGE = 6;
 const ARMORY_SPEARS = 12;
 
-export interface TribeFounding {
+interface TribeFounding {
   readonly adults: number;
   readonly children: number;
   readonly x: number;
@@ -66,7 +67,7 @@ export function runUntil(harness: SocietyHarness, seconds: number, isDone: () =>
 
   while (elapsed < seconds && !isDone()) {
     harness.step();
-    elapsed += 0.1;
+    elapsed += TICK_SECONDS;
   }
 
   return elapsed;
