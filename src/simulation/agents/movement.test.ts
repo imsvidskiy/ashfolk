@@ -255,7 +255,6 @@ describe("movement", () => {
     floodCells(world, world.grid.cellsInRadius(0, 0, 40), 0.6);
 
     const mover = createMover(-120, 0, 0);
-
     const navigation = new NavigationGrid(world);
 
     let wasInWater = false;

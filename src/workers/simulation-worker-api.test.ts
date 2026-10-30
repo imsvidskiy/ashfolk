@@ -104,7 +104,6 @@ describe("saving the world", () => {
 
   it("brings every plant back as the species it was saved as", () => {
     const saved = savedWorld();
-
     const savedSpecies = [...saved.simulation.world.vegetation.species];
 
     const { world } = createApi().loadWorld(saved, ignore);

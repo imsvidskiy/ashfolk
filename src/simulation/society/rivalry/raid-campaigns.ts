@@ -289,7 +289,7 @@ export class RaidCampaigns {
       const attacker = context.people.findTribe(side.tribeId);
       const defender = context.people.findTribe(otherSideOf(relation, side.tribeId).tribeId);
 
-      if (attacker === null || defender === null || !this.#mayRaid(attacker, defender, context)) {
+      if (attacker === null || defender === null || !this.#canRaid(attacker, defender, context)) {
         continue;
       }
 
@@ -325,7 +325,7 @@ export class RaidCampaigns {
     forgetDates(this.#restingUntil, living);
   }
 
-  #mayRaid(attacker: Tribe, defender: Tribe, context: SocietyContext): boolean {
+  #canRaid(attacker: Tribe, defender: Tribe, context: SocietyContext): boolean {
     const { day } = context.environment;
 
     if (attacker.isMigrating || defender.isMigrating || defender.memberCount < SMALLEST_VICTIM_TRIBE) {
