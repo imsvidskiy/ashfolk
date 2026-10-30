@@ -193,7 +193,7 @@ function readListing(value: unknown): SavedWorldListing | null {
   };
 }
 
-export function listSavedWorlds(): Promise<SavedWorldListing[]> {
+export function listSavedWorlds(): Promise<SavedWorldListing[] | null> {
   return attempt(
     async () => {
       const database = await openDatabase();
@@ -208,7 +208,7 @@ export function listSavedWorlds(): Promise<SavedWorldListing[]> {
         return second.savedAt - first.savedAt;
       });
     },
-    [],
+    null,
     "Saved worlds are not available"
   );
 }

@@ -1,9 +1,10 @@
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { render } from "vitest-browser-react";
 import { useLaunchStore } from "../../app/launch-store.ts";
 import { ignore } from "../../shared/ignore.ts";
 import { createTestSession } from "../testing/engine-fixtures.ts";
-import { deleteSavedWorld, listSavedWorlds, type SavedWorldListing } from "./save-database.ts";
+import { blockSavedWorlds, deleteAllSavedWorlds } from "../testing/save-fixtures.ts";
+import { listSavedWorlds, type SavedWorldListing } from "./save-database.ts";
 import { SavedWorldList } from "./saved-world-list.tsx";
 import { useSavesStore } from "./saves-store.ts";
 import { WorldSaver } from "./world-saver.ts";
@@ -43,15 +44,10 @@ async function saveWorld(id: string, name: string): Promise<void> {
 }
 
 afterEach(async () => {
+  vi.restoreAllMocks();
   useSavesStore.setState(initialSaves, true);
 
-  const worlds = await listSavedWorlds();
-
-  await Promise.all(
-    worlds.map((world) => {
-      return deleteSavedWorld(world.id);
-    })
-  );
+  await deleteAllSavedWorlds();
 });
 
 describe("saved world list", () => {
@@ -113,5 +109,15 @@ describe("saved world list", () => {
 
     await expect.element(screen.getByRole("button", { name: "Delete Old Ford" })).not.toBeInTheDocument();
     expect(await listSavedWorlds()).toMatchObject([{ id: "ashvale" }]);
+  });
+
+  it("says saved worlds are unavailable when the browser blocks them", async () => {
+    await blockSavedWorlds();
+    await useSavesStore.getState().refresh();
+
+    const screen = await render(<SavedWorldList />);
+
+    await expect.element(screen.getByText("Saved worlds are unavailable in this browser.")).toBeVisible();
+    expect(screen.getByRole("list")).not.toBeInTheDocument();
   });
 });

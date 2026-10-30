@@ -11,6 +11,7 @@ import { useSavesStore } from "./saves-store.ts";
 import { useNow } from "./use-now.ts";
 
 const CLOCK_MILLISECONDS = 30_000;
+const UNAVAILABLE_NOTE = "Saved worlds are unavailable in this browser.";
 
 interface SavedWorldRowProps {
   readonly now: number;
@@ -113,11 +114,30 @@ function SavedWorldRow({ now, world }: SavedWorldRowProps) {
   );
 }
 
+export function SavesUnavailableNote() {
+  const canReadSaves = useSavesStore((state) => {
+    return state.canReadSaves;
+  });
+
+  if (canReadSaves) {
+    return null;
+  }
+
+  return <p className="text-ink-soft text-sm">{UNAVAILABLE_NOTE}</p>;
+}
+
 export function SavedWorldList() {
+  const canReadSaves = useSavesStore((state) => {
+    return state.canReadSaves;
+  });
   const worlds = useSavesStore((state) => {
     return state.worlds;
   });
   const now = useNow(CLOCK_MILLISECONDS);
+
+  if (!canReadSaves) {
+    return <SavesUnavailableNote />;
+  }
 
   return (
     <ul aria-label="Your worlds" className="flex max-h-80 flex-col gap-0.5 overflow-y-auto">

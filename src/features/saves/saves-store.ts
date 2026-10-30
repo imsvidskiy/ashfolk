@@ -9,6 +9,7 @@ const AUTOSAVE_MILLISECONDS = 60_000;
 interface SavesStore {
   readonly acceptedLand: GameSession | null;
   readonly acceptLand: (session: GameSession) => void;
+  readonly canReadSaves: boolean;
   readonly hasFailed: boolean;
   readonly isSaving: boolean;
   readonly lastSavedAt: number | null;
@@ -25,13 +26,20 @@ export const useSavesStore = create<SavesStore>()((set, get) => {
     acceptLand: (session) => {
       set({ acceptedLand: session });
     },
+    canReadSaves: true,
     hasFailed: false,
     isSaving: false,
     lastSavedAt: null,
     refresh: async () => {
       const worlds = await listSavedWorlds();
 
-      set({ worlds });
+      if (worlds === null) {
+        set({ canReadSaves: false, worlds: [] });
+
+        return;
+      }
+
+      set({ canReadSaves: true, worlds });
     },
     remove: async (id) => {
       await deleteSavedWorld(id);
