@@ -4,8 +4,9 @@ import { render } from "vitest-browser-react";
 import { useLaunchStore } from "../../app/launch-store.ts";
 import { SAVE_VERSION } from "../../simulation/saved-world.ts";
 import { CHANGED_HEIGHT, startLoadedWorld, UNCHANGED_HEIGHT } from "../testing/land-change-fixtures.ts";
+import { deleteAllSavedWorlds } from "../testing/save-fixtures.ts";
 import { LandChangedDialog } from "./land-changed-dialog.tsx";
-import { deleteSavedWorld, listSavedWorlds, writeSavedWorld } from "./save-database.ts";
+import { listSavedWorlds, writeSavedWorld } from "./save-database.ts";
 import { useSavesStore } from "./saves-store.ts";
 
 const initialSaves = useSavesStore.getState();
@@ -28,13 +29,7 @@ afterEach(async () => {
   useSavesStore.setState(initialSaves, true);
   useLaunchStore.setState(initialLaunch, true);
 
-  const worlds = await listSavedWorlds();
-
-  await Promise.all(
-    worlds.map((world) => {
-      return deleteSavedWorld(world.id);
-    })
-  );
+  await deleteAllSavedWorlds();
 });
 
 describe("the land changed dialog", () => {

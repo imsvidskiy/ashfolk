@@ -5,6 +5,7 @@ import { SAVE_VERSION, type SavedWorldState } from "../../simulation/saved-world
 import { Simulation } from "../../simulation/simulation.ts";
 import { createVegetatedWorld } from "../../simulation/testing/test-world.ts";
 import { createSimulationWorkerApi } from "../../workers/simulation-worker-api.ts";
+import { deleteAllSavedWorlds } from "../testing/save-fixtures.ts";
 import {
   deleteSavedWorld,
   listSavedWorlds,
@@ -78,13 +79,7 @@ async function putRawRecord(record: object): Promise<void> {
 }
 
 afterEach(async () => {
-  const worlds = await listSavedWorlds();
-
-  await Promise.all(
-    worlds.map((world) => {
-      return deleteSavedWorld(world.id);
-    })
-  );
+  await deleteAllSavedWorlds();
 });
 
 describe("saved worlds", () => {
@@ -93,9 +88,7 @@ describe("saved worlds", () => {
 
     expect(await writeSavedWorld(recordFor("first", state), state, [])).toBe(true);
 
-    const [listed] = await listSavedWorlds();
-
-    expect(listed).toMatchObject({ id: "first", isLoadable: true, name: "Old Ford" });
+    expect(await listSavedWorlds()).toMatchObject([{ id: "first", isLoadable: true, name: "Old Ford" }]);
 
     const stored = await readSavedWorld("first");
 
@@ -110,11 +103,7 @@ describe("saved worlds", () => {
     await writeSavedWorld(recordFor("older", state, { savedAt: 1000 }), state, []);
     await writeSavedWorld(recordFor("newer", state, { savedAt: 2000 }), state, []);
 
-    expect(
-      (await listSavedWorlds()).map((world) => {
-        return world.id;
-      })
-    ).toEqual(["newer", "older"]);
+    expect(await listSavedWorlds()).toMatchObject([{ id: "newer" }, { id: "older" }]);
   });
 
   it("deletes a world with its state", async () => {
@@ -132,9 +121,7 @@ describe("saved worlds", () => {
 
     await writeSavedWorld(recordFor("old", state, { version: SAVE_VERSION + 1 }), state, []);
 
-    const [listed] = await listSavedWorlds();
-
-    expect(listed).toMatchObject({ id: "old", isLoadable: false });
+    expect(await listSavedWorlds()).toMatchObject([{ id: "old", isLoadable: false }]);
     expect(await readSavedWorld("old")).toBeNull();
   });
 

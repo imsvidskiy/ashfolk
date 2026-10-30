@@ -19,6 +19,11 @@ describe("saved time", () => {
     expect(formatSavedAt(NOW - 5 * 24 * HOUR, NOW)).toBe("5 days ago");
   });
 
+  it("moves to the next unit once the count would round up to it", () => {
+    expect(formatSavedAt(NOW - 59.7 * MINUTE, NOW)).toBe("1 hour ago");
+    expect(formatSavedAt(NOW - 23.7 * HOUR, NOW)).toBe("yesterday");
+  });
+
   it("counts people in words", () => {
     expect(describePeople(0)).toBe("0 people");
     expect(describePeople(1)).toBe("1 person");

@@ -7,7 +7,6 @@ const TRIPLED_LETTER = /(?<letter>.)\k<letter>\k<letter>/u;
 describe("world names", () => {
   it("names every seed the same way each time", () => {
     expect(worldNameFor(7)).toBe("Duskcrest");
-    expect(worldNameFor(7)).toBe(worldNameFor(7));
   });
 
   it("gives neighboring seeds different single-word names", () => {

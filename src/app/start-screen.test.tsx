@@ -1,9 +1,17 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { render } from "vitest-browser-react";
+import { useSavesStore } from "../features/saves/saves-store.ts";
+import { blockSavedWorlds } from "../features/testing/save-fixtures.ts";
 import { useLaunchStore } from "./launch-store.ts";
 import { StartScreen } from "./start-screen.tsx";
 
 const initialLaunch = useLaunchStore.getState();
+const initialSaves = useSavesStore.getState();
+
+afterEach(() => {
+  vi.restoreAllMocks();
+  useSavesStore.setState(initialSaves, true);
+});
 
 describe("start screen", () => {
   it("offers a named round world from a random seed", async () => {
@@ -55,5 +63,14 @@ describe("start screen", () => {
 
     expect(isChoosingWorld).toBe(false);
     expect(launch).toMatchObject({ name: "Old Ford", seed: 42, shape: "square" });
+  });
+
+  it("says saved worlds are unavailable when the browser blocks them", async () => {
+    await blockSavedWorlds();
+
+    const screen = await render(<StartScreen />);
+
+    await expect.element(screen.getByText("Saved worlds are unavailable in this browser.")).toBeVisible();
+    await expect.element(screen.getByRole("button", { name: "Grow the island" })).toBeEnabled();
   });
 });
