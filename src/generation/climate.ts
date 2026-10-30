@@ -1,13 +1,13 @@
 import { Biome, type BiomeIndex } from "../content/biomes.ts";
 import { Ground, type GroundIndex } from "../content/grounds.ts";
 import { lerp, saturate, smoothstep } from "../shared/math.ts";
-import { createNoiseSampler } from "../shared/noise.ts";
+import { createNoiseSampler, type NoiseSampler } from "../shared/noise.ts";
 import { createRandom } from "../shared/random.ts";
 import { gradientXAt, gradientZAt, slopeAt } from "../world/footing.ts";
 import { hasWater } from "../world/water.ts";
 import { ORTHOGONAL_STEPS, type WorldGrid } from "../world/world-grid.ts";
 import type { ClimateProfile } from "./island-layout.ts";
-import { islandPointAt } from "./relief.ts";
+import { type IslandPoint, islandPointAt } from "./relief.ts";
 import {
   findPools,
   findSmallAreas,
@@ -82,6 +82,17 @@ interface CellClimate {
 interface Slopes {
   shaded: Float32Array;
   slope: Float32Array;
+}
+
+interface ClimateFields {
+  readonly inputs: WetlandInputs;
+  readonly noise: NoiseSampler;
+  readonly profile: ClimateProfile;
+  readonly riverBanks: Uint8Array;
+  readonly rockStrength: Float32Array;
+  readonly slopes: Slopes;
+  readonly waterDistance: Float32Array;
+  readonly wetness: Float32Array;
 }
 
 interface DrainedLand {
@@ -369,6 +380,43 @@ function shapeSwamps(inputs: WetlandInputs, result: ClimateResult, wetness: Floa
   }
 }
 
+function cellClimate(fields: ClimateFields, column: number, row: number, point: IslandPoint): CellClimate {
+  const { inputs, noise, profile, slopes, waterDistance } = fields;
+
+  const cell = inputs.grid.index(column, row);
+  const height = inputs.heights[cell];
+  const desert = inputs.desert[cell];
+  const shaded = slopes.shaded[cell];
+  const moistureNoise = 0.28 * noise.fractal(point.x * 1.3 + 11, point.z * 1.3 - 7, { octaves: 4 });
+  const waterInfluence = 0.36 * Math.exp(-waterDistance[cell] / 13);
+
+  const warmSide = profile.warmthX * point.x + profile.warmthZ * point.z;
+  const temperature = baseTemperature(profile, height, warmSide, desert);
+  const isWater = hasWater(inputs.waterSurface[cell], height);
+  const moisture = saturate(
+    0.5 + profile.moistureOffset + moistureNoise + waterInfluence + 0.14 * shaded - 0.8 * desert - 0.01 * warmSide
+  );
+
+  const isNearShore =
+    !isWater &&
+    waterDistance[cell] <= 2 &&
+    inputs.riverStrength[cell] === 0 &&
+    isNearLakeShore(inputs, column, row, height);
+
+  return {
+    desert,
+    height,
+    isNearShore,
+    isRiverBank: fields.riverBanks[cell] === 1,
+    isWater,
+    isWetland: isWetland(fields.wetness[cell]),
+    moisture,
+    rockSlope: bareRockSlope(temperature, fields.rockStrength[cell], desert),
+    slope: slopes.slope[cell],
+    temperature,
+  };
+}
+
 export function buildClimate(
   profile: ClimateProfile,
   inputs: WetlandInputs,
@@ -384,6 +432,7 @@ export function buildClimate(
   const slopes = measureSlopes(profile, grid, heights, exactSlopes);
   const riverBanks = findRiverBanks(inputs, slopes.slope);
   const wetness = measureWetness(inputs, exactSlopes);
+  const fields: ClimateFields = { inputs, noise, profile, riverBanks, rockStrength, slopes, waterDistance, wetness };
   const drained = new Uint8Array(grid.cellCount);
   const drainedGround = new Uint8Array(grid.cellCount);
   const result: ClimateResult = {
@@ -400,39 +449,7 @@ export function buildClimate(
     for (let column = 0; column < grid.cellsPerSide; column += 1) {
       const point = islandPointAt(grid, column, row);
       const cell = grid.index(column, row);
-      const shaded = slopes.shaded[cell];
-      const slope = slopes.slope[cell];
-
-      const height = heights[cell];
-      const desert = inputs.desert[cell];
-      const moistureNoise = 0.28 * noise.fractal(point.x * 1.3 + 11, point.z * 1.3 - 7, { octaves: 4 });
-      const waterInfluence = 0.36 * Math.exp(-waterDistance[cell] / 13);
-
-      const warmSide = profile.warmthX * point.x + profile.warmthZ * point.z;
-      const temperature = baseTemperature(profile, height, warmSide, desert);
-      const isWater = hasWater(waterSurface[cell], height);
-      const moisture = saturate(
-        0.5 + profile.moistureOffset + moistureNoise + waterInfluence + 0.14 * shaded - 0.8 * desert - 0.01 * warmSide
-      );
-
-      const isNearShore =
-        !isWater &&
-        waterDistance[cell] <= 2 &&
-        inputs.riverStrength[cell] === 0 &&
-        isNearLakeShore(inputs, column, row, height);
-
-      const climate: CellClimate = {
-        desert,
-        height,
-        isNearShore,
-        isRiverBank: riverBanks[cell] === 1,
-        isWater,
-        isWetland: isWetland(wetness[cell]),
-        moisture,
-        rockSlope: bareRockSlope(temperature, rockStrength[cell], desert),
-        slope,
-        temperature,
-      };
+      const climate = cellClimate(fields, column, row, point);
 
       const biome = classifyBiome(climate);
 
@@ -446,8 +463,8 @@ export function buildClimate(
 
       result.biome[cell] = biome;
       result.ground[cell] = groundFor(biome, climate, waterSurface[cell]);
-      result.baseTemperature[cell] = temperature;
-      result.moisture[cell] = moisture;
+      result.baseTemperature[cell] = climate.temperature;
+      result.moisture[cell] = climate.moisture;
       result.variation[cell] = noise.fractal(point.x * 9 + 3, point.z * 9 - 7, { octaves: 2 });
     }
   }
