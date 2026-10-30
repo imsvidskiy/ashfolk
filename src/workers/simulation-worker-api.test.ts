@@ -102,6 +102,16 @@ describe("saving the world", () => {
     expect(hasLandChanged).toBe(false);
   });
 
+  it("brings every plant back as the species it was saved as", () => {
+    const saved = savedWorld();
+
+    const savedSpecies = [...saved.simulation.world.vegetation.species];
+
+    const { world } = createApi().loadWorld(saved, ignore);
+
+    expect([...world.vegetation.species]).toEqual(savedSpecies);
+  });
+
   it("saves the fingerprint of the generated land", () => {
     expect(savedWorld().generationFingerprint).toBe(createTestSimulation().world.generationFingerprint);
   });
