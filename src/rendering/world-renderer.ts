@@ -42,7 +42,7 @@ import { LilyPads } from "./water/lily-pads.ts";
 import { areSpringsShapedBy, SpringView } from "./water/spring-view.ts";
 import { WaterView } from "./water/water-view.ts";
 import { WaterfallView } from "./water/waterfall-view.ts";
-import { WorldChangeReader } from "./world-changes.ts";
+import { WorldChangeReader, type WorldChanges } from "./world-changes.ts";
 
 const CLOUD_SEA_DEPTH = 760;
 const WATER_DRIFT = 0.08;
@@ -237,43 +237,7 @@ export class WorldRenderer {
     this.#fireGlow.update(frame);
     this.#textures.lava.update(frame.lava);
 
-    if (changes.heightRegion !== null) {
-      this.#terrain.heightsChanged(changes.heightRegion);
-      this.#vegetation.heightsChanged(changes.heightRegion);
-      this.#understory.heightsChanged(changes.heightRegion);
-      this.#crops.heightsChanged(changes.heightRegion);
-    }
-
-    if (changes.groundRuns.length > 0) {
-      this.#crops.groundChanged(changes.groundRuns);
-    }
-
-    if (changes.heightRegion !== null || changes.hasWaterChanged) {
-      this.#crossings.rebuild();
-    }
-
-    if (changes.vegetationIndices.length > 0) {
-      this.#vegetation.plantsChanged(changes.vegetationIndices);
-      this.#understory.plantsChanged(changes.vegetationIndices);
-    }
-
-    if (changes.hasWaterChanged) {
-      this.#water.waterChanged(null);
-    } else if (changes.waterLevelRegion !== null) {
-      this.#water.waterChanged(changes.waterLevelRegion);
-    }
-
-    if (changes.hasWaterChanged || this.#waterfalls.isShapedBy(changes.heightRegion, this.#mirror.grid)) {
-      this.#waterfalls.rebuild(this.#mirror.water.waterfalls, this.#textures, this.#plinth);
-    }
-
-    if (changes.hasWaterChanged || areSpringsShapedBy(changes.heightRegion, this.#mirror)) {
-      this.#springs.rebuild(this.#mirror);
-    }
-
-    if (changes.hasWaterChanged) {
-      this.#lilies.rebuild(this.#mirror);
-    }
+    this.#applyChanges(changes);
 
     const gameSeconds = frame.isPaused ? 0 : view.realSeconds * frame.speed;
     const metersPerSecond = (frame.weather.windSpeed * 1000) / 3600;
@@ -359,6 +323,46 @@ export class WorldRenderer {
     this.#fireGlow.dispose();
     this.#atmosphere.dispose();
     this.#output.dispose();
+  }
+
+  #applyChanges(changes: WorldChanges): void {
+    if (changes.heightRegion !== null) {
+      this.#terrain.heightsChanged(changes.heightRegion);
+      this.#vegetation.heightsChanged(changes.heightRegion);
+      this.#understory.heightsChanged(changes.heightRegion);
+      this.#crops.heightsChanged(changes.heightRegion);
+    }
+
+    if (changes.groundRuns.length > 0) {
+      this.#crops.groundChanged(changes.groundRuns);
+    }
+
+    if (changes.heightRegion !== null || changes.hasWaterChanged) {
+      this.#crossings.rebuild();
+    }
+
+    if (changes.vegetationIndices.length > 0) {
+      this.#vegetation.plantsChanged(changes.vegetationIndices);
+      this.#understory.plantsChanged(changes.vegetationIndices);
+    }
+
+    if (changes.hasWaterChanged) {
+      this.#water.waterChanged(null);
+    } else if (changes.waterLevelRegion !== null) {
+      this.#water.waterChanged(changes.waterLevelRegion);
+    }
+
+    if (changes.hasWaterChanged || this.#waterfalls.isShapedBy(changes.heightRegion, this.#mirror.grid)) {
+      this.#waterfalls.rebuild(this.#mirror.water.waterfalls, this.#textures, this.#plinth);
+    }
+
+    if (changes.hasWaterChanged || areSpringsShapedBy(changes.heightRegion, this.#mirror)) {
+      this.#springs.rebuild(this.#mirror);
+    }
+
+    if (changes.hasWaterChanged) {
+      this.#lilies.rebuild(this.#mirror);
+    }
   }
 
   #paintWater(windX: number, windZ: number, precipitation: number, rainfall: number, realSeconds: number): void {
