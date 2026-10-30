@@ -24,16 +24,16 @@ type FrameListener = (frame: SimulationFrame) => void;
 type StatusListener = (status: SessionStatus) => void;
 
 interface SessionOptions {
-  onProgress?: (progress: GenerationProgress) => void;
+  readonly onProgress?: (progress: GenerationProgress) => void;
 }
 
 interface LoadOptions extends SessionOptions {
-  journal?: readonly ChronicleEntry[];
+  readonly journal?: readonly ChronicleEntry[];
 }
 
 interface SavedOrigin {
-  hasLandChanged: boolean;
-  journal: readonly ChronicleEntry[];
+  readonly hasLandChanged: boolean;
+  readonly journal: readonly ChronicleEntry[];
 }
 
 export class GameSession {
@@ -255,6 +255,10 @@ export class GameSession {
   }
 
   #fail(error: Error): void {
+    if (this.#status.kind !== "running") {
+      return;
+    }
+
     console.error("The simulation stopped", error);
     this.#setStatus({ error, kind: "failed" });
     this.#connection.dispose();
