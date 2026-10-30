@@ -1,6 +1,6 @@
 {
   "$schema": "https://www.schemastore.org/package.json",
-  "name": "dawnfolk",
+  "name": "ashfolk",
   "version": "0.9.1",
   "private": true,
   "description": "A god game about the first tribes on a floating island",

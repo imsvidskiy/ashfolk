@@ -3,7 +3,7 @@ import { DEFAULT_SOUND_LEVELS } from "../../audio/sound-engine.ts";
 import { ignore } from "../../shared/ignore.ts";
 import { readStoredLevels, useSoundStore } from "./sound-store.ts";
 
-const STORAGE_KEY = "dawnfolk.sound";
+const STORAGE_KEY = "ashfolk.sound";
 
 function saveLevels(levels: unknown): void {
   localStorage.setItem(STORAGE_KEY, JSON.stringify({ state: { levels }, version: 0 }));

@@ -78,7 +78,7 @@ export function LandChangedDialog() {
                 </AlertDialog.Title>
 
                 <AlertDialog.Description className="text-ink-soft text-sm">
-                  {launch.name} was saved in an older Dawnfolk, and seed {launch.seed} now grows a different island.
+                  {launch.name} was saved in an older Ashfolk, and seed {launch.seed} now grows a different island.
                   Hills and rivers will not match what your people built.
                 </AlertDialog.Description>
 

@@ -19,7 +19,7 @@ describe("install guide dialog", () => {
     await screen.getByRole("button", { name: "Menu" }).click();
     await screen.getByRole("menuitem", { name: "Install the app" }).click();
 
-    const guide = screen.getByRole("dialog", { name: "Install Dawnfolk" });
+    const guide = screen.getByRole("dialog", { name: "Install Ashfolk" });
 
     await expect.element(guide).toBeVisible();
     await expect.element(guide.getByText("then Add to Home Screen", { exact: false })).toBeVisible();

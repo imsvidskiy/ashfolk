@@ -3,7 +3,7 @@ import { defaultPowerParameters } from "../../content/powers.ts";
 import { ignore } from "../../shared/ignore.ts";
 import { parametersOf, readStoredParameters, usePowerStore } from "./power-store.ts";
 
-const STORAGE_KEY = "dawnfolk.powers";
+const STORAGE_KEY = "ashfolk.powers";
 
 function saveSettings(parameters: unknown): void {
   localStorage.setItem(STORAGE_KEY, JSON.stringify({ state: { parameters }, version: 0 }));

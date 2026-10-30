@@ -62,7 +62,7 @@ describe("saved world list", () => {
     await expect.element(screen.getByRole("button", { name: "Old Ford 12 people · just now" })).toBeEnabled();
     await expect.element(screen.getByRole("button", { name: "Ashvale The land has changed · just now" })).toBeEnabled();
     await expect
-      .element(screen.getByRole("button", { name: "Mossholm Saved by another version of Dawnfolk · just now" }))
+      .element(screen.getByRole("button", { name: "Mossholm Saved by another version of Ashfolk · just now" }))
       .toBeDisabled();
   });
 

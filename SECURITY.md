@@ -10,7 +10,7 @@
 ## Reporting a vulnerability
 
 Report vulnerabilities through
-[GitHub private vulnerability reporting](https://github.com/imsvidskiy/dawnfolk/security/advisories/new).
+[GitHub private vulnerability reporting](https://github.com/imsvidskiy/ashfolk/security/advisories/new).
 Don't open a public issue, pull request, or discussion for a security problem.
 
 Include what helps reproduce and assess the issue:

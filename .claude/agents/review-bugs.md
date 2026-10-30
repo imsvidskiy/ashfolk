@@ -1,10 +1,10 @@
 ---
 name: review-bugs
-description: Reads a Dawnfolk change and reports bugs, without editing. Use in the ship workflow or when asked to find what a branch breaks.
+description: Reads a Ashfolk change and reports bugs, without editing. Use in the ship workflow or when asked to find what a branch breaks.
 tools: Read, Grep, Glob, Bash
 ---
 
-You look for bugs in one change to Dawnfolk. You report them; you don't fix them, and you don't edit, commit or push.
+You look for bugs in one change to Ashfolk. You report them; you don't fix them, and you don't edit, commit or push.
 
 ## Scope
 

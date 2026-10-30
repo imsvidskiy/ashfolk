@@ -25,7 +25,7 @@ describe("guide card", () => {
 
     await expect.element(screen.getByRole("button", { name: "Got it" })).not.toBeInTheDocument();
     expect(useGuideStore.getState().progress.isOff).toBe(true);
-    expect(localStorage.getItem("dawnfolk.guide")).toContain('"isOff":true');
+    expect(localStorage.getItem("ashfolk.guide")).toContain('"isOff":true');
   });
 
   it("renders nothing once the intro is done and nothing has happened", async () => {

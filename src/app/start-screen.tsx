@@ -2,7 +2,6 @@ import { ArrowLeft, ArrowRight } from "lucide-react";
 import { type ReactNode, useEffect, useState } from "react";
 import { IconButton, TextButton } from "../design/buttons.tsx";
 import { Island } from "../design/island.tsx";
-import { Logo } from "../design/logo.tsx";
 import { useWorldDraft } from "../features/new-world/use-world-draft.ts";
 import { NameField, SeedField, ShapeChoice, SizeChoice } from "../features/new-world/world-fields.tsx";
 import { ProjectLinks } from "../features/project/project-links.tsx";
@@ -175,9 +174,9 @@ export function StartScreen() {
       <div className="relative flex min-h-full flex-col items-center justify-end gap-3 px-4 pt-[max(1rem,env(safe-area-inset-top))] pb-[max(1rem,env(safe-area-inset-bottom))] sm:justify-center sm:p-8">
         <Island className="flex w-full max-w-md flex-col gap-6 p-7">
           <header className="flex flex-col items-center gap-2 text-center">
-            <Logo />
+            <img alt="" className="size-16" height="64" src="/logo.svg" width="64" />
 
-            <h1 className="text-ink text-4xl font-extrabold tracking-tight">Dawnfolk</h1>
+            <h1 className="text-ink text-4xl font-extrabold tracking-tight">Ashfolk</h1>
 
             <p className="text-ink-soft">Guide the first tribes of a floating island.</p>
           </header>
