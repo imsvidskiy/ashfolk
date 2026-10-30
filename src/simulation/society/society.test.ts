@@ -178,6 +178,19 @@ describe("danger", () => {
     expect(harness.society.tribes()).toHaveLength(0);
     expect(harness.society.findTribe(tribe.id)).toBeNull();
   });
+
+  it("spares the person held in the hand from a blast", () => {
+    const harness = new SocietyHarness({ day: MORNING });
+
+    const tribe = settle(harness, 4);
+    const [held] = harness.society.membersOf(tribe);
+
+    harness.society.hold(held);
+    harness.society.damageArea(tribe.campX, tribe.campZ, 200, 5, "blast");
+
+    expect(held.isAlive).toBe(true);
+    expect(harness.society.population).toBe(1);
+  });
 });
 
 describe("people nearby", () => {

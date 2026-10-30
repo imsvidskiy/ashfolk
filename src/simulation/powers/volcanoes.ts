@@ -407,13 +407,13 @@ function endanger(volcano: Volcano, seconds: number, services: PowerServices): v
   const extent = volcano.radius * (1 + LONGEST_TONGUE_REACH);
 
   for (const person of people.livingWithin(volcano.x, volcano.z, extent)) {
-    if (!people.isHeld(person) && isHot(volcano, grid.cellAt(person.mover.x, person.mover.z))) {
+    if (isHot(volcano, grid.cellAt(person.mover.x, person.mover.z))) {
       people.kill(person, "lava");
     }
   }
 
   for (const animal of fauna.livingWithin(volcano.x, volcano.z, extent)) {
-    if (!fauna.isHeld(animal) && isHot(volcano, grid.cellAt(animal.mover.x, animal.mover.z))) {
+    if (isHot(volcano, grid.cellAt(animal.mover.x, animal.mover.z))) {
       fauna.kill(animal, "fire");
     }
   }

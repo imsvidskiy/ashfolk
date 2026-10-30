@@ -309,7 +309,7 @@ export class FaunaSystem {
 
   livingWithin(x: number, z: number, radius: number): Animal[] {
     return this.#animals.filter((animal) => {
-      return animal.isAlive && Math.hypot(animal.mover.x - x, animal.mover.z - z) < radius;
+      return animal.isAlive && Math.hypot(animal.mover.x - x, animal.mover.z - z) < radius && !this.isHeld(animal);
     });
   }
 

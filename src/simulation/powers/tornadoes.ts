@@ -122,15 +122,11 @@ function rage(tornado: Tornado, center: Waypoint, seconds: number, services: Pow
   blowOut(center, radius, force, services);
 
   for (const person of people.livingWithin(center.x, center.z, radius)) {
-    if (!people.isHeld(person)) {
-      whirl(person.mover, center, radius, force, services);
-    }
+    whirl(person.mover, center, radius, force, services);
   }
 
   for (const animal of fauna.livingWithin(center.x, center.z, radius)) {
-    if (!fauna.isHeld(animal)) {
-      whirl(animal.mover, center, radius, force, services);
-    }
+    whirl(animal.mover, center, radius, force, services);
   }
 
   people.damageArea(center.x, center.z, core, PEOPLE_DAMAGE_PER_SECOND * force, "tornado");

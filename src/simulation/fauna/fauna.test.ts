@@ -197,6 +197,20 @@ describe("animals", () => {
     expect(fauna.herds).toHaveLength(0);
   });
 
+  it("spare the animal held in the hand from a blast", () => {
+    const { fauna } = createFauna();
+
+    fauna.spawnHerd("deer", 0, 0, 3, createRandom(1));
+
+    const [held] = fauna.animals;
+
+    fauna.hold(held);
+    fauna.damageArea(0, 0, 100, 10, "blast");
+
+    expect(held.isAlive).toBe(true);
+    expect(livingCount(fauna)).toBe(1);
+  });
+
   it("swim ashore when the water rises around them as they graze", () => {
     const { fauna, navigation, world } = createFauna();
 
