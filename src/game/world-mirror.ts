@@ -127,11 +127,11 @@ export class WorldMirror {
   readonly waterLevelChanges = new RegionChangeTracker();
   crossings: readonly Crossing[];
   frame: SimulationFrame;
-  frameReceivedAt: number;
   landVersion = 0;
   water: MirroredWater;
   waterVersion = 0;
   #crossingIndex: CrossingIndex;
+  #frameReceivedAt: number;
   #heightVersion = 0;
   #landmarks: readonly Landmark[];
   #landmarksVersion = 0;
@@ -149,7 +149,7 @@ export class WorldMirror {
     this.vegetation = new MirroredVegetation(initial.vegetation);
     this.water = initial.water;
     this.frame = initial.frame;
-    this.frameReceivedAt = receivedAt;
+    this.#frameReceivedAt = receivedAt;
     this.surfaceChanges = new RowChangeTracker(this.grid.cellsPerSide);
     this.groundChanges = new RowChangeTracker(this.grid.cellsPerSide);
     this.#landmarks = this.#findLandmarks();
@@ -190,7 +190,7 @@ export class WorldMirror {
     }
 
     this.frame = frame;
-    this.frameReceivedAt = receivedAt;
+    this.#frameReceivedAt = receivedAt;
   }
 
   gameSecondsSinceTick(now: number): number {
@@ -200,7 +200,7 @@ export class WorldMirror {
       return frame.secondsSinceTick;
     }
 
-    const realSeconds = (now - this.frameReceivedAt) / MILLISECONDS_PER_SECOND;
+    const realSeconds = (now - this.#frameReceivedAt) / MILLISECONDS_PER_SECOND;
 
     return frame.secondsSinceTick + clamp(realSeconds, 0, LONGEST_EXTRAPOLATION_SECONDS) * frame.speed;
   }

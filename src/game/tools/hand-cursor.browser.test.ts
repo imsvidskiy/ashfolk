@@ -5,7 +5,7 @@ import sharpClosedHand from "./cursors/hand-closed@2x.png";
 import closedHand from "./cursors/hand-closed.png";
 import sharpOpenHand from "./cursors/hand-open@2x.png";
 import openHand from "./cursors/hand-open.png";
-import { handCursorStyles, showHandCursor } from "./hand-cursor.ts";
+import { showHandCursor } from "./hand-cursor.ts";
 import type { HandCursor } from "./hand-tool.ts";
 
 const LOOKS: readonly (readonly [HandCursor, string, string, string])[] = [
@@ -60,6 +60,5 @@ describe("hand cursor", () => {
     showHandCursor(element, "none");
 
     expect(element.style.cursor).toBe("");
-    expect(handCursorStyles("none")).toEqual([""]);
   });
 });

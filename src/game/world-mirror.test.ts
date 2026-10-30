@@ -301,19 +301,6 @@ describe("world mirror", () => {
     expect(Math.hypot(lakes[0].x, lakes[0].z + 200)).toBeLessThan(140);
   });
 
-  it("remembers when the latest frame arrived", () => {
-    const simulation = createSimulation();
-
-    const mirror = new WorldMirror(simulation.initialWorld(), 0);
-
-    const frame = simulation.advance(STEP_SECONDS);
-
-    mirror.apply(frame, 1234);
-
-    expect(mirror.frame).toBe(frame);
-    expect(mirror.frameReceivedAt).toBe(1234);
-  });
-
   it("measures the game time since the latest tick for smooth motion", () => {
     const simulation = createSimulation();
 
