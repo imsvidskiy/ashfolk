@@ -7,7 +7,7 @@ import { isExpeditionSeason } from "./jobs/build-job.ts";
 import { findClay } from "./jobs/clay-job.ts";
 import { findCraftWork } from "./jobs/craft-job.ts";
 import { findFruit } from "./jobs/gather-job.ts";
-import { findMineWork } from "./jobs/mine-job.ts";
+import { findMineWork, MineJob } from "./jobs/mine-job.ts";
 import { findPlanting } from "./jobs/plant-job.ts";
 import { carriedAmount } from "./person.ts";
 import { emptySpot, ripestFruitTree } from "./plots.ts";
@@ -118,7 +118,7 @@ function oreOnTheWay(tick: PersonTick, kind: DepositKind): number {
   const { resource } = DEPOSITS[kind];
 
   return tick.context.people.membersOf(tick.tribe).reduce((total, person) => {
-    return total + carriedAmount(person, resource) + (person.job?.kind === "mine" ? 1 : 0);
+    return total + carriedAmount(person, resource) + (person.job instanceof MineJob && person.job.ore === kind ? 1 : 0);
   }, 0);
 }
 
