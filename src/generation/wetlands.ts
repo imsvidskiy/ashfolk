@@ -337,6 +337,25 @@ export function findSmallAreas(grid: WorldGrid, isMember: (cell: number) => bool
   return small;
 }
 
+function isInterior(grid: WorldGrid, cell: number, isMarsh: (cell: number) => boolean): boolean {
+  const column = grid.columnOf(cell);
+  const row = grid.rowOf(cell);
+
+  for (let rowOffset = -1; rowOffset <= 1; rowOffset += 1) {
+    for (let columnOffset = -1; columnOffset <= 1; columnOffset += 1) {
+      if (!grid.contains(column + columnOffset, row + rowOffset)) {
+        return false;
+      }
+
+      if (!isMarsh(grid.index(column + columnOffset, row + rowOffset))) {
+        return false;
+      }
+    }
+  }
+
+  return true;
+}
+
 export function findPools(
   grid: WorldGrid,
   seed: number,
@@ -362,23 +381,4 @@ export function findPools(
   }
 
   return pools;
-}
-
-function isInterior(grid: WorldGrid, cell: number, isMarsh: (cell: number) => boolean): boolean {
-  const column = grid.columnOf(cell);
-  const row = grid.rowOf(cell);
-
-  for (let rowOffset = -1; rowOffset <= 1; rowOffset += 1) {
-    for (let columnOffset = -1; columnOffset <= 1; columnOffset += 1) {
-      if (!grid.contains(column + columnOffset, row + rowOffset)) {
-        return false;
-      }
-
-      if (!isMarsh(grid.index(column + columnOffset, row + rowOffset))) {
-        return false;
-      }
-    }
-  }
-
-  return true;
 }

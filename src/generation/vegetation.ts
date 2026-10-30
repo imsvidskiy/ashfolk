@@ -88,6 +88,42 @@ function sow(rule: PlantingRule, random: RandomSource, grid: WorldGrid, cell: nu
   };
 }
 
+function plantWildBerries(
+  store: VegetationStore,
+  grid: WorldGrid,
+  terrain: TerrainData,
+  seed: number,
+  reserved: Uint8Array
+): void {
+  const berries = createRandom(seed * 3 + 3);
+
+  for (let cell = 0; cell < grid.cellCount; cell += 1) {
+    if (reserved[cell] !== 0) {
+      continue;
+    }
+
+    const biome = plantableBiome(terrain, grid, cell, seed);
+
+    if (biome === null) {
+      continue;
+    }
+
+    const clearing = clearingAt(terrain, cell);
+
+    for (const rule of WILD_BERRY_RULES[biome]) {
+      if (!berries.chance(rule.chancePerCell * clearing)) {
+        continue;
+      }
+
+      const plant = sow(rule, berries, grid, cell);
+
+      if (hasRoomToGrow(terrain, grid, plant.x, plant.z, plant.species)) {
+        store.add(plant);
+      }
+    }
+  }
+}
+
 export function plantInitialVegetation(
   store: VegetationStore,
   grid: WorldGrid,
@@ -134,40 +170,4 @@ export function plantInitialVegetation(
   }
 
   plantWildBerries(store, grid, terrain, seed, reserved);
-}
-
-function plantWildBerries(
-  store: VegetationStore,
-  grid: WorldGrid,
-  terrain: TerrainData,
-  seed: number,
-  reserved: Uint8Array
-): void {
-  const berries = createRandom(seed * 3 + 3);
-
-  for (let cell = 0; cell < grid.cellCount; cell += 1) {
-    if (reserved[cell] !== 0) {
-      continue;
-    }
-
-    const biome = plantableBiome(terrain, grid, cell, seed);
-
-    if (biome === null) {
-      continue;
-    }
-
-    const clearing = clearingAt(terrain, cell);
-
-    for (const rule of WILD_BERRY_RULES[biome]) {
-      if (!berries.chance(rule.chancePerCell * clearing)) {
-        continue;
-      }
-
-      const plant = sow(rule, berries, grid, cell);
-
-      if (hasRoomToGrow(terrain, grid, plant.x, plant.z, plant.species)) {
-        store.add(plant);
-      }
-    }
-  }
 }

@@ -270,6 +270,14 @@ function averageCell(grid: WorldGrid, cells: readonly number[]): { x: number; z:
   return { x: sumX / cells.length, z: sumZ / cells.length };
 }
 
+function isFilledByRiver(area: FloodedArea, options: CellThresholds): boolean {
+  return (
+    area.cells.length >= options.riverBasinMinimumCells &&
+    area.maximumAccumulation >= options.riverThreshold &&
+    area.maximumDepth >= options.riverBasinMinimumDepth
+  );
+}
+
 function isLakeKept(area: FloodedArea, centerDryness: number, options: CellThresholds): boolean {
   const catchmentNeeded = options.lakeMinimumCatchment * (1 + 6 * centerDryness);
 
@@ -279,14 +287,6 @@ function isLakeKept(area: FloodedArea, centerDryness: number, options: CellThres
     area.maximumDepth >= options.lakeMinimumDepth;
 
   return isLargeLake || isFilledByRiver(area, options);
-}
-
-function isFilledByRiver(area: FloodedArea, options: CellThresholds): boolean {
-  return (
-    area.cells.length >= options.riverBasinMinimumCells &&
-    area.maximumAccumulation >= options.riverThreshold &&
-    area.maximumDepth >= options.riverBasinMinimumDepth
-  );
 }
 
 function findLakes(

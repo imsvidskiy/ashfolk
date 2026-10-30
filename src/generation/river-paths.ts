@@ -3,14 +3,15 @@ import type { RiverPoint } from "../world/water.ts";
 
 const SMOOTHING_PASSES = 2;
 
-export function smoothRiverPath(points: readonly RiverPoint[]): RiverPoint[] {
-  let current = [...points];
-
-  for (let iteration = 0; iteration < SMOOTHING_PASSES; iteration += 1) {
-    current = chaikinPass(current);
-  }
-
-  return current;
+export function interpolatePoint(start: RiverPoint, end: RiverPoint, amount: number): RiverPoint {
+  return {
+    depth: lerp(start.depth, end.depth, amount),
+    flow: lerp(start.flow, end.flow, amount),
+    surface: lerp(start.surface, end.surface, amount),
+    width: lerp(start.width, end.width, amount),
+    x: lerp(start.x, end.x, amount),
+    z: lerp(start.z, end.z, amount),
+  };
 }
 
 function chaikinPass(points: readonly RiverPoint[]): RiverPoint[] {
@@ -35,15 +36,14 @@ function chaikinPass(points: readonly RiverPoint[]): RiverPoint[] {
   return smoothed;
 }
 
-export function interpolatePoint(start: RiverPoint, end: RiverPoint, amount: number): RiverPoint {
-  return {
-    depth: lerp(start.depth, end.depth, amount),
-    flow: lerp(start.flow, end.flow, amount),
-    surface: lerp(start.surface, end.surface, amount),
-    width: lerp(start.width, end.width, amount),
-    x: lerp(start.x, end.x, amount),
-    z: lerp(start.z, end.z, amount),
-  };
+export function smoothRiverPath(points: readonly RiverPoint[]): RiverPoint[] {
+  let current = [...points];
+
+  for (let iteration = 0; iteration < SMOOTHING_PASSES; iteration += 1) {
+    current = chaikinPass(current);
+  }
+
+  return current;
 }
 
 export function makeSurfaceDescend(points: RiverPoint[], minimumDrop: number): void {

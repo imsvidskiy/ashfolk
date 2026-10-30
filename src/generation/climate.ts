@@ -352,6 +352,23 @@ function groundFor(biome: BiomeIndex, cell: CellClimate, waterLevel: number): Gr
   return BIOME_GROUND[biome];
 }
 
+function shapeSwamps(inputs: WetlandInputs, result: ClimateResult, wetness: Float32Array, drained: DrainedLand): void {
+  const { grid, seed } = inputs;
+
+  for (const cell of findSmallAreas(grid, (candidate) => {
+    return result.biome[candidate] === Biome.Swamp;
+  })) {
+    result.biome[cell] = drained.biome[cell];
+    result.ground[cell] = drained.ground[cell];
+  }
+
+  for (const cell of findPools(grid, seed, wetness, (candidate) => {
+    return result.biome[candidate] === Biome.Swamp;
+  })) {
+    result.ground[cell] = Ground.Bog;
+  }
+}
+
 export function buildClimate(
   profile: ClimateProfile,
   inputs: WetlandInputs,
@@ -438,21 +455,4 @@ export function buildClimate(
   shapeSwamps(inputs, result, wetness, { biome: drained, ground: drainedGround });
 
   return result;
-}
-
-function shapeSwamps(inputs: WetlandInputs, result: ClimateResult, wetness: Float32Array, drained: DrainedLand): void {
-  const { grid, seed } = inputs;
-
-  for (const cell of findSmallAreas(grid, (candidate) => {
-    return result.biome[candidate] === Biome.Swamp;
-  })) {
-    result.biome[cell] = drained.biome[cell];
-    result.ground[cell] = drained.ground[cell];
-  }
-
-  for (const cell of findPools(grid, seed, wetness, (candidate) => {
-    return result.biome[candidate] === Biome.Swamp;
-  })) {
-    result.ground[cell] = Ground.Bog;
-  }
 }

@@ -114,52 +114,6 @@ function sinkIntoSlopes(land: RiverLand, points: RiverPoint[]): void {
   }
 }
 
-function buildRivers(land: RiverLand, chains: readonly RiverChain[]): River[] {
-  const { basins, grid } = land;
-
-  const rivers: River[] = [];
-  const surfaces = new Map<number, number>();
-  const claimedPastCoast = new Set<number>();
-  const flows = chainFlows(basins.network, chains);
-
-  for (const [chainIndex, chain] of chains.entries()) {
-    const cells = chainCells(chain);
-
-    if (cells.length < 4) {
-      continue;
-    }
-
-    const points = cells.map((cell, index) => {
-      return riverPointFor(land, cell, flows[chainIndex][index]);
-    });
-    const lakeId = lakeAtMouth(basins.lakeIds, chain);
-    const reachesEdge = chain.mouthReceiver === NO_CELL && chain.joinsCell === NO_CELL;
-
-    sinkIntoSlopes(land, points);
-
-    if (lakeId >= 0) {
-      appendLakeEntry(grid, points, basins.lakes[lakeId], chain.mouthReceiver);
-    }
-
-    makeSurfaceDescend(points, MINIMUM_POINT_DROP);
-    settleIntoMainRiver(points, surfaces.get(chain.joinsCell));
-
-    for (const [index, cell] of chain.cells.entries()) {
-      surfaces.set(cell, points[index].surface);
-    }
-
-    const smoothed = smoothRiverPath(points);
-
-    if (reachesEdge) {
-      runPastCoast(land, smoothed, claimedPastCoast);
-    }
-
-    rivers.push({ id: rivers.length, points: smoothed, reachesEdge });
-  }
-
-  return rivers;
-}
-
 function settleIntoMainRiver(points: RiverPoint[], mainSurface: number | undefined): void {
   const last = points.at(-1);
 
@@ -267,6 +221,52 @@ function appendLakeEntry(grid: WorldGrid, points: RiverPoint[], lake: Lake, lake
   }
 
   points.push({ ...last, surface: lake.level, x: grid.cellCenterX(lakeCell), z: grid.cellCenterZ(lakeCell) });
+}
+
+function buildRivers(land: RiverLand, chains: readonly RiverChain[]): River[] {
+  const { basins, grid } = land;
+
+  const rivers: River[] = [];
+  const surfaces = new Map<number, number>();
+  const claimedPastCoast = new Set<number>();
+  const flows = chainFlows(basins.network, chains);
+
+  for (const [chainIndex, chain] of chains.entries()) {
+    const cells = chainCells(chain);
+
+    if (cells.length < 4) {
+      continue;
+    }
+
+    const points = cells.map((cell, index) => {
+      return riverPointFor(land, cell, flows[chainIndex][index]);
+    });
+    const lakeId = lakeAtMouth(basins.lakeIds, chain);
+    const reachesEdge = chain.mouthReceiver === NO_CELL && chain.joinsCell === NO_CELL;
+
+    sinkIntoSlopes(land, points);
+
+    if (lakeId >= 0) {
+      appendLakeEntry(grid, points, basins.lakes[lakeId], chain.mouthReceiver);
+    }
+
+    makeSurfaceDescend(points, MINIMUM_POINT_DROP);
+    settleIntoMainRiver(points, surfaces.get(chain.joinsCell));
+
+    for (const [index, cell] of chain.cells.entries()) {
+      surfaces.set(cell, points[index].surface);
+    }
+
+    const smoothed = smoothRiverPath(points);
+
+    if (reachesEdge) {
+      runPastCoast(land, smoothed, claimedPastCoast);
+    }
+
+    rivers.push({ id: rivers.length, points: smoothed, reachesEdge });
+  }
+
+  return rivers;
 }
 
 function flowDirectionAt(river: River, mouth: RiverPoint): { directionX: number; directionZ: number } {

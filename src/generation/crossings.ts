@@ -175,6 +175,49 @@ function passageIn(survey: CrossingSurvey, cell: number): Passage {
   return isWalkableGround(terrain, grid, cell) && !isBlocked(cell) ? Passage.Ground : Passage.Blocked;
 }
 
+function segmentAt(course: RiverCourse, along: number): number {
+  const { lengths } = course;
+
+  let low = 0;
+  let high = lengths.length - 1;
+
+  while (high - low > 1) {
+    const middle = Math.floor((low + high) / 2);
+
+    if (lengths[middle] <= along) {
+      low = middle;
+    } else {
+      high = middle;
+    }
+  }
+
+  return low;
+}
+
+function interpolationAt(course: RiverCourse, along: number): { amount: number; index: number } {
+  const { lengths } = course;
+
+  const clamped = clamp(along, 0, course.length);
+  const index = segmentAt(course, clamped);
+  const span = lengths[index + 1] - lengths[index];
+
+  return { amount: span > 0 ? (clamped - lengths[index]) / span : 0, index };
+}
+
+function pointAlong(course: RiverCourse, along: number): Point {
+  const { amount, index } = interpolationAt(course, along);
+  const start = course.river.points[index];
+  const end = course.river.points[index + 1];
+
+  return { x: lerp(start.x, end.x, amount), z: lerp(start.z, end.z, amount) };
+}
+
+function isRiverWater(survey: CrossingSurvey, cell: number): boolean {
+  const { lakeIds, terrain } = survey;
+
+  return isWaterCell(terrain, cell) && terrain.riverStrength[cell] > 0 && lakeIds[cell] === NO_CELL;
+}
+
 function wideningAlong(survey: CrossingSurvey, course: RiverCourse): number {
   const { grid, terrain } = survey;
 
@@ -248,43 +291,6 @@ function riverCourse(river: River): RiverCourse {
   return { length, lengths, river };
 }
 
-function segmentAt(course: RiverCourse, along: number): number {
-  const { lengths } = course;
-
-  let low = 0;
-  let high = lengths.length - 1;
-
-  while (high - low > 1) {
-    const middle = Math.floor((low + high) / 2);
-
-    if (lengths[middle] <= along) {
-      low = middle;
-    } else {
-      high = middle;
-    }
-  }
-
-  return low;
-}
-
-function interpolationAt(course: RiverCourse, along: number): { amount: number; index: number } {
-  const { lengths } = course;
-
-  const clamped = clamp(along, 0, course.length);
-  const index = segmentAt(course, clamped);
-  const span = lengths[index + 1] - lengths[index];
-
-  return { amount: span > 0 ? (clamped - lengths[index]) / span : 0, index };
-}
-
-function pointAlong(course: RiverCourse, along: number): Point {
-  const { amount, index } = interpolationAt(course, along);
-  const start = course.river.points[index];
-  const end = course.river.points[index + 1];
-
-  return { x: lerp(start.x, end.x, amount), z: lerp(start.z, end.z, amount) };
-}
-
 function nearestAlong(course: RiverCourse, point: Point): { along: number; distance: number } {
   const { lengths, river } = course;
 
@@ -307,12 +313,6 @@ function nearestAlong(course: RiverCourse, point: Point): { along: number; dista
   }
 
   return best;
-}
-
-function isRiverWater(survey: CrossingSurvey, cell: number): boolean {
-  const { lakeIds, terrain } = survey;
-
-  return isWaterCell(terrain, cell) && terrain.riverStrength[cell] > 0 && lakeIds[cell] === NO_CELL;
 }
 
 function crossWater(survey: CrossingSurvey, center: Point, directionX: number, directionZ: number): WaterSpan | null {
