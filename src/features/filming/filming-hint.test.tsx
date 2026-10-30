@@ -21,6 +21,17 @@ describe("filming hint", () => {
     await expect.element(screen.getByText("Interface hidden. Press H to show it.")).not.toBeInTheDocument();
   });
 
+  it("shows the interface again from its button", async () => {
+    const { engine } = await startTestEngine();
+
+    const screen = await render(<FilmingHint />);
+
+    engine.filming.set({ isInterfaceHidden: true });
+    await screen.getByRole("button", { name: "Show" }).click();
+
+    expect(engine.filming.settings.isInterfaceHidden).toBe(false);
+  });
+
   it("leaves H alone while a field is typed into", async () => {
     const { engine } = await startTestEngine();
 

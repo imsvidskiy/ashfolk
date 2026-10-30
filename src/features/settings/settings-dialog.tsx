@@ -23,17 +23,13 @@ interface SettingsSection {
   readonly value: SettingsTab;
 }
 
-const DEVELOPER_SECTIONS: readonly SettingsSection[] = import.meta.env.DEV
-  ? [{ Content: FilmingSection, label: "Dev", value: "developer" }]
-  : [];
-
 const SECTIONS: readonly SettingsSection[] = [
   { Content: WorldRulesSection, label: "World", value: "world" },
   { Content: WeatherSection, label: "Weather", value: "weather" },
   { Content: TimeSection, label: "Time", value: "time" },
   { Content: IslandSection, label: "Island", value: "island" },
   { Content: SoundSection, label: "Sound", value: "sound" },
-  ...DEVELOPER_SECTIONS,
+  { Content: FilmingSection, label: "Photo", value: "photo" },
 ];
 
 function isSettingsTab(value: unknown): value is SettingsTab {
@@ -44,7 +40,7 @@ function isSettingsTab(value: unknown): value is SettingsTab {
 
 function SectionTab({ section }: { readonly section: SettingsSection }) {
   return (
-    <Tabs.Tab className={cn(SEGMENT, "flex-1 px-1.5 text-sm sm:px-3 pointer-coarse:h-10")} value={section.value}>
+    <Tabs.Tab className={cn(SEGMENT, "flex-1 px-1 text-sm sm:px-3 pointer-coarse:h-10")} value={section.value}>
       {section.label}
     </Tabs.Tab>
   );

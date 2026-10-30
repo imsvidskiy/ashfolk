@@ -101,7 +101,7 @@ export function Hud() {
 
       <LandChangedDialog />
 
-      {import.meta.env.DEV ? <FilmingHint /> : null}
+      <FilmingHint />
     </>
   );
 }

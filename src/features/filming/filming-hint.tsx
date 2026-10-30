@@ -1,6 +1,9 @@
 import { useEffect, useState } from "react";
 import { useEngine } from "../../app/use-engine.ts";
+import { TextButton } from "../../design/buttons.tsx";
 import { Island } from "../../design/island.tsx";
+import { useIsTouch } from "../../design/use-media-query.ts";
+import type { Filming } from "../../game/filming.ts";
 import { isTypingTarget } from "../../game/input/keyboard-controls.ts";
 import { useFilming } from "./use-filming.ts";
 
@@ -43,36 +46,74 @@ function useIsHintShown(): boolean {
   const [isHintShown, setIsHintShown] = useState(false);
 
   useEffect(() => {
-    setIsHintShown(isInterfaceHidden);
-
     if (!isInterfaceHidden) {
+      setIsHintShown(false);
+
       return;
     }
 
-    const timer = window.setTimeout(() => {
-      setIsHintShown(false);
-    }, HINT_MILLISECONDS);
+    let timer = 0;
+
+    function showHint(): void {
+      setIsHintShown(true);
+      window.clearTimeout(timer);
+      timer = window.setTimeout(() => {
+        setIsHintShown(false);
+      }, HINT_MILLISECONDS);
+    }
+
+    function handlePointerDown(event: PointerEvent): void {
+      if (event.pointerType === "touch") {
+        showHint();
+      }
+    }
+
+    showHint();
+    window.addEventListener("pointerdown", handlePointerDown);
 
     return () => {
       window.clearTimeout(timer);
+      window.removeEventListener("pointerdown", handlePointerDown);
     };
   }, [isInterfaceHidden]);
 
   return isHintShown;
 }
 
+function useShowInterface(filming: Filming) {
+  return () => {
+    filming.set({ isInterfaceHidden: false });
+  };
+}
+
+function HintContent({ filming }: { readonly filming: Filming }) {
+  const isTouch = useIsTouch();
+  const handleShow = useShowInterface(filming);
+
+  return (
+    <Island className="pointer-events-auto flex items-center gap-2 py-1.5 pr-1.5 pl-4 text-sm">
+      <span>{isTouch ? "Interface hidden." : "Interface hidden. Press H to show it."}</span>
+
+      <TextButton className="h-8 px-3" onClick={handleShow} tone="quiet">
+        Show
+      </TextButton>
+    </Island>
+  );
+}
+
 export function FilmingHint() {
   useInterfaceKey();
 
+  const engine = useEngine();
   const isHintShown = useIsHintShown();
 
-  if (!isHintShown) {
+  if (engine === null || !isHintShown) {
     return null;
   }
 
   return (
     <div className="pointer-events-none fixed inset-x-0 top-4 z-20 flex justify-center" role="status">
-      <Island className="px-4 py-2 text-sm">Interface hidden. Press H to show it.</Island>
+      <HintContent filming={engine.filming} />
     </div>
   );
 }
