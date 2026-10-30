@@ -312,7 +312,7 @@ export function completeConstruction(tribe: Tribe, site: Building, context: Soci
   });
 
   retireReplaced(site, context);
-  assignHomes(tribe, context);
+  assignHomes(tribe, context.buildings, context.people.membersOf(tribe));
   learn(tribe, 2, context.rules);
 }
 
@@ -382,7 +382,7 @@ export function handleBuildingLoss(tribe: Tribe, loss: BuildingLoss, context: So
     });
   }
 
-  assignHomes(tribe, context);
+  assignHomes(tribe, context.buildings, context.people.membersOf(tribe));
 }
 
 function clearedId(id: number | null, lost: Building): number | null {

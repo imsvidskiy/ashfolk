@@ -13,6 +13,7 @@ import type { BuildingSystem } from "./buildings.ts";
 import { handleBuildingLoss } from "./construction.ts";
 import { advanceJob, dropJob, updateMind } from "./decisions.ts";
 import { abandonFields } from "./farming.ts";
+import { assignHomes } from "./housing.ts";
 import { walk } from "./jobs/job.ts";
 import { updateNeeds } from "./needs.ts";
 import { createPerson, type DeathCause, type Person, walkSpeed } from "./person.ts";
@@ -383,7 +384,11 @@ export class SocietySystem {
 
     if (tribe.memberCount === 0) {
       this.#dissolve(tribe);
+
+      return;
     }
+
+    assignHomes(tribe, this.#dependencies.buildings, this.membersOf(tribe));
   }
 
   damageArea(x: number, z: number, radius: number, damage: number, cause: DeathCause): void {

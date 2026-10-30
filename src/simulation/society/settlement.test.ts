@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { PlantSpecies } from "../../content/plants.ts";
 import { SocietyHarness, settle } from "../testing/test-society.ts";
 import { floodStrip, fordAcross, plantInCell } from "../testing/test-world.ts";
+import { assignHomes } from "./housing.ts";
 import type { Person } from "./person.ts";
 import { considerSplit, findCampSite, scoreSite, siteSearchNear } from "./settlement.ts";
 import type { Tribe } from "./tribe.ts";
@@ -17,9 +18,7 @@ interface SplittingTribe {
   tribe: Tribe;
 }
 
-function settleSplittingTribe(youngestAge: number): SplittingTribe {
-  const harness = new SocietyHarness();
-
+function settleSplittingTribe(youngestAge: number, harness = new SocietyHarness()): SplittingTribe {
   const tribe = settle(harness, 20);
   const members = harness.society.membersOf(tribe);
 
@@ -171,5 +170,28 @@ describe("splits", () => {
 
     expect(nextDrawAfterSplitCheck(40)).toBe(idleDraw);
     expect(nextDrawAfterSplitCheck(20)).not.toBe(idleDraw);
+  });
+
+  it("hand the beds the settlers leave to those who stay", () => {
+    const { harness, members, tribe } = settleSplittingTribe(
+      20,
+      new SocietyHarness({ world: { dimensions: { cellSize: 10, cellsPerSide: 192 } } })
+    );
+
+    const tent = harness.buildings.add({ kind: "tent", rotation: 0, tribeId: tribe.id, x: 30, z: 30 }, harness.random);
+
+    tribe.buildings.shelterIds.push(tent.id);
+    tent.progress = 1;
+    assignHomes(tribe, harness.buildings, harness.society.membersOf(tribe));
+    considerSplit(tribe, members, harness.context);
+
+    const stayers = harness.society.membersOf(tribe);
+
+    expect(stayers.length).toBeLessThan(members.length);
+    expect(
+      stayers.filter((person) => {
+        return person.homeId === tent.id;
+      })
+    ).toHaveLength(3);
   });
 });

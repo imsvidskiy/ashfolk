@@ -7,6 +7,7 @@ import { aroundPoint, type Waypoint } from "../agents/navigation.ts";
 import type { WorldState } from "../world/world-state.ts";
 import { dropJob } from "./decisions.ts";
 import { abandonFields } from "./farming.ts";
+import { assignHomes } from "./housing.ts";
 import { isChild, isElder, type Person } from "./person.ts";
 import { abandonPlots } from "./plots.ts";
 import { syncEra } from "./progress.ts";
@@ -556,6 +557,8 @@ export function considerSplit(tribe: Tribe, members: readonly Person[], context:
   for (const person of settlers) {
     moveToTribe(person, tribe, offshoot);
   }
+
+  assignHomes(tribe, context.buildings, context.people.membersOf(tribe));
 
   context.chronicle.record({
     category: "split",
