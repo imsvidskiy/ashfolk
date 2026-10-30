@@ -148,6 +148,7 @@ export class Simulation {
   readonly world: WorldState;
   readonly #faunaThreats: FaunaThreats;
   readonly #frameBuilder: FrameBuilder;
+  readonly #vegetationGrowth: VegetationGrowthSystem;
   #grab: Grab | null = null;
   #isPaused: boolean;
   #notices: string[] = [];
@@ -157,7 +158,6 @@ export class Simulation {
   #tasks: ScheduledTask[] = [];
   #tick = 0;
   #tickBacklog = 0;
-  readonly #vegetationGrowth: VegetationGrowthSystem;
   #viewFocus: Waypoint = { x: 0, z: 0 };
   #waterUpdate: WaterUpdate | null = null;
 
