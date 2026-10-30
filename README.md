@@ -38,7 +38,7 @@
   <a href="#architecture">Architecture</a> ·
   <a href="docs/roadmap.md">Roadmap</a> ·
   <a href="CONTRIBUTING.md">Contributing</a> ·
-  <a href="https://github.com/sponsors/imsvidskiy">Sponsor</a>
+  <a href="#sponsor">Sponsor</a>
 </p>
 
 https://github.com/user-attachments/assets/bc99af11-0acd-4cca-85cc-39c3b5a4b256
@@ -100,8 +100,13 @@ The simulation runs in a Web Worker. The renderer and the HUD read its frames an
 
 ## Sponsor
 
-Ashfolk is free and open source. If you enjoy it, you can support its development on
-[GitHub Sponsors](https://github.com/sponsors/imsvidskiy).
+Ashfolk is free and open source. If you enjoy it, you can support it in two ways:
+
+- [Supporter membership on Whop](https://whop.com/ashfolk-supporter/), $9 a month. It pays for development, hosting,
+  art and sound. Cancel any time.
+- [GitHub Sponsors](https://github.com/sponsors/imsvidskiy), with your GitHub account.
+
+The Sponsor button in the game opens the Whop membership.
 
 ## Star history
 
