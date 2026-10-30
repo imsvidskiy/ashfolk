@@ -21,7 +21,7 @@ import type { HandMotion } from "../hand-motion.ts";
 import { geometryFromMeshData, InstanceBatch, toInstancedGeometry } from "../instancing.ts";
 import { SHADOW_ONLY_LAYER } from "../shadow-only-layer.ts";
 import type { TerrainTextures } from "../terrain/terrain-textures.ts";
-import { HIDDEN_LEVEL } from "../view-input.ts";
+import { HIDDEN_LEVEL, levelWithin } from "../view-input.ts";
 import { createPlantMaterial, PlantWeather, SpeciesLook } from "./plant-material.ts";
 import { foliageLook } from "./plant-palette.ts";
 import {
@@ -130,9 +130,7 @@ function chunkLevelOf(
 
   const distance = chunk.bounds.distanceToPoint(camera.position);
 
-  return levelDistances.findIndex((limit) => {
-    return distance < limit * detail;
-  });
+  return levelWithin(distance, levelDistances, detail);
 }
 
 function fillPlants(plants: PlantBatch, chunks: readonly VegetationChunk[], casterCount: number): void {

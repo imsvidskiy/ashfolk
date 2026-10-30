@@ -11,6 +11,7 @@ import {
 import type { CellRegion } from "../../world/change-tracking.ts";
 import type { WorldGrid } from "../../world/world-grid.ts";
 import { toInstancedGeometry } from "../instancing.ts";
+import { HIDDEN_LEVEL, levelWithin } from "../view-input.ts";
 import {
   createPatchGeometry,
   PATCH_CELLS,
@@ -73,15 +74,13 @@ function isPatchVisible(patch: Patch, frustum: Frustum): boolean {
 }
 
 function patchLevelFor(distance: number, detail: number): number {
-  const index = PATCH_LEVEL_DISTANCES.findIndex((limit) => {
-    return distance < limit * detail;
-  });
+  const level = levelWithin(distance, PATCH_LEVEL_DISTANCES, detail);
 
-  if (index === -1) {
+  if (level === HIDDEN_LEVEL) {
     return PATCH_STEPS.length - 1;
   }
 
-  return index;
+  return level;
 }
 
 export class PatchGrid {
