@@ -19,7 +19,7 @@ const STEADY_JOBS: ReadonlySet<JobKind> = new Set(["defend", "envoy", "fight", "
 function answerRaid(tick: PersonTick): Job | null {
   const { context, person, tribe } = tick;
 
-  const raid = context.rivalry.raidAgainst(tribe.id);
+  const raid = context.rivalry.campaigns.raidAgainst(tribe.id);
 
   if (raid === null) {
     return null;

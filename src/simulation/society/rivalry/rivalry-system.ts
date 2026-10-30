@@ -105,11 +105,11 @@ function recordFall(victim: Person, raid: Raid | null): void {
 }
 
 export class RivalrySystem implements Battleground {
+  readonly campaigns: RaidCampaigns;
   readonly ledger = new CombatLedger();
   readonly random: RandomSource;
   readonly relations = new RelationBook();
   readonly #arrows: ArrowFlights;
-  readonly #campaigns: RaidCampaigns;
   readonly #chronicle: Chronicle;
   #claims = new Map<number, Claim>();
   #encounters: BeastEncounters | null = null;
@@ -120,20 +120,16 @@ export class RivalrySystem implements Battleground {
     this.#chronicle = dependencies.chronicle;
     this.#arrows = new ArrowFlights(dependencies.effects);
     this.random = createRandom(dependencies.seed * 13 + 101);
-    this.#campaigns = new RaidCampaigns({
+    this.campaigns = new RaidCampaigns({
       chronicle: dependencies.chronicle,
       random: this.random,
       relations: this.relations,
     });
   }
 
-  get raids(): readonly Raid[] {
-    return this.#campaigns.raids;
-  }
-
   snapshot(people: readonly Person[]): RivalrySnapshot {
     return {
-      ...this.#campaigns.snapshot(people),
+      ...this.campaigns.snapshot(people),
       claims: structuredClone(this.#claims),
       ledger: this.ledger.snapshot(),
       random: this.random.state(),
@@ -151,15 +147,7 @@ export class RivalrySystem implements Battleground {
     this.relations.restore(snapshot.relations);
     this.#surveyDays = snapshot.surveyDays;
     this.#surveySeconds = snapshot.surveySeconds;
-    this.#campaigns.restore(snapshot, people);
-  }
-
-  raidOf(id: number): Raid | null {
-    return this.#campaigns.raidOf(id);
-  }
-
-  raidAgainst(tribeId: number): Raid | null {
-    return this.#campaigns.raidAgainst(tribeId);
+    this.campaigns.restore(snapshot, people);
   }
 
   senses(context: SocietyContext): PeopleSense {
@@ -179,7 +167,7 @@ export class RivalrySystem implements Battleground {
 
     const victimTribe = people.findTribe(victim.tribeId);
     const slayerTribe = people.findTribe(slayer.tribeId);
-    const raid = this.#campaigns.raidBetween(victim.tribeId, slayer.tribeId);
+    const raid = this.campaigns.raidBetween(victim.tribeId, slayer.tribeId);
 
     if (victimTribe === null || slayerTribe === null) {
       people.kill(victim, "battle");
@@ -223,14 +211,10 @@ export class RivalrySystem implements Battleground {
     });
   }
 
-  launchRaid(attacker: Tribe, defender: Tribe, context: SocietyContext): Raid | null {
-    return this.#campaigns.launch(attacker, defender, context);
-  }
-
   update(seconds: number, days: number, context: SocietyContext): void {
     this.ledger.update(seconds);
     this.#arrows.update(seconds, this, context);
-    this.#campaigns.advance(seconds, context);
+    this.campaigns.advance(seconds, context);
     this.#surveySeconds -= seconds;
     this.#surveyDays += days;
 
@@ -247,7 +231,7 @@ export class RivalrySystem implements Battleground {
 
   view(day: number): RivalryView {
     return {
-      raids: this.#campaigns.raids.map((raid) => {
+      raids: this.campaigns.raids.map((raid) => {
         return {
           aim: raid.aim,
           attackerId: raid.attackerId,
@@ -298,7 +282,7 @@ export class RivalrySystem implements Battleground {
     }
 
     for (const relation of this.relations.all) {
-      this.#campaigns.consider(relation, days, context);
+      this.campaigns.consider(relation, days, context);
       this.#considerPeace(relation, days, context);
     }
   }
@@ -384,7 +368,7 @@ export class RivalrySystem implements Battleground {
 
   #makePeace(relation: Relation, context: SocietyContext): void {
     agreeTruce(relation, context.environment.day);
-    this.#campaigns.retreatBetween(relation.first.tribeId, relation.second.tribeId);
+    this.campaigns.retreatBetween(relation.first.tribeId, relation.second.tribeId);
   }
 
   #forgetVanished(tribes: readonly Tribe[]): void {
@@ -404,6 +388,6 @@ export class RivalrySystem implements Battleground {
       }
     }
 
-    this.#campaigns.forgetVanished(living);
+    this.campaigns.forgetVanished(living);
   }
 }

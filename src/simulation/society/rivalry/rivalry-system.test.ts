@@ -109,7 +109,7 @@ describe("a raid", () => {
     armTribe(raiders, 200);
     armTribe(victims, 60);
 
-    const raid = harness.rivalry.launchRaid(raiders, victims, harness.context);
+    const raid = harness.rivalry.campaigns.launch(raiders, victims, harness.context);
 
     expect(raid).not.toBeNull();
     expect(raid?.warriorIds.length).toBeGreaterThanOrEqual(3);
@@ -118,7 +118,7 @@ describe("a raid", () => {
     const victimJobs = new Set<string>();
 
     runUntil(harness, 900, () => {
-      for (const current of harness.rivalry.raids) {
+      for (const current of harness.rivalry.campaigns.raids) {
         phases.add(current.phase);
       }
 
@@ -126,13 +126,13 @@ describe("a raid", () => {
         victimJobs.add(String(person.job?.kind));
       }
 
-      return harness.rivalry.raids.length === 0;
+      return harness.rivalry.campaigns.raids.length === 0;
     });
 
     const story = chronicleTexts(harness);
 
     expect([...phases]).toEqual(["muster", "march", "assault", "retreat"]);
-    expect(harness.rivalry.raids).toHaveLength(0);
+    expect(harness.rivalry.campaigns.raids).toHaveLength(0);
     expect(victimJobs).toContain("defend");
     expect(victimJobs).toContain("hide");
     expect(story).toContainEqual(expect.stringMatching(RAID_SENT_STORY));
@@ -149,9 +149,9 @@ describe("a raid", () => {
     setFood(victims, 80);
     victims.stock.wood = 30;
 
-    harness.rivalry.launchRaid(raiders, victims, harness.context);
+    harness.rivalry.campaigns.launch(raiders, victims, harness.context);
     runUntil(harness, 900, () => {
-      return harness.rivalry.raids.length === 0;
+      return harness.rivalry.campaigns.raids.length === 0;
     });
 
     const story = chronicleTexts(harness);
@@ -169,11 +169,11 @@ describe("a raid", () => {
     armTribe(raiders, 200);
     setFood(victims, 80);
 
-    const raid = harness.rivalry.launchRaid(raiders, victims, harness.context);
+    const raid = harness.rivalry.campaigns.launch(raiders, victims, harness.context);
 
     raid?.burned.push("hut");
     runUntil(harness, 900, () => {
-      return harness.rivalry.raids.length === 0;
+      return harness.rivalry.campaigns.raids.length === 0;
     });
 
     expect(harness.rivalry.relations.find(raiders.id, victims.id)?.lastGrudge).toBe("burning");
@@ -192,10 +192,10 @@ describe("a raid", () => {
     setFood(victims, 80);
     victims.stock.copper = 30;
 
-    const raid = harness.rivalry.launchRaid(raiders, victims, harness.context);
+    const raid = harness.rivalry.campaigns.launch(raiders, victims, harness.context);
 
     runUntil(harness, 1500, () => {
-      return harness.rivalry.raids.length === 0;
+      return harness.rivalry.campaigns.raids.length === 0;
     });
     runUntil(harness, 600, () => {
       return harness.society.membersOf(raiders).every((person) => {
@@ -220,7 +220,7 @@ describe("a raid", () => {
     sideOf(relation, first.id).grievance = 200;
     harness.run(60);
 
-    expect(harness.rivalry.raids).toHaveLength(0);
+    expect(harness.rivalry.campaigns.raids).toHaveLength(0);
   });
 });
 
@@ -318,7 +318,7 @@ describe("determinism", () => {
 
     armTribe(raiders, 200);
     armTribe(victims, 60);
-    harness.rivalry.launchRaid(raiders, victims, harness.context);
+    harness.rivalry.campaigns.launch(raiders, victims, harness.context);
     harness.run(240);
 
     return [

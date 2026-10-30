@@ -134,7 +134,7 @@ function raidingSimulation(): Simulation {
 
   attacker.stock.meat = RAID_PROVISIONS;
 
-  if (simulation.rivalry.launchRaid(attacker, defender, simulation.services) === null) {
+  if (simulation.rivalry.campaigns.launch(attacker, defender, simulation.services) === null) {
     throw new Error("The test tribes could not raid");
   }
 
@@ -144,7 +144,7 @@ function raidingSimulation(): Simulation {
 }
 
 function raidsOf(simulation: Simulation): number[] {
-  return simulation.rivalry.raids.map((raid) => {
+  return simulation.rivalry.campaigns.raids.map((raid) => {
     return raid.id;
   });
 }
@@ -497,7 +497,7 @@ describe("world snapshots", () => {
 
   it("keeps a raid going after the world loads", { timeout: 60_000 }, () => {
     const original = raidingSimulation();
-    const [raid] = original.rivalry.raids;
+    const [raid] = original.rivalry.campaigns.raids;
 
     const copy = restored(snapshotOf(original));
 
@@ -552,7 +552,7 @@ describe("world snapshots", () => {
 
     copy.runTicks(1);
 
-    expect(copy.rivalry.raids).toHaveLength(0);
+    expect(copy.rivalry.campaigns.raids).toHaveLength(0);
   });
 
   it("gives back the inputs of a craft in progress", () => {

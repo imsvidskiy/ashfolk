@@ -89,7 +89,7 @@ export class DefendJob implements Job {
   }
 
   update(tick: PersonTick): Job | null {
-    const raid = tick.context.rivalry.raidOf(this.#raidId);
+    const raid = tick.context.rivalry.campaigns.raidOf(this.#raidId);
 
     if (raid === null) {
       return null;
