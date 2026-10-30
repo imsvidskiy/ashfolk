@@ -1,4 +1,5 @@
 const HOME_HOST = "ashfolk.com";
+const SERVED_HOSTS = new Set([HOME_HOST, "localhost"]);
 const MEDIA_PREFIX = "/media/";
 const RANGE_PATTERN = /^bytes=(?<start>\d+)-(?<end>\d*)$/u;
 
@@ -9,7 +10,7 @@ interface WorkerEnvironment {
 export function homeAddressOf(request: Request): string | null {
   const url = new URL(request.url);
 
-  if (url.hostname === HOME_HOST || url.hostname === "localhost") {
+  if (SERVED_HOSTS.has(url.hostname)) {
     return null;
   }
 
