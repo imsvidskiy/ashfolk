@@ -28,6 +28,7 @@ export function tribePower(
   services: PowerServices
 ): PowerOutcome {
   const tribe = services.people.spawnTribe({
+    canSettleRoughGround: true,
     context: services,
     people: parameters.people,
     technologies: [],

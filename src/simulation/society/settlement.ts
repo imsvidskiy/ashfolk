@@ -23,6 +23,12 @@ const WATER_SAMPLES = 24;
 const NEAR_WATER = 300;
 const TOO_CLOSE_TO_WATER = 35;
 const FORAGE_REACH_CELLS = 14;
+const OPEN_REACH = 80;
+const GENTLE_SLOPE = 0.3;
+const STEEPEST_MEAN_SLOPE = 0.24;
+const SMALLEST_OPEN_SHARE = 0.5;
+const CLOSED_CANOPY_SHARE = 0.25;
+const ROUGH_GROUND_PENALTY = 6;
 const SITE_ATTEMPTS = 90;
 const ACCEPTABLE_SCORE = -5;
 const DEFAULT_NEIGHBOR_DISTANCE = 500;
@@ -42,8 +48,10 @@ const MIGRANT_PACE = 2;
 const BURNT_CAMP = 0.8;
 const PROSPECTING_SHARE = 0.5;
 const MARSH_AVERSION = 6;
+const ROCKY_BIOMES: ReadonlySet<number> = new Set([Biome.Alpine, Biome.Glacier]);
 
 interface SiteSearch {
+  canSettleRoughGround: boolean;
   excluded: Tribe | null;
   isNearOrigin: boolean;
   minimumNeighborDistance: number;
@@ -54,8 +62,12 @@ interface SiteSearch {
 interface Surroundings {
   bushes: number;
   marsh: number;
+  nearSamples: number;
+  openSamples: number;
   samples: number;
+  slopeSum: number;
   trees: number;
+  woodedSamples: number;
 }
 
 export function scoreSite(
@@ -75,13 +87,32 @@ export function scoreSite(
 
   const surroundings = surveySurroundings(world, cell);
 
+  const isOpen = isOpenAround(surroundings);
+
+  if (!(isOpen || search.canSettleRoughGround)) {
+    return UNSUITABLE;
+  }
+
   return (
     waterScore(world, point) +
     forageScore(surroundings) -
-    marshScore(surroundings) +
+    marshScore(surroundings) -
+    roughnessScore(surroundings) +
     climateScore(world, cell) +
     neighborScore(point, search, tribes) -
-    world.slope(cell) * 6
+    world.slope(cell) * 6 -
+    (isOpen ? 0 : ROUGH_GROUND_PENALTY)
+  );
+}
+
+function isOpenAround(surroundings: Surroundings): boolean {
+  if (surroundings.nearSamples === 0) {
+    return false;
+  }
+
+  return (
+    surroundings.slopeSum / surroundings.nearSamples <= STEEPEST_MEAN_SLOPE &&
+    surroundings.openSamples / surroundings.nearSamples >= SMALLEST_OPEN_SHARE
   );
 }
 
@@ -90,7 +121,7 @@ function isCampable(world: WorldState, cell: number, point: Waypoint): boolean {
     return false;
   }
 
-  if (world.terrain.biome[cell] === Biome.Swamp) {
+  if (world.terrain.biome[cell] === Biome.Swamp || ROCKY_BIOMES.has(world.terrain.biome[cell])) {
     return false;
   }
 
@@ -133,8 +164,18 @@ function surveySurroundings(world: WorldState, center: number): Surroundings {
 
   const centerColumn = grid.columnOf(center);
   const centerRow = grid.rowOf(center);
+  const openReachCells = OPEN_REACH / grid.cellSize;
 
-  const surroundings: Surroundings = { bushes: 0, marsh: 0, samples: 0, trees: 0 };
+  const surroundings: Surroundings = {
+    bushes: 0,
+    marsh: 0,
+    nearSamples: 0,
+    openSamples: 0,
+    samples: 0,
+    slopeSum: 0,
+    trees: 0,
+    woodedSamples: 0,
+  };
 
   for (let rowOffset = -FORAGE_REACH_CELLS; rowOffset <= FORAGE_REACH_CELLS; rowOffset += 2) {
     for (let columnOffset = -FORAGE_REACH_CELLS; columnOffset <= FORAGE_REACH_CELLS; columnOffset += 2) {
@@ -145,7 +186,9 @@ function surveySurroundings(world: WorldState, center: number): Surroundings {
         continue;
       }
 
-      countSurroundings(world, grid.index(column, row), surroundings);
+      const isNear = Math.hypot(columnOffset, rowOffset) <= openReachCells;
+
+      countSurroundings(world, grid.index(column, row), isNear, surroundings);
     }
   }
 
@@ -156,15 +199,28 @@ function forageScore(surroundings: Surroundings): number {
   return Math.min(4, surroundings.bushes * 0.4) + Math.min(2.5, surroundings.trees * 0.06);
 }
 
+function roughnessScore(surroundings: Surroundings): number {
+  if (surroundings.nearSamples === 0) {
+    return 0;
+  }
+
+  const meanSlope = surroundings.slopeSum / surroundings.nearSamples;
+  const openShare = surroundings.openSamples / surroundings.nearSamples;
+  const woodedShare = surroundings.woodedSamples / surroundings.nearSamples;
+
+  return meanSlope * 12 + (1 - openShare) * 4 + Math.max(0, woodedShare - CLOSED_CANOPY_SHARE) * 12;
+}
+
 function marshScore(surroundings: Surroundings): number {
   return surroundings.samples === 0 ? 0 : (surroundings.marsh / surroundings.samples) * MARSH_AVERSION;
 }
 
-function countSurroundings(world: WorldState, cell: number, surroundings: Surroundings): void {
+function countSurroundings(world: WorldState, cell: number, isNear: boolean, surroundings: Surroundings): void {
   const { terrain, vegetation } = world;
 
-  surroundings.samples += 1;
-  surroundings.marsh += terrain.biome[cell] === Biome.Swamp ? 1 : 0;
+  const isMarsh = terrain.biome[cell] === Biome.Swamp;
+
+  let trees = 0;
 
   for (let plant = vegetation.firstPlantInCell(cell); plant !== NO_PLANT; plant = vegetation.nextPlantInCell(plant)) {
     if (!vegetation.isAlive(plant)) {
@@ -174,8 +230,25 @@ function countSurroundings(world: WorldState, cell: number, surroundings: Surrou
     const species = vegetation.species[plant];
 
     surroundings.bushes += plantSpeciesDefinition(species).givesBerries ? 1 : 0;
-    surroundings.trees += isLivingTreeSpecies(species) ? 1 : 0;
+    trees += isLivingTreeSpecies(species) ? 1 : 0;
   }
+
+  surroundings.samples += 1;
+  surroundings.marsh += isMarsh ? 1 : 0;
+  surroundings.trees += trees;
+
+  if (!isNear || world.isWater(cell)) {
+    return;
+  }
+
+  const slope = world.slope(cell);
+  const isBuildable =
+    world.isWalkable(cell) && slope <= GENTLE_SLOPE && !isMarsh && !ROCKY_BIOMES.has(terrain.biome[cell]);
+
+  surroundings.nearSamples += 1;
+  surroundings.slopeSum += slope;
+  surroundings.woodedSamples += trees > 0 ? 1 : 0;
+  surroundings.openSamples += isBuildable && trees === 0 ? 1 : 0;
 }
 
 function climateScore(world: WorldState, cell: number): number {
@@ -236,7 +309,14 @@ export function findCampSite(search: SiteSearch, context: SocietyContext, tribes
 }
 
 export function siteSearchNear(origin: Waypoint, radius: number, excluded: Tribe | null): SiteSearch {
-  return { excluded, isNearOrigin: false, minimumNeighborDistance: DEFAULT_NEIGHBOR_DISTANCE, origin, radius };
+  return {
+    canSettleRoughGround: false,
+    excluded,
+    isNearOrigin: false,
+    minimumNeighborDistance: DEFAULT_NEIGHBOR_DISTANCE,
+    origin,
+    radius,
+  };
 }
 
 export function updateMigration(tribe: Tribe, members: readonly Person[], context: SocietyContext): void {
@@ -322,7 +402,7 @@ export function considerMoving(tribe: Tribe, members: readonly Person[], context
   }
 
   const site = findCampSite(
-    siteSearchNear(campPoint(tribe), MOVE_SEARCH_RADIUS, tribe),
+    { ...siteSearchNear(campPoint(tribe), MOVE_SEARCH_RADIUS, tribe), canSettleRoughGround: true },
     context,
     context.people.tribes()
   );
@@ -340,6 +420,7 @@ function prospect(tribe: Tribe, members: readonly Person[], context: SocietyCont
   }
 
   const search: SiteSearch = {
+    canSettleRoughGround: false,
     excluded: tribe,
     isNearOrigin: true,
     minimumNeighborDistance: DEFAULT_NEIGHBOR_DISTANCE,

@@ -244,20 +244,22 @@ export class Simulation {
   populate(): void {
     const { halfSize, squareKilometers } = this.world.grid;
 
-    let settled = 0;
+    const unsettledSpots = new Set(STARTING_SPOTS);
 
-    for (const spot of STARTING_SPOTS) {
-      if (settled >= STARTING_TRIBES) {
-        break;
-      }
+    for (const canSettleRoughGround of [false, true]) {
+      for (const spot of unsettledSpots) {
+        if (unsettledSpots.size <= STARTING_SPOTS.length - STARTING_TRIBES) {
+          break;
+        }
 
-      if (this.#spawnTribe(spot.x * halfSize, spot.z * halfSize)) {
-        settled += 1;
+        if (this.#spawnTribe(spot.x * halfSize, spot.z * halfSize, canSettleRoughGround)) {
+          unsettledSpots.delete(spot);
+        }
       }
     }
 
-    if (settled === 0) {
-      this.#spawnTribe(0, 0);
+    if (unsettledSpots.size === STARTING_SPOTS.length) {
+      this.#spawnTribe(0, 0, true);
     }
 
     this.fauna.populate(Math.round(HERDS_PER_SQUARE_KILOMETER * squareKilometers), this.random);
@@ -606,8 +608,9 @@ export class Simulation {
     };
   }
 
-  #spawnTribe(x: number, z: number): boolean {
+  #spawnTribe(x: number, z: number, canSettleRoughGround: boolean): boolean {
     const tribe = this.society.spawnTribe({
+      canSettleRoughGround,
       context: this.services,
       people: STARTING_TRIBE_SIZE,
       technologies: [],
