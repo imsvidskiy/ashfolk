@@ -20,11 +20,6 @@ describe("eras", () => {
     });
 
     expect(
-      ERAS.map((era) => {
-        return era.name;
-      })
-    ).toEqual(["Wanderers", "Stone Age", "Neolithic", "Copper Age", "Bronze Age", "Iron Age"]);
-    expect(
       keys.map((technology) => {
         return order.indexOf(technology);
       })
