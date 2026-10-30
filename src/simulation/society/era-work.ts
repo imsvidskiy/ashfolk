@@ -118,7 +118,9 @@ function oreOnTheWay(tick: PersonTick, kind: DepositKind): number {
   const { resource } = DEPOSITS[kind];
 
   return tick.context.people.membersOf(tick.tribe).reduce((total, person) => {
-    return total + carriedAmount(person, resource) + (person.job instanceof MineJob && person.job.ore === kind ? 1 : 0);
+    const minerShare = person.job instanceof MineJob && person.job.ore === kind ? MINERS_SHARE : 0;
+
+    return total + carriedAmount(person, resource) + minerShare;
   }, 0);
 }
 
@@ -129,7 +131,7 @@ function oreNeed(tick: PersonTick, kind: DepositKind): number {
     return 0;
   }
 
-  const stocked = tick.tribe.stock[DEPOSITS[kind].resource] + oreOnTheWay(tick, kind) * MINERS_SHARE;
+  const stocked = tick.tribe.stock[DEPOSITS[kind].resource] + oreOnTheWay(tick, kind);
 
   return Math.max(0, 1 - stocked / ORE_TARGETS[kind]);
 }

@@ -5,6 +5,7 @@ import {
   chronicleTexts,
   foundNeighboringTribes,
   foundTribe,
+  longFeud,
   runUntil,
   SPRING_HARNESS,
   setFood,
@@ -229,14 +230,9 @@ describe("peace", () => {
 
     const [first, second] = foundNeighboringTribes(harness, 420);
 
-    const relation = harness.rivalry.relations.meet(first.id, second.id, false);
+    const relation = longFeud(harness, first, second);
 
     setFood(first, 120);
-    relation.standing = -90;
-    relation.stance = "hostile";
-    relation.feudStartDay = -12;
-    sideOf(relation, first.id).weariness = 120;
-    sideOf(relation, second.id).weariness = 40;
 
     runUntil(harness, 200, () => {
       return relation.envoyId !== null;
@@ -261,14 +257,9 @@ describe("peace", () => {
 
     const [first, second] = foundNeighboringTribes(harness, 420);
 
-    const relation = harness.rivalry.relations.meet(first.id, second.id, false);
+    const relation = longFeud(harness, first, second);
 
     setFood(first, 120);
-    relation.standing = -90;
-    relation.stance = "hostile";
-    relation.feudStartDay = -12;
-    sideOf(relation, first.id).weariness = 120;
-    sideOf(relation, second.id).weariness = 40;
 
     let seekerFood = totalFood(first.stock);
 
@@ -303,14 +294,10 @@ describe("peace", () => {
 
     const [first, second] = foundNeighboringTribes(harness, 420);
 
-    const relation = harness.rivalry.relations.meet(first.id, second.id, false);
+    const relation = longFeud(harness, first, second);
 
     setFood(first, 0);
     setFood(second, 0);
-    relation.standing = -90;
-    relation.stance = "hostile";
-    relation.feudStartDay = -12;
-    sideOf(relation, first.id).weariness = 120;
 
     runUntil(harness, 400, () => {
       setFood(first, 0);

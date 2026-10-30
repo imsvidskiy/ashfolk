@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { PlantSpecies } from "../../content/plants.ts";
-import { MORNING, SocietyHarness, settle } from "../testing/test-society.ts";
+import { addShelter, MORNING, SocietyHarness, settle } from "../testing/test-society.ts";
 import { TroddenGround } from "./trodden-ground.ts";
 
 describe("trodden ground", () => {
@@ -9,13 +9,9 @@ describe("trodden ground", () => {
 
     const tribe = settle(harness, 4);
 
-    const tent = harness.buildings.add(
-      { kind: "tent", rotation: 0, tribeId: tribe.id, x: tribe.campX + 25, z: tribe.campZ },
-      harness.random
-    );
+    const tent = addShelter(harness, tribe, "tent", tribe.campX + 25, tribe.campZ);
 
     tent.progress = 1;
-    tribe.buildings.shelterIds.push(tent.id);
     new TroddenGround().update(0.2, harness.context, [tribe]);
 
     const { world } = harness;

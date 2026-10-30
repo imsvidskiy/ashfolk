@@ -322,7 +322,7 @@ function migrationJob(tick: PersonTick): Job {
   return new MigrateJob(tick);
 }
 
-function mayGatherBerries(tick: PersonTick): boolean {
+function shouldGatherBerries(tick: PersonTick): boolean {
   const { environment, random } = tick.context;
 
   if (tick.person.age < GATHERING_AGE || isWinter(environment.season)) {
@@ -337,7 +337,7 @@ function mayGatherBerries(tick: PersonTick): boolean {
 }
 
 function childActivity(tick: PersonTick): Job {
-  if (!mayGatherBerries(tick)) {
+  if (!shouldGatherBerries(tick)) {
     return new WanderJob(tick, "play");
   }
 

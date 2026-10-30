@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { firstMemberTick, SocietyHarness, settle } from "../testing/test-society.ts";
+import { addShelter, firstMemberTick, SocietyHarness, settle } from "../testing/test-society.ts";
 import { decideJob } from "./decisions.ts";
 import { chillPerDay, isSheltered, nearestWarmPlace, warmthOnArrival } from "./warmth.ts";
 
@@ -35,12 +35,8 @@ describe("staying warm", () => {
     const tribe = settle(harness, 3);
     const tick = firstMemberTick(harness, tribe);
 
-    const house = harness.buildings.add(
-      { kind: "longhouse", rotation: 0, tribeId: tribe.id, x: tribe.campX + 20, z: tribe.campZ },
-      harness.random
-    );
+    const house = addShelter(harness, tribe, "longhouse", tribe.campX + 20, tribe.campZ);
 
-    tribe.buildings.shelterIds.push(house.id);
     tick.person.mover.x = house.x + 3;
     tick.person.mover.z = house.z;
 
@@ -57,13 +53,9 @@ describe("staying warm", () => {
     const tribe = settle(harness, 3);
     const tick = firstMemberTick(harness, tribe);
 
-    const house = harness.buildings.add(
-      { kind: "longhouse", rotation: 0, tribeId: tribe.id, x: tribe.campX, z: tribe.campZ },
-      harness.random
-    );
+    const house = addShelter(harness, tribe, "longhouse", tribe.campX, tribe.campZ);
 
     house.progress = 1;
-    tribe.buildings.shelterIds.push(house.id);
 
     const place = nearestWarmPlace(tick);
 
