@@ -2,7 +2,7 @@
 
 What Ashfolk is heading for and why. [plan.md](plan.md) is the how: the architecture these goals stand on.
 
-Last reviewed at v0.9.0. There are no dates. **Now** is being built, **Next** is shaped and comes after it, **Later** is
+Last reviewed at v0.10.0. There are no dates. **Now** is being built, **Next** is shaped and comes after it, **Later** is
 the direction. The roadmap is reviewed at every minor release: finished items move to [Recently done](#recently-done),
 dead ones are deleted, and an item enters Now only when it is small or medium and says when it's done.
 
@@ -53,9 +53,10 @@ dead ones are deleted, and an item enters Now only when it is small or medium an
 
 - **Goal**: players who want to support the game can join a membership and get recognition and early builds.
 - **Why**: Sponsors reaches developers. Players need a simple checkout.
-- **Scope**: a Whop membership, a Supporter button in the menu, a Discord role, names in the credits, votes on what comes
-  next. Out: accounts in the game, anything that locks a feature.
-- **Done when**: a purchase gives the role, and the button opens the checkout on desktop and phone.
+- **Scope**: the membership is live at $9 a month on [Whop](https://whop.com/ashfolk-supporter/), and Sponsor in the
+  game opens it. Left: a Discord role, names in the credits, votes on what comes next. Out: accounts in the game,
+  anything that locks a feature.
+- **Done when**: a purchase gives the Discord role, and supporters' names show in the credits.
 - **Depends on**: nothing. Size: S. More in [Paid content](#paid-content).
 
 ## Next
@@ -132,8 +133,8 @@ dead ones are deleted, and an item enters Now only when it is small or medium an
 
 ### Mobile app
 
-- **Goal**: Ashfolk installs on a phone and plays offline.
-- **Scope**: an installable web app with offline play first, store builds after.
+- **Goal**: Ashfolk is in the App Store and Google Play.
+- **Scope**: store builds of the web app, which already installs from the menu and plays offline since 0.9.1.
 - **Size**: M.
 
 ### Cloud saves and shared worlds
@@ -153,8 +154,8 @@ The code is MIT and runs in the browser. Anything gated only in the client can b
 legal. So Ashfolk sells what isn't code, and the free game never shrinks.
 
 - **Free forever**: the whole game, local saves and every power that exists today.
-- **Supporter**, about $4 a month: credits, a Discord role, votes, early builds, cosmetics.
-- **Patron**, about $9 a month: everything in Supporter, plus cloud saves, shared worlds, world presets and, later,
+- **Supporter**, $9 a month, live on Whop: credits, a Discord role, votes, early builds, cosmetics.
+- **Patron**, a higher tier later: everything in Supporter, plus cloud saves, shared worlds, world presets and, later,
   hosting online rooms. This tier pays for the servers.
 - **Founder**, a one-time price for the first supporters: Supporter for life and a founder frame.
 - **Packs**, a few dollars each: themes, palettes, scenarios, music.
@@ -192,6 +193,9 @@ Rules:
 
 ## Recently done
 
+- **0.10**: the game is Ashfolk at ashfolk.com, with a new logo, a share card for links, and a supporter membership on
+  Whop.
+- **0.9.1**: a Photo tab for screenshots and video, install from the menu, play without a connection.
 - **0.9**: sound: calm music, nature that follows the place, the weather and the hour, sounds for every power,
   people at work and the interface, and volume settings.
 - **0.8.3**: objects dissolve around a close camera, the hand grabs animals up close, plainer people, shorter power
