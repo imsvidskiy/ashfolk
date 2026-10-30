@@ -332,7 +332,6 @@ function withEraDetails(appearance: PersonAppearance, era: number, seed: number)
   }
 
   const rolls = eraRolls(seed);
-
   const isAdult = appearance.ageGroup !== "child";
   const hasEraCape = era >= BRONZE_AGE && isAdult && rolls.cape < 0.3;
 
