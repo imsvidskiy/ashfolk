@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { render } from "vitest-browser-react";
+import type { TribeSummary } from "../../simulation/frame.ts";
 import {
   createAnimalInspection,
   createBuildingInspection,
@@ -11,6 +12,10 @@ import {
   showWorld,
 } from "../testing/world-fixtures.ts";
 import { AnimalDetails, BuildingDetails, CellDetails, PersonDetails, TribeDetails } from "./inspector-details.tsx";
+
+function renderTribe(summary: TribeSummary) {
+  return render(<TribeDetails tribe={{ kind: "tribe", summary }} />);
+}
 
 describe("person details", () => {
   it("shows what a person is doing and how they feel", async () => {
@@ -171,7 +176,7 @@ describe("tribe details", () => {
       stock: createStock({ berries: 12.4, grain: 20, stone: 3, wood: 8.6 }),
     });
 
-    const screen = await render(<TribeDetails tribe={{ kind: "tribe", summary }} />);
+    const screen = await renderTribe(summary);
 
     const food = screen.getByRole("region", { name: "Food" });
     const materials = screen.getByRole("region", { name: "Materials" });
@@ -192,7 +197,7 @@ describe("tribe details", () => {
       eraName: "Copper Age",
     });
 
-    const screen = await render(<TribeDetails tribe={{ kind: "tribe", summary }} />);
+    const screen = await renderTribe(summary);
 
     await expect.element(screen.getByRole("list", { name: "Era 4 of 6" })).toBeVisible();
     await expect.element(screen.getByText("Next: Bronze Age", { exact: true })).toBeVisible();
@@ -203,7 +208,7 @@ describe("tribe details", () => {
       goal: { isBlocked: true, need: "4 tin ore", progress: 1, technologyName: "Bronze" },
     });
 
-    const screen = await render(<TribeDetails tribe={{ kind: "tribe", summary }} />);
+    const screen = await renderTribe(summary);
 
     await expect.element(screen.getByRole("meter", { name: "Next: Bronze" })).toHaveAttribute("aria-valuenow", "1");
     await expect.element(screen.getByText("Needs 4 tin ore", { exact: true })).toBeVisible();
@@ -218,7 +223,7 @@ describe("tribe details", () => {
       farmland: { crops: [{ count: 3, crop: "wheat", name: "Wheat" }], fields: 4, orchardTrees: 6, woodlotTrees: 0 },
     });
 
-    const screen = await render(<TribeDetails tribe={{ kind: "tribe", summary }} />);
+    const screen = await renderTribe(summary);
 
     await expect.element(screen.getByText("Longhouse ×2", { exact: true })).toBeVisible();
     await expect.element(screen.getByText("Smelter", { exact: true })).toBeVisible();
@@ -233,7 +238,7 @@ describe("tribe details", () => {
       goal: { isBlocked: false, need: null, progress: 0.5, technologyName: "Fire making" },
     });
 
-    const screen = await render(<TribeDetails tribe={{ kind: "tribe", summary }} />);
+    const screen = await renderTribe(summary);
 
     await expect.element(screen.getByRole("meter", { name: "Faith" })).toHaveAttribute("aria-valuenow", "0.4");
     await expect.element(screen.getByText("40", { exact: true })).toBeVisible();
@@ -246,7 +251,7 @@ describe("tribe details", () => {
   it("fills the faith meter at most to the top", async () => {
     const summary = createTribe({ faith: 140 });
 
-    const screen = await render(<TribeDetails tribe={{ kind: "tribe", summary }} />);
+    const screen = await renderTribe(summary);
 
     await expect.element(screen.getByRole("meter", { name: "Faith" })).toHaveAttribute("aria-valuenow", "1");
     await expect.element(screen.getByText("140", { exact: true })).toBeVisible();
@@ -255,7 +260,7 @@ describe("tribe details", () => {
   it("says when every discovery is made", async () => {
     const summary = createTribe({ goal: null });
 
-    const screen = await render(<TribeDetails tribe={{ kind: "tribe", summary }} />);
+    const screen = await renderTribe(summary);
 
     await expect.element(screen.getByText("Every discovery is made.")).toBeVisible();
   });
@@ -263,14 +268,12 @@ describe("tribe details", () => {
   it("lists the technologies the tribe knows", async () => {
     const summary = createTribe({ technologies: ["Gathering", "Fire making"] });
 
-    const screen = await render(<TribeDetails tribe={{ kind: "tribe", summary }} />);
+    const screen = await renderTribe(summary);
 
     await expect.element(screen.getByText("Gathering", { exact: true })).toBeVisible();
     await expect.element(screen.getByText("Fire making", { exact: true })).toBeVisible();
   });
-});
 
-describe("tribe details in a running game", () => {
   it("lists the neighbors of the tribe", async () => {
     showWorld({
       rivalry: {
@@ -280,7 +283,7 @@ describe("tribe details in a running game", () => {
       tribes: [createTribe({ id: 1, name: "Bear Clan" }), createTribe({ id: 2, name: "Wolf Clan" })],
     });
 
-    const screen = await render(<TribeDetails tribe={{ kind: "tribe", summary: createTribe({ id: 1 }) }} />);
+    const screen = await renderTribe(createTribe({ id: 1 }));
 
     const neighbors = screen.getByRole("region", { name: "Neighbors" });
 

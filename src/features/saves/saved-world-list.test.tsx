@@ -9,8 +9,6 @@ import { SavedWorldList } from "./saved-world-list.tsx";
 import { useSavesStore } from "./saves-store.ts";
 import { WorldSaver } from "./world-saver.ts";
 
-const initialSaves = useSavesStore.getState();
-
 const SUMMARY = {
   day: 3,
   eraIndex: 0,
@@ -45,7 +43,6 @@ async function saveWorld(id: string, name: string): Promise<void> {
 
 afterEach(async () => {
   vi.restoreAllMocks();
-  useSavesStore.setState(initialSaves, true);
 
   await deleteAllSavedWorlds();
 });

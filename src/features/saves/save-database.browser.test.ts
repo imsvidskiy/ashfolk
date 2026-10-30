@@ -5,13 +5,12 @@ import { SAVE_VERSION, type SavedWorldState } from "../../simulation/saved-world
 import { Simulation } from "../../simulation/simulation.ts";
 import { createVegetatedWorld } from "../../simulation/testing/test-world.ts";
 import { createSimulationWorkerApi } from "../../workers/simulation-worker-api.ts";
-import { deleteAllSavedWorlds } from "../testing/save-fixtures.ts";
+import { createSavedRecord, deleteAllSavedWorlds } from "../testing/save-fixtures.ts";
 import {
   deleteSavedWorld,
   listSavedWorlds,
   markLandChanged,
   readSavedWorld,
-  type SavedWorldRecord,
   writeSavedWorld,
 } from "./save-database.ts";
 
@@ -32,22 +31,6 @@ function savedState(): SavedWorldState {
   }
 
   return state;
-}
-
-function recordFor(id: string, state: SavedWorldState, changes: Partial<SavedWorldRecord> = {}): SavedWorldRecord {
-  return {
-    generationFingerprint: state.generationFingerprint,
-    id,
-    isLandChanged: false,
-    name: "Old Ford",
-    savedAt: Date.now(),
-    seed: state.request.seed,
-    shape: state.request.options.shape,
-    size: "normal",
-    summary: state.summary,
-    version: SAVE_VERSION,
-    ...changes,
-  };
 }
 
 async function putRawRecord(record: object): Promise<void> {
@@ -86,7 +69,7 @@ describe("saved worlds", () => {
   it("saves, lists and reads back a world", async () => {
     const state = savedState();
 
-    expect(await writeSavedWorld(recordFor("first", state), state, [])).toBe(true);
+    expect(await writeSavedWorld(createSavedRecord("first", state), state, [])).toBe(true);
 
     expect(await listSavedWorlds()).toMatchObject([{ id: "first", isLoadable: true, name: "Old Ford" }]);
 
@@ -100,8 +83,8 @@ describe("saved worlds", () => {
   it("lists the most recent save first", async () => {
     const state = savedState();
 
-    await writeSavedWorld(recordFor("older", state, { savedAt: 1000 }), state, []);
-    await writeSavedWorld(recordFor("newer", state, { savedAt: 2000 }), state, []);
+    await writeSavedWorld(createSavedRecord("older", state, { savedAt: 1000 }), state, []);
+    await writeSavedWorld(createSavedRecord("newer", state, { savedAt: 2000 }), state, []);
 
     expect(await listSavedWorlds()).toMatchObject([{ id: "newer" }, { id: "older" }]);
   });
@@ -109,7 +92,7 @@ describe("saved worlds", () => {
   it("deletes a world with its state", async () => {
     const state = savedState();
 
-    await writeSavedWorld(recordFor("gone", state), state, []);
+    await writeSavedWorld(createSavedRecord("gone", state), state, []);
 
     expect(await deleteSavedWorld("gone")).toBe(true);
     expect(await listSavedWorlds()).toEqual([]);
@@ -119,7 +102,7 @@ describe("saved worlds", () => {
   it("lists a save from another version without loading it", async () => {
     const state = savedState();
 
-    await writeSavedWorld(recordFor("old", state, { version: SAVE_VERSION + 1 }), state, []);
+    await writeSavedWorld(createSavedRecord("old", state, { version: SAVE_VERSION + 1 }), state, []);
 
     expect(await listSavedWorlds()).toMatchObject([{ id: "old", isLoadable: false }]);
     expect(await readSavedWorld("old")).toBeNull();
@@ -128,7 +111,7 @@ describe("saved worlds", () => {
   it("loads a saved world back into a simulation", async () => {
     const state = savedState();
 
-    await writeSavedWorld(recordFor("again", state), state, []);
+    await writeSavedWorld(createSavedRecord("again", state), state, []);
 
     const stored = await readSavedWorld("again");
 
@@ -156,7 +139,7 @@ describe("saved worlds", () => {
   it("leaves worlds saved without a fingerprint unmarked until loading finds the land changed", async () => {
     const state = savedState();
 
-    await writeSavedWorld(recordFor("older", state, { generationFingerprint: null, savedAt: 1000 }), state, []);
+    await writeSavedWorld(createSavedRecord("older", state, { generationFingerprint: null, savedAt: 1000 }), state, []);
 
     expect(await listSavedWorlds()).toMatchObject([{ hasLandChanged: false, id: "older" }]);
 
@@ -168,12 +151,12 @@ describe("saved worlds", () => {
   it("marks a world whose land has changed until it is saved again", async () => {
     const state = savedState();
 
-    await writeSavedWorld(recordFor("moved", state), state, []);
+    await writeSavedWorld(createSavedRecord("moved", state), state, []);
 
     expect(await markLandChanged("moved")).toBe(true);
     expect(await listSavedWorlds()).toMatchObject([{ hasLandChanged: true, id: "moved" }]);
 
-    await writeSavedWorld(recordFor("moved", state), state, []);
+    await writeSavedWorld(createSavedRecord("moved", state), state, []);
 
     expect(await listSavedWorlds()).toMatchObject([{ hasLandChanged: false, id: "moved" }]);
   });
@@ -181,7 +164,7 @@ describe("saved worlds", () => {
   it("lists and reads back the island size", async () => {
     const state = savedState();
 
-    await writeSavedWorld(recordFor("large", state, { size: "large" }), state, []);
+    await writeSavedWorld(createSavedRecord("large", state, { size: "large" }), state, []);
 
     expect(await listSavedWorlds()).toMatchObject([{ id: "large", size: "large" }]);
     expect((await readSavedWorld("large"))?.record.size).toBe("large");
@@ -190,9 +173,9 @@ describe("saved worlds", () => {
   it("reads and lists records saved before island sizes as normal", async () => {
     const state = savedState();
 
-    await writeSavedWorld(recordFor("older", state), state, []);
+    await writeSavedWorld(createSavedRecord("older", state), state, []);
 
-    const { size: _, ...older } = recordFor("older", state, { size: "large" });
+    const { size: _, ...older } = createSavedRecord("older", state, { size: "large" });
 
     await putRawRecord(older);
 
@@ -203,9 +186,13 @@ describe("saved worlds", () => {
   it("reads and lists records saved before fingerprints", async () => {
     const state = savedState();
 
-    await writeSavedWorld(recordFor("older", state), state, []);
+    await writeSavedWorld(createSavedRecord("older", state), state, []);
 
-    const { generationFingerprint: _, isLandChanged: __, ...older } = recordFor("older", state, { savedAt: 1000 });
+    const {
+      generationFingerprint: _,
+      isLandChanged: __,
+      ...older
+    } = createSavedRecord("older", state, { savedAt: 1000 });
 
     await putRawRecord(older);
 

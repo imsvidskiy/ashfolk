@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 import { render } from "vitest-browser-react";
 import { GuideCard } from "./guide-card.tsx";
 import { useGuideStore } from "./guide-store.ts";
@@ -8,10 +8,6 @@ const LOOK_TIP = /Drag to look around/u;
 const PICK_TIP = /Pick Lightning/u;
 
 describe("guide card", () => {
-  beforeEach(() => {
-    useGuideStore.setState({ progress: FRESH_GUIDE });
-  });
-
   it("shows the first tip and moves on when dismissed", async () => {
     const screen = await render(<GuideCard />);
 
