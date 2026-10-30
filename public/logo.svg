@@ -4,41 +4,41 @@
     <clipPath id="shape">
       <rect height="256" rx="56" width="256" />
     </clipPath>
-    <radialGradient cx="0" cy="0" gradientUnits="userSpaceOnUse" id="shade" r="220">
-      <stop offset="0" stop-color="#1a191c" />
-      <stop offset="1" stop-color="#1a191c" stop-opacity="0" />
+    <radialGradient cx="0" cy="0" gradientUnits="userSpaceOnUse" id="shade" r="230">
+      <stop offset="0" stop-color="#18171a" />
+      <stop offset="1" stop-color="#18171a" stop-opacity="0" />
     </radialGradient>
-    <radialGradient cx="256" cy="0" gradientUnits="userSpaceOnUse" id="ash" r="280">
-      <stop offset="0" stop-color="#717584" stop-opacity="0.9" />
-      <stop offset="1" stop-color="#717584" stop-opacity="0" />
+    <radialGradient cx="256" cy="0" gradientUnits="userSpaceOnUse" id="ash" r="290">
+      <stop offset="0" stop-color="#8b8e99" stop-opacity="0.85" />
+      <stop offset="1" stop-color="#8b8e99" stop-opacity="0" />
     </radialGradient>
-    <radialGradient cx="0" cy="256" gradientUnits="userSpaceOnUse" id="soot" r="250">
-      <stop offset="0" stop-color="#40363a" stop-opacity="0.9" />
-      <stop offset="1" stop-color="#40363a" stop-opacity="0" />
+    <radialGradient cx="0" cy="256" gradientUnits="userSpaceOnUse" id="ember" r="250">
+      <stop offset="0" stop-color="#cf4436" stop-opacity="0.75" />
+      <stop offset="1" stop-color="#cf4436" stop-opacity="0" />
     </radialGradient>
-    <radialGradient cx="256" cy="256" gradientUnits="userSpaceOnUse" id="ember" r="200">
-      <stop offset="0" stop-color="#e8713a" stop-opacity="0.85" />
-      <stop offset="1" stop-color="#e8713a" stop-opacity="0" />
+    <radialGradient cx="256" cy="256" gradientUnits="userSpaceOnUse" id="dawn" r="230">
+      <stop offset="0" stop-color="#ec6839" stop-opacity="0.95" />
+      <stop offset="1" stop-color="#ec6839" stop-opacity="0" />
     </radialGradient>
     <linearGradient gradientUnits="userSpaceOnUse" id="edge" x1="0" x2="0" y1="0" y2="256">
       <stop offset="0" stop-color="#ffffff" stop-opacity="0.26" />
       <stop offset="1" stop-color="#ffffff" stop-opacity="0.06" />
     </linearGradient>
-    <linearGradient gradientUnits="userSpaceOnUse" id="flame" x1="0" x2="0" y1="46" y2="214">
+    <linearGradient gradientUnits="userSpaceOnUse" id="flame" x1="0" x2="0" y1="48" y2="208">
       <stop offset="0" stop-color="#ffffff" />
-      <stop offset="1" stop-color="#e9e6e3" />
+      <stop offset="1" stop-color="#f3e6dd" />
     </linearGradient>
   </defs>
   <g clip-path="url(#shape)">
-    <rect fill="#27262a" height="256" width="256" />
+    <rect fill="#26252a" height="256" width="256" />
     <rect fill="url(#shade)" height="256" width="256" />
     <rect fill="url(#ash)" height="256" width="256" />
-    <rect fill="url(#soot)" height="256" width="256" />
     <rect fill="url(#ember)" height="256" width="256" />
+    <rect fill="url(#dawn)" height="256" width="256" />
   </g>
   <rect fill="none" height="253" rx="54.5" stroke="url(#edge)" stroke-width="3" width="253" x="1.5" y="1.5" />
   <path
-    d="M132 46 C140 86 186 104 186 154 C186 190 160 214 128 214 C96 214 70 190 70 156 C70 128 86 110 100 96 C102 116 108 128 120 134 C112 104 116 72 132 46 Z M128 202 C112 202 102 190 102 175 C102 158 118 150 132 134 C136 152 156 160 156 178 C156 192 144 202 128 202 Z"
+    d="M137 53.8C150.7 86.5 186.3 105 186.3 146.2C186.3 181.5 159.8 208 128 208C96.2 208 69.7 181.5 69.7 149.7C69.7 127.4 78.5 110.1 90.8 95.7C94.9 90.9 98.3 92.2 99.8 98.4C101.7 106.3 104.9 112.9 109.6 118.1C112.8 121.6 114.8 120.2 113.9 115.5C110.4 94.6 114.2 72.2 126.3 52.2C130.1 45.8 134.2 47 137 53.8ZM135.6 142.5C141.9 151 151 157.7 151 168.3C151 179.7 142.1 185.9 129.8 185.9C117.4 185.9 108.6 179.7 108.6 168.3C108.6 156.8 119.1 150.6 126.8 142C130 138.4 132.7 138.6 135.6 142.5Z"
     fill="url(#flame)"
     fill-rule="evenodd"
   />
