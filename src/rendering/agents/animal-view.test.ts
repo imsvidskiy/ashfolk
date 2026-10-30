@@ -1,20 +1,14 @@
-import { Frustum, Matrix4, PerspectiveCamera } from "three/webgpu";
 import { describe, expect, it } from "vitest";
 import { ANIMAL_KINDS, type AnimalKind } from "../../content/animals.ts";
-import { WorldMirror } from "../../game/world-mirror.ts";
 import { type AnimalAppearance, animalAppearance } from "../../models/animals/animal-appearance.ts";
 import { ANIMAL_SPECIES, animalBoneScales, buildAnimalParts, poseAnimal } from "../../models/animals/animal-models.ts";
 import { mergeMeshes, vertexCount } from "../../models/mesh/mesh-data.ts";
 import { Pose } from "../../models/rig/pose.ts";
 import { SkeletonPoser } from "../../models/rig/skeleton-poser.ts";
 import { posedMesh } from "../../models/testing/moved-mesh.ts";
-import { Simulation } from "../../simulation/simulation.ts";
-import { createVegetatedWorld } from "../../simulation/testing/test-world.ts";
 import { AnimalField } from "../../world/agent-buffers.ts";
 import { ANIMAL_POSES } from "../../world/agent-poses.ts";
-import { CameraAxes } from "../effects/billboards.ts";
-import { HandMotion } from "../hand-motion.ts";
-import { AgentMarkers } from "./agent-markers.ts";
+import { agentInputAbove, createPopulatedMirror } from "../testing/agent-scene.ts";
 import type { AgentViewInput } from "./agent-view-input.ts";
 import { ANIMAL_BOUNDING_LIFT, ANIMAL_BOUNDING_RADIUS, AnimalView } from "./animal-view.ts";
 
@@ -72,36 +66,9 @@ function farthestReach(kind: AnimalKind): number {
 }
 
 function inputNearFirstAnimal(): AgentViewInput {
-  const simulation = new Simulation(createVegetatedWorld({ dimensions: { cellSize: 10, cellsPerSide: 96 } }));
+  const mirror = createPopulatedMirror();
 
-  simulation.populate();
-
-  const mirror = new WorldMirror(simulation.initialWorld(), 0);
-
-  mirror.apply(simulation.advance(0.05), 0);
-
-  const camera = new PerspectiveCamera(60, 1.5, 1, 40_000);
-  const x = mirror.frame.animals[AnimalField.X];
-  const z = mirror.frame.animals[AnimalField.Z];
-
-  camera.position.set(x, mirror.heightAt(x, z) + 30, z + 1);
-  camera.lookAt(x, mirror.heightAt(x, z), z);
-  camera.updateMatrixWorld();
-
-  return {
-    camera,
-    detail: 1,
-    frustum: new Frustum().setFromProjectionMatrix(
-      new Matrix4().multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse)
-    ),
-    gameSeconds: 0,
-    hand: new HandMotion(),
-    highlighted: null,
-    markers: new AgentMarkers(new CameraAxes(), mirror),
-    mirror,
-    realSeconds: 0,
-    secondsSinceTick: 0,
-  };
+  return agentInputAbove(mirror, mirror.frame.animals[AnimalField.X], mirror.frame.animals[AnimalField.Z], 30);
 }
 
 describe("animal view hover", () => {
