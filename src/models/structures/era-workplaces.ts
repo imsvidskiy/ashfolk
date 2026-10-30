@@ -106,8 +106,12 @@ function addGranaryStilts(context: StructureContext): void {
   }
 }
 
+function granarySegments(context: StructureContext): number {
+  return detail(context, 16, 8);
+}
+
 function addGranaryStore(context: StructureContext): void {
-  const segments = detail(context, 16, 8);
+  const segments = granarySegments(context);
 
   context.builder.add(
     cylinder({
@@ -161,12 +165,14 @@ function addGranaryStore(context: StructureContext): void {
     buildOrder: 0.55,
     slot: MaterialSlot.Ash,
   });
+}
 
+function addGranaryRoof(context: StructureContext): void {
   const thatch = thatchSections(GRANARY_ROOF_BOTTOM, GRANARY_ROOF_TOP, GRANARY_ROOF_RADIUS, () => {
     return 1;
   });
 
-  context.builder.add(loft(thatch, segments), {
+  context.builder.add(loft(thatch, granarySegments(context)), {
     style: {
       buildOrder: rising(0.68, 0.92, GRANARY_ROOF_BOTTOM, GRANARY_ROOF_TOP),
       shade: (point) => {
@@ -206,6 +212,7 @@ function addGranaryLadder(context: StructureContext): void {
 export function addGranary(context: StructureContext): void {
   addGranaryStilts(context);
   addGranaryStore(context);
+  addGranaryRoof(context);
   addGranaryLadder(context);
 
   for (const [x, z, height] of [

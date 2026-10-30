@@ -59,6 +59,11 @@ interface Pad {
   readonly turn: number;
 }
 
+interface PadGrowth {
+  readonly pads: readonly Pad[];
+  readonly tips: readonly Pad[];
+}
+
 function ribbed(ribs: number, depth = RIB_DEPTH): (around: number) => number {
   if (ribs === 0) {
     return () => {
@@ -271,7 +276,7 @@ function childPad(parent: Pad, random: RandomSource): Pad {
   };
 }
 
-function addPricklyPear(builder: MeshBuilder, random: RandomSource, detail: CactusDetail): void {
+function growPads(random: RandomSource): PadGrowth {
   const bases = random.integer(2, 4);
   const pads: Pad[] = [];
   const tips: Pad[] = [];
@@ -303,21 +308,10 @@ function addPricklyPear(builder: MeshBuilder, random: RandomSource, detail: Cact
     tips.push(...grown);
   }
 
-  const segments = Math.max(5, detail.segments - 4);
-  const padShape = sphere(1, segments, Math.max(4, Math.floor(segments * 0.6)));
+  return { pads, tips };
+}
 
-  for (const pad of pads.slice(0, detail.maximumStems * 2)) {
-    builder.add(padShape, {
-      seam: PAD_SEAM,
-      style: { shade: stemShade(1.6) },
-      transform: padTransform(pad),
-    });
-  }
-
-  if (!detail.hasFlowers) {
-    return;
-  }
-
+function addPadFlowers(builder: MeshBuilder, random: RandomSource, tips: readonly Pad[]): void {
   for (const pad of tips) {
     for (const rimAngle of [-0.5, 0, 0.5]) {
       if (random.chance(0.4)) {
@@ -331,6 +325,25 @@ function addPricklyPear(builder: MeshBuilder, random: RandomSource, detail: Cact
         transform: transformOf({ position: padRim(pad, rimAngle).toArray(), scale: [1, isFruit ? 1.3 : 0.7, 1] }),
       });
     }
+  }
+}
+
+function addPricklyPear(builder: MeshBuilder, random: RandomSource, detail: CactusDetail): void {
+  const { pads, tips } = growPads(random);
+
+  const segments = Math.max(5, detail.segments - 4);
+  const padShape = sphere(1, segments, Math.max(4, Math.floor(segments * 0.6)));
+
+  for (const pad of pads.slice(0, detail.maximumStems * 2)) {
+    builder.add(padShape, {
+      seam: PAD_SEAM,
+      style: { shade: stemShade(1.6) },
+      transform: padTransform(pad),
+    });
+  }
+
+  if (detail.hasFlowers) {
+    addPadFlowers(builder, random, tips);
   }
 }
 
