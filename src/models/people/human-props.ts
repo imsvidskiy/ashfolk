@@ -1,133 +1,19 @@
-import { Vector3 } from "three";
 import { FULL_TURN } from "../../shared/math.ts";
 import { segmentsAtLeast } from "../level-of-detail.ts";
 import { MaterialSlot } from "../materials.ts";
 import type { MeshBuilder } from "../mesh/mesh-builder.ts";
 import type { Shape } from "../mesh/shape.ts";
-import { blob, box, cone, cylinder, type LoftSection, lathe, loft, sphere } from "../mesh/shapes.ts";
+import { blob, box, cone, cylinder, lathe, loft, sphere } from "../mesh/shapes.ts";
 import { segmentLength, segmentTransform, type Triple, transformOf } from "../mesh/transforms.ts";
 import { tube } from "../mesh/tubes.ts";
-import { rigidStyle } from "../rig/skin-weights.ts";
 import { STONE_NOISE } from "../stones.ts";
-import { forEachSide, headShape, headStroke } from "./human-anatomy.ts";
 import { type HumanDetail, trimmedRing, trimSegments } from "./human-detail.ts";
-import { armStyle, FLEXIBLE_TORSO_STYLE } from "./human-rigging.ts";
-import { HumanBone } from "./human-skeleton.ts";
 import { addRod, CRADLE, inLeftHand, inRightHand, LEFT_FIST, onChest, RIGHT_FIST } from "./prop-placement.ts";
 
 const SHOULDER_GRIP: Triple = [0.25, 1.46, 0.21];
-const FEATHER_LENGTH = 0.17;
-const FEATHER_TIP = 0.05;
-const NECKLACE_RADIUS = 0.088;
-const NECKLACE_CORD = transformOf({ position: [0, 1.425, 0.005], rotation: [-0.35, 0, 0], scale: [1, 1, 0.9] });
-const TOOTH_ANGLES = [-0.3, 0, 0.3];
 
 function lump(detail: HumanDetail, offset: Triple, radius: number, roughness: number): Shape {
   return blob({ detail: detail.propSubdivisions, noise: STONE_NOISE, offset, radius, roughness });
-}
-
-export function addHeadband(builder: MeshBuilder, detail: HumanDetail): void {
-  builder.add(trimmedRing(detail, 0.1, 0.011, 16), {
-    style: { ...rigidStyle(HumanBone.Head), slot: MaterialSlot.Accent },
-    transform: transformOf({ position: [0, 1.684, -0.008], rotation: [0.1, 0, 0], scale: [1.02, 1, 1.13] }),
-  });
-}
-
-function featherVane(detail: HumanDetail): Shape {
-  const sections: LoftSection[] = [
-    { radiusX: 0, radiusZ: 0, y: 0 },
-    { radiusX: 0.009, radiusZ: 0.003, y: 0.012 },
-    { radiusX: 0.016, radiusZ: 0.004, y: 0.05 },
-    { radiusX: 0.017, radiusZ: 0.004, y: 0.1 },
-    { radiusX: 0.012, radiusZ: 0.003, y: 0.15 },
-    { radiusX: 0, radiusZ: 0, y: FEATHER_LENGTH },
-  ];
-
-  return loft(sections, detail.hasFineDetails ? 6 : 4);
-}
-
-export function addFeather(builder: MeshBuilder, detail: HumanDetail): void {
-  const quill = transformOf({ position: [0.07, 1.68, -0.08], rotation: [-0.42, 0.6, -0.18] });
-  const style = rigidStyle(HumanBone.Head);
-
-  builder.add(featherVane(detail), {
-    style: {
-      ...style,
-      slot: (point) => {
-        return point.local.y > FEATHER_LENGTH - FEATHER_TIP ? MaterialSlot.Accent : MaterialSlot.Bone;
-      },
-    },
-    transform: quill,
-  });
-  builder.add(
-    tube(
-      [
-        { radius: 0.004, x: 0, y: -0.045, z: 0 },
-        { radius: 0.004, x: 0, y: 0.03, z: 0 },
-      ],
-      { radialSegments: 4 }
-    ),
-    { style: { ...style, slot: MaterialSlot.Bone }, transform: quill }
-  );
-}
-
-export function addNecklace(builder: MeshBuilder, detail: HumanDetail): void {
-  const style = onChest(MaterialSlot.Bone);
-
-  builder.add(trimmedRing(detail, NECKLACE_RADIUS, 0.008, 14), {
-    style: { ...FLEXIBLE_TORSO_STYLE, slot: MaterialSlot.Rope },
-    transform: NECKLACE_CORD,
-  });
-
-  if (!detail.hasFineDetails) {
-    return;
-  }
-
-  for (const offset of TOOTH_ANGLES) {
-    const angle = Math.PI / 2 + offset;
-
-    const knot = new Vector3(Math.cos(angle) * NECKLACE_RADIUS, 0, Math.sin(angle) * NECKLACE_RADIUS).applyMatrix4(
-      NECKLACE_CORD
-    );
-
-    builder.add(cone(0.011, 0.04, 5), {
-      style,
-      transform: transformOf({ position: [knot.x, knot.y - 0.004, knot.z + 0.005], rotation: [Math.PI + 0.25, 0, 0] }),
-    });
-  }
-}
-
-export function addPaint(builder: MeshBuilder, detail: HumanDetail): void {
-  if (!detail.hasSmallParts) {
-    return;
-  }
-
-  const style = { ...rigidStyle(HumanBone.Head), slot: MaterialSlot.Accent };
-  const head = headShape(detail);
-
-  forEachSide((_side, mirror) => {
-    for (const offset of [0, 0.014]) {
-      const stroke = headStroke(
-        head,
-        [
-          [0.044, 1.601 - offset, 0.09],
-          [0.058, 1.597 - offset, 0.08],
-          [0.072, 1.592 - offset, 0.07],
-        ],
-        0.0035,
-        -0.0008
-      );
-
-      builder.add(tube(stroke, { radialSegments: detail.hasFineDetails ? 4 : 3 }), { style, transform: mirror });
-    }
-  });
-}
-
-export function addArmband(builder: MeshBuilder, detail: HumanDetail): void {
-  builder.add(trimmedRing(detail, 0.06, 0.009, 12), {
-    style: { ...armStyle(1), slot: MaterialSlot.Accent },
-    transform: transformOf({ position: [0.202, 1.29, -0.004], rotation: [0, 0, -0.05] }),
-  });
 }
 
 export function addAxe(builder: MeshBuilder, detail: HumanDetail): void {

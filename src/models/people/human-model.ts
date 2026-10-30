@@ -4,7 +4,7 @@ import { MeshBuilder } from "../mesh/mesh-builder.ts";
 import type { MeshData } from "../mesh/mesh-data.ts";
 import type { HairStyle, PersonAppearance } from "./appearance.ts";
 import { addCarriedClay, addCarriedFruit, addCarriedOre } from "./carried-props.ts";
-import { addBrooch, addBuckle, addHelmet, addTorc } from "./era-props.ts";
+import { addHelmet } from "./era-props.ts";
 import { addChildBody, addFemaleBody, addMaleBody } from "./human-anatomy.ts";
 import { HUMAN_CLIPS } from "./human-clips.ts";
 import { addBoots, addCape, addCloak, addDress, addLoincloth, addTunic, addWrap } from "./human-clothing.ts";
@@ -21,7 +21,6 @@ import {
   addWildHair,
 } from "./human-hair.ts";
 import {
-  addArmband,
   addAxe,
   addCarriedBerries,
   addCarriedCrops,
@@ -30,11 +29,7 @@ import {
   addCarriedStone,
   addCarriedWood,
   addDiggingStick,
-  addFeather,
   addHammerStone,
-  addHeadband,
-  addNecklace,
-  addPaint,
   addSpear,
   addToolBasket,
 } from "./human-props.ts";
@@ -61,11 +56,6 @@ export const HUMAN_PARTS = [
   "cape",
   "cloak",
   "boots",
-  "headband",
-  "feather",
-  "necklace",
-  "paint",
-  "armband",
   "axe",
   "spear",
   "diggingStick",
@@ -84,10 +74,7 @@ export const HUMAN_PARTS = [
   "carriedOre",
   "carriedClay",
   "carriedFruit",
-  "torc",
   "helmet",
-  "brooch",
-  "buckle",
   "warPaint",
 ] as const;
 
@@ -134,7 +121,6 @@ const CARRIED_PARTS: Readonly<Record<CarriedItem, HumanPart | null>> = {
 type PartBuilder = (builder: MeshBuilder, detail: HumanDetail) => void;
 
 const PART_BUILDERS: Readonly<Record<HumanPart, PartBuilder>> = {
-  armband: addArmband,
   axe: addAxe,
   basket: addToolBasket,
   beardFull: addFullBeard,
@@ -144,8 +130,6 @@ const PART_BUILDERS: Readonly<Record<HumanPart, PartBuilder>> = {
   bodyMale: addMaleBody,
   boots: addBoots,
   bow: addBow,
-  brooch: addBrooch,
-  buckle: addBuckle,
   cape: addCape,
   carriedBerries: addCarriedBerries,
   carriedClay: addCarriedClay,
@@ -160,7 +144,6 @@ const PART_BUILDERS: Readonly<Record<HumanPart, PartBuilder>> = {
   diggingStick: addDiggingStick,
   drawnBow: addDrawnBow,
   dress: addDress,
-  feather: addFeather,
   hairBraids: addBraids,
   hairBun: addBun,
   hairFringe: addFringeHair,
@@ -169,15 +152,11 @@ const PART_BUILDERS: Readonly<Record<HumanPart, PartBuilder>> = {
   hairShort: addShortHair,
   hairWild: addWildHair,
   hammerStone: addHammerStone,
-  headband: addHeadband,
   helmet: addHelmet,
   loincloth: addLoincloth,
-  necklace: addNecklace,
-  paint: addPaint,
   pickaxe: addPickaxe,
   quiver: addQuiver,
   spear: addSpear,
-  torc: addTorc,
   tunic: addTunic,
   warPaint: addWarPaint,
   wrap: addWrap,
@@ -219,7 +198,6 @@ export function appearanceParts(appearance: PersonAppearance): HumanPart[] {
     HAIR_PARTS[appearance.hair],
     beardPart(appearance),
     appearance.outfit,
-    ...appearance.accessories,
   ];
 
   if (appearance.hasCape) {
@@ -232,6 +210,10 @@ export function appearanceParts(appearance: PersonAppearance): HumanPart[] {
 
   if (appearance.hasBoots) {
     parts.push("boots");
+  }
+
+  if (appearance.hasHelmet) {
+    parts.push("helmet");
   }
 
   return parts.filter((part) => {
