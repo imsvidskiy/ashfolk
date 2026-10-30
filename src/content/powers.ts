@@ -103,7 +103,7 @@ export const POWERS = {
   },
   forest: {
     category: "land",
-    description: "Plants trees. Automatic picks species that suit the local climate.",
+    description: "Plants trees. By default it picks species that suit the local climate.",
     name: "Forest",
     parameters: z.object({
       density: strength(50, "How many trees grow per stroke."),
@@ -265,7 +265,7 @@ export const POWERS = {
   },
   paint: {
     category: "land",
-    description: "Changes the ground: meadow, dry grass, sand, rock, snow, swamp or bare earth.",
+    description: "Changes the ground: meadow, dry grass, forest floor, sand, rock, snow, swamp or bare earth.",
     name: "Paint ground",
     parameters: z.object({
       material: choiceParameter({
