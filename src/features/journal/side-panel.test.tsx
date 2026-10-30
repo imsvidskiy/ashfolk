@@ -9,6 +9,10 @@ import { SidePanel } from "./side-panel.tsx";
 
 const BEAR_CLAN: TribeInspection = { kind: "tribe", summary: createTribe() };
 
+function openTribesJournal(): void {
+  useInterfaceStore.getState().openJournal("tribes");
+}
+
 describe("side panel", () => {
   it("stays hidden while the journal is closed and nothing is selected", async () => {
     showWorld();
@@ -63,6 +67,29 @@ describe("side panel", () => {
     await userEvent.keyboard("{Escape}");
 
     expect(useInterfaceStore.getState().isJournalOpen).toBe(false);
+  });
+
+  it("gives focus back to the control that opened it once it closes", async () => {
+    showWorld();
+
+    const screen = await render(
+      <>
+        <button onClick={openTribesJournal} type="button">
+          Open the journal
+        </button>
+        <SidePanel />
+      </>
+    );
+
+    const opener = screen.getByRole("button", { exact: true, name: "Open the journal" });
+
+    await opener.click();
+
+    await expect.element(screen.getByRole("heading", { level: 2, name: "Journal" })).toHaveFocus();
+
+    await userEvent.keyboard("{Escape}");
+
+    await expect.element(opener).toHaveFocus();
   });
 });
 
