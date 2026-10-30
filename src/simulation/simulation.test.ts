@@ -86,11 +86,11 @@ function meanSlopeAround(simulation: Simulation, x: number, z: number): number {
 }
 
 function treesAround(simulation: Simulation, x: number, z: number): number {
-  const { vegetation } = simulation.world;
+  const { grid, vegetation } = simulation.world;
 
   let trees = 0;
 
-  for (const cell of simulation.world.grid.cellsInRadius(x, z, CAMP_WOODS)) {
+  for (const cell of grid.cellsInRadius(x, z, CAMP_WOODS)) {
     for (let plant = vegetation.firstPlantInCell(cell); plant !== NO_PLANT; plant = vegetation.nextPlantInCell(plant)) {
       trees += vegetation.isAlive(plant) && isLivingTreeSpecies(vegetation.species[plant]) ? 1 : 0;
     }
@@ -631,7 +631,8 @@ describe("world snapshots", () => {
 
   it("brings a raider's plunder home after the world loads", { timeout: 60_000 }, () => {
     const snapshot = snapshotOf(raidingSimulation());
-    const [raider, ...others] = snapshot.rivalry.raiders ?? [];
+    const { raiders } = snapshot.rivalry;
+    const [raider, ...others] = raiders === undefined ? [] : raiders;
 
     if (raider === undefined) {
       throw new Error("Expected a raider in the save");

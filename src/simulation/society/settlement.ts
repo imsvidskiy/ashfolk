@@ -93,8 +93,9 @@ export function scoreSite(
   }
 
   const surroundings = surveySurroundings(world, cell);
+  const shares = groundShares(surroundings);
 
-  const isOpen = isOpenAround(surroundings);
+  const isOpen = isOpenAround(shares);
 
   if (!(isOpen || search.canSettleRoughGround)) {
     return UNSUITABLE;
@@ -104,7 +105,7 @@ export function scoreSite(
     waterScore(world, point) +
     forageScore(surroundings) -
     marshScore(surroundings) -
-    roughnessScore(surroundings) +
+    roughnessScore(shares) +
     climateScore(world, cell) +
     neighborScore(point, search, tribes) -
     world.slope(cell) * 6 -
@@ -112,9 +113,7 @@ export function scoreSite(
   );
 }
 
-function isOpenAround(surroundings: Surroundings): boolean {
-  const shares = groundShares(surroundings);
-
+function isOpenAround(shares: GroundShares | null): boolean {
   return shares !== null && shares.meanSlope <= STEEPEST_MEAN_SLOPE && shares.openShare >= SMALLEST_OPEN_SHARE;
 }
 
@@ -213,9 +212,7 @@ function groundShares(surroundings: Surroundings): GroundShares | null {
   };
 }
 
-function roughnessScore(surroundings: Surroundings): number {
-  const shares = groundShares(surroundings);
-
+function roughnessScore(shares: GroundShares | null): number {
   if (shares === null) {
     return 0;
   }
