@@ -25,6 +25,8 @@ export const FOLIAGE_FLUTTER = 1;
 const MESH_NOISE = createVolumeNoise(createRandom(5150));
 const BLOB_LIMITS: Readonly<Record<PlantDetailLevel, number>> = { far: 1, high: 9, low: 1, medium: 4 };
 const GROUNDED_CROWN_LIFT = 0.8;
+const LOW_CROWN_FILL = 0.53;
+const LOW_FROND_CROWN_FILL = 0.4;
 const SWAY_GROWTH = 1.4;
 
 const BRANCH_SIDES: Readonly<Record<PlantDetailLevel, readonly number[]>> = {
@@ -587,8 +589,14 @@ function crownEnvelope(structure: TreeStructure): FoliageBlob {
     maximum.max(reach.maximum);
   }
 
+  const hasFronds = structure.foliage.some((foliage) => {
+    return foliage.kind === "frond";
+  });
   const center = minimum.clone().add(maximum).multiplyScalar(0.5);
-  const size = maximum.clone().sub(minimum).multiplyScalar(0.46);
+  const size = maximum
+    .clone()
+    .sub(minimum)
+    .multiplyScalar(hasFronds ? LOW_FROND_CROWN_FILL : LOW_CROWN_FILL);
 
   return {
     center: center.toArray(),
