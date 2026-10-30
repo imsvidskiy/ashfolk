@@ -12,8 +12,8 @@ export class ResolutionGovernor {
   readonly #maximumPixelRatio: number;
   #averageFrameMilliseconds = SMOOTH_FRAME_MILLISECONDS;
   #isHeld: boolean;
-  #scale = 1;
   #millisecondsSinceChange = 0;
+  #scale = 1;
 
   constructor(maximumPixelRatio: number) {
     this.#maximumPixelRatio = maximumPixelRatio;

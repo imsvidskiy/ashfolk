@@ -5,6 +5,9 @@ const MAXIMUM_DISTANCE_IN_HALF_SIZES = 3.5;
 const MAXIMUM_PITCH = 1.48;
 const MINIMUM_DISTANCE = 4;
 const OPENING_DISTANCE_IN_HALF_SIZES = 1.6;
+const OPENING_PITCH = 0.82;
+const OPENING_YAW = 0.6;
+const TARGET_LIMIT_IN_HALF_SIZES = 1.05;
 const MINIMUM_PITCH = 0.08;
 const SMOOTHING_RATE = 9;
 const ARRIVAL_RATE = 0;
@@ -12,6 +15,8 @@ const ARRIVAL_RATE_GROWTH = 1.2;
 const SKETCH_HEIGHT_SHARE = 0.72;
 const SKETCH_WIDTH_SHARE = 0.86;
 const CLEARANCE = 1.2;
+const SHAKE_DECAY_RATE = 4;
+const SMALLEST_SHAKE = 0.01;
 const SCREEN_CORNERS = [
   [-1, -1],
   [1, -1],
@@ -75,10 +80,10 @@ export class GodCamera {
     this.#maximumDistance = worldHalfSize * MAXIMUM_DISTANCE_IN_HALF_SIZES;
     this.#goal = {
       distance: worldHalfSize * OPENING_DISTANCE_IN_HALF_SIZES,
-      pitch: 0.82,
+      pitch: OPENING_PITCH,
       targetX: 0,
       targetZ: 0,
-      yaw: 0.6,
+      yaw: OPENING_YAW,
     };
     this.#current = { ...this.#goal };
     this.#targetHeight = heightAt(0, 0);
@@ -218,7 +223,7 @@ export class GodCamera {
     current.targetZ += (goal.targetZ - current.targetZ) * blend;
     current.yaw += wrapAngle(goal.yaw - current.yaw) * blend;
     this.#targetHeight += (this.#heightAt(current.targetX, current.targetZ) - this.#targetHeight) * blend;
-    this.#shake *= Math.exp(-4 * seconds);
+    this.#shake *= Math.exp(-SHAKE_DECAY_RATE * seconds);
     this.#place();
   }
 
@@ -240,7 +245,7 @@ export class GodCamera {
   }
 
   #clampGoal(): void {
-    const limit = this.#worldHalfSize * 1.05;
+    const limit = this.#worldHalfSize * TARGET_LIMIT_IN_HALF_SIZES;
     const goal = this.#goal;
 
     goal.distance = clamp(goal.distance, MINIMUM_DISTANCE, this.#maximumDistance);
@@ -267,7 +272,7 @@ export class GodCamera {
 
     position.y = Math.max(position.y, ground);
 
-    if (this.#shake > 0.01) {
+    if (this.#shake > SMALLEST_SHAKE) {
       position.x += (Math.random() - 0.5) * this.#shake;
       position.y += (Math.random() - 0.5) * this.#shake;
       position.z += (Math.random() - 0.5) * this.#shake;
