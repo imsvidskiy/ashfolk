@@ -11,16 +11,6 @@ interface InstallStore {
   readonly setGuideOpen: (isOpen: boolean) => void;
 }
 
-function isInstallPrompt(event: Event): event is InstallPrompt {
-  return "prompt" in event;
-}
-
-function canAddToHomeScreen(target: Window): boolean {
-  const { navigator } = target;
-
-  return Reflect.get(navigator, "standalone") === false && navigator.userAgent.includes(" Safari/");
-}
-
 export const useInstallStore = create<InstallStore>()((set) => {
   return {
     isGuideNeeded: false,
@@ -31,6 +21,16 @@ export const useInstallStore = create<InstallStore>()((set) => {
     },
   };
 });
+
+function isInstallPrompt(event: Event): event is InstallPrompt {
+  return "prompt" in event;
+}
+
+function canAddToHomeScreen(target: Window): boolean {
+  const { navigator } = target;
+
+  return Reflect.get(navigator, "standalone") === false && navigator.userAgent.includes(" Safari/");
+}
 
 export function connectInstall(target: Window): () => void {
   const abort = new AbortController();
