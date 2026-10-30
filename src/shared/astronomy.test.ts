@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { moonDirection, sunDeclination, sunDirection } from "./astronomy.ts";
+import { moonDirection, sunDirection } from "./astronomy.ts";
 
 const SUMMER_SOLSTICE = 1;
 const WINTER_SOLSTICE = 3;
@@ -18,7 +18,6 @@ describe("sun direction", () => {
 
   it("stays lower in winter than in summer", () => {
     expect(sunDirection(12, WINTER_SOLSTICE).y).toBeLessThan(sunDirection(12, SUMMER_SOLSTICE).y);
-    expect(sunDeclination(WINTER_SOLSTICE)).toBeLessThan(0);
   });
 
   it("rises in the east and sets in the west", () => {

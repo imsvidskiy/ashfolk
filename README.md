@@ -57,14 +57,14 @@ Shape the land, call rain, fire and lightning, and watch small tribes grow from 
 ## Stack
 
 - **App:** Bun, Vite, React, TypeScript
-- **Graphics:** three.js with WebGPU and TSL, WebGL 2 fallback
+- **Graphics:** three.js with WebGPU and TSL
 - **Interface:** Base UI, Tailwind CSS, Zustand
 - **Data:** Zod, Comlink
 - **Tooling:** Biome, Vitest, Playwright, Lefthook
 
 ## Getting started
 
-You need [Bun](https://bun.sh) 1.4 or later and a browser with WebGPU or WebGL 2.
+You need [Bun](https://bun.sh) 1.4 or later and a browser with WebGPU.
 
 ```sh
 git clone https://github.com/imsvidskiy/dawnfolk.git

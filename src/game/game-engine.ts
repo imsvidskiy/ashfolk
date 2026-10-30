@@ -31,8 +31,10 @@ const FIELD_OF_VIEW = 45;
 const NEAR_PLANE = 0.5;
 const FAR_PLANE = 40_000;
 const CURSOR_COLOR = 0xff_ff_ff;
+const CURSOR_OPACITY = 0.9;
 const PRESSED_CURSOR_COLOR = 0xff_d8_8a;
 const FOLLOW_DISTANCE = 45;
+const SHAKE_REACH = 400;
 const VIEW_FOCUS_STEP = 50;
 const ACTIVITY_EVENTS = ["keydown", "pointerdown", "pointermove", "wheel"] as const;
 
@@ -394,7 +396,7 @@ export class GameEngine implements EngineHandle {
   #shake(amount: number, x: number, z: number): void {
     const { target } = this.camera;
 
-    const reach = 400 + this.camera.state.distance;
+    const reach = SHAKE_REACH + this.camera.state.distance;
     const distance = Math.hypot(target.x - x, target.z - z);
 
     this.camera.shake(amount * Math.max(0, 1 - distance / reach));
@@ -403,7 +405,7 @@ export class GameEngine implements EngineHandle {
   #showCursor(point: Vector3, radius: number, isPressed: boolean): void {
     const color = isPressed ? PRESSED_CURSOR_COLOR : CURSOR_COLOR;
 
-    this.#world.cursor.show(point.x, point.z, radius, color, 0.9);
+    this.#world.cursor.show(point.x, point.z, radius, color, CURSOR_OPACITY);
   }
 
   #selectAt(point: Vector3 | null, screen: ScreenPoint): void {

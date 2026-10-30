@@ -209,7 +209,7 @@ export function plantHitDistance(ray: Ray, plant: StandingPlant, slack: number):
     ? coneHit(ray, plant, bottomY, topY + slack, radius)
     : ellipsoidHit(ray, [plant.x, (bottomY + topY) / 2, plant.z], radius, (topY - bottomY) / 2 + slack);
 
-  const trunk = capsuleHit(ray, plant, Math.max(bottomY, plant.baseY), volume.trunkRadius * plant.height + slack);
+  const trunk = capsuleHit(ray, plant, bottomY, volume.trunkRadius * plant.height + slack);
 
   return closer(crown, trunk);
 }
