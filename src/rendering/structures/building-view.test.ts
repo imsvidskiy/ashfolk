@@ -9,12 +9,6 @@ import { createVegetatedMirror } from "../testing/vegetated-mirror.ts";
 import { TribeLooks } from "../tribe-looks.ts";
 import { BuildingView } from "./building-view.ts";
 
-interface PlacedHut {
-  readonly floor: number;
-  readonly isFading: boolean;
-  readonly visibility: number;
-}
-
 const HUT: BuildingSnapshot = {
   extent: 0,
   fuel: 0,
@@ -30,6 +24,12 @@ const HUT: BuildingSnapshot = {
   x: 120,
   z: 140,
 };
+
+interface PlacedHut {
+  readonly floor: number;
+  readonly isFading: boolean;
+  readonly visibility: number;
+}
 
 function createView(): { mirror: WorldMirror; view: BuildingView } {
   const mirror = createVegetatedMirror();

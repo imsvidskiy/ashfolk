@@ -574,11 +574,11 @@ export class VegetationView {
       }
 
       const casters = this.#chunksWhere(level, 1, 0);
-      const others = this.#chunksWhere(level, 0, 0);
+      const chunks = [...casters, ...this.#chunksWhere(level, 0, 0)];
 
       for (const batch of batches) {
         if (needsRefill(batch, changed, isWhole)) {
-          fillPlants(batch, [...casters, ...others], casters.length, level === SPARSE_LEVEL);
+          fillPlants(batch, chunks, casters.length, level === SPARSE_LEVEL);
         }
       }
 
@@ -592,12 +592,12 @@ export class VegetationView {
 
   #refillNearCamera(casters: readonly VegetationChunk[], changed: ReadonlySet<number>, isWhole: boolean): void {
     const fadingCasters = this.#chunksWhere(NEAREST_LEVEL, 1, 1);
-    const fadingOthers = this.#chunksWhere(NEAREST_LEVEL, 0, 1);
+    const fading = [...fadingCasters, ...this.#chunksWhere(NEAREST_LEVEL, 0, 1)];
     const allCasters = [...casters, ...fadingCasters];
 
     for (const batch of this.#fadingBatches) {
       if (needsRefill(batch, changed, isWhole)) {
-        fillPlants(batch, [...fadingCasters, ...fadingOthers], fadingCasters.length);
+        fillPlants(batch, fading, fadingCasters.length);
       }
     }
 

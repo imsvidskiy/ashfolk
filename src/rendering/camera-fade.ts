@@ -33,7 +33,7 @@ export function columnVisibility(camera: Vector3, base: Vector3, extent: ObjectE
   const sideways = Math.max(Math.hypot(camera.x - base.x, camera.z - base.z) - extent.radius, 0);
   const above = Math.max(camera.y - base.y - extent.height, 0);
 
-  return smoothstepNumber(CAMERA_FADE_MARGIN, CAMERA_FADE_MARGIN + CAMERA_FADE_BAND, Math.hypot(sideways, above));
+  return smoothstepNumber(CAMERA_FADE_MARGIN, CAMERA_FADE_REACH, Math.hypot(sideways, above));
 }
 
 export function columnVisibilityNode(base: Node<"vec3">, radius: Node<"float">, height: Node<"float">): Node<"float"> {
@@ -41,7 +41,7 @@ export function columnVisibilityNode(base: Node<"vec3">, radius: Node<"float">, 
   const sideways = max(length(toCamera.xz).sub(radius), 0);
   const above = max(toCamera.y.sub(height), 0);
 
-  return smoothstep(CAMERA_FADE_MARGIN, CAMERA_FADE_MARGIN + CAMERA_FADE_BAND, length(vec2(sideways, above)));
+  return smoothstep(CAMERA_FADE_MARGIN, CAMERA_FADE_REACH, length(vec2(sideways, above)));
 }
 
 export function fadeNearCamera(material: MeshStandardNodeMaterial, visibility: Node<"float">): void {
