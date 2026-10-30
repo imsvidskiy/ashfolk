@@ -16,6 +16,7 @@ import type { MeshData, VertexChannel } from "../../models/mesh/mesh-data.ts";
 import { buildPlantVariant, PLANT_DETAIL_LEVELS } from "../../models/plants/plant-models.ts";
 import type { CellRegion } from "../../world/change-tracking.ts";
 import { NO_PLANT } from "../../world/vegetation-store.ts";
+import { CAMERA_FADE_REACH, extentOf, type ObjectExtent, widestExtent } from "../camera-fade.ts";
 import type { FireGlow } from "../effects/fire-glow.ts";
 import type { HandMotion } from "../hand-motion.ts";
 import { geometryFromMeshData, InstanceBatch, toInstancedGeometry } from "../instancing.ts";
@@ -66,6 +67,11 @@ interface PlantModel {
   readonly species: number;
 }
 
+interface NearMaterials {
+  readonly fading: MeshStandardNodeMaterial;
+  readonly solid: MeshStandardNodeMaterial;
+}
+
 interface BatchCounts {
   drawn: number;
   shadowed: number;
@@ -99,6 +105,18 @@ function crownMiddle(models: readonly PlantModel[], species: number): number {
   }
 
   return (lowest + highest) / 2;
+}
+
+function speciesExtent(models: readonly PlantModel[], species: number): ObjectExtent {
+  return widestExtent(
+    models
+      .filter((model) => {
+        return model.species === species;
+      })
+      .map((model) => {
+        return extentOf(model.mesh.positions);
+      })
+  );
 }
 
 function shadowFrustumOf(sun: DirectionalLight): Frustum {
@@ -206,8 +224,10 @@ export class VegetationView {
   readonly #highlight = uniform(new Vector3());
   readonly #looks: readonly SpeciesLook[];
   readonly #mirror: WorldMirror;
+  readonly #nearMaterials: readonly NearMaterials[];
   readonly #shadowProxies: readonly PlantBatch[];
   #heldBatch: InstanceBatch | null = null;
+  #isFadingNear = false;
   #levelDistances = LEVEL_DISTANCES;
   #paintedSeason = Number.NaN;
   #shadowLevelCount = SHADOW_LEVEL_COUNT;
@@ -235,10 +255,10 @@ export class VegetationView {
     const models = [...detailedModels, sparseModels];
 
     const materials = this.#looks.map((look, species) => {
-      return createPlantMaterial({
+      const options = {
         crown: {
           hasTiers: species === PlantSpecies.Spruce,
-          middle: crownMiddle(models[0], species),
+          middle: crownMiddle(models[NEAREST_LEVEL], species),
         },
         detailFade: this.#detailFade,
         glow,
@@ -248,17 +268,30 @@ export class VegetationView {
         look,
         textures,
         weather: this.weather,
-      });
+      };
+
+      return {
+        fading: createPlantMaterial({ ...options, fadingExtent: speciesExtent(models[NEAREST_LEVEL], species) }),
+        solid: createPlantMaterial({ ...options, fadingExtent: null }),
+      };
     });
 
     this.#batches = models.map((levelModels, levelIndex) => {
       return levelModels.map(({ buckets, mesh, species }) => {
-        return this.#createBatch(geometryFromMeshData(mesh, PLANT_CHANNELS), materials[species], levelIndex, buckets);
+        return this.#createBatch(
+          geometryFromMeshData(mesh, PLANT_CHANNELS),
+          materials[species].solid,
+          levelIndex,
+          buckets
+        );
       });
+    });
+    this.#nearMaterials = models[NEAREST_LEVEL].map(({ species }) => {
+      return materials[species];
     });
 
     this.#shadowProxies = models[SHADOW_PROXY_LEVEL].map(({ buckets, mesh, species }) => {
-      return this.#createShadowProxy(geometryFromMeshData(mesh, PLANT_CHANNELS), materials[species], buckets);
+      return this.#createShadowProxy(geometryFromMeshData(mesh, PLANT_CHANNELS), materials[species].solid, buckets);
     });
 
     this.#changedBuckets = this.#batches.map(() => {
@@ -347,6 +380,7 @@ export class VegetationView {
     const repacked = this.chunks.repackDirty();
 
     this.#assignLevels(camera, frustum, sun, detail);
+    this.#fadeNearCamera(camera);
     this.#markBucketsOf(repacked);
     this.#refillDirtyLevels(this.#shouldRefillAll);
     this.#shouldRefillAll = false;
@@ -409,8 +443,9 @@ export class VegetationView {
       return known;
     }
 
-    const { mesh } = this.#nearestBatchOf(bucket).batch;
-    const batch = new InstanceBatch(toInstancedGeometry(mesh.geometry), mesh.material, PLANT_FIELDS, 1);
+    const nearest = this.#nearestBatchOf(bucket);
+    const { fading } = this.#nearMaterials[this.#batches[NEAREST_LEVEL].indexOf(nearest)];
+    const batch = new InstanceBatch(toInstancedGeometry(nearest.batch.mesh.geometry), fading, PLANT_FIELDS, 1);
 
     batch.mesh.castShadow = true;
     batch.mesh.receiveShadow = true;
@@ -442,6 +477,26 @@ export class VegetationView {
 
       look.foliageColor.value.setHex(current.color);
       look.foliageCoverage.value = current.coverage;
+    }
+  }
+
+  #fadeNearCamera(camera: PerspectiveCamera): void {
+    const isFading = this.chunks.chunks.some((chunk, index) => {
+      return (
+        this.#chunkLevels[index] === NEAREST_LEVEL && chunk.bounds.distanceToPoint(camera.position) < CAMERA_FADE_REACH
+      );
+    });
+
+    if (isFading === this.#isFadingNear) {
+      return;
+    }
+
+    this.#isFadingNear = isFading;
+
+    for (const [index, { batch }] of this.#batches[NEAREST_LEVEL].entries()) {
+      const { fading, solid } = this.#nearMaterials[index];
+
+      batch.mesh.material = isFading ? fading : solid;
     }
   }
 

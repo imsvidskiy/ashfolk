@@ -22,6 +22,7 @@ import { eraDefinition } from "../../content/eras.ts";
 import { MaterialSlot, SLOT_COLOR_TABLE } from "../../models/materials.ts";
 import { GLOW_PART } from "../../models/structures/structure-parts.ts";
 import type { WorldGrid } from "../../world/world-grid.ts";
+import { fadeNearCamera } from "../camera-fade.ts";
 import { rotateAroundUp, slotColorTable } from "../node-helpers.ts";
 import { markOutlined } from "../outlines.ts";
 import { coarseGroundOffsetNode } from "../terrain/height-sampling.ts";
@@ -90,7 +91,7 @@ export function createBuildingMaterial(textures: TerrainTextures, grid: WorldGri
   material.emissiveNode = vec3(1, 0.42, 0.12).mul(glow);
   material.roughnessNode = float(0.86);
 
-  markOutlined(material);
+  fadeNearCamera(material, state.w);
 
   return material;
 }

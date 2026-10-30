@@ -24,6 +24,7 @@ import { buildMineModel, MINE_SCALE, type MineOre } from "../../models/structure
 import { clamp, FULL_TURN, saturate } from "../../shared/math.ts";
 import type { BuildingView as BuildingSnapshot, SimulationFrame } from "../../simulation/frame.ts";
 import type { WorldGrid } from "../../world/world-grid.ts";
+import { columnVisibility, extentOf, type ObjectExtent } from "../camera-fade.ts";
 import { geometryFromMeshData, InstanceBatch, toInstancedGeometry } from "../instancing.ts";
 import type { TerrainTextures } from "../terrain/terrain-textures.ts";
 import type { TribeLooks } from "../tribe-looks.ts";
@@ -120,6 +121,7 @@ interface Seat {
 interface PlacedPiece {
   readonly batches: readonly InstanceBatch[];
   readonly building: BuildingSnapshot;
+  readonly extent: ObjectExtent;
   readonly plinth: GroundBox | null;
   readonly progress: number;
   readonly rotation: number;
@@ -336,7 +338,9 @@ export class BuildingView {
   readonly group = new Group();
   readonly #all: readonly InstanceBatch[];
   readonly #batches = new Map<ModelKey, readonly InstanceBatch[]>();
+  readonly #base = new Vector3();
   readonly #bounds = new Sphere(new Vector3(), PIECE_RADIUS);
+  readonly #extents = new Map<ModelKey, ObjectExtent>();
   readonly #footings = new Map<ModelKey, Footing>();
   readonly #plinths: readonly InstanceBatch[];
   readonly #tribes: TribeLooks;
@@ -357,6 +361,7 @@ export class BuildingView {
           return createBatch(geometryFromMeshData(meshData, BUILDING_CHANNELS), material, BUILDING_FIELDS);
         })
       );
+      this.#extents.set(source.key, extentOf(high.positions));
       this.#footings.set(source.key, source.footing(high));
     }
 
@@ -416,15 +421,17 @@ export class BuildingView {
 
   #addPiece(mirror: WorldMirror, building: BuildingSnapshot, piece: PiecePlacement): void {
     const batches = this.#batches.get(piece.key);
+    const extent = this.#extents.get(piece.key);
     const footing = this.#footings.get(piece.key);
 
-    if (batches === undefined || footing === undefined) {
+    if (batches === undefined || extent === undefined || footing === undefined) {
       return;
     }
 
     this.#pieces.push({
       batches,
       building,
+      extent,
       plinth: footing.plinth,
       progress: piece.progress,
       rotation: piece.rotation,
@@ -449,11 +456,12 @@ export class BuildingView {
 
     const level = distance < LEVEL_DISTANCES.high * input.detail ? 0 : 1;
     const accent = this.#tribes.accent(building.tribeId);
+    const visibility = columnVisibility(input.camera.position, this.#base.set(piece.x, y, piece.z), piece.extent);
 
     piece.batches[level].add(
       [piece.x, y, piece.z, piece.rotation],
       [piece.progress, accent.r, accent.g, accent.b],
-      [saturate(1 - building.health), glowOf(building), building.style, 0]
+      [saturate(1 - building.health), glowOf(building), building.style, visibility]
     );
 
     if (piece.plinth !== null) {

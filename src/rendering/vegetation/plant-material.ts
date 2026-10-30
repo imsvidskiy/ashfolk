@@ -26,6 +26,7 @@ import { MaterialSlot } from "../../models/materials.ts";
 import { BERRY_PART } from "../../models/plants/berries.ts";
 import { clamp as clampNumber } from "../../shared/math.ts";
 import type { WorldGrid } from "../../world/world-grid.ts";
+import { columnVisibilityNode, fadeNearCamera, type ObjectExtent } from "../camera-fade.ts";
 import { type FireGlow, fireLightAt } from "../effects/fire-glow.ts";
 import { brightenHighlighted } from "../highlight.ts";
 import { rotateAroundUp, SNOW_COLOR, slotColorTable, snowCoverNode } from "../node-helpers.ts";
@@ -56,6 +57,7 @@ interface CrownShape {
 interface PlantMaterialOptions {
   readonly crown: CrownShape;
   readonly detailFade: UniformNode<"vec2", Vector2>;
+  readonly fadingExtent: ObjectExtent | null;
   readonly glow: FireGlow;
   readonly grid: WorldGrid;
   readonly highlight: UniformNode<"vec3", Vector3>;
@@ -108,6 +110,7 @@ function tiltOver(vector: Node<"vec3">): Node<"vec3"> {
 export function createPlantMaterial({
   crown,
   detailFade,
+  fadingExtent,
   glow,
   grid,
   highlight,
@@ -219,7 +222,17 @@ export function createPlantMaterial({
   material.emissiveNode = vertexColor.mul(fireLight).mul(CROWN_FIRE_LIGHT).add(burning);
   material.roughnessNode = float(0.88);
 
-  markOutlined(material);
+  if (fadingExtent === null) {
+    markOutlined(material);
+
+    return material;
+  }
+
+  const { height, radius } = fadingExtent;
+  const reach = mix(float(radius), float(Math.max(radius, height)), fallen).mul(scale);
+  const top = mix(float(height), float(radius), fallen).mul(scale);
+
+  fadeNearCamera(material, varying(columnVisibilityNode(placement.xyz.add(ground), reach, top), "plantVisibility"));
 
   return material;
 }
