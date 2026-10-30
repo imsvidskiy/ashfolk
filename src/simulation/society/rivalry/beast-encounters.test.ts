@@ -115,6 +115,7 @@ describe("wolves", () => {
         return wolf.fear > 0.5;
       })
     ).toBe(true);
+    expect(harness.fauna.snapshot().instincts.strikes.size).toBe(0);
   });
 
   it("break off when one of the pack is badly hurt", () => {
@@ -141,6 +142,7 @@ describe("wolves", () => {
       })
     ).toBe(false);
     expect(bitten.fear).toBeGreaterThan(0.5);
+    expect(harness.fauna.snapshot().instincts.strikes.size).toBe(0);
   });
 
   it("leave people alone at noon when they are not hungry", () => {
