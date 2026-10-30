@@ -136,7 +136,7 @@ export class FleeJob implements Job {
     };
 
     dropCarrying(person);
-    setDestination(person.mover, refuge, tick.context.navigation, { mayPlanRoute: isCornered });
+    setDestination(person.mover, refuge, tick.context.navigation, { canPlanRoute: isCornered });
   }
 
   update(tick: PersonTick): Job | null {

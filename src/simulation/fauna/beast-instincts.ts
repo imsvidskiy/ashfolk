@@ -63,7 +63,7 @@ export interface Quarry {
   readonly z: number;
 }
 
-export type BlowKind = "bite" | "gore" | "trample";
+type BlowKind = "bite" | "gore" | "trample";
 
 export interface BeastBlow {
   readonly attacker: Animal;
@@ -93,14 +93,14 @@ export interface Pack {
   readonly memberIds: readonly number[];
 }
 
-export interface PackHunt {
+interface PackHunt {
   hasDrawnBlood: boolean;
   readonly preyId: number;
   seconds: number;
   readonly startingSize: number;
 }
 
-export interface PreySense {
+interface PreySense {
   find: (id: number) => Animal | null;
   kill: (animal: Animal) => void;
   nearest: (x: number, z: number, radius: number) => Animal | null;
