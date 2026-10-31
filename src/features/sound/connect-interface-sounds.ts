@@ -1,13 +1,11 @@
 import { ACTION_RANK, InterfaceSounds } from "../../audio/interface-sounds.ts";
 import { SOUNDS } from "../../audio/sound-catalog.ts";
 import { type InterfaceStore, useInterfaceStore } from "../interface/interface-store.ts";
-import { type PowerStore, usePowerStore } from "../powers/power-store.ts";
+import { isPowerPicked, type PowerStore, usePowerStore } from "../powers/power-store.ts";
 import { sound } from "./sound.ts";
 
 function isPicked(state: PowerStore, previous: PowerStore): boolean {
-  const isPowerPicked = state.selectedPowerId !== null && state.selectedPowerId !== previous.selectedPowerId;
-
-  return isPowerPicked || (state.isHandSelected && !previous.isHandSelected);
+  return isPowerPicked(state, previous) || (state.isHandSelected && !previous.isHandSelected);
 }
 
 function openedPanels(state: InterfaceStore): number {

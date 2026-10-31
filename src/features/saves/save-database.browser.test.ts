@@ -108,6 +108,16 @@ describe("saved worlds", () => {
     expect(await readSavedWorld("old")).toBeNull();
   });
 
+  it("lists a world whose record cannot be read without loading it", async () => {
+    const state = savedState();
+
+    await writeSavedWorld(createSavedRecord("broken", state), state, []);
+    await putRawRecord({ ...createSavedRecord("broken", state), shape: "triangle" });
+
+    expect(await listSavedWorlds()).toMatchObject([{ id: "broken", isLoadable: false, shape: "round" }]);
+    expect(await readSavedWorld("broken")).toBeNull();
+  });
+
   it("loads a saved world back into a simulation", async () => {
     const state = savedState();
 
@@ -134,18 +144,6 @@ describe("saved worlds", () => {
     expect(world.frame.personCount).toBe(state.simulation.society.people.length);
     expect(world.frame.personCount).toBeGreaterThan(0);
     expect(hasLandChanged).toBe(false);
-  });
-
-  it("leaves worlds saved without a fingerprint unmarked until loading finds the land changed", async () => {
-    const state = savedState();
-
-    await writeSavedWorld(createSavedRecord("older", state, { generationFingerprint: null, savedAt: 1000 }), state, []);
-
-    expect(await listSavedWorlds()).toMatchObject([{ hasLandChanged: false, id: "older" }]);
-
-    await markLandChanged("older");
-
-    expect(await listSavedWorlds()).toMatchObject([{ hasLandChanged: true, id: "older" }]);
   });
 
   it("marks a world whose land has changed until it is saved again", async () => {

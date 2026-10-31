@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { IslandSketch } from "../generation/generation-options.ts";
+import { NO_WATER } from "../world/water.ts";
 import { shrinkSketch } from "./island-sketch.ts";
 
 function sketchOf(cellsPerSide: number): IslandSketch {
@@ -33,6 +34,30 @@ describe("island sketch", () => {
     expect(shrunk.height[0]).toBe(640.5);
     expect(shrunk.ground).toBeNull();
     expect(shrunk.waterSurface).toBeNull();
+  });
+
+  it("keeps ground codes and water levels whole instead of blending them", () => {
+    const cellsPerSide = 1280;
+
+    const sourceGround = Uint8Array.from({ length: cellsPerSide * cellsPerSide }, (_, cell) => {
+      return cell % 5;
+    });
+    const sourceWater = Float32Array.from({ length: cellsPerSide * cellsPerSide }, (_, cell) => {
+      return cell % 2 === 0 ? NO_WATER : 50;
+    });
+
+    const { ground, waterSurface } = shrinkSketch({
+      ...sketchOf(cellsPerSide),
+      ground: sourceGround,
+      waterSurface: sourceWater,
+    });
+
+    if (ground === null || waterSurface === null) {
+      throw new Error("The sketch lost its ground or water");
+    }
+
+    expect(ground[3]).toBe(sourceGround[cellsPerSide + 7]);
+    expect(new Set(waterSurface)).toEqual(new Set([50]));
   });
 
   it("blends heights so a slope stays even at an uneven step", () => {

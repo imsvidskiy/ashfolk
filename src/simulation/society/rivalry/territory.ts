@@ -36,9 +36,9 @@ function farthestBuilding(tribe: Tribe, buildings: readonly Building[]): number 
   return farthest;
 }
 
-export function claimOf(tribe: Tribe, population: number, buildings: readonly Building[]): Claim {
+export function claimOf(tribe: Tribe, buildings: readonly Building[]): Claim {
   const radius = Math.max(
-    claimRadius(population, buildings.length),
+    claimRadius(tribe.memberCount, buildings.length),
     farthestBuilding(tribe, buildings) + OUTPOST_REACH
   );
 

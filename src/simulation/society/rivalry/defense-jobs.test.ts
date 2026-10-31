@@ -1,9 +1,18 @@
 import { describe, expect, it } from "vitest";
+import { placeMover } from "../../agents/movement.ts";
+import { wallIn } from "../../testing/test-jobs.ts";
 import { runUntil, SPRING_HARNESS, standOff } from "../../testing/test-rivalry.ts";
-import { SocietyHarness, tickFor } from "../../testing/test-society.ts";
+import {
+  firstMemberTick,
+  MORNING,
+  runToCompletion,
+  SocietyHarness,
+  settle,
+  tickFor,
+} from "../../testing/test-society.ts";
 import type { CarriedWeapon } from "../weapons.ts";
 import { BARE_HANDS } from "./combat-stats.ts";
-import { FightJob } from "./defense-jobs.ts";
+import { FightJob, MournJob } from "./defense-jobs.ts";
 import { personFoe } from "./foes.ts";
 
 const QUIVER = 10;
@@ -64,5 +73,22 @@ describe("combat", () => {
       })
     ).toBe(false);
     expect(archer.pose).toBe("brawl");
+  });
+});
+
+describe("mourning", () => {
+  it("gives up when the way to camp is blocked", () => {
+    const harness = new SocietyHarness({ day: MORNING });
+
+    const tribe = settle(harness, 1);
+    const tick = firstMemberTick(harness, tribe);
+
+    placeMover(tick.person.mover, tribe.campX + 200, tribe.campZ);
+
+    const job = new MournJob(tick);
+
+    wallIn(harness, tick.person);
+
+    expect(runToCompletion(job, tick, 60)).toBe(true);
   });
 });

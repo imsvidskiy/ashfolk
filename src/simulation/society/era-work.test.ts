@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { NO_PLANT } from "../../world/vegetation-store.ts";
 import { WorldGrid } from "../../world/world-grid.ts";
 import {
-  completeStructure,
+  addStructure,
   createMiningHarness,
   firstMemberTick,
   MORNING,
@@ -47,22 +47,9 @@ describe("mining work", () => {
 
     const tribe = teach(settle(harness, 4), [...THROUGH_MINING, "copper"], 2);
 
-    const copperMine = completeStructure(
-      tribe,
-      harness.buildings.add(
-        { depositId: 0, kind: "mine", rotation: 0, tribeId: tribe.id, x: 150, z: 40 },
-        harness.random
-      )
-    );
+    const copperMine = addStructure(harness, tribe, { depositId: 0, kind: "mine", x: 150, z: 40 });
 
-    completeStructure(
-      tribe,
-      harness.buildings.add(
-        { depositId: 1, kind: "mine", rotation: 0, tribeId: tribe.id, x: -150, z: 40 },
-        harness.random
-      )
-    );
-
+    addStructure(harness, tribe, { depositId: 1, kind: "mine", x: -150, z: 40 });
     moveToSeason(harness, 1);
 
     const tick = firstMemberTick(harness, tribe);
@@ -83,13 +70,7 @@ describe("mining work", () => {
 
     const tribe = teach(settle(harness, 4), THROUGH_MINING, 2);
 
-    completeStructure(
-      tribe,
-      harness.buildings.add(
-        { depositId: 0, kind: "mine", rotation: 0, tribeId: tribe.id, x: 150, z: 40 },
-        harness.random
-      )
-    );
+    addStructure(harness, tribe, { depositId: 0, kind: "mine", x: 150, z: 40 });
     moveToSeason(harness, 1);
 
     const [, carrier] = harness.society.membersOf(tribe);
@@ -98,6 +79,24 @@ describe("mining work", () => {
     pickUp(carrier, "copperOre", 7, "ore");
 
     expect(eraOption("mine").weight(tick, NO_CONSTRUCTION)).toBeCloseTo(1.2);
+  });
+
+  it("waits for the expedition season", () => {
+    const harness = createMiningHarness();
+
+    const tribe = teach(settle(harness, 4), THROUGH_MINING, 2);
+
+    addStructure(harness, tribe, { depositId: 0, kind: "mine", x: 150, z: 40 });
+    moveToSeason(harness, 3.5);
+
+    const tick = firstMemberTick(harness, tribe);
+    const option = eraOption("mine");
+
+    expect(option.weight(tick, NO_CONSTRUCTION)).toBe(0);
+
+    moveToSeason(harness, 1);
+
+    expect(option.weight(tick, NO_CONSTRUCTION)).toBeCloseTo(2.4);
   });
 });
 

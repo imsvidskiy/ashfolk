@@ -234,13 +234,9 @@ function nextLavaCell(services: PowerServices, lava: ReadonlyMap<number, number>
   let bestSlope = Number.POSITIVE_INFINITY;
 
   for (const offset of NEIGHBOR_OFFSETS) {
-    if (!grid.contains(column + offset.column, row + offset.row)) {
-      continue;
-    }
+    const neighbor = grid.neighborIndex(column, row, offset);
 
-    const neighbor = grid.index(column + offset.column, row + offset.row);
-
-    if (lava.has(neighbor)) {
+    if (neighbor < 0 || lava.has(neighbor)) {
       continue;
     }
 
@@ -312,14 +308,11 @@ function widen(volcano: Volcano, from: number, cell: number, services: PowerServ
   const alongRow = row - grid.rowOf(from);
 
   for (const side of [-1, 1]) {
-    const sideColumn = column - alongRow * side;
-    const sideRow = row + alongColumn * side;
+    const neighbor = grid.neighborIndex(column, row, { column: -alongRow * side, row: alongColumn * side });
 
-    if (!grid.contains(sideColumn, sideRow)) {
+    if (neighbor < 0) {
       continue;
     }
-
-    const neighbor = grid.index(sideColumn, sideRow);
 
     const isSpreading = hashToUnit(neighbor, SPLIT_SALT) < WIDENING_CHANCE * (0.5 + volcano.strength * 0.5);
     const isLevel = terrain.height[neighbor] <= terrain.height[cell] + POOLING_RISE;
@@ -348,8 +341,10 @@ function cover(volcano: Volcano, cell: number, services: PowerServices): void {
   volcano.lava.set(cell, 1);
 
   for (const offset of NEIGHBOR_OFFSETS) {
-    if (grid.contains(column + offset.column, row + offset.row)) {
-      fire.addHeat(grid.index(column + offset.column, row + offset.row), LAVA_HEAT);
+    const neighbor = grid.neighborIndex(column, row, offset);
+
+    if (neighbor >= 0) {
+      fire.addHeat(neighbor, LAVA_HEAT);
     }
   }
 

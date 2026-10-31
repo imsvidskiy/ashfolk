@@ -1,6 +1,10 @@
 import { useSendCommand } from "../../app/use-engine.ts";
-import { describeParameterGroups, type ParameterField, type ParameterGroupField } from "../../content/parameters.ts";
-import type { ParameterValue } from "../../content/powers.ts";
+import {
+  describeParameterGroups,
+  type ParameterField,
+  type ParameterGroupField,
+  type ParameterValue,
+} from "../../content/parameters.ts";
 import { DEFAULT_WORLD_RULES, readWorldRules, type WorldRules, worldRulesSchema } from "../../content/world-rules.ts";
 import { TextButton } from "../../design/buttons.tsx";
 import { useHeldDraft } from "../../design/use-held-draft.ts";

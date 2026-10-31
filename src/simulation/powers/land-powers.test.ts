@@ -8,6 +8,7 @@ import { brush, createPowerSimulation } from "../testing/test-powers.ts";
 import {
   centerCell,
   createVegetatedWorld,
+  floodCells,
   monumentAround,
   plantInCell,
   plantsTooSteep,
@@ -79,6 +80,21 @@ describe("land", () => {
 
     expect(terrain.ground[centerCell(simulation.world)]).toBe(Ground.Forest);
     expect(terrain.ground[cell]).toBe(Ground.Meadow);
+  });
+
+  it("paint leaves the ground under water alone", () => {
+    const simulation = createPowerSimulation();
+
+    const { fields, grid, terrain } = simulation.world;
+    const cell = grid.cellAt(-20, 0);
+
+    floodCells(simulation.world, [cell], 2);
+    simulation.beginStroke("paint", 0, 0, { material: "snow", radius: 40 });
+    simulation.endStroke();
+
+    expect(terrain.ground[centerCell(simulation.world)]).toBe(Ground.Snow);
+    expect(terrain.ground[cell]).toBe(Ground.Meadow);
+    expect(fields.snow[cell]).toBe(0);
   });
 
   it("forest plants the chosen trees", () => {

@@ -32,12 +32,13 @@ const SEED_BEARING_DAYS = 8;
 const LONGEST_RECOVERY_DAYS = 72;
 const CLIMAX_SALT = 61.7;
 const SPREAD_WITHIN_CELL = 0.8;
-const BARE_CLIMAX: Climax = { shrubs: [], trees: [] };
 
 interface Climax {
   readonly shrubs: readonly PlantPlacement[];
   readonly trees: readonly PlantPlacement[];
 }
+
+const BARE_CLIMAX: Climax = { shrubs: [], trees: [] };
 
 interface Cover {
   shrubs: number;

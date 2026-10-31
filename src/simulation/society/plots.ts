@@ -14,6 +14,8 @@ import type { SocietyContext } from "./society-context.ts";
 import { knows, type Plot, type PlotKind, type PlotSpot, type Tribe } from "./tribe.ts";
 import { campPoint } from "./tribe-places.ts";
 
+export const RIPE_FRUIT = 0.25;
+
 const BERRY_MATURE_DAYS = 3;
 const BERRY_SAPLING_HEIGHT = 0.5;
 const PLOT_SLOPE = 0.35;
@@ -73,7 +75,7 @@ function plotCells(world: WorldState, column: number, row: number, layout: PlotL
 
       const cell = grid.index(column + columnOffset, row + rowOffset);
 
-      if (!(world.isWalkable(cell) && world.canPlace(cell, PLOT_SLOPE)) || world.isTrodden(cell)) {
+      if (!world.canPlace(cell, PLOT_SLOPE) || world.isTrodden(cell)) {
         return null;
       }
 
@@ -108,10 +110,11 @@ function spotSpecies(kind: PlotKind, row: number, column: number, timber: readon
   return FRUIT_TREE_SPECIES[(row + column) % FRUIT_TREE_SPECIES.length];
 }
 
-function layOutSpots(world: WorldState, kind: PlotKind, cells: readonly number[], layout: PlotLayout): PlotSpot[] {
+function layOutSpots(world: WorldState, kind: PlotKind, cells: readonly number[]): PlotSpot[] {
   const { grid } = world;
   const [first] = cells;
 
+  const layout = LAYOUTS[kind];
   const timber = timberSpecies(world, first);
   const originX = grid.cellCenterX(first) - grid.cellSize / 2;
   const originZ = grid.cellCenterZ(first) - grid.cellSize / 2;
@@ -163,13 +166,13 @@ export function addPlotIfNeeded(tribe: Tribe, context: SocietyContext): void {
   }
 }
 
-function openPlot(tribe: Tribe, kind: PlotKind, cells: readonly number[], world: WorldState): void {
+function openPlot(tribe: Tribe, kind: PlotKind, cells: number[], world: WorldState): void {
   for (const cell of cells) {
     world.clearPlants(cell, false);
     world.occupancy[cell] = PLOT_GROUND;
   }
 
-  tribe.plots.push({ cells: [...cells], kind, spots: layOutSpots(world, kind, cells, LAYOUTS[kind]) });
+  tribe.plots.push({ cells, kind, spots: layOutSpots(world, kind, cells) });
 }
 
 export function abandonPlots(tribe: Tribe, world: WorldState): void {
@@ -185,7 +188,14 @@ export function abandonPlots(tribe: Tribe, world: WorldState): void {
 }
 
 function isSpotEmpty(spot: PlotSpot, world: WorldState): boolean {
-  return spot.plant === NO_PLANT || !world.vegetation.isAlive(spot.plant);
+  const { vegetation } = world;
+  const { plant } = spot;
+
+  if (plant === NO_PLANT || !vegetation.isAlive(plant)) {
+    return true;
+  }
+
+  return vegetation.x[plant] !== Math.fround(spot.x) || vegetation.z[plant] !== Math.fround(spot.z);
 }
 
 export function emptySpot(tribe: Tribe, world: WorldState, taken: ReadonlySet<PlotSpot>): PlotSpot | null {
@@ -255,6 +265,10 @@ export function plantSpot(tribe: Tribe, spot: PlotSpot, context: SocietyContext)
     z: spot.z,
   });
 
+  if (plant === NO_PLANT) {
+    return false;
+  }
+
   spot.plant = plant;
   spot.plantedDay = environment.day;
 
@@ -265,14 +279,14 @@ function plotAge(spot: PlotSpot, plotKind: PlotKind, day: number): number {
   return saturate((day - spot.plantedDay) / matureDays(spot, plotKind));
 }
 
-export function isProtectedPlant(tribe: Tribe, plant: number, species: number, day: number): boolean {
-  if (isFruitTreeSpecies(species)) {
+export function isProtectedPlant(tribe: Tribe, world: WorldState, plant: number, day: number): boolean {
+  if (isFruitTreeSpecies(world.vegetation.species[plant])) {
     return true;
   }
 
   for (const plot of tribe.plots) {
     const spot = plot.spots.find((candidate) => {
-      return candidate.plant === plant;
+      return candidate.plant === plant && !isSpotEmpty(candidate, world);
     });
 
     if (spot !== undefined) {
@@ -339,7 +353,7 @@ export function updatePlots(tribe: Tribe, context: SocietyContext, days: number)
 
 export function ripestFruitTree(tribe: Tribe, world: WorldState): number | null {
   let ripest: number | null = null;
-  let ripestFruit = 0.25;
+  let ripestFruit = RIPE_FRUIT;
 
   for (const plot of tribe.plots) {
     for (const spot of plot.spots) {
@@ -360,16 +374,19 @@ export function ripestFruitTree(tribe: Tribe, world: WorldState): number | null 
 }
 
 export function plantedCount(tribe: Tribe, world: WorldState, kind: PlotKind): number {
-  return tribe.plots
-    .filter((plot) => {
-      return plot.kind === kind;
-    })
-    .reduce((count, plot) => {
-      return (
-        count +
-        plot.spots.filter((spot) => {
-          return !isSpotEmpty(spot, world);
-        }).length
-      );
-    }, 0);
+  let count = 0;
+
+  for (const plot of tribe.plots) {
+    if (plot.kind !== kind) {
+      continue;
+    }
+
+    for (const spot of plot.spots) {
+      if (!isSpotEmpty(spot, world)) {
+        count += 1;
+      }
+    }
+  }
+
+  return count;
 }

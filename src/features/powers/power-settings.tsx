@@ -1,7 +1,7 @@
 import { RotateCcw, SlidersHorizontal } from "lucide-react";
 import { useState } from "react";
-import { describeParameters } from "../../content/parameters.ts";
-import { type ParameterValue, POWERS, type PowerId } from "../../content/powers.ts";
+import { describeParameters, type ParameterValue } from "../../content/parameters.ts";
+import { POWERS, type PowerId } from "../../content/powers.ts";
 import { IconButton } from "../../design/buttons.tsx";
 import { cn } from "../../design/cn.ts";
 import { GameIcon } from "../../design/game-icon.tsx";

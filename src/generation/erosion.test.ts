@@ -132,6 +132,19 @@ describe("thermal relaxation", () => {
     expect(sumOf(heights)).toBeCloseTo(before, -1);
   });
 
+  it("keeps settling a slope just under the talus angle as the cliff below it gives way", () => {
+    const size = 32;
+    const heights = Float32Array.from({ length: size * size }, (_, cell) => {
+      const column = cell % size;
+
+      return column < 12 ? 100 : 160 + (column - 12) * 7.9;
+    });
+
+    relaxSlopes(heights, size, CELL_SIZE, new Float32Array(size * size).fill(0.8), 1000);
+
+    expect(steepestSlope(heights, size)).toBeLessThan(0.81);
+  });
+
   it("lowers a steep face to an even slope instead of a staircase", () => {
     const size = 64;
     const heights = Float32Array.from({ length: size * size }, (_, cell) => {

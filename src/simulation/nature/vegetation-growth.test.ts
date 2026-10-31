@@ -15,10 +15,12 @@ import {
   steepeningRamp,
 } from "../testing/test-world.ts";
 import type { WorldState } from "../world/world-state.ts";
-import { berryGrowthPerDay, SNAG_LIFETIME_DAYS, VegetationGrowthSystem } from "./vegetation-growth.ts";
+import { SNAG_LIFETIME_DAYS, VegetationGrowthSystem } from "./vegetation-growth.ts";
 
 const SUMMER = 1.2;
 const WINTER = 3.5;
+const FAST_REGROWTH = worldRulesSchema.parse({ nature: { forestRegrowth: 3 } });
+const NO_REGROWTH = worldRulesSchema.parse({ nature: { forestRegrowth: 0 } });
 
 interface GrowthPeriod {
   days: number;
@@ -46,11 +48,6 @@ function growFor(world: WorldState, period: Partial<GrowthPeriod>): void {
 }
 
 describe("berries", () => {
-  it("ripen in summer and drop in winter", () => {
-    expect(berryGrowthPerDay(SUMMER)).toBeGreaterThan(0);
-    expect(berryGrowthPerDay(WINTER)).toBeLessThan(0);
-  });
-
   it("fill the bushes over a summer day", () => {
     const world = createTestWorld();
 
@@ -86,7 +83,7 @@ describe("berries", () => {
     }
 
     vegetation.discardChanges();
-    growFor(world, { days: 0.4, rules: worldRulesSchema.parse({ nature: { forestRegrowth: 0 } }) });
+    growFor(world, { days: 0.4, rules: NO_REGROWTH });
 
     expect(vegetation.takeChanges()?.indices).toEqual(
       Int32Array.from(
@@ -119,14 +116,13 @@ describe("snags", () => {
 
     const cell = centerCell(world);
     const tree = plantInCell(world, cell, PlantSpecies.Oak);
-    const withoutRegrowth = worldRulesSchema.parse({ nature: { forestRegrowth: 0 } });
 
     world.vegetation.burnTreesInCell(cell, 10);
-    growFor(world, { days: SNAG_LIFETIME_DAYS - 1, firstDay: 10, rules: withoutRegrowth });
+    growFor(world, { days: SNAG_LIFETIME_DAYS - 1, firstDay: 10, rules: NO_REGROWTH });
 
     expect(world.vegetation.state[tree]).toBe(PlantState.Burnt);
 
-    growFor(world, { days: 2, firstDay: 10 + SNAG_LIFETIME_DAYS - 1, rules: withoutRegrowth });
+    growFor(world, { days: 2, firstDay: 10 + SNAG_LIFETIME_DAYS - 1, rules: NO_REGROWTH });
 
     expect(world.vegetation.state[tree]).toBe(PlantState.Removed);
   });
@@ -136,7 +132,7 @@ describe("regrowth", () => {
   it("brings trees back to open forest land", () => {
     const world = createTestWorld({ biome: Biome.Forest, ground: Ground.Forest });
 
-    growFor(world, { days: 2, rules: worldRulesSchema.parse({ nature: { forestRegrowth: 3 } }) });
+    growFor(world, { days: 2, rules: FAST_REGROWTH });
 
     expect(world.vegetation.aliveCount).toBeGreaterThan(10);
   });
@@ -145,7 +141,7 @@ describe("regrowth", () => {
     const stopped = createTestWorld({ biome: Biome.Forest, ground: Ground.Forest });
     const frozen = createTestWorld({ biome: Biome.Forest, ground: Ground.Forest });
 
-    growFor(stopped, { days: 2, rules: worldRulesSchema.parse({ nature: { forestRegrowth: 0 } }) });
+    growFor(stopped, { days: 2, rules: NO_REGROWTH });
     growFor(frozen, { days: 2, season: WINTER });
 
     expect(stopped.vegetation.aliveCount).toBe(0);
@@ -155,7 +151,7 @@ describe("regrowth", () => {
   it("regrows each tree only on ground gentle enough for it", () => {
     const world = createTestWorld({ biome: Biome.Forest, ground: Ground.Forest, heightAt: steepeningRamp(1.4, 320) });
 
-    growFor(world, { days: 128, rules: worldRulesSchema.parse({ nature: { forestRegrowth: 3 } }) });
+    growFor(world, { days: 128, rules: FAST_REGROWTH });
 
     const slopes = Array.from({ length: world.vegetation.count }, (_, plant) => {
       return world.slope(world.vegetation.cell[plant]);
@@ -174,7 +170,7 @@ describe("regrowth", () => {
       terrain.woodland[cell] = grid.cellCenterX(cell) < 0 ? 0 : 0.5;
     }
 
-    growFor(world, { days: 192, rules: worldRulesSchema.parse({ nature: { forestRegrowth: 3 } }) });
+    growFor(world, { days: 192, rules: FAST_REGROWTH });
 
     const columns = Array.from({ length: vegetation.count }, (_, plant) => {
       return grid.columnOf(vegetation.cell[plant]);
@@ -195,7 +191,7 @@ describe("regrowth", () => {
     const ruin = monumentAround(grid, 0, 0, 60);
     const world = createTestWorld({ biome: Biome.Forest, ground: Ground.Forest, monuments: [ruin] });
 
-    growFor(world, { days: 128, rules: worldRulesSchema.parse({ nature: { forestRegrowth: 3 } }) });
+    growFor(world, { days: 128, rules: FAST_REGROWTH });
 
     const onRuin = Array.from({ length: world.vegetation.count }, (_, plant) => {
       return world.vegetation.cell[plant];
@@ -210,7 +206,7 @@ describe("regrowth", () => {
   it("keeps trees off sandy banks", () => {
     const world = createTestWorld({ biome: Biome.Forest, ground: Ground.Sand });
 
-    growFor(world, { days: 2, rules: worldRulesSchema.parse({ nature: { forestRegrowth: 3 } }) });
+    growFor(world, { days: 2, rules: FAST_REGROWTH });
 
     expect(world.vegetation.aliveCount).toBe(0);
   });
@@ -219,7 +215,7 @@ describe("regrowth", () => {
     const world = createTestWorld({ biome: Biome.Forest, ground: Ground.Forest });
 
     world.fields.scorch.fill(1);
-    growFor(world, { days: 2, rules: worldRulesSchema.parse({ nature: { forestRegrowth: 3 } }) });
+    growFor(world, { days: 2, rules: FAST_REGROWTH });
 
     expect(world.vegetation.aliveCount).toBe(0);
   });

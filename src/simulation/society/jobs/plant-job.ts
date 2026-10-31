@@ -4,6 +4,8 @@ import { learn, type PlotSpot } from "../tribe.ts";
 import { Errand, headTo, type Job } from "./job.ts";
 
 const PLANTING_SECONDS = 7;
+const STANDING_OFFSET = 0.9;
+const KNOWLEDGE_PER_PLANTING = 0.4;
 
 export function freeSpot(tick: PersonTick): PlotSpot | null {
   const taken = new Set<PlotSpot>();
@@ -35,7 +37,7 @@ class PlantJob implements Job {
   constructor(tick: PersonTick, spot: PlotSpot) {
     this.spot = spot;
     this.#errand = new Errand(PLANTING_SECONDS, "dig", spot);
-    headTo(tick.person, { x: spot.x + 0.9, z: spot.z + 0.9 }, tick.context);
+    headTo(tick.person, { x: spot.x + STANDING_OFFSET, z: spot.z + STANDING_OFFSET }, tick.context);
   }
 
   update(tick: PersonTick): Job | null {
@@ -46,7 +48,7 @@ class PlantJob implements Job {
     }
 
     if (plantSpot(tick.tribe, this.spot, tick.context)) {
-      learn(tick.tribe, 0.4, tick.context.rules);
+      learn(tick.tribe, KNOWLEDGE_PER_PLANTING, tick.context.rules);
     }
 
     return null;

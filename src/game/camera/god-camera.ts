@@ -15,6 +15,9 @@ const ARRIVAL_RATE_GROWTH = 1.2;
 const SKETCH_HEIGHT_SHARE = 0.72;
 const SKETCH_WIDTH_SHARE = 0.86;
 const CLEARANCE = 1.2;
+const CLEARANCE_PER_DISTANCE = 0.02;
+const LEVEL_PAN_SLANT = 0.4;
+const PAN_SLANT_PER_SINE = 0.6;
 const SHAKE_DECAY_RATE = 4;
 const SMALLEST_SHAKE = 0.01;
 const SCREEN_CORNERS = [
@@ -37,13 +40,7 @@ export interface GroundPoint {
   readonly z: number;
 }
 
-interface MutableCameraState {
-  distance: number;
-  pitch: number;
-  targetX: number;
-  targetZ: number;
-  yaw: number;
-}
+type MutableCameraState = { -readonly [Key in keyof CameraState]: number };
 
 type HeightProbe = (x: number, z: number) => number;
 
@@ -103,8 +100,6 @@ export class GodCamera {
 
   groundFootprint(reach: number): GroundPoint[] {
     const { camera } = this;
-
-    camera.updateMatrixWorld();
 
     return SCREEN_CORNERS.map(([column, row]) => {
       const direction = this.#ray.set(column, row, 0.5).unproject(camera).sub(camera.position).normalize();
@@ -173,10 +168,10 @@ export class GodCamera {
   pan(screenDeltaX: number, screenDeltaY: number, viewportHeight: number): void {
     this.#follow = null;
 
-    const { yaw } = this.#current;
+    const { pitch, yaw } = this.#current;
 
     const metersPerPixel = (2 * this.#goal.distance * this.#halfViewTangent()) / viewportHeight;
-    const slant = Math.max(0.35, Math.sin(this.#current.pitch) * 0.6 + 0.4);
+    const slant = LEVEL_PAN_SLANT + PAN_SLANT_PER_SINE * Math.sin(pitch);
 
     const scale = metersPerPixel / slant;
     const cosine = Math.cos(yaw);
@@ -268,7 +263,7 @@ export class GodCamera {
 
     const position = this.#position.copy(this.#target).add(this.#offset);
 
-    const ground = this.#heightAt(position.x, position.z) + CLEARANCE + distance * 0.02;
+    const ground = this.#heightAt(position.x, position.z) + CLEARANCE + distance * CLEARANCE_PER_DISTANCE;
 
     position.y = Math.max(position.y, ground);
 
@@ -280,5 +275,6 @@ export class GodCamera {
 
     this.camera.position.copy(position);
     this.camera.lookAt(this.#target);
+    this.camera.updateMatrixWorld();
   }
 }

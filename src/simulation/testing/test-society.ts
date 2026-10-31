@@ -1,4 +1,5 @@
 import type { BuildingKind } from "../../content/buildings.ts";
+import type { DepositKind } from "../../content/deposits.ts";
 import type { TechnologyId } from "../../content/technologies.ts";
 import { DEFAULT_WORLD_RULES, type WorldRules } from "../../content/world-rules.ts";
 import { createRandom, type RandomSource } from "../../shared/random.ts";
@@ -8,13 +9,13 @@ import { NavigationGrid } from "../agents/navigation.ts";
 import { isDryFooting } from "../agents/walkable-ground.ts";
 import { Chronicle } from "../chronicle.ts";
 import { EffectLog } from "../effects.ts";
-import { FaunaSystem } from "../fauna/fauna.ts";
+import { type Animal, FaunaSystem } from "../fauna/fauna.ts";
 import { IdentifierSource } from "../identifiers.ts";
 import { Calendar } from "../nature/calendar.ts";
 import { describeEnvironment } from "../nature/environment.ts";
 import { FireSystem } from "../nature/fire.ts";
 import { WeatherSystem } from "../nature/weather.ts";
-import { type Building, BuildingSystem } from "../society/buildings.ts";
+import { type Building, type BuildingPlacement, BuildingSystem } from "../society/buildings.ts";
 import type { Job } from "../society/jobs/job.ts";
 import type { Person } from "../society/person.ts";
 import { RivalrySystem } from "../society/rivalry/rivalry-system.ts";
@@ -44,7 +45,7 @@ export const THROUGH_MINING: readonly TechnologyId[] = [
 ];
 
 const SEED = 3;
-const MINING_DIMENSIONS = { cellSize: 10, cellsPerSide: 96 };
+const DIMENSIONS = { cellSize: 10, cellsPerSide: 96 };
 
 interface SocietyHarnessOptions {
   day: number;
@@ -52,6 +53,8 @@ interface SocietyHarnessOptions {
   rules: WorldRules;
   world: Partial<TestWorldOptions>;
 }
+
+type StructurePlacement = Omit<BuildingPlacement, "rotation" | "tribeId">;
 
 export function settle(harness: SocietyHarness, people: number): Tribe {
   const tribe = harness.spawnTribe(people);
@@ -61,6 +64,16 @@ export function settle(harness: SocietyHarness, people: number): Tribe {
   }
 
   return tribe;
+}
+
+export function firstAnimal(harness: SocietyHarness, herd: { memberIds: number[] } | null): Animal {
+  const animal = herd === null ? null : harness.fauna.findAnimal(herd.memberIds[0]);
+
+  if (animal === null) {
+    throw new Error("Expected an animal");
+  }
+
+  return animal;
 }
 
 export function tickFor(harness: SocietyHarness, person: Person, tribe: Tribe): PersonTick {
@@ -107,19 +120,21 @@ export function addShelter(harness: SocietyHarness, tribe: Tribe, kind: Building
   return shelter;
 }
 
-export function completeStructure(tribe: Tribe, building: Building): Building {
-  building.progress = 1;
-  tribe.buildings.structureIds.push(building.id);
+export function addStructure(harness: SocietyHarness, tribe: Tribe, placement: StructurePlacement): Building {
+  const structure = harness.buildings.add({ ...placement, rotation: 0, tribeId: tribe.id }, harness.random);
 
-  return building;
+  structure.progress = 1;
+  tribe.buildings.structureIds.push(structure.id);
+
+  return structure;
 }
 
-export function createMiningHarness(): SocietyHarness {
-  const grid = new WorldGrid(MINING_DIMENSIONS);
+export function createMiningHarness(kind: DepositKind = "copper"): SocietyHarness {
+  const grid = new WorldGrid(DIMENSIONS);
 
   return new SocietyHarness({
     day: MORNING,
-    world: { deposits: [depositAround(grid, "copper", 160, 40)], dimensions: MINING_DIMENSIONS },
+    world: { deposits: [depositAround(grid, kind, 160, 40)], dimensions: DIMENSIONS },
   });
 }
 
@@ -175,7 +190,7 @@ export class SocietyHarness {
       day: 0.36,
       isFaunaAwake: false,
       rules: DEFAULT_WORLD_RULES,
-      world: { dimensions: { cellSize: 10, cellsPerSide: 96 } },
+      world: { dimensions: DIMENSIONS },
       ...options,
     };
 
@@ -244,6 +259,16 @@ export class SocietyHarness {
     this.hazards.update(TICK_SECONDS);
   }
 
+  spawnTribe(people: number): Tribe | null {
+    return this.society.spawnTribe({
+      canSettleRoughGround: false,
+      context: this.context,
+      people,
+      x: 0,
+      z: 0,
+    });
+  }
+
   #wakeFauna(days: number): void {
     if (!this.isFaunaAwake) {
       return;
@@ -265,17 +290,6 @@ export class SocietyHarness {
         },
         people: this.rivalry.senses(this.context),
       },
-    });
-  }
-
-  spawnTribe(people: number): Tribe | null {
-    return this.society.spawnTribe({
-      canSettleRoughGround: false,
-      context: this.context,
-      people,
-      technologies: [],
-      x: 0,
-      z: 0,
     });
   }
 }

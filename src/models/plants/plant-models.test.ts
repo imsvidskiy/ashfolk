@@ -7,7 +7,6 @@ import { isInsidePiece, loosePieces, type MeshPiece, meshPieces } from "../testi
 import { windBentMesh } from "../testing/moved-mesh.ts";
 import { widestReach } from "../testing/structure-checks.ts";
 import { BERRY_PART, BERRY_RADIUS } from "./berries.ts";
-import { CACTUS_FORMS, cactusForm } from "./cacti.ts";
 import {
   buildPlantVariants,
   canonicalHeight,
@@ -15,7 +14,7 @@ import {
   PLANT_DETAIL_LEVELS,
   plantVariantCount,
 } from "./plant-models.ts";
-import { FOLIAGE_FLUTTER, type PlantDetailLevel, plantSway } from "./tree-mesher.ts";
+import { FOLIAGE_FLUTTER, type NearLevel, type PlantDetailLevel, plantSway } from "./tree-mesher.ts";
 
 const RADIUS_TOLERANCE = 0.2;
 const STORM_PUSH = 2;
@@ -24,6 +23,7 @@ const SPECIES: readonly PlantSpeciesIndex[] = PLANT_SPECIES.map((definition) => 
   return definition.index;
 });
 const FOLIAGE_SLOTS: ReadonlySet<number> = new Set([MaterialSlot.Leaf, MaterialSlot.Needle]);
+const NEAR_LEVELS: readonly NearLevel[] = ["high", "medium"];
 
 const TREES = [
   PlantSpecies.Acacia,
@@ -37,6 +37,8 @@ const TREES = [
   PlantSpecies.Willow,
 ];
 
+const BUILT_VARIANTS = new Map<string, MeshData[]>();
+
 const MIXED_FORMS: ReadonlySet<PlantSpeciesIndex> = new Set([PlantSpecies.Cactus, PlantSpecies.DeadTree]);
 
 const LYING_FORMS: ReadonlySet<PlantSpeciesIndex> = new Set(
@@ -47,6 +49,21 @@ const LYING_FORMS: ReadonlySet<PlantSpeciesIndex> = new Set(
   })
 );
 
+function variantsOf(species: PlantSpeciesIndex, level: PlantDetailLevel): MeshData[] {
+  const key = `${species} ${level}`;
+  const known = BUILT_VARIANTS.get(key);
+
+  if (known !== undefined) {
+    return known;
+  }
+
+  const variants = buildPlantVariants(species, level);
+
+  BUILT_VARIANTS.set(key, variants);
+
+  return variants;
+}
+
 function shortestVariantShare(species: PlantSpeciesIndex): number {
   if (LYING_FORMS.has(species)) {
     return 0.08;
@@ -56,7 +73,7 @@ function shortestVariantShare(species: PlantSpeciesIndex): number {
 }
 
 function widestRadius(species: PlantSpeciesIndex): number {
-  return buildPlantVariants(species, "high").reduce((widest, mesh) => {
+  return variantsOf(species, "high").reduce((widest, mesh) => {
     return Math.max(widest, widestReach(mesh));
   }, 0);
 }
@@ -72,7 +89,7 @@ function workingRadius(species: PlantSpeciesIndex): number {
 }
 
 function averageTriangles(species: PlantSpeciesIndex, level: PlantDetailLevel): number {
-  const variants = buildPlantVariants(species, level);
+  const variants = variantsOf(species, level);
 
   return (
     variants.reduce((sum, mesh) => {
@@ -118,7 +135,7 @@ function highestVertex(mesh: MeshData, vertices: readonly number[]): number {
 describe.each(SPECIES)("plant species %i", (species) => {
   test("builds clean variants at every level of detail", () => {
     for (const level of PLANT_DETAIL_LEVELS) {
-      const variants = buildPlantVariants(species, level);
+      const variants = variantsOf(species, level);
 
       expect(variants).toHaveLength(plantVariantCount(species));
 
@@ -131,7 +148,7 @@ describe.each(SPECIES)("plant species %i", (species) => {
   test("stands on the ground at about its canonical height", () => {
     const height = canonicalHeight(species);
     const shortest = shortestVariantShare(species);
-    const variants = buildPlantVariants(species, "high");
+    const variants = variantsOf(species, "high");
 
     for (const mesh of variants) {
       expect(mesh.bounds.minimum[1]).toBeGreaterThan(-0.5);
@@ -172,7 +189,7 @@ describe.each(SPECIES)("plant species %i", (species) => {
 
   test("closes every variant everywhere above the ground", () => {
     for (const level of PLANT_DETAIL_LEVELS) {
-      for (const [variant, mesh] of buildPlantVariants(species, level).entries()) {
+      for (const [variant, mesh] of variantsOf(species, level).entries()) {
         expect(highestExposedOpenEdge(mesh), `${level} variant ${variant}`).toBeLessThan(GROUND_LEVEL);
       }
     }
@@ -180,7 +197,7 @@ describe.each(SPECIES)("plant species %i", (species) => {
 
   test("keeps every part of every variant attached to the ground", () => {
     for (const level of PLANT_DETAIL_LEVELS) {
-      for (const [variant, mesh] of buildPlantVariants(species, level).entries()) {
+      for (const [variant, mesh] of variantsOf(species, level).entries()) {
         const detached = loosePieces(mesh);
 
         expect(detached, `${level} variant ${variant}`).toEqual([]);
@@ -190,7 +207,7 @@ describe.each(SPECIES)("plant species %i", (species) => {
 
   test("keeps every part attached while a storm bends it", () => {
     for (const level of PLANT_DETAIL_LEVELS) {
-      for (const [variant, mesh] of buildPlantVariants(species, level).entries()) {
+      for (const [variant, mesh] of variantsOf(species, level).entries()) {
         const bent = windBentMesh(mesh, STORM_PUSH);
         const detached = loosePieces(bent);
 
@@ -202,7 +219,7 @@ describe.each(SPECIES)("plant species %i", (species) => {
 
 describe("tree details", () => {
   it.each(TREES)("flutters only the foliage of species %i and sways it more than the trunk foot", (species) => {
-    const [mesh] = buildPlantVariants(species, "high");
+    const [mesh] = variantsOf(species, "high");
 
     const vertices = Array.from({ length: vertexCount(mesh) }, (_, vertex) => {
       return vertex;
@@ -243,8 +260,8 @@ describe("tree details", () => {
   });
 
   it("sways the top of every willow crown with the tree", () => {
-    for (const level of ["high", "medium"] as const) {
-      for (const willow of buildPlantVariants(PlantSpecies.Willow, level)) {
+    for (const level of NEAR_LEVELS) {
+      for (const willow of variantsOf(PlantSpecies.Willow, level)) {
         const foliage = meshPieces(willow).filter((piece) => {
           return willow.channels.flutter[piece.vertices[0]] === FOLIAGE_FLUTTER;
         });
@@ -260,8 +277,8 @@ describe("tree details", () => {
   });
 
   it("moves each berry as one piece with the leaves it grows on", () => {
-    for (const level of ["high", "medium"] as const) {
-      for (const bush of buildPlantVariants(PlantSpecies.Bush, level)) {
+    for (const level of NEAR_LEVELS) {
+      for (const bush of variantsOf(PlantSpecies.Bush, level)) {
         const berries = berryPieces(bush);
 
         expect(berries.length).toBeGreaterThan(0);
@@ -289,8 +306,8 @@ describe("tree details", () => {
   });
 
   it("keeps every berry small and whole through a storm", () => {
-    for (const level of ["high", "medium"] as const) {
-      for (const bush of buildPlantVariants(PlantSpecies.Bush, level)) {
+    for (const level of NEAR_LEVELS) {
+      for (const bush of variantsOf(PlantSpecies.Bush, level)) {
         const bent = windBentMesh(bush, STORM_PUSH);
 
         for (const piece of berryPieces(bush)) {
@@ -309,8 +326,8 @@ describe("tree details", () => {
   });
 
   it("tucks the tip of every spruce tier inside the tier above it", () => {
-    for (const level of ["high", "medium"] as const) {
-      for (const spruce of buildPlantVariants(PlantSpecies.Spruce, level)) {
+    for (const level of NEAR_LEVELS) {
+      for (const spruce of variantsOf(PlantSpecies.Spruce, level)) {
         const tiers = meshPieces(spruce)
           .filter((piece) => {
             return spruce.channels.slot[piece.vertices[0]] === MaterialSlot.Needle;
@@ -352,23 +369,18 @@ describe("tree details", () => {
       return reach;
     }
 
-    for (const spruce of buildPlantVariants(PlantSpecies.Spruce, "high")) {
+    for (const spruce of variantsOf(PlantSpecies.Spruce, "high")) {
       expect(woodReach(spruce)).toBeGreaterThan(1);
     }
 
-    for (const spruce of buildPlantVariants(PlantSpecies.Spruce, "low")) {
+    for (const spruce of variantsOf(PlantSpecies.Spruce, "low")) {
       expect(woodReach(spruce)).toBeLessThan(1);
     }
   });
 
   it("grows a different kind of cactus from each variant", () => {
-    const [saguaro, organPipe, barrel, pricklyPear] = buildPlantVariants(PlantSpecies.Cactus, "high");
+    const [saguaro, organPipe, barrel, pricklyPear] = variantsOf(PlantSpecies.Cactus, "high");
 
-    expect(
-      CACTUS_FORMS.map((_form, variant) => {
-        return cactusForm(variant);
-      })
-    ).toEqual(CACTUS_FORMS);
     expect(saguaro.bounds.maximum[1]).toBeGreaterThan(3);
     expect(
       meshPieces(organPipe).filter((piece) => {
@@ -382,7 +394,7 @@ describe("tree details", () => {
 
   it("leaves dead trees bare in every season", () => {
     for (const level of PLANT_DETAIL_LEVELS) {
-      for (const snag of buildPlantVariants(PlantSpecies.DeadTree, level)) {
+      for (const snag of variantsOf(PlantSpecies.DeadTree, level)) {
         expect(
           [...snag.channels.slot].some((slot) => {
             return FOLIAGE_SLOTS.has(slot);
@@ -394,9 +406,9 @@ describe("tree details", () => {
   });
 
   it("marks birch bark and hangs berries only on near bushes", () => {
-    const [birch] = buildPlantVariants(PlantSpecies.Birch, "high");
-    const [nearBush] = buildPlantVariants(PlantSpecies.Bush, "high");
-    const [farBush] = buildPlantVariants(PlantSpecies.Bush, "low");
+    const [birch] = variantsOf(PlantSpecies.Birch, "high");
+    const [nearBush] = variantsOf(PlantSpecies.Bush, "high");
+    const [farBush] = variantsOf(PlantSpecies.Bush, "low");
 
     expect(birch.channels.slot).toContain(MaterialSlot.BirchBark);
     expect(birch.channels.slot).toContain(MaterialSlot.Bark);

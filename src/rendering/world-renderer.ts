@@ -48,6 +48,10 @@ import { WorldChangeReader, type WorldChanges } from "./world-changes.ts";
 
 const CLOUD_SEA_DEPTH = 760;
 const WATER_DRIFT = 0.08;
+const NIGHT_SPRITE_BRIGHTNESS = 0.25;
+const NIGHT_SMOKE_BRIGHTNESS = 0.3;
+const SMOKE_LEANING_WIND = 5;
+const STRONGEST_SMOKE_LEAN = 1.5;
 const SELECTION_COLOR = 0xff_f2_c8;
 const HELD_RING_RADIUS = 2.5;
 const PLACEABLE_COLOR = 0xff_ff_ff;
@@ -156,7 +160,7 @@ export class WorldRenderer {
     this.#terrain = new TerrainView(mirror, this.#textures, this.#plinth, this.#fireGlow, renderer);
     this.#islandBase = new IslandBase(mirror, this.#textures, this.#plinth);
     this.#water = new WaterView(mirror, this.#textures);
-    this.#waterfalls.rebuild(mirror.water.waterfalls, this.#textures, this.#plinth);
+    this.#waterfalls.rebuild(this.#textures, mirror.water.waterfalls, this.#plinth);
     this.#springs.rebuild(mirror);
     this.#lilies = new LilyPads(mirror, this.#textures);
     this.#vegetation = new VegetationView(mirror, this.#textures, this.#fireGlow);
@@ -386,11 +390,11 @@ export class WorldRenderer {
       this.#water.waterChanged(changes.waterLevelRegion);
     }
 
-    if (changes.hasWaterChanged || this.#waterfalls.isShapedBy(changes.heightRegion, this.#mirror.grid)) {
-      this.#waterfalls.rebuild(this.#mirror.water.waterfalls, this.#textures, this.#plinth);
+    if (changes.hasWaterChanged || this.#waterfalls.isShapedBy(this.#mirror.grid, changes.heightRegion)) {
+      this.#waterfalls.rebuild(this.#textures, this.#mirror.water.waterfalls, this.#plinth);
     }
 
-    if (changes.hasWaterChanged || areSpringsShapedBy(changes.heightRegion, this.#mirror)) {
+    if (changes.hasWaterChanged || areSpringsShapedBy(this.#mirror, changes.heightRegion)) {
       this.#springs.rebuild(this.#mirror);
     }
 
@@ -451,17 +455,17 @@ export class WorldRenderer {
     const { weather } = this.#mirror.frame;
 
     const darkness = 1 - this.#atmosphere.daylight;
-    const brightness = 0.25 + this.#atmosphere.daylight * 0.75;
+    const brightness = lerp(NIGHT_SPRITE_BRIGHTNESS, 1, this.#atmosphere.daylight);
 
     this.#axes.update(view.camera);
-    this.#fire.smoke.brightness.value = 0.3 + this.#atmosphere.daylight * 0.7;
+    this.#fire.smoke.brightness.value = lerp(NIGHT_SMOKE_BRIGHTNESS, 1, this.#atmosphere.daylight);
     this.#fire.smoke.sunlight.value = this.#atmosphere.daylight;
     this.#fire.smoke.sunDirection.value
       .subVectors(this.#atmosphere.sun.position, this.#atmosphere.sun.target.position)
       .normalize();
     this.#fire.smoke.wind.value
       .set(weather.windX, weather.windZ)
-      .multiplyScalar(Math.min(1.5, wind.metersPerSecond / 5));
+      .multiplyScalar(Math.min(STRONGEST_SMOKE_LEAN, wind.metersPerSecond / SMOKE_LEANING_WIND));
     this.#fire.update(this.#mirror, view.camera, darkness);
     this.#effects.add(view.effects);
     this.#effects.update(view.realSeconds, gameSeconds);

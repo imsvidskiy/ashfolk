@@ -13,7 +13,16 @@ import {
   monumentAround,
   plantInCell,
 } from "../testing/test-world.ts";
-import { CROSSING_GROUND, MONUMENT_GROUND, NO_BUILDING, SPRING_GROUND } from "./world-state.ts";
+import {
+  CROP_GROWTH_STEP,
+  CROSSING_GROUND,
+  MONUMENT_GROUND,
+  NO_BUILDING,
+  SPRING_GROUND,
+  TRODDEN_LEVELS,
+} from "./world-state.ts";
+
+const STEP_FRACTION = 0.4;
 
 function caveAt(grid: WorldGrid, cell: number): Spring {
   return {
@@ -31,27 +40,6 @@ function caveAt(grid: WorldGrid, cell: number): Spring {
 }
 
 describe("world state", () => {
-  it("interpolates heights between cell centers", () => {
-    const world = createTestWorld({
-      heightAt: (x) => {
-        return 100 + x;
-      },
-    });
-
-    expect(world.heightAt(5, 0)).toBeCloseTo(105);
-    expect(world.heightAt(10, 0)).toBeCloseTo(110);
-  });
-
-  it("measures slope as rise over run", () => {
-    const world = createTestWorld({
-      heightAt: (x) => {
-        return 100 + 0.5 * x;
-      },
-    });
-
-    expect(world.slope(centerCell(world))).toBeCloseTo(0.5);
-  });
-
   it("knows where the water is and how deep it is", () => {
     const world = createTestWorld();
 
@@ -117,6 +105,32 @@ describe("world state", () => {
 
     expect(world.fields.fuel[cell]).toBeCloseTo(groundDefinition(Ground.Steppe).fuel);
     expect(world.groundChanges.takeRuns()).toEqual([{ firstRow: world.grid.rowOf(cell), rowCount: 1 }]);
+  });
+
+  it("redraws the ground once small changes of trodden earth or a crop add up to a visible step", () => {
+    const world = createTestWorld();
+
+    const cell = centerCell(world);
+    const changedRow = [{ firstRow: world.grid.rowOf(cell), rowCount: 1 }];
+    const troddenStep = 1 / TRODDEN_LEVELS;
+
+    world.setTrodden(cell, troddenStep * STEP_FRACTION);
+
+    expect(world.groundChanges.takeRuns()).toEqual([]);
+
+    world.setTrodden(cell, troddenStep * STEP_FRACTION * 2);
+    world.setTrodden(cell, troddenStep * STEP_FRACTION * 3);
+
+    expect(world.groundChanges.takeRuns()).toEqual(changedRow);
+
+    world.setCrop(cell, CROP_GROWTH_STEP * STEP_FRACTION);
+
+    expect(world.groundChanges.takeRuns()).toEqual([]);
+
+    world.setCrop(cell, CROP_GROWTH_STEP * STEP_FRACTION * 2);
+    world.setCrop(cell, CROP_GROWTH_STEP * STEP_FRACTION * 3);
+
+    expect(world.groundChanges.takeRuns()).toEqual(changedRow);
   });
 
   it("tracks canopy fuel as trees are planted and removed", () => {
@@ -219,6 +233,7 @@ describe("world state", () => {
 
   it("keeps the fingerprint of the generated land after the land changes", () => {
     const world = createTestWorld();
+
     const fingerprint = world.generationFingerprint;
 
     world.setHeight(0, 900);

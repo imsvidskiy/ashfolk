@@ -1,4 +1,4 @@
-import { hashToUnit, smoothstep } from "../../shared/math.ts";
+import { hashToUnit } from "../../shared/math.ts";
 import { MaterialSlot } from "../materials.ts";
 import { card } from "../mesh/shapes.ts";
 import { type Triple, transformOf } from "../mesh/transforms.ts";
@@ -12,6 +12,7 @@ import {
   rising,
   type StructureContext,
   stoneShade,
+  upwardShade,
 } from "./structure-parts.ts";
 
 const LONGHOUSE_HALF_LENGTH = 6.4;
@@ -118,9 +119,7 @@ function addLonghouseWalls(context: StructureContext): void {
     [0, LONGHOUSE_FOOTING - 0.05 + wallHeight / 2, 0],
     {
       buildOrder: rising(0.15, 0.42, LONGHOUSE_FOOTING, LONGHOUSE_WALL_TOP),
-      shade: (point) => {
-        return 0.74 + 0.26 * smoothstep(0, 2.2, point.position.y);
-      },
+      shade: upwardShade(0.74, 0, 2.2),
       slot: MaterialSlot.Daub,
     }
   );
@@ -196,9 +195,7 @@ function addLonghouseRoof(context: StructureContext): void {
     span: LONGHOUSE_EAVE_REACH * 2,
     style: {
       buildOrder: rising(0.55, 0.9, LONGHOUSE_EAVE - 0.3, LONGHOUSE_RIDGE),
-      shade: (point) => {
-        return 0.72 + 0.28 * smoothstep(LONGHOUSE_EAVE, LONGHOUSE_RIDGE, point.position.y);
-      },
+      shade: upwardShade(0.72, LONGHOUSE_EAVE, LONGHOUSE_RIDGE),
       slot: MaterialSlot.Thatch,
     },
     thickness: LONGHOUSE_ROOF_THICKNESS,
@@ -347,9 +344,7 @@ function addHouseRoof(context: StructureContext): void {
     span: HOUSE_EAVE_REACH * 2,
     style: {
       buildOrder: rising(0.6, 0.9, HOUSE_EAVE - 0.3, HOUSE_RIDGE),
-      shade: (point) => {
-        return 0.74 + 0.26 * smoothstep(HOUSE_EAVE, HOUSE_RIDGE, point.position.y);
-      },
+      shade: upwardShade(0.74, HOUSE_EAVE, HOUSE_RIDGE),
       slot: MaterialSlot.Thatch,
     },
     thickness: 0.4,

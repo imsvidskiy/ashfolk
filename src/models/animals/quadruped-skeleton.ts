@@ -22,7 +22,7 @@ export const QuadrupedBone = {
   UpperHindRight: 15,
 } as const;
 
-export const FIRST_EXTRA_BONE = 18;
+export const FIRST_EXTRA_BONE = Object.keys(QuadrupedBone).length;
 export const LEG_ENDS: readonly LegEnd[] = ["front", "hind"];
 
 type LegJoints = readonly [upper: Triple, lower: Triple, hoof: Triple];
@@ -87,7 +87,7 @@ function legDefinitions(frame: QuadrupedFrame, end: LegEnd, side: Side): BoneDef
   const bones = legBones(end, side);
   const joints = end === "front" ? frame.frontLeg : frame.hindLeg;
   const parent = end === "front" ? QuadrupedBone.Chest : QuadrupedBone.Pelvis;
-  const name = `${end}${side === 1 ? "Left" : "Right"}`;
+  const name = `${end === "front" ? "Front" : "Hind"}${side === 1 ? "Left" : "Right"}`;
 
   return [
     { joint: onSide(joints[0], side), name: `upper${name}`, order: "limb", parent },

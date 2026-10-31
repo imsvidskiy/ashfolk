@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { LIT_CAMPFIRE_FUEL } from "../../content/buildings.ts";
+import { BUILDINGS, LIT_CAMPFIRE_FUEL } from "../../content/buildings.ts";
 import { TOOL_MATERIAL_DEFINITIONS } from "../../content/weapons.ts";
 import { Badge } from "../../design/badge.tsx";
 import { cn } from "../../design/cn.ts";
@@ -7,7 +7,7 @@ import { FactList } from "../../design/fact-list.tsx";
 import { formatPercent } from "../../design/format.ts";
 import { GameIcon } from "../../design/game-icon.tsx";
 import { MeterBar } from "../../design/meter-bar.tsx";
-import type { EraView } from "../../simulation/frame.ts";
+import type { EraView, TribeSummary } from "../../simulation/frame.ts";
 import type {
   AnimalInspection,
   BuildingInspection,
@@ -21,22 +21,23 @@ import { BuildingList } from "../tribes/building-list.tsx";
 import { GoalNeed } from "../tribes/goal-need.tsx";
 import { StockList } from "../tribes/stock-list.tsx";
 
-function landFacts(summary: TribeInspection["summary"]) {
-  const { farmland } = summary;
+const STRONGEST_EMBERS = 0.05;
 
+function landFacts({ farmland }: TribeSummary) {
   const crops = farmland.crops
     .map((crop) => {
       return `${crop.name} ${crop.count}`;
     })
     .join(" · ");
+  const fields = farmland.crops.length > 0 ? `${farmland.fields} (${crops})` : farmland.fields;
   const facts = [
-    { label: "Fields", value: crops.length > 0 ? `${farmland.fields} (${crops})` : String(farmland.fields) },
+    { label: "Fields", value: fields },
     { label: "Orchard trees", value: farmland.orchardTrees },
     { label: "Woodlot trees", value: farmland.woodlotTrees },
   ];
 
   return facts.filter((fact) => {
-    return fact.value !== 0 && fact.value !== "0";
+    return fact.value !== 0;
   });
 }
 
@@ -81,7 +82,7 @@ function BuildingState({ building }: { readonly building: BuildingInspection }) 
 }
 
 function CampfireFuel({ building }: { readonly building: BuildingInspection }) {
-  if (building.name !== "Campfire" || building.progress < 1) {
+  if (building.name !== BUILDINGS.campfire.name || building.progress < 1) {
     return null;
   }
 
@@ -127,7 +128,7 @@ function PlantList({ plants }: { readonly plants: readonly PlantDescription[] })
 }
 
 function FireWarning({ cell }: { readonly cell: CellInspection }) {
-  if (cell.fire <= 0.05) {
+  if (cell.fire <= STRONGEST_EMBERS) {
     return null;
   }
 
@@ -144,7 +145,7 @@ export function CellDetails({ cell }: { readonly cell: CellInspection }) {
     { label: "Ground", value: cell.groundName },
     { label: "Height", value: `${Math.round(cell.height)} m` },
     { label: "Temperature", value: `${Math.round(cell.temperature)} °C` },
-    { label: "Water depth", value: cell.waterDepth > 0.05 ? `${cell.waterDepth.toFixed(1)} m` : "Dry" },
+    { label: "Water depth", value: cell.waterDepth > 0 ? `${cell.waterDepth.toFixed(1)} m` : "Dry" },
     { label: "Snow", value: formatPercent(cell.snow) },
     { label: "Wetness", value: formatPercent(cell.wetness) },
     { label: "Scorched", value: formatPercent(cell.scorch) },

@@ -35,7 +35,7 @@ Review the folders or branch the request names. Without one, review the files th
 
 ## Proving nothing changed
 
-- Run `bun run check`, `bun run typecheck` and `bun run test`, as AGENTS.md describes.
+- Run `bun run check`, `bun run typecheck`, `bun run knip` and `bun run test`, as AGENTS.md describes.
 - For generation, compare hashes of full worlds for a few seeds and both shapes against `origin/main`.
 - For models, compare hashes of the built meshes against `origin/main`.
 - For the interface or rendering, compare screenshots as AGENTS.md describes.

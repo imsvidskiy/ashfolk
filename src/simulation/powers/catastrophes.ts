@@ -1,6 +1,6 @@
-import { isShrubSpecies, isTreeSpecies, PlantSpecies, plantSpeciesDefinition } from "../../content/plants.ts";
+import { isRockSpecies, isShrubSpecies, isTreeSpecies, PlantSpecies } from "../../content/plants.ts";
 import { clamp, FULL_TURN, hashToUnit, lerp, smoothstep } from "../../shared/math.ts";
-import type { Waypoint } from "../agents/navigation.ts";
+import { isDryLand, type Waypoint } from "../agents/navigation.ts";
 import { setAlight } from "../society/buildings.ts";
 import { discover } from "../society/progress.ts";
 import { type Catastrophe, ruinText, type Shock, shakeMonuments } from "../world/monument-damage.ts";
@@ -12,11 +12,24 @@ const STRIKE_RADIUS = 20;
 const STRIKE_INTENSITY = 0.65;
 const STRIKE_SCORCH = 0.5;
 const STRIKE_KILL_RADIUS = 14;
+const STRIKE_PEOPLE_DAMAGE = 3;
+const STRIKE_ANIMAL_DAMAGE = 6;
 const STRIKE_BUILDING_RADIUS = 18;
 const STRIKE_SCARE_RADIUS = 200;
 const TEACHING_DISTANCE = 300;
 const SOAKED = 0.5;
+const NATURAL_STRIKE_ATTEMPTS = 6;
+const ANY_LAND_STRIKE_ATTEMPT = 4;
+const NEAREST_NATURAL_STRIKE = 300;
+const FARTHEST_NATURAL_STRIKE = 2500;
+const HIGH_GROUND = 700;
+const TALL_FOREST = 1;
+const ISLAND_MARGIN = 60;
 const CRATER_CORE = 0.85;
+const CRATER_DEPTH_SHARE = 0.3;
+const DEEP_BLAST_POWER = 1.5;
+const DEEP_CRATER_SCALE = 1.25;
+const WATERY_CORE = 0.5;
 const FELLING_REACH = 1.45;
 const FELLING_FRINGE = 0.3;
 const FALLING_SWAY = 0.5;
@@ -30,13 +43,24 @@ const DEBRIS_REACH = 3.2;
 const DEBRIS_PER_METER = 0.35;
 const FEWEST_DEBRIS = 6;
 const MOST_DEBRIS = 120;
-const WATERY_CORE = 0.5;
 const BLAST_REACH = 1.8;
 const MONUMENT_REACH = 3.2;
-const NATURAL_STRIKE_ATTEMPTS = 6;
-const HIGH_GROUND = 700;
-const TALL_FOREST = 1;
-const ISLAND_MARGIN = 60;
+const BLAST_BUILDING_DAMAGE = 120;
+const BLAST_PEOPLE_DAMAGE = 1.6;
+const BLAST_ANIMAL_DAMAGE = 3;
+const BLAST_SCARE_REACH = 8;
+const BLAST_DANGER_REACH = 4;
+const BLAST_DANGER_SECONDS = 6;
+const QUAKE_TOPPLING = 0.08;
+const QUAKE_MONUMENT_STRENGTH = 0.6;
+const QUAKE_BUILDING_DAMAGE = 45;
+const QUAKE_PEOPLE_REACH = 0.6;
+const QUAKE_PEOPLE_DAMAGE = 0.35;
+const QUAKE_SCARE_REACH = 1.5;
+const QUAKE_DANGER_SECONDS = 5;
+const FALL_SALT = 97;
+const SHARD_SALT = 53;
+const TOPPLE_SALT = 31;
 
 interface Strike {
   ignitionChance: number;
@@ -46,8 +70,8 @@ interface Strike {
 }
 
 interface Blast {
-  burnsDebris: boolean;
   catastrophe: Catastrophe;
+  hasBurningDebris: boolean;
   power: number;
   radius: number;
   x: number;
@@ -75,8 +99,8 @@ export function strikeLightning(strike: Strike, services: PowerServices): void {
     world.markSurfaceCell(cell);
   }
 
-  people.damageArea(strike.x, strike.z, STRIKE_KILL_RADIUS, 3, "lightning");
-  fauna.damageArea(strike.x, strike.z, STRIKE_KILL_RADIUS, 6, "lightning");
+  people.damageArea(strike.x, strike.z, STRIKE_KILL_RADIUS, STRIKE_PEOPLE_DAMAGE, "lightning");
+  fauna.damageArea(strike.x, strike.z, STRIKE_KILL_RADIUS, STRIKE_ANIMAL_DAMAGE, "lightning");
   fauna.scare(strike.x, strike.z, STRIKE_SCARE_RADIUS);
 
   for (const building of buildings.all) {
@@ -121,12 +145,12 @@ export function naturalStrikeSite(focus: Waypoint, services: PowerServices): Way
 
   for (let attempt = 0; attempt < NATURAL_STRIKE_ATTEMPTS; attempt += 1) {
     const angle = random.next() * FULL_TURN;
-    const distance = random.between(300, 2500);
+    const distance = random.between(NEAREST_NATURAL_STRIKE, FARTHEST_NATURAL_STRIKE);
 
     const x = clamp(focus.x + Math.cos(angle) * distance, -limit, limit);
     const z = clamp(focus.z + Math.sin(angle) * distance, -limit, limit);
 
-    if (isStrikeSite(world.grid.cellAt(x, z), attempt >= 4, services)) {
+    if (isStrikeSite(world.grid.cellAt(x, z), attempt >= ANY_LAND_STRIKE_ATTEMPT, services)) {
       return { x, z };
     }
   }
@@ -134,18 +158,24 @@ export function naturalStrikeSite(focus: Waypoint, services: PowerServices): Way
   return null;
 }
 
-function isStrikeSite(cell: number, acceptsAnyLand: boolean, services: PowerServices): boolean {
+function isStrikeSite(cell: number, shouldAcceptAnyLand: boolean, services: PowerServices): boolean {
   const { world } = services;
 
-  if (!world.isOnIsland(cell) || world.isWater(cell)) {
+  if (!isDryLand(world, cell)) {
     return false;
   }
 
-  return acceptsAnyLand || world.terrain.height[cell] > HIGH_GROUND || world.canopyFuel[cell] > TALL_FOREST;
+  return shouldAcceptAnyLand || world.terrain.height[cell] > HIGH_GROUND || world.canopyFuel[cell] > TALL_FOREST;
 }
 
 function reachScale(blast: Blast): number {
   return 0.85 + 0.15 * blast.power;
+}
+
+function craterDepth(blast: Blast): number {
+  const deepening = blast.power > DEEP_BLAST_POWER ? DEEP_CRATER_SCALE : 1;
+
+  return blast.radius * CRATER_DEPTH_SHARE * deepening;
 }
 
 export function explode(blast: Blast, services: PowerServices): void {
@@ -154,12 +184,12 @@ export function explode(blast: Blast, services: PowerServices): void {
   const reach = blast.radius * BLAST_REACH;
 
   const isInWater = isMostlyWater(blast, services);
-  const burnsDebris = blast.burnsDebris && !isInWater;
+  const hasBurningDebris = blast.hasBurningDebris && !isInWater;
 
-  carveCrater(world, blast, blast.radius * 0.3 * (blast.power > 1.5 ? 1.25 : 1));
-  scatterDebris(blast, burnsDebris, services);
+  carveCrater(world, blast, craterDepth(blast));
+  scatterDebris(blast, hasBurningDebris, services);
 
-  if (burnsDebris) {
+  if (hasBurningDebris) {
     hurlBurningDebris(blast, services);
   }
 
@@ -173,11 +203,16 @@ export function explode(blast: Blast, services: PowerServices): void {
     },
     services
   );
-  buildings.damageArea(blast.x, blast.z, reach, 120 * blast.power, burnsDebris);
-  people.damageArea(blast.x, blast.z, reach, 1.6 * blast.power, "blast");
-  fauna.damageArea(blast.x, blast.z, reach, 3 * blast.power, "blast");
-  fauna.scare(blast.x, blast.z, blast.radius * 8);
-  hazards.addZone({ radius: blast.radius * 4, remainingSeconds: 6, x: blast.x, z: blast.z });
+  buildings.damageArea(blast.x, blast.z, reach, BLAST_BUILDING_DAMAGE * blast.power, hasBurningDebris);
+  people.damageArea(blast.x, blast.z, reach, BLAST_PEOPLE_DAMAGE * blast.power, "blast");
+  fauna.damageArea(blast.x, blast.z, reach, BLAST_ANIMAL_DAMAGE * blast.power, "blast");
+  fauna.scare(blast.x, blast.z, blast.radius * BLAST_SCARE_REACH);
+  hazards.addZone({
+    radius: blast.radius * BLAST_DANGER_REACH,
+    remainingSeconds: BLAST_DANGER_SECONDS,
+    x: blast.x,
+    z: blast.z,
+  });
   services.effects.add({
     isInWater,
     kind: "explosion",
@@ -200,7 +235,7 @@ function isMostlyWater(blast: Blast, services: PowerServices): boolean {
   return wet > core.length * WATERY_CORE;
 }
 
-function scatterDebris(blast: Blast, burnsDebris: boolean, services: PowerServices): void {
+function scatterDebris(blast: Blast, hasBurningDebris: boolean, services: PowerServices): void {
   const { random, world } = services;
 
   const scale = reachScale(blast);
@@ -224,7 +259,7 @@ function scatterDebris(blast: Blast, burnsDebris: boolean, services: PowerServic
       flatten(cell, blast, (relativeDistance - CRATER_CORE) / (felling - CRATER_CORE), services);
     }
 
-    if (burnsDebris) {
+    if (hasBurningDebris) {
       igniteDebris(cell, smoothstep(felling, ignition, relativeDistance), services);
     }
   }
@@ -248,13 +283,13 @@ function flatten(cell: number, blast: Blast, remoteness: number, services: Power
   for (const plant of vegetation.plantsInCell(cell).filter((index) => {
     return vegetation.isAlive(index);
   })) {
-    const { form } = plantSpeciesDefinition(vegetation.species[plant]);
+    const species = vegetation.species[plant];
 
-    if (isTreeSpecies(vegetation.species[plant])) {
+    if (isTreeSpecies(species)) {
       world.fellPlant(plant, environment.day, fallingAway(plant, blast, world));
-    } else if (isShrubSpecies(vegetation.species[plant])) {
+    } else if (isShrubSpecies(species)) {
       world.removePlant(plant);
-    } else if (form === "stone" && remoteness < SHATTERING_REACH) {
+    } else if (isRockSpecies(species) && remoteness < SHATTERING_REACH) {
       shatter(plant, blast, services);
     }
   }
@@ -269,7 +304,7 @@ function fallingAway(plant: number, blast: Blast, world: WorldState): number {
 
   const outwardX = vegetation.x[plant] - blast.x;
   const outwardZ = vegetation.z[plant] - blast.z;
-  const sway = (hashToUnit(vegetation.seed[plant] * 97, plant) - 0.5) * FALLING_SWAY;
+  const sway = (hashToUnit(vegetation.seed[plant] * FALL_SALT, plant) - 0.5) * FALLING_SWAY;
 
   return Math.atan2(outwardX, outwardZ) + sway;
 }
@@ -279,21 +314,21 @@ function shatter(plant: number, blast: Blast, services: PowerServices): void {
   const { vegetation } = world;
 
   const height = vegetation.height[plant];
-  const seed = vegetation.seed[plant];
-  const x = vegetation.x[plant];
-  const z = vegetation.z[plant];
 
   if (height < SHATTERING_HEIGHT) {
     return;
   }
 
-  world.removePlant(plant);
-
+  const shardSeed = vegetation.seed[plant] * SHARD_SALT;
+  const x = vegetation.x[plant];
+  const z = vegetation.z[plant];
   const away = Math.atan2(z - blast.z, x - blast.x);
 
+  world.removePlant(plant);
+
   for (let shard = 0; shard < SHARDS; shard += 1) {
-    const angle = away + (hashToUnit(seed * 53, shard, 1) - 0.5) * 1.8;
-    const throwDistance = 1.5 + hashToUnit(seed * 53, shard, 2) * height * 1.5;
+    const angle = away + (hashToUnit(shardSeed, shard, 1) - 0.5) * 1.8;
+    const throwDistance = 1.5 + hashToUnit(shardSeed, shard, 2) * height * 1.5;
 
     const shardX = x + Math.cos(angle) * throwDistance;
     const shardZ = z + Math.sin(angle) * throwDistance;
@@ -304,9 +339,9 @@ function shatter(plant: number, blast: Blast, services: PowerServices): void {
 
     world.plant({
       bornDay: environment.day,
-      height: height * lerp(0.22, 0.42, hashToUnit(seed * 53, shard, 3)),
-      rotation: hashToUnit(seed * 53, shard, 4) * FULL_TURN,
-      seed: hashToUnit(seed * 53, shard, 5),
+      height: height * lerp(0.22, 0.42, hashToUnit(shardSeed, shard, 3)),
+      rotation: hashToUnit(shardSeed, shard, 4) * FULL_TURN,
+      seed: hashToUnit(shardSeed, shard, 5),
       species: PlantSpecies.Boulder,
       x: shardX,
       z: shardZ,
@@ -350,7 +385,8 @@ function ruinMonuments(shock: Shock, services: PowerServices): void {
 }
 
 function vaporize(cell: number, services: PowerServices): void {
-  const { fields } = services.world;
+  const { environment, world } = services;
+  const { fields } = world;
 
   fields.fire[cell] = 0;
   fields.heat[cell] = 0;
@@ -358,8 +394,8 @@ function vaporize(cell: number, services: PowerServices): void {
   fields.scorch[cell] = 1;
   fields.wetness[cell] = 0;
   fields.snow[cell] = 0;
-  services.world.clearPlants(cell, true);
-  services.world.markDisturbed(cell, services.environment.day);
+  world.clearPlants(cell, true);
+  world.markDisturbed(cell, environment.day);
 }
 
 export function shakeLand(quake: Quake, services: PowerServices): void {
@@ -368,19 +404,31 @@ export function shakeLand(quake: Quake, services: PowerServices): void {
   shakeTerrain(world, quake, quake.magnitude, random);
 
   for (const { cell, distance } of cellsInArea(world, quake)) {
-    if (random.chance(0.08 * (1 - distance / quake.radius) * quake.magnitude)) {
+    if (random.chance(QUAKE_TOPPLING * (1 - distance / quake.radius) * quake.magnitude)) {
       toppleTrees(cell, services);
     }
   }
 
   ruinMonuments(
-    { catastrophe: "earthquake", reach: quake.radius, strength: 0.6 * quake.magnitude, x: quake.x, z: quake.z },
+    {
+      catastrophe: "earthquake",
+      reach: quake.radius,
+      strength: QUAKE_MONUMENT_STRENGTH * quake.magnitude,
+      x: quake.x,
+      z: quake.z,
+    },
     services
   );
-  buildings.damageArea(quake.x, quake.z, quake.radius, 45 * quake.magnitude, false);
-  people.damageArea(quake.x, quake.z, quake.radius * 0.6, 0.35 * quake.magnitude, "earthquake");
-  fauna.scare(quake.x, quake.z, quake.radius * 1.5);
-  hazards.addZone({ radius: quake.radius, remainingSeconds: 5, x: quake.x, z: quake.z });
+  buildings.damageArea(quake.x, quake.z, quake.radius, QUAKE_BUILDING_DAMAGE * quake.magnitude, false);
+  people.damageArea(
+    quake.x,
+    quake.z,
+    quake.radius * QUAKE_PEOPLE_REACH,
+    QUAKE_PEOPLE_DAMAGE * quake.magnitude,
+    "earthquake"
+  );
+  fauna.scare(quake.x, quake.z, quake.radius * QUAKE_SCARE_REACH);
+  hazards.addZone({ radius: quake.radius, remainingSeconds: QUAKE_DANGER_SECONDS, x: quake.x, z: quake.z });
   services.effects.add({
     kind: "earthquake",
     magnitude: quake.magnitude,
@@ -394,12 +442,10 @@ function toppleTrees(cell: number, services: PowerServices): void {
   const { environment, world } = services;
   const { vegetation } = world;
 
-  for (const plant of vegetation.plantsInCell(cell).filter((index) => {
-    return vegetation.isAlive(index);
+  for (const tree of vegetation.plantsInCell(cell).filter((plant) => {
+    return vegetation.isAlive(plant) && isTreeSpecies(vegetation.species[plant]);
   })) {
-    if (isTreeSpecies(vegetation.species[plant])) {
-      world.fellPlant(plant, environment.day, hashToUnit(vegetation.seed[plant] * 31, cell) * FULL_TURN);
-      world.markDisturbed(cell, environment.day);
-    }
+    world.fellPlant(tree, environment.day, hashToUnit(vegetation.seed[tree] * TOPPLE_SALT, cell) * FULL_TURN);
+    world.markDisturbed(cell, environment.day);
   }
 }

@@ -1,4 +1,4 @@
-import type { ResourceKind } from "./resources.ts";
+import type { MaterialKind } from "./resources.ts";
 
 const TECHNOLOGY_IDS = [
   "fire",
@@ -26,7 +26,7 @@ export type TechnologyId = (typeof TECHNOLOGY_IDS)[number];
 
 interface MaterialNeed {
   amount: number;
-  resource: ResourceKind;
+  resource: MaterialKind;
 }
 
 export interface TechnologyDefinition {

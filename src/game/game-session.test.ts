@@ -1,11 +1,14 @@
 import { describe, expect, it, vi } from "vitest";
 import type { GenerationProgress } from "../generation/generation-options.ts";
 import { ignore } from "../shared/ignore.ts";
+import type { ChronicleEntry } from "../simulation/chronicle.ts";
 import { Simulation } from "../simulation/simulation.ts";
 import { createVegetatedWorld } from "../simulation/testing/test-world.ts";
 import { createSimulationWorkerApi } from "../workers/simulation-worker-api.ts";
 import { CHRONICLE_HISTORY_LIMIT, GameSession, type SessionStatus } from "./game-session.ts";
 import { createLocalSession, LocalSimulationConnection } from "./testing/local-session.ts";
+
+const SAVED_ENTRY: ChronicleEntry = { category: "weather", day: 3, id: 9, text: "Saved", tribeId: null, x: 0, z: 0 };
 
 interface SessionSetup {
   connection: LocalSimulationConnection;
@@ -56,6 +59,26 @@ describe("creating a session", () => {
   });
 });
 
+describe("loading a session", () => {
+  it("starts the chronicle from the saved journal", async () => {
+    const { connection } = await createSession();
+
+    const saved = await connection.saveWorld();
+
+    if (saved === null) {
+      throw new Error("The test world was busy");
+    }
+
+    const loading = new LocalSimulationConnection(
+      createSimulationWorkerApi(createTestSimulation, createTestSimulation)
+    );
+    const session = await GameSession.load(loading, saved, { journal: [SAVED_ENTRY] });
+
+    expect(session.chronicle[0]).toEqual(SAVED_ENTRY);
+    expect(session.hasLandChanged).toBe(false);
+  });
+});
+
 describe("advancing", () => {
   it("keeps one request in flight and carries the waiting time into the next one", async () => {
     const { connection, session } = await createSession();
@@ -65,10 +88,14 @@ describe("advancing", () => {
     session.update(0.1);
     session.update(0.05);
     session.update(0.05);
+
+    expect(session.isAdvancing).toBe(true);
+
     await session.whenIdle();
     session.update(0.05);
     await session.whenIdle();
 
+    expect(session.isAdvancing).toBe(false);
     expect(advance).toHaveBeenCalledTimes(2);
     expect(advance).toHaveBeenNthCalledWith(1, expect.closeTo(0.1));
     expect(advance).toHaveBeenNthCalledWith(2, expect.closeTo(0.15));
@@ -182,6 +209,21 @@ describe("advancing", () => {
     session.send({ isPaused: true, type: "setPaused" });
 
     expect(listener).toHaveBeenCalledExactlyOnceWith({ speed: 4, type: "setSpeed" });
+  });
+
+  it("counts the commands and ticks worth saving, but not the view", async () => {
+    const { session } = await createSession();
+
+    session.send({ selection: null, type: "setSelection" });
+    session.send({ type: "setViewFocus", x: 120, z: -80 });
+    await advanceSession(session, 0.02);
+
+    expect(session.changes).toBe(0);
+
+    session.send({ speed: 2, type: "setSpeed" });
+    await advanceSession(session, 0.1);
+
+    expect(session.changes).toBe(2);
   });
 });
 

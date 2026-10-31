@@ -10,6 +10,10 @@ export type ParameterUnit =
   | "percent"
   | "seconds";
 
+export type ParameterValue = boolean | number | string;
+
+export type ParameterValueMap = Readonly<Record<string, ParameterValue>>;
+
 interface RangeParameterSpecification {
   defaultValue: number;
   description: string;

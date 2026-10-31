@@ -25,7 +25,6 @@ const listingSchema = z.object({
   shape: z.enum(ISLAND_SHAPES).catch("round"),
   size: z.enum(ISLAND_SIZES).catch("normal"),
   summary: worldSummarySchema.nullable().catch(null),
-  version: z.number().catch(0),
 });
 
 const recordSchema = z.object({
@@ -178,12 +177,12 @@ function readListing(value: unknown): SavedWorldListing | null {
     return null;
   }
 
-  const { id, isLandChanged, name, savedAt, seed, shape, size, summary, version } = result.data;
+  const { id, isLandChanged, name, savedAt, seed, shape, size, summary } = result.data;
 
   return {
     hasLandChanged: isLandChanged,
     id,
-    isLoadable: version === SAVE_VERSION && summary !== null,
+    isLoadable: recordSchema.safeParse(value).success,
     name,
     savedAt,
     seed,

@@ -6,13 +6,13 @@ import { PAPER_SURFACE } from "../../design/styles.ts";
 import { CHRONICLE_ICONS } from "../journal/chronicle-icons.ts";
 import { dismissNotice, useWorldStore, type WorldNotice } from "../world/world-store.ts";
 
-const NOTICE_SECONDS = 7;
+const NOTICE_MILLISECONDS = 7000;
 
 function useDismissLater(noticeId: number): void {
   useEffect(() => {
     const timer = window.setTimeout(() => {
       dismissNotice(noticeId);
-    }, NOTICE_SECONDS * 1000);
+    }, NOTICE_MILLISECONDS);
 
     return () => {
       window.clearTimeout(timer);

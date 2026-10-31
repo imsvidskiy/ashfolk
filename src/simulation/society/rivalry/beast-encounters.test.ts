@@ -39,6 +39,12 @@ function spawnPack(harness: SocietyHarness, x: number, z: number, size: number):
   });
 }
 
+function packRestDays(harness: SocietyHarness, pack: readonly Animal[]): number | undefined {
+  const [leader] = pack;
+
+  return harness.fauna.snapshot().instincts.moods.get(leader.herdId)?.restDays;
+}
+
 function tribeOf(harness: SocietyHarness, person: Person): Tribe {
   const tribe = harness.society.findTribe(person.tribeId);
 
@@ -116,6 +122,7 @@ describe("wolves", () => {
       })
     ).toBe(true);
     expect(harness.fauna.snapshot().instincts.strikes.size).toBe(0);
+    expect(packRestDays(harness, wolves)).toBeGreaterThan(0);
   });
 
   it("forget their strikes when their prey dies before they reach it", () => {
@@ -168,6 +175,7 @@ describe("wolves", () => {
     ).toBe(false);
     expect(bitten.fear).toBeGreaterThan(0.5);
     expect(harness.fauna.snapshot().instincts.strikes.size).toBe(0);
+    expect(packRestDays(harness, wolves)).toBeGreaterThan(0);
   });
 
   it("leave people alone at noon when they are not hungry", () => {
@@ -225,8 +233,9 @@ describe("big game", () => {
     stag.mover.z = herder.mover.z;
     stag.fear = 1;
     stag.mover.stuckSeconds = 1;
-    harness.run(0.2);
+    harness.step();
 
+    expect(stag.pose).toBe("charge");
     expect(harness.fauna.isMenacing(stag)).toBe(true);
 
     runUntil(harness, 10, () => {

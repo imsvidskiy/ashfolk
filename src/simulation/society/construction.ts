@@ -1,5 +1,5 @@
 import { BUILDINGS, type BuildingKind, isEnclosure } from "../../content/buildings.ts";
-import type { ResourceAmounts } from "../../content/recipes.ts";
+import type { ResourceAmounts } from "../../content/resources.ts";
 import { FULL_TURN } from "../../shared/math.ts";
 import { aroundPoint, type Waypoint } from "../agents/navigation.ts";
 import { NO_BUILDING } from "../world/world-state.ts";
@@ -22,8 +22,9 @@ const LONGEST_STALL_DAYS = 2.5;
 const PLANS_TO_SAVE_FOR = 3;
 const CLEARING = 4;
 const SLOPE_PROBE = 3;
+const BUILDING_LEARNING = 2;
 
-interface Site {
+interface Lot {
   readonly pad: BuildingPad | null;
   readonly spot: Waypoint;
 }
@@ -117,7 +118,7 @@ function placeBuilding(tribe: Tribe, plan: BuildingPlan, context: SocietyContext
 
   const { random, world } = context;
 
-  let flattest: Site | null = null;
+  let flattest: Lot | null = null;
 
   for (let attempt = 0; attempt < PLACEMENT_ATTEMPTS; attempt += 1) {
     const angle = random.next() * FULL_TURN;
@@ -133,14 +134,14 @@ function placeBuilding(tribe: Tribe, plan: BuildingPlan, context: SocietyContext
       return startBuilding(tribe, plan, { pad: null, spot }, context);
     }
 
-    const site: Site = { pad: planPad(world, context.buildings.all, spot, plan.kind), spot };
+    const lot: Lot = { pad: planPad(world, context.buildings.all, spot, plan.kind), spot };
 
-    if (unevenness(site) <= DEEPEST_LEVELING) {
-      return startBuilding(tribe, plan, site, context);
+    if (unevenness(lot) <= DEEPEST_LEVELING) {
+      return startBuilding(tribe, plan, lot, context);
     }
 
-    if (flattest === null || unevenness(site) < unevenness(flattest)) {
-      flattest = site;
+    if (flattest === null || unevenness(lot) < unevenness(flattest)) {
+      flattest = lot;
     }
   }
 
@@ -151,12 +152,12 @@ function placeBuilding(tribe: Tribe, plan: BuildingPlan, context: SocietyContext
   return startBuilding(tribe, plan, flattest, context);
 }
 
-function unevenness(site: Site): number {
-  if (site.pad === null) {
+function unevenness(lot: Lot): number {
+  if (lot.pad === null) {
     return Number.POSITIVE_INFINITY;
   }
 
-  return site.pad.unevenness;
+  return lot.pad.unevenness;
 }
 
 function isClearOfOthers(spot: Waypoint, kind: BuildingKind, context: SocietyContext): boolean {
@@ -232,7 +233,7 @@ function siteRotation(tribe: Tribe, plan: BuildingPlan, spot: Waypoint, context:
   return Math.atan2(tribe.campX - spot.x, tribe.campZ - spot.z);
 }
 
-function startBuilding(tribe: Tribe, plan: BuildingPlan, { pad, spot }: Site, context: SocietyContext): Building {
+function startBuilding(tribe: Tribe, plan: BuildingPlan, { pad, spot }: Lot, context: SocietyContext): Building {
   const site = context.buildings.add(
     {
       depositId: plan.depositId,
@@ -313,7 +314,7 @@ export function completeConstruction(tribe: Tribe, site: Building, context: Soci
 
   retireReplaced(site, context);
   assignHomes(tribe, context.buildings, context.people.membersOf(tribe));
-  learn(tribe, 2, context.rules);
+  learn(tribe, BUILDING_LEARNING, context.rules);
 }
 
 function constructionMessage(tribe: Tribe, site: Building, context: SocietyContext): string {

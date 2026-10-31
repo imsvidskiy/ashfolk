@@ -1,8 +1,9 @@
 import { PerspectiveCamera, type Vector3 } from "three/webgpu";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { GodCamera } from "../camera/god-camera.ts";
+import { flatGround, settle } from "../testing/view-fixtures.ts";
 import { GroundPicker } from "./ground-picker.ts";
-import { PointerControls, type TapHandler, type ToolGestures } from "./pointer-controls.ts";
+import { PointerControls, type TapListener, type ToolGestures } from "./pointer-controls.ts";
 
 const WORLD_HALF_SIZE = 4000;
 const CANVAS_WIDTH = 390;
@@ -16,16 +17,11 @@ interface Rig {
   readonly camera: GodCamera;
   readonly canvas: HTMLCanvasElement;
   readonly controls: PointerControls;
+  readonly picker: GroundPicker;
   readonly tool: ToolSpy;
 }
 
 const rigs: Rig[] = [];
-
-function settle(camera: GodCamera): void {
-  for (let step = 0; step < 60; step += 1) {
-    camera.update(0.1);
-  }
-}
 
 function isAlwaysTrue(): boolean {
   return true;
@@ -45,7 +41,7 @@ function createTool(canBegin: () => boolean, isActive: () => boolean) {
     hover: vi.fn<ToolGestures["hover"]>(),
     isActive,
     move: vi.fn<ToolGestures["move"]>(),
-    tap: vi.fn<TapHandler["tap"]>(),
+    tap: vi.fn<TapListener>(),
   };
 }
 
@@ -61,27 +57,15 @@ function createRig(
   document.body.append(canvas);
 
   const perspective = new PerspectiveCamera(45, CANVAS_WIDTH / CANVAS_HEIGHT, 1, 40_000);
-  const camera = new GodCamera(
-    perspective,
-    () => {
-      return 0;
-    },
-    WORLD_HALF_SIZE
-  );
+  const camera = new GodCamera(perspective, flatGround, WORLD_HALF_SIZE);
 
   camera.jumpTo({ distance: 600, targetX: 0, targetZ: 0 });
   settle(camera);
 
   const tool = createTool(canBegin, isActive);
   const tools = leading === null ? [tool] : [leading, tool];
-  const picker = new GroundPicker(
-    perspective,
-    () => {
-      return 0;
-    },
-    WORLD_HALF_SIZE
-  );
-  const rig = { camera, canvas, controls: new PointerControls(canvas, camera, picker, tools, tool), tool };
+  const picker = new GroundPicker(perspective, flatGround, WORLD_HALF_SIZE);
+  const rig = { camera, canvas, controls: new PointerControls(canvas, camera, picker, tools, tool.tap), picker, tool };
 
   rigs.push(rig);
 
@@ -116,6 +100,10 @@ function runFrames(rig: Rig): void {
     rig.camera.update(0.05);
     rig.controls.update();
   }
+}
+
+function groundUnder(rig: Rig, x: number, y: number): Vector3 | null {
+  return rig.picker.pick({ x, y }, { height: CANVAS_HEIGHT, width: CANVAS_WIDTH });
 }
 
 function lastMovedPoint(tool: ToolSpy): Vector3 {
@@ -437,13 +425,18 @@ describe("pointer controls", () => {
     expect(rig.tool.tap).not.toHaveBeenCalled();
   });
 
-  it("taps to select when no tool is selected", () => {
+  it("taps to select the ground under the release when no tool is selected", () => {
     const rig = createRig(isNeverTrue, null, isNeverTrue);
 
     mouse(rig, "pointerdown", 195, 420);
-    mouse(rig, "pointerup", 195, 420);
+    mouse(rig, "pointermove", 198, 422);
+    mouse(rig, "pointerup", 198, 422);
 
+    const released = groundUnder(rig, 198, 422);
+
+    expect(released).toMatchObject({ y: 0 });
     expect(rig.tool.tap).toHaveBeenCalledTimes(1);
+    expect(rig.tool.tap).toHaveBeenCalledWith(released, { x: 198, y: 422 });
   });
 
   it("hovers once a frame with the screen point, and again when the camera moves", () => {
@@ -472,5 +465,26 @@ describe("pointer controls", () => {
     mouse(rig, "pointerleave", 120, 200);
 
     expect(rig.tool.hover).toHaveBeenLastCalledWith(null, null);
+  });
+
+  it("hovers the ground under the still pointer in the view the camera turned to", () => {
+    const rig = createRig();
+
+    mouse(rig, "pointermove", 120, 200);
+    rig.camera.orbit(0.6, 0);
+    rig.camera.update(0.05);
+    rig.controls.update();
+
+    const hovered = rig.tool.hover.mock.lastCall?.[0];
+
+    rig.camera.camera.updateMatrixWorld();
+
+    const drawn = groundUnder(rig, 120, 200);
+
+    if (hovered === undefined || hovered === null || drawn === null) {
+      throw new Error("The pointer should be over the ground");
+    }
+
+    expect(hovered.distanceTo(drawn)).toBeLessThan(0.01);
   });
 });

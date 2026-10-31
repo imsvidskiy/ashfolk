@@ -1,7 +1,7 @@
 import { clamp } from "../../../shared/math.ts";
 import { faceTowards } from "../../agents/movement.ts";
 import type { Waypoint } from "../../agents/navigation.ts";
-import { type Building, setAlight } from "../buildings.ts";
+import { type Building, type BuildingSystem, setAlight } from "../buildings.ts";
 import { headTo, type Job, standStill, walk } from "../jobs/job.ts";
 import { runSpeed, walkSpeed } from "../person.ts";
 import type { PersonTick } from "../society-context.ts";
@@ -9,7 +9,7 @@ import type { Stock } from "../stock.ts";
 import type { Tribe } from "../tribe.ts";
 import { campPoint, completedBuilding } from "../tribe-places.ts";
 import type { CarriedWeapon } from "../weapons.ts";
-import { Engagement } from "./engagement.ts";
+import { Engagement, runningPose } from "./engagement.ts";
 import { type Foe, personFoe } from "./foes.ts";
 import { plunderSurplus, totalGoods, unpack } from "./provisions.ts";
 import { buildingName, burnableBuilding, eatRation, MARCH_SPEED, type Raid } from "./raids.ts";
@@ -20,8 +20,6 @@ const CORNERED_RADIUS = 16;
 const SEEK_RADIUS = 90;
 const FREEZING_WARMTH = 0.2;
 const WORK_REACH = 2.2;
-const PLUNDER_SECONDS = 3;
-const KINDLING_SECONDS = 2.5;
 const PLUNDER_SHARE = 0.06;
 const SPARED_FOOD = 8;
 const BROKEN_HEALTH = 0.25;
@@ -34,7 +32,11 @@ const SLOWEST_PACE = 0.55;
 const FASTEST_PACE = 1.35;
 const STARVING_HUNGER = 0.85;
 
-type Destination = "home" | "objective" | "rally" | "target";
+type Task = "kindling" | "plunder";
+
+const WORK_SECONDS: Readonly<Record<Task, number>> = { kindling: 2.5, plunder: 3 };
+
+type Destination = "home" | "rally" | "target" | Task;
 
 type Leg = "homeward" | "outward";
 
@@ -47,8 +49,8 @@ export interface RaiderState {
   readonly slot: number;
 }
 
-function plunderSpot(tribe: Tribe, tick: PersonTick): Waypoint {
-  const storehouse = completedBuilding(tick.context.buildings, tribe.buildings.storehouseId);
+function plunderSpot(buildings: BuildingSystem, tribe: Tribe): Waypoint {
+  const storehouse = completedBuilding(buildings, tribe.buildings.storehouseId);
 
   if (storehouse === null) {
     return campPoint(tribe);
@@ -77,7 +79,7 @@ function marchPace(tick: PersonTick, raid: Raid): number {
   for (const id of raid.warriorIds) {
     const comrade = tick.context.people.findPerson(id);
 
-    if (comrade?.isAlive === true && comrade.job instanceof RaidJob) {
+    if (comrade?.isAlive === true && comrade.job instanceof RaidJob && !raid.routedIds.has(id)) {
       total += Math.hypot(comrade.mover.x - raid.target.x, comrade.mover.z - raid.target.z);
       count += 1;
     }
@@ -223,14 +225,14 @@ export class RaidJob implements Job {
       raid.aim === "burn" && raid.burned.length === 0 ? burnableBuilding(tick.context.buildings.all, victims) : null;
 
     if (building !== null) {
-      this.#workAt(tick, raid, building, KINDLING_SECONDS, () => {
+      this.#workAt(tick, raid, "kindling", building, () => {
         setAblaze(building, raid);
       });
 
       return;
     }
 
-    this.#workAt(tick, raid, plunderSpot(victims, tick), PLUNDER_SECONDS, () => {
+    this.#workAt(tick, raid, "plunder", plunderSpot(tick.context.buildings, victims), () => {
       this.#plunder(raid, victims);
     });
   }
@@ -242,11 +244,11 @@ export class RaidJob implements Job {
     unpack(this.#state.loot, taken);
   }
 
-  #workAt(tick: PersonTick, raid: Raid, spot: Waypoint, seconds: number, finish: () => void): void {
+  #workAt(tick: PersonTick, raid: Raid, task: Task, spot: Waypoint, finish: () => void): void {
     const { person } = tick;
 
-    if (this.#destination !== "objective") {
-      this.#destination = "objective";
+    if (this.#destination !== task) {
+      this.#destination = task;
       this.#workSeconds = 0;
       headTo(person, spot, tick.context);
     }
@@ -259,7 +261,7 @@ export class RaidJob implements Job {
     faceTowards(person.mover, spot.x, spot.z);
     this.#workSeconds += tick.seconds;
 
-    if (this.#workSeconds < seconds) {
+    if (this.#workSeconds < WORK_SECONDS[task]) {
       return;
     }
 
@@ -279,7 +281,7 @@ export class RaidJob implements Job {
       return true;
     }
 
-    person.pose = this.#weapon.kind === "spear" ? "charge" : "run";
+    person.pose = runningPose(this.#weapon);
 
     return false;
   }

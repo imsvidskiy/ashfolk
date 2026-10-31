@@ -11,15 +11,6 @@ describe("interface store", () => {
     expect(state.isMapOpen).toBe(!window.matchMedia(COMPACT_QUERY).matches);
   });
 
-  it("opens the journal on the chosen tab", () => {
-    useInterfaceStore.getState().openJournal("chronicle");
-
-    const state = useInterfaceStore.getState();
-
-    expect(state.isJournalOpen).toBe(true);
-    expect(state.journalTab).toBe("chronicle");
-  });
-
   it("closes the journal and keeps its tab", () => {
     const { closeJournal, openJournal } = useInterfaceStore.getState();
 
@@ -63,18 +54,6 @@ describe("interface store", () => {
 
     expect(useInterfaceStore.getState().areLabelsShown).toBe(true);
     expect(localStorage.getItem("ashfolk.labels")).toBe("shown");
-  });
-
-  it("opens the settings on the World section", () => {
-    const { openSettings, setSettingsTab } = useInterfaceStore.getState();
-
-    setSettingsTab("time");
-    openSettings();
-
-    const state = useInterfaceStore.getState();
-
-    expect(state.isSettingsOpen).toBe(true);
-    expect(state.settingsTab).toBe("world");
   });
 
   it("remembers the section after the settings close", () => {

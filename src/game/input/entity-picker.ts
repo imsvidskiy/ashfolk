@@ -57,9 +57,16 @@ export interface GrabScene extends AgentScene {
   readonly vegetation: Pick<VegetationBuffers, "count" | "height" | "species" | "state" | "x" | "z">;
 }
 
-export type AgentFooting = (kind: "animal" | "person", x: number, z: number) => number;
+type AgentKind = "animal" | "person";
 
-export type DrawnHeading = (kind: "animal" | "person", id: number) => number | null;
+export type AgentFooting = (kind: AgentKind, x: number, z: number) => number;
+
+export type DrawnHeading = (kind: AgentKind, id: number) => number | null;
+
+interface AgentTarget {
+  readonly id: number;
+  readonly kind: AgentKind;
+}
 
 interface PointerPick {
   readonly ground: Vector3 | null;
@@ -73,22 +80,22 @@ interface ScreenHit {
   readonly reach: number;
 }
 
-interface AgentLayout {
-  readonly body: (data: Float32Array, offset: number) => AgentBody;
-  readonly fields: MotionFields & { readonly Heading: number; readonly Id: number };
-  readonly kind: "animal" | "person";
-  readonly stride: number;
-}
-
-const PEOPLE: AgentLayout = { body: personBody, fields: PersonField, kind: "person", stride: PERSON_STRIDE };
-const ANIMALS: AgentLayout = { body: animalBody, fields: AnimalField, kind: "animal", stride: ANIMAL_STRIDE };
-
 type PixelPoint = readonly [number, number];
 
 interface RaySearch {
   readonly farthest: number;
   readonly spots: GroundPoint[];
 }
+
+interface AgentLayout {
+  readonly body: (data: Float32Array, offset: number) => AgentBody;
+  readonly fields: MotionFields & { readonly Heading: number; readonly Id: number };
+  readonly kind: AgentKind;
+  readonly stride: number;
+}
+
+const PEOPLE: AgentLayout = { body: personBody, fields: PersonField, kind: "person", stride: PERSON_STRIDE };
+const ANIMALS: AgentLayout = { body: animalBody, fields: AnimalField, kind: "animal", stride: ANIMAL_STRIDE };
 
 function searchAlong(ray: Ray, end: Vector3, heightAt: HeightField): RaySearch {
   const { origin } = ray;
@@ -152,10 +159,10 @@ export class EntityPicker {
   readonly #camera: PerspectiveCamera;
   readonly #drawnHeading: DrawnHeading;
   readonly #heightAt: HeightField;
-  readonly #standingAt: AgentFooting;
   readonly #point = new Vector3();
   readonly #projected = new Vector3();
   readonly #raycaster = new Raycaster();
+  readonly #standingAt: AgentFooting;
 
   constructor(camera: PerspectiveCamera, heightAt: HeightField, standingAt: AgentFooting, drawnHeading: DrawnHeading) {
     this.#camera = camera;
@@ -235,18 +242,14 @@ export class EntityPicker {
     return nearest;
   }
 
-  #agents(
-    scene: AgentScene,
-    layout: AgentLayout,
-    pointer: PointerPick
-  ): Candidate<{ id: number; kind: AgentLayout["kind"] }>[] {
+  #agents(scene: AgentScene, layout: AgentLayout, pointer: PointerPick): Candidate<AgentTarget>[] {
     const { frame, secondsSinceTick } = scene;
     const { body, fields, kind, stride } = layout;
 
     const data = kind === "person" ? frame.people : frame.animals;
     const count = kind === "person" ? frame.personCount : frame.animalCount;
 
-    const candidates: Candidate<{ id: number; kind: AgentLayout["kind"] }>[] = [];
+    const candidates: Candidate<AgentTarget>[] = [];
 
     for (let agent = 0; agent < count; agent += 1) {
       const offset = agent * stride;
@@ -292,10 +295,10 @@ export class EntityPicker {
 
   #grabbablePlant(scene: GrabScene, pointer: PointerPick): Candidate<GrabTarget> | null {
     const { vegetation } = scene;
-
     const { ray } = pointer;
-    const end = pointer.ground === null ? ray.at(this.#camera.far, new Vector3()) : pointer.ground;
     const { origin } = ray;
+
+    const end = pointer.ground === null ? ray.at(this.#camera.far, new Vector3()) : pointer.ground;
     const { farthest, spots } = searchAlong(ray, end, this.#heightAt);
     const slackPerMeter = this.#metersPerPixel(pointer.viewport) * PLANT_SLACK_PIXELS;
     const groundReach = pointer.ground === null ? Number.POSITIVE_INFINITY : origin.distanceTo(pointer.ground);

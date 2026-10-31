@@ -21,6 +21,7 @@ import {
 } from "three/tsl";
 import { Color, type Node, SRGBColorSpace, Vector3 } from "three/webgpu";
 import { CROP_KINDS, type CropKind, FENCED_CROP_OFFSET } from "../../content/crops.ts";
+import { FULL_TURN } from "../../shared/math.ts";
 import type { WorldGrid } from "../../world/world-grid.ts";
 import { FurrowAxis, fieldSharesNode } from "./field-plan.ts";
 import { cellAtNode } from "./height-sampling.ts";
@@ -95,8 +96,8 @@ export function fieldGroundNode(
   grain: Node<"vec2">
 ): FieldGround {
   const { earth, soil } = textures.groundAlbedo;
-  const point = positionWorld.xz;
 
+  const point = positionWorld.xz;
   const wobbled = point.add(grain.mul(EDGE_WOBBLE));
   const blur = fwidth(point.x)
     .add(fwidth(point.y))
@@ -119,11 +120,9 @@ export function fieldGroundNode(
 
     If(axis.greaterThan(int(FurrowAxis.None)), () => {
       const [tilled, reach] = shares;
-      const cellGround = textureLoad(textures.groundAlbedo.cells, cell);
 
-      const phase = fract(rows)
-        .sub(0.5)
-        .mul(Math.PI * 2);
+      const cellGround = textureLoad(textures.groundAlbedo.cells, cell);
+      const phase = fract(rows).sub(0.5).mul(FULL_TURN);
       const relief = smoothstep(0.66, 0.92, reach).mul(float(1).sub(smoothstep(0.3, 0.6, rowBlur)));
       const crop = cropColor(int(cellGround.a.mul(BYTE).add(0.5)), cellGround.g);
       const border = smoothstep(0.1, 0.42, reach).mul(float(1).sub(tilled)).mul(BORDER_WEAR);

@@ -22,10 +22,13 @@ const SIZE_OPTIONS: readonly ChoiceOption[] = [
 const FIELD = cn(FIELD_SURFACE, "focus-within:ring-dawn flex min-w-0 flex-1 items-center gap-2 focus-within:ring-2");
 
 interface RolledFieldProps {
-  readonly className?: string | undefined;
   readonly onChange: (event: ChangeEvent<HTMLInputElement>) => void;
   readonly onRoll: () => void;
   readonly value: string;
+}
+
+interface SeedFieldProps extends RolledFieldProps {
+  readonly className?: string | undefined;
 }
 
 interface ShapeChoiceProps {
@@ -59,7 +62,7 @@ export function NameField({ onChange, onRoll, value }: RolledFieldProps) {
   );
 }
 
-export function SeedField({ className, onChange, onRoll, value }: RolledFieldProps) {
+export function SeedField({ className, onChange, onRoll, value }: SeedFieldProps) {
   return (
     <div className={cn("flex items-center gap-2", className)}>
       <label className={FIELD}>

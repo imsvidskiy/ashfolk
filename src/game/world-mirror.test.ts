@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { allRows, packGroundRows, packSurfaceRows } from "../simulation/frame-packing.ts";
 import { Simulation } from "../simulation/simulation.ts";
+import { createValleySimulation } from "../simulation/testing/test-simulation.ts";
 import {
   centerCell,
   createVegetatedWorld,
@@ -101,17 +102,7 @@ describe("world mirror", () => {
   });
 
   it("follows a crater lake as it fills by its water levels alone", () => {
-    const simulation = new Simulation(
-      createVegetatedWorld({
-        dimensions: { cellSize: 10, cellsPerSide: 96 },
-        heightAt: (x, z) => {
-          return 200 + Math.abs(x - 5) * 0.25 + z * 0.02;
-        },
-      })
-    );
-
-    simulation.weather.setKind("clear");
-    simulation.waterRecomputation.recompute();
+    const simulation = createValleySimulation();
 
     const mirror = new WorldMirror(simulation.initialWorld(), 0);
 
@@ -269,17 +260,7 @@ describe("world mirror", () => {
   });
 
   it("names a crater lake once it has filled", () => {
-    const simulation = new Simulation(
-      createVegetatedWorld({
-        dimensions: { cellSize: 10, cellsPerSide: 96 },
-        heightAt: (x, z) => {
-          return 200 + Math.abs(x - 5) * 0.25 + z * 0.02;
-        },
-      })
-    );
-
-    simulation.weather.setKind("clear");
-    simulation.waterRecomputation.recompute();
+    const simulation = createValleySimulation();
 
     const mirror = new WorldMirror(simulation.initialWorld(), 0);
 

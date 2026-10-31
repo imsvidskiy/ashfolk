@@ -22,6 +22,8 @@ import {
 const FLASH_DECAY = 7;
 const LIGHT_DECAY = 5;
 const LIGHT_DISTANCE = 900;
+const LIGHT_FALLOFF = 1.4;
+const LIGHT_POWER = 400;
 
 interface EffectViewOptions {
   readonly axes: CameraAxes;
@@ -37,7 +39,7 @@ export class EffectView {
   readonly #context: EffectContext;
   readonly #createRing: () => GroundRing;
   readonly #idleRings: GroundRing[] = [];
-  readonly #light = new PointLight(0xff_ff_ff, 0, LIGHT_DISTANCE, 1.4);
+  readonly #light = new PointLight(0xff_ff_ff, 0, LIGHT_DISTANCE, LIGHT_FALLOFF);
   readonly #meshes = new EffectMeshes();
   readonly #sinks: SpriteSinks;
   #flash = 0;
@@ -103,7 +105,7 @@ export class EffectView {
     this.#sinks.glow.commit();
     this.#flash *= Math.exp(-FLASH_DECAY * realSeconds);
     this.#lightStrength *= Math.exp(-LIGHT_DECAY * realSeconds);
-    this.#light.intensity = this.#lightStrength * 4000;
+    this.#light.intensity = this.#lightStrength * LIGHT_POWER;
   }
 
   dispose(): void {
@@ -175,6 +177,6 @@ export class EffectView {
   #lightUp(position: Vector3, color: number, intensity: number): void {
     this.#light.position.copy(position);
     this.#light.color.setHex(color);
-    this.#lightStrength = Math.max(this.#lightStrength, intensity / 10);
+    this.#lightStrength = Math.max(this.#lightStrength, intensity);
   }
 }

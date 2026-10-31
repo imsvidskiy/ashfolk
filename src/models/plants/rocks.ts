@@ -16,11 +16,6 @@ export const ROCK_HEIGHTS = {
   [PlantSpecies.Sandstone]: 2.6,
 } as const satisfies Readonly<Record<RockSpecies, number>>;
 
-export const ROCK_VARIANT_COUNTS = {
-  [PlantSpecies.Boulder]: 4,
-  [PlantSpecies.Sandstone]: 3,
-} as const satisfies Readonly<Record<RockSpecies, number>>;
-
 const BOULDER_NOISE = createVolumeNoise(createRandom(8080));
 const STONE_DETAIL: Readonly<Record<PlantDetailLevel, number>> = { far: 0, high: 1, low: 0, medium: 1 };
 const STRATA_SEGMENTS: Readonly<Record<PlantDetailLevel, number>> = { far: 4, high: 14, low: 6, medium: 9 };
@@ -49,6 +44,11 @@ const SANDSTONE_STRATA: readonly (readonly (readonly [number, number])[])[] = [
     [1.0, 0.4],
   ],
 ];
+
+export const ROCK_VARIANT_COUNTS = {
+  [PlantSpecies.Boulder]: BOULDER_COMPANIONS.length,
+  [PlantSpecies.Sandstone]: SANDSTONE_STRATA.length,
+} as const satisfies Readonly<Record<RockSpecies, number>>;
 
 type RockSpecies = typeof PlantSpecies.Boulder | typeof PlantSpecies.Sandstone;
 
@@ -104,7 +104,7 @@ function addBoulder(context: RockContext): void {
     { lichen: 0.14, moss: 0.3 }
   );
 
-  for (const [index, companion] of BOULDER_COMPANIONS[variant % BOULDER_COMPANIONS.length].entries()) {
+  for (const [index, companion] of BOULDER_COMPANIONS[variant].entries()) {
     const angle = random.next() * FULL_TURN + index * 2.4;
     const reach = radius * 0.7 + companion * 0.4;
     const squash = random.between(0.62, 0.85);
@@ -190,7 +190,7 @@ function bandSlot(height: number, seed: number): (point: SurfacePoint) => Materi
 function addSandstone(context: RockContext): void {
   const { builder, level, random, variant } = context;
 
-  const strata = stack(-0.3, SANDSTONE_STRATA[variant % SANDSTONE_STRATA.length]);
+  const strata = stack(-0.3, SANDSTONE_STRATA[variant]);
   const seed = random.next() * 20;
 
   builder.add(facetShape(loft(strataSections(strata, random), STRATA_SEGMENTS[level])), {

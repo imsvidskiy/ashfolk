@@ -2,21 +2,27 @@ import { groundDefinition } from "../../content/grounds.ts";
 import type { WorldRules } from "../../content/world-rules.ts";
 import { clamp, smoothstep } from "../../shared/math.ts";
 import type { RandomSource } from "../../shared/random.ts";
+import { CellSet } from "../../world/cell-set.ts";
 import { NEIGHBOR_OFFSETS } from "../../world/world-grid.ts";
-import { CellSet } from "../world/cell-set.ts";
 import type { WorldState } from "../world/world-state.ts";
 
 const IGNITION_INTENSITY = 0.14;
 const EXTINGUISHED_INTENSITY = 0.02;
 const BURNT_OUT_FUEL = 0.01;
+const LEAST_STARTING_FUEL = 0.01;
 const HEAT_FLOOR = 0.002;
 const HEAT_RETENTION = 0.99;
 const CROWN_BURN_FRACTION = 0.55;
 const DIAGONAL_WIND_DAMPING = 0.72;
 const FULL_WIND_SPEED = 45;
 const MAXIMUM_WIND_STRENGTH = 1.4;
+const DOWNWIND_CELLS = 2;
+const DOWNWIND_WEIGHT = 0.35;
+const LEAST_DOWNWIND_WEIGHT = 0.05;
 const BURNABLE_GROUND_FUEL = 0.02;
 const BURNABLE_CANOPY_FUEL = 0.05;
+const EMBER_CANOPY_FUEL = 0.8;
+const EMBER_INTENSITY = 0.55;
 const SNOW_BLOCKING_IGNITION = 0.3;
 const SOAKING_DAMPNESS = 1.1;
 const GROUND_FIRE_EMISSION = 0.75;
@@ -98,9 +104,9 @@ export class FireSystem {
       this.#windFactors[index] = (push * diagonalDamping) / (1 + 0.3 * strength);
     }
 
-    this.#downwindColumn = Math.round(windX * 2);
-    this.#downwindRow = Math.round(windZ * 2);
-    this.#downwindWeight = 0.35 * strength * influence;
+    this.#downwindColumn = Math.round(windX * DOWNWIND_CELLS);
+    this.#downwindRow = Math.round(windZ * DOWNWIND_CELLS);
+    this.#downwindWeight = DOWNWIND_WEIGHT * strength * influence;
     this.#windStrength = strength;
   }
 
@@ -211,18 +217,15 @@ export class FireSystem {
   }
 
   #nextIntensity(cell: number, intensity: number): number {
-    const { canopyFuel, fields, initialCanopyFuel, terrain } = this.#world;
+    const { canopyFuel, fields, terrain } = this.#world;
 
     const ground = groundDefinition(terrain.ground[cell]);
-    const groundFuel = fields.fuel[cell];
-    const canopy = canopyFuel[cell];
 
-    const availableFuel = Math.min(1, groundFuel * 0.75 + canopy * 0.3);
+    const availableFuel = Math.min(1, fields.fuel[cell] * 0.75 + canopyFuel[cell] * 0.3);
     const dampness =
       Math.max(0, 1 - fields.wetness[cell] * SOAKING_DAMPNESS) * (1 - Math.min(1, fields.snow[cell] * 4));
-    const fuelFraction = (groundFuel + canopy) / Math.max(0.01, ground.fuel + initialCanopyFuel[cell]);
 
-    const flamingPhase = 0.18 + 0.82 * smoothstep(0, 1, (fuelFraction - 0.12) / 0.5);
+    const flamingPhase = 0.18 + 0.82 * smoothstep(0, 1, (this.#fuelShareLeft(cell) - 0.12) / 0.5);
     const target = Math.min(1, (0.25 + availableFuel) * (0.6 + 0.4 * ground.flammability)) * dampness;
 
     return intensity + (target * flamingPhase - intensity) * 0.3;
@@ -251,14 +254,17 @@ export class FireSystem {
   }
 
   #raiseScorch(cell: number): void {
+    const { scorch } = this.#world.fields;
+
+    scorch[cell] = Math.max(scorch[cell], 1 - this.#fuelShareLeft(cell));
+  }
+
+  #fuelShareLeft(cell: number): number {
     const { canopyFuel, fields, initialCanopyFuel, terrain } = this.#world;
 
-    const ground = groundDefinition(terrain.ground[cell]);
-    const fuelLeft = fields.fuel[cell] + canopyFuel[cell];
+    const startingFuel = groundDefinition(terrain.ground[cell]).fuel + initialCanopyFuel[cell];
 
-    const totalFuel = Math.max(0.01, ground.fuel + initialCanopyFuel[cell]);
-
-    fields.scorch[cell] = Math.max(fields.scorch[cell], 1 - fuelLeft / totalFuel);
+    return (fields.fuel[cell] + canopyFuel[cell]) / Math.max(LEAST_STARTING_FUEL, startingFuel);
   }
 
   #burnOut(cell: number, fuelLeft: number, day: number): void {
@@ -315,7 +321,7 @@ export class FireSystem {
   #heatDownwind(column: number, row: number, emittedHeat: number): void {
     const { grid } = this.#world;
 
-    if (this.#downwindWeight <= 0.05 || !grid.contains(column, row)) {
+    if (this.#downwindWeight <= LEAST_DOWNWIND_WEIGHT || !grid.contains(column, row)) {
       return;
     }
 
@@ -323,7 +329,7 @@ export class FireSystem {
   }
 
   #throwEmbers(cell: number, intensity: number, tick: FireTick): void {
-    if (this.#world.canopyFuel[cell] <= 0.8 || intensity <= 0.55) {
+    if (this.#world.canopyFuel[cell] <= EMBER_CANOPY_FUEL || intensity <= EMBER_INTENSITY) {
       return;
     }
 

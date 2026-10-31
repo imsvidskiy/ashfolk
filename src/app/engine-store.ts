@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import type { EngineStatus } from "./engine-launcher.ts";
+import { type EngineStatus, WAKING_STATUS } from "./engine-launcher.ts";
 
 interface EngineStore {
   readonly setStatus: (status: EngineStatus) => void;
@@ -11,6 +11,6 @@ export const useEngineStore = create<EngineStore>()((set) => {
     setStatus: (status) => {
       set({ status });
     },
-    status: { kind: "loading", progress: null },
+    status: WAKING_STATUS,
   };
 });

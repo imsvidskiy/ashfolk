@@ -19,12 +19,10 @@ import {
 } from "three/tsl";
 import {
   Color,
-  DataTexture,
+  type DataTexture,
   LinearFilter,
-  NearestFilter,
   type Node,
   NodeMaterial,
-  type PixelFormat,
   QuadMesh,
   RenderTarget,
   RGBAFormat,
@@ -38,7 +36,7 @@ import {
 import { GROUNDS, Ground, seasonalGroundColor } from "../../content/grounds.ts";
 import type { WorldMirror } from "../../game/world-mirror.ts";
 import { lerp, saturate } from "../../shared/math.ts";
-import { floatDataTexture } from "../data-textures.ts";
+import { cellByteTexture, floatDataTexture } from "../data-textures.ts";
 
 const BYTE = 255;
 const COVER_REACH = 2;
@@ -53,16 +51,6 @@ interface AlbedoSources {
 interface CellLook {
   readonly color: Node<"vec4">;
   readonly isOpen: Node<"float">;
-}
-
-function cellTexture(data: Uint8Array, size: number, format: PixelFormat): DataTexture {
-  const texture = new DataTexture(data, size, size, format, UnsignedByteType);
-
-  texture.minFilter = NearestFilter;
-  texture.magFilter = NearestFilter;
-  texture.needsUpdate = true;
-
-  return texture;
 }
 
 function lushnessData(mirror: WorldMirror): Float32Array {
@@ -116,7 +104,7 @@ function albedoNode({ ground, lushness, palette, size }: AlbedoSources): Node<"v
 
   for (let row = -COVER_REACH; row <= COVER_REACH; row += 1) {
     for (let column = -COVER_REACH; column <= COVER_REACH; column += 1) {
-      const neighbor = lookAt(column, row);
+      const neighbor = column === 0 && row === 0 ? own : lookAt(column, row);
 
       around = around.add(neighbor.color.mul(neighbor.isOpen));
       weight = weight.add(neighbor.isOpen);
@@ -145,7 +133,7 @@ export class GroundAlbedo {
   constructor(mirror: WorldMirror) {
     const size = mirror.grid.cellsPerSide;
 
-    this.#ground = cellTexture(mirror.ground, size, RGBAFormat);
+    this.#ground = cellByteTexture(mirror.ground, size, RGBAFormat);
     this.#lushness = floatDataTexture(lushnessData(mirror), size, size, RGFormat);
     this.#target = new RenderTarget(size, size, {
       colorSpace: SRGBColorSpace,

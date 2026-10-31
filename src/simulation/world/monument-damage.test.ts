@@ -7,6 +7,7 @@ import { type Monument, MonumentDamage } from "../../world/monuments.ts";
 import { NO_PLANT } from "../../world/vegetation-store.ts";
 import { WorldGrid } from "../../world/world-grid.ts";
 import { Simulation } from "../simulation.ts";
+import { valleyHeight } from "../testing/test-simulation.ts";
 import { createVegetatedWorld, type TestWorldOptions } from "../testing/test-world.ts";
 import type { WorldState } from "./world-state.ts";
 
@@ -206,13 +207,7 @@ describe("monument damage", () => {
 
 describe("drowned monuments", () => {
   it("tells when a new lake drowns a monument", () => {
-    const simulation = new Simulation(
-      raiseStoneCircles([{ x: 5, z: -200 }], {
-        heightAt: (x, z) => {
-          return 200 + Math.abs(x - 5) * 0.25 + z * 0.02;
-        },
-      })
-    );
+    const simulation = new Simulation(raiseStoneCircles([{ x: 5, z: -200 }], { heightAt: valleyHeight }));
 
     simulation.waterRecomputation.recompute();
     simulation.usePower("meteor", 0, -200, { craterRadius: 140, fallTime: 0.5 });

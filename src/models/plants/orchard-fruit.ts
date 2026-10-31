@@ -14,6 +14,7 @@ import { FOLIAGE_FLUTTER, type NearLevel, plantSway } from "./tree-mesher.ts";
 const HANGING_STEP = 1.45;
 const FRUIT_SINK = 0.4;
 const PEAR_CENTER = 0.72;
+const PEAR_LENGTH = 2.2;
 
 type FruitShape = "pear" | "round";
 
@@ -41,7 +42,7 @@ interface FruitHost {
   readonly squash: number;
 }
 
-export interface FruitPlacement {
+interface FruitPlacement {
   readonly detail: NearLevel;
   readonly height: number;
   readonly hosts: readonly FruitHost[];
@@ -65,7 +66,7 @@ function fruitShape(look: FruitLook, detail: NearLevel): Shape {
       { radius, y: radius * 0.7 },
       { radius: radius * 0.78, y: radius * 1.35 },
       { radius: radius * 0.42, y: radius * 1.85 },
-      { radius: 0, y: radius * 2.2 },
+      { radius: 0, y: radius * PEAR_LENGTH },
     ],
     segments
   );
@@ -73,7 +74,7 @@ function fruitShape(look: FruitLook, detail: NearLevel): Shape {
 
 function fruitLift(look: FruitLook): number {
   if (look.shape === "pear") {
-    return -look.radius * 2.2 * PEAR_CENTER;
+    return -look.radius * PEAR_LENGTH * PEAR_CENTER;
   }
 
   return 0;

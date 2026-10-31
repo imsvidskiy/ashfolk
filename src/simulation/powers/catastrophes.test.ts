@@ -4,28 +4,15 @@ import { Ground } from "../../content/grounds.ts";
 import { isTreeSpecies, PlantSpecies, plantSpeciesDefinition } from "../../content/plants.ts";
 import { PlantState } from "../../world/vegetation-store.ts";
 import { WorldGrid } from "../../world/world-grid.ts";
+import { isDryLand, type Waypoint } from "../agents/navigation.ts";
 import { Simulation } from "../simulation.ts";
+import { createValleySimulation, VALLEY_DIMENSIONS } from "../testing/test-simulation.ts";
 import { createVegetatedWorld, floodCells, monumentAround, plantInCell } from "../testing/test-world.ts";
 import { raiseTerrain } from "../world/terrain-editing.ts";
+import { naturalStrikeSite } from "./catastrophes.ts";
 
-const VALLEY_SIDES = 0.25;
-const VALLEY_FALL = 0.02;
 const METEOR_Z = -200;
-
-function valleyHeight(x: number, z: number): number {
-  return 200 + Math.abs(x - 5) * VALLEY_SIDES + z * VALLEY_FALL;
-}
-
-function createValley(): Simulation {
-  const simulation = new Simulation(
-    createVegetatedWorld({ dimensions: { cellSize: 10, cellsPerSide: 96 }, heightAt: valleyHeight })
-  );
-
-  simulation.weather.setKind("clear");
-  simulation.waterRecomputation.recompute();
-
-  return simulation;
-}
+const STORMS = 200;
 
 function settle(simulation: Simulation, seconds: number): void {
   for (let elapsed = 0; elapsed < seconds; elapsed += 0.1) {
@@ -44,143 +31,6 @@ function waterCellsWithin(simulation: Simulation, x: number, z: number, radius: 
 function depthAt(simulation: Simulation, x: number, z: number): number {
   return simulation.world.waterDepth(simulation.world.grid.cellAt(x, z));
 }
-
-describe("water after the land changes", () => {
-  it("runs a river down the valley before anything happens", () => {
-    const simulation = createValley();
-
-    expect(simulation.world.water.rivers.length).toBeGreaterThan(0);
-    expect(simulation.world.isWaterAt(0, 0)).toBe(true);
-    expect(simulation.world.water.lakes).toHaveLength(0);
-  });
-
-  it("fills an explosion crater on a river as a pond and lets the river flow on", () => {
-    const simulation = createValley();
-
-    simulation.usePower("explosion", 0, 0, {});
-    settle(simulation, 8);
-
-    expect(simulation.world.water.lakes).toHaveLength(1);
-    expect(depthAt(simulation, 0, 0)).toBeGreaterThan(5);
-    expect(simulation.world.isWaterAt(0, -250)).toBe(true);
-  });
-
-  it("starts filling a crater lake at once and fills it over a few seconds", () => {
-    const simulation = createValley();
-
-    simulation.usePower("meteor", 0, METEOR_Z, { craterRadius: 140, fallTime: 0.5 });
-    settle(simulation, 0.7);
-
-    const early = waterCellsWithin(simulation, 0, METEOR_Z, 120);
-
-    settle(simulation, 1.5);
-
-    const later = waterCellsWithin(simulation, 0, METEOR_Z, 120);
-
-    settle(simulation, 6);
-
-    const full = waterCellsWithin(simulation, 0, METEOR_Z, 120);
-
-    expect(simulation.waterRecomputation.isPending).toBe(false);
-    expect(early).toBeLessThan(later);
-    expect(later).toBeLessThan(full);
-    expect(full).toBeGreaterThan(300);
-    expect(depthAt(simulation, 0, METEOR_Z)).toBeGreaterThan(30);
-  });
-
-  it("draws a river into a crater that tears through its bank", () => {
-    const simulation = createValley();
-
-    expect(simulation.world.isWaterAt(35, 0)).toBe(false);
-
-    simulation.usePower("explosion", 35, 0, { radius: 45 });
-    settle(simulation, 8);
-
-    expect(depthAt(simulation, 35, 0)).toBeGreaterThan(3);
-    expect(simulation.world.isWaterAt(0, -250)).toBe(true);
-  });
-
-  it("dams a river that the rim of a nearby crater falls across", () => {
-    const simulation = createValley();
-
-    const before = simulation.world.water.lakes.length;
-
-    simulation.usePower("explosion", 50, 0, { radius: 45 });
-    settle(simulation, 8);
-
-    const upstream = simulation.world.water.lakes.filter((lake) => {
-      return lake.centerZ > 0 && Math.abs(lake.centerX) < 80;
-    });
-
-    expect(simulation.world.water.lakes.length).toBeGreaterThan(before);
-    expect(upstream.length).toBeGreaterThan(0);
-  });
-
-  it("washes away the buildings that a new lake covers", () => {
-    const simulation = createValley();
-
-    const shelter = simulation.buildings.add({ kind: "tent", rotation: 0, tribeId: 0, x: 5, z: 80 }, simulation.random);
-
-    shelter.progress = 1;
-    raiseTerrain(simulation.world, { radius: 40, x: 5, z: 30 }, 9);
-    settle(simulation, 8);
-
-    expect(simulation.world.isWaterAt(5, 80)).toBe(true);
-    expect(simulation.buildings.all).not.toContain(shelter);
-  });
-
-  it("puts out the fire and clears the shore where lowered land floods", () => {
-    const simulation = createValley();
-    const { world } = simulation;
-
-    const area = world.grid.cellsInRadius(5, 0, 200);
-    const before = waterCellsWithin(simulation, 5, 0, 120);
-    const burningWater = new Set<number>();
-
-    simulation.beginStroke("lower", 5, 0, { radius: 100, strength: 100 });
-    settle(simulation, 2);
-    simulation.endStroke();
-    simulation.usePower("fire", 5, 0, { intensity: 100, radius: 120 });
-
-    for (let elapsed = 0; elapsed < 8; elapsed += 0.1) {
-      simulation.advance(0.1);
-
-      for (const cell of area) {
-        if (world.isWater(cell) && world.isBurning(cell)) {
-          burningWater.add(cell);
-        }
-      }
-    }
-
-    const plantsAtTheWater = area.filter((cell) => {
-      return world.touchesWater(cell) && world.vegetation.countTreesInCell(cell) > 0;
-    });
-
-    expect(waterCellsWithin(simulation, 5, 0, 120)).toBeGreaterThan(before + 10);
-    expect([...burningWater]).toEqual([]);
-    expect(plantsAtTheWater).toEqual([]);
-  });
-
-  it("drowns the plants that the rising water reaches", () => {
-    const simulation = createValley();
-    const { vegetation } = simulation.world;
-
-    simulation.usePower("meteor", 0, METEOR_Z, { craterRadius: 140, fallTime: 0.5 });
-    settle(simulation, 10);
-
-    const drowned = Array.from({ length: vegetation.count }, (_, plant) => {
-      return plant;
-    }).filter((plant) => {
-      const { form } = plantSpeciesDefinition(vegetation.species[plant]);
-
-      const isGrowing = form !== "stone" && form !== "monument";
-
-      return isGrowing && vegetation.isAlive(plant) && simulation.world.touchesWater(vegetation.cell[plant]);
-    });
-
-    expect(drowned).toEqual([]);
-  });
-});
 
 function createForest(): Simulation {
   const simulation = new Simulation(
@@ -224,6 +74,143 @@ function standingTreesOnScorchedGround(simulation: Simulation): number {
 
   return count;
 }
+
+describe("water after the land changes", () => {
+  it("runs a river down the valley before anything happens", () => {
+    const simulation = createValleySimulation();
+
+    expect(simulation.world.water.rivers.length).toBeGreaterThan(0);
+    expect(simulation.world.isWaterAt(0, 0)).toBe(true);
+    expect(simulation.world.water.lakes).toHaveLength(0);
+  });
+
+  it("fills an explosion crater on a river as a pond and lets the river flow on", () => {
+    const simulation = createValleySimulation();
+
+    simulation.usePower("explosion", 0, 0, {});
+    settle(simulation, 8);
+
+    expect(simulation.world.water.lakes).toHaveLength(1);
+    expect(depthAt(simulation, 0, 0)).toBeGreaterThan(5);
+    expect(simulation.world.isWaterAt(0, -250)).toBe(true);
+  });
+
+  it("starts filling a crater lake at once and fills it over a few seconds", () => {
+    const simulation = createValleySimulation();
+
+    simulation.usePower("meteor", 0, METEOR_Z, { craterRadius: 140, fallTime: 0.5 });
+    settle(simulation, 0.7);
+
+    const early = waterCellsWithin(simulation, 0, METEOR_Z, 120);
+
+    settle(simulation, 1.5);
+
+    const later = waterCellsWithin(simulation, 0, METEOR_Z, 120);
+
+    settle(simulation, 6);
+
+    const full = waterCellsWithin(simulation, 0, METEOR_Z, 120);
+
+    expect(simulation.waterRecomputation.isPending).toBe(false);
+    expect(early).toBeLessThan(later);
+    expect(later).toBeLessThan(full);
+    expect(full).toBeGreaterThan(300);
+    expect(depthAt(simulation, 0, METEOR_Z)).toBeGreaterThan(30);
+  });
+
+  it("draws a river into a crater that tears through its bank", () => {
+    const simulation = createValleySimulation();
+
+    expect(simulation.world.isWaterAt(35, 0)).toBe(false);
+
+    simulation.usePower("explosion", 35, 0, { radius: 45 });
+    settle(simulation, 8);
+
+    expect(depthAt(simulation, 35, 0)).toBeGreaterThan(3);
+    expect(simulation.world.isWaterAt(0, -250)).toBe(true);
+  });
+
+  it("dams a river that the rim of a nearby crater falls across", () => {
+    const simulation = createValleySimulation();
+
+    const before = simulation.world.water.lakes.length;
+
+    simulation.usePower("explosion", 50, 0, { radius: 45 });
+    settle(simulation, 8);
+
+    const upstream = simulation.world.water.lakes.filter((lake) => {
+      return lake.centerZ > 0 && Math.abs(lake.centerX) < 80;
+    });
+
+    expect(simulation.world.water.lakes.length).toBeGreaterThan(before);
+    expect(upstream.length).toBeGreaterThan(0);
+  });
+
+  it("washes away the buildings that a new lake covers", () => {
+    const simulation = createValleySimulation();
+
+    const shelter = simulation.buildings.add({ kind: "tent", rotation: 0, tribeId: 0, x: 5, z: 80 }, simulation.random);
+
+    shelter.progress = 1;
+    raiseTerrain(simulation.world, { radius: 40, x: 5, z: 30 }, 9);
+    settle(simulation, 8);
+
+    expect(simulation.world.isWaterAt(5, 80)).toBe(true);
+    expect(simulation.buildings.all).not.toContain(shelter);
+  });
+
+  it("puts out the fire and clears the shore where lowered land floods", () => {
+    const simulation = createValleySimulation();
+    const { world } = simulation;
+
+    const area = world.grid.cellsInRadius(5, 0, 200);
+    const before = waterCellsWithin(simulation, 5, 0, 120);
+    const burningWater = new Set<number>();
+
+    simulation.beginStroke("lower", 5, 0, { radius: 100, strength: 100 });
+    settle(simulation, 2);
+    simulation.endStroke();
+    simulation.usePower("fire", 5, 0, { intensity: 100, radius: 120 });
+
+    for (let elapsed = 0; elapsed < 8; elapsed += 0.1) {
+      simulation.advance(0.1);
+
+      for (const cell of area) {
+        if (world.isWater(cell) && world.isBurning(cell)) {
+          burningWater.add(cell);
+        }
+      }
+    }
+
+    const plantsAtTheWater = area.filter((cell) => {
+      return world.touchesWater(cell) && world.vegetation.countTreesInCell(cell) > 0;
+    });
+
+    expect(waterCellsWithin(simulation, 5, 0, 120)).toBeGreaterThan(before + 10);
+    expect([...burningWater]).toEqual([]);
+    expect(plantsAtTheWater).toEqual([]);
+  });
+
+  it("drowns the plants that the rising water reaches", () => {
+    const simulation = createValleySimulation();
+    const { vegetation } = simulation.world;
+
+    simulation.usePower("meteor", 0, METEOR_Z, { craterRadius: 140, fallTime: 0.5 });
+    settle(simulation, 10);
+
+    const drowned = Array.from({ length: vegetation.count }, (_, plant) => {
+      return plant;
+    }).filter((plant) => {
+      const { form } = plantSpeciesDefinition(vegetation.species[plant]);
+
+      const isGrowing = form !== "stone" && form !== "monument";
+
+      return isGrowing && vegetation.isAlive(plant) && simulation.world.touchesWater(vegetation.cell[plant]);
+    });
+
+    expect(drowned).toEqual([]);
+  });
+});
 
 describe("fire after a blast", () => {
   it("fells the trees around the crater outward and sets the forest beyond burning", () => {
@@ -388,22 +375,118 @@ describe("earthquakes", () => {
       plants: expect.arrayContaining([expect.objectContaining({ name: expect.stringContaining("(fallen)") })]),
     });
   });
+
+  it("leave the cells they throw trees in to regrow and no bare ones", () => {
+    const simulation = createForest();
+    const { world } = simulation;
+    const { vegetation } = world;
+
+    const clearing = world.grid.cellsInRadius(0, 0, 150);
+
+    for (const cell of clearing) {
+      world.clearPlants(cell, true);
+    }
+
+    simulation.usePower("earthquake", 0, 0, { magnitude: 100, radius: 300 });
+
+    const day = Math.fround(simulation.environment.day);
+    const thrownCells = Array.from({ length: vegetation.count }, (_, plant) => {
+      return plant;
+    })
+      .filter((plant) => {
+        return vegetation.state[plant] === PlantState.Fallen;
+      })
+      .map((plant) => {
+        return vegetation.cell[plant];
+      });
+
+    expect(thrownCells.length).toBeGreaterThan(20);
+    expect(
+      thrownCells.filter((cell) => {
+        return !world.recovering.has(cell) || world.disturbedDay[cell] !== day;
+      })
+    ).toEqual([]);
+    expect(
+      clearing.filter((cell) => {
+        return world.recovering.has(cell);
+      })
+    ).toEqual([]);
+  });
+});
+
+function createStormyMeadow(): Simulation {
+  const simulation = new Simulation(createVegetatedWorld({ dimensions: { cellSize: 10, cellsPerSide: 96 } }));
+  const { world } = simulation;
+  const { grid } = world;
+
+  const cells = grid.cellsInRadius(0, 0, grid.worldSize);
+  const north = cells.filter((cell) => {
+    return grid.cellCenterZ(cell) > 0;
+  });
+
+  for (const cell of cells) {
+    world.clearPlants(cell, true);
+  }
+
+  floodCells(
+    world,
+    north.filter((cell) => {
+      return grid.cellCenterX(cell) < 0;
+    }),
+    2
+  );
+
+  for (const cell of north) {
+    if (grid.cellCenterX(cell) >= 0) {
+      world.terrain.coastDistance[cell] = -5;
+    }
+  }
+
+  return simulation;
+}
+
+function naturalStrikeSites(simulation: Simulation): Waypoint[] {
+  const sites: Waypoint[] = [];
+
+  for (let storm = 0; storm < STORMS; storm += 1) {
+    const site = naturalStrikeSite({ x: 0, z: 0 }, simulation.services);
+
+    if (site !== null) {
+      sites.push(site);
+    }
+  }
+
+  return sites;
+}
+
+describe("natural lightning", () => {
+  it("strikes only dry land on the island", () => {
+    const simulation = createStormyMeadow();
+    const { world } = simulation;
+
+    const sites = naturalStrikeSites(simulation);
+
+    expect(sites.length).toBeGreaterThan(0);
+    expect(
+      sites.filter((site) => {
+        return !isDryLand(world, world.grid.cellAt(site.x, site.z));
+      })
+    ).toEqual([]);
+  });
+
+  it("falls back to low dry land when no high ground or forest turns up", () => {
+    const simulation = createStormyMeadow();
+
+    expect(naturalStrikeSites(simulation).length).toBeGreaterThan(STORMS * 0.6);
+  });
 });
 
 describe("determinism", () => {
   function replay(): Simulation {
-    const dimensions = { cellSize: 10, cellsPerSide: 96 };
+    const simulation = createValleySimulation({
+      monuments: [monumentAround(new WorldGrid(VALLEY_DIMENSIONS), 200, 150, 20)],
+    });
 
-    const simulation = new Simulation(
-      createVegetatedWorld({
-        dimensions,
-        heightAt: valleyHeight,
-        monuments: [monumentAround(new WorldGrid(dimensions), 200, 150, 20)],
-      })
-    );
-
-    simulation.weather.setKind("clear");
-    simulation.waterRecomputation.recompute();
     simulation.populate();
     simulation.execute({
       parameters: { craterRadius: 140, fallTime: 0.5 },

@@ -1,16 +1,16 @@
-import { faceTowards } from "../../agents/movement.ts";
 import { carriedFood, pickUp } from "../person.ts";
 import { nearestShore, type ShoreSpot } from "../resources.ts";
 import type { PersonTick } from "../society-context.ts";
 import { learn, markScarce } from "../tribe.ts";
 import { campPoint } from "../tribe-places.ts";
 import { DeliverJob } from "./deliver-job.ts";
-import { Errand, headToBank, type Job } from "./job.ts";
+import { Errand, headToWorkSpot, type Job } from "./job.ts";
 
 const FISHING_SECONDS = 11;
 const CATCH_CHANCE = 0.7;
 const FISH_PER_CATCH = 3;
 const SEARCH_RADIUS = 320;
+const KNOWLEDGE_PER_CAST = 0.5;
 
 export function findFishingSpot(tick: PersonTick): FishJob | null {
   const { person, tribe } = tick;
@@ -31,34 +31,25 @@ export function findFishingSpot(tick: PersonTick): FishJob | null {
 
 class FishJob implements Job {
   readonly kind = "fish";
-  readonly #errand = new Errand(FISHING_SECONDS, "fish");
-  readonly #spot: ShoreSpot;
+  readonly #errand: Errand;
 
   constructor(tick: PersonTick, spot: ShoreSpot) {
-    this.#spot = spot;
-    headToBank(tick.person, spot, tick.context);
+    this.#errand = new Errand(FISHING_SECONDS, "fish", { x: spot.waterX, z: spot.waterZ });
+    headToWorkSpot(tick.person, spot, tick.context);
   }
 
   update(tick: PersonTick): Job | null {
     const progress = this.#errand.update(tick);
 
-    if (progress === "abandoned") {
-      return null;
-    }
-
-    if (progress !== "traveling") {
-      faceTowards(tick.person.mover, this.#spot.waterX, this.#spot.waterZ);
-    }
-
     if (progress !== "finished") {
-      return this;
+      return progress === "abandoned" ? null : this;
     }
 
     if (tick.context.random.chance(CATCH_CHANCE)) {
       pickUp(tick.person, "fish", FISH_PER_CATCH, "fish");
     }
 
-    learn(tick.tribe, 0.5, tick.context.rules);
+    learn(tick.tribe, KNOWLEDGE_PER_CAST, tick.context.rules);
 
     if (carriedFood(tick.person) >= FISH_PER_CATCH) {
       return new DeliverJob(tick);

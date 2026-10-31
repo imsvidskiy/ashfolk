@@ -2,6 +2,7 @@ import { Matrix4 } from "three";
 import { describe, expect, it } from "vitest";
 import { signedVolume } from "../testing/mesh-checks.ts";
 import { MeshBuilder } from "./mesh-builder.ts";
+import { vertexCount } from "./mesh-data.ts";
 import { box, cylinder } from "./shapes.ts";
 import { MIRROR_X, segmentLength, segmentTransform, transformOf } from "./transforms.ts";
 
@@ -83,5 +84,35 @@ describe("mesh builder", () => {
     expect(new Set(copy.channels.slot)).toEqual(new Set([7]));
     expect(new Set(copy.channels.part)).toEqual(new Set([9]));
     expect(copy.bounds.minimum[1]).toBeCloseTo(4.5);
+  });
+
+  it("copies each vertex's own channels after the shapes already placed", () => {
+    const source = new MeshBuilder({
+      sway: (point) => {
+        return point.position.y;
+      },
+    });
+
+    source.add(box(1, 1, 1), { style: { slot: 3 } });
+    source.add(box(1, 1, 1), { style: { slot: 4 }, transform: transformOf({ position: [0, 2, 0] }) });
+
+    const part = source.build();
+    const builder = new MeshBuilder({ slot: 1 });
+
+    builder.add(box(1, 1, 1));
+    builder.addMesh(part, { transform: transformOf({ position: [0, 5, 0] }) });
+
+    const copy = builder.build();
+    const copied = vertexCount(part);
+    const firstCopied = vertexCount(copy) - copied;
+
+    expect(new Set(copy.channels.slot.subarray(0, firstCopied))).toEqual(new Set([1]));
+
+    for (let vertex = 0; vertex < copied; vertex += 1) {
+      const height = part.positions[vertex * 3 + 1];
+
+      expect(copy.channels.slot[firstCopied + vertex]).toBe(height > 1 ? 4 : 3);
+      expect(copy.channels.sway[firstCopied + vertex]).toBe(height);
+    }
   });
 });

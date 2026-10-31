@@ -1,5 +1,6 @@
-import { DEPOSITS, type DepositKind, MINED_DEPOSIT_KINDS } from "../../content/deposits.ts";
-import type { RecipeId, ResourceAmounts } from "../../content/recipes.ts";
+import { DEPOSITS, MINED_DEPOSIT_KINDS, type MinedDepositKind } from "../../content/deposits.ts";
+import type { RecipeId } from "../../content/recipes.ts";
+import type { ResourceAmounts } from "../../content/resources.ts";
 import { isWinter } from "../../content/seasons.ts";
 import { isComplete } from "./buildings.ts";
 import { mineFor } from "./camp-plan.ts";
@@ -26,7 +27,7 @@ export const ERA_WORK_OPTIONS: readonly WorkOption[] = [
 
       const wanted = clayWanted(tick, construction);
 
-      if (!knows(tick.tribe, "pottery") || wanted <= 0 || !isWorthIt(tick, "clay", 1) || !isExpeditionSeason(season)) {
+      if (!knows(tick.tribe, "pottery") || wanted <= 0 || !isWorthIt(tick, "clay") || !isExpeditionSeason(season)) {
         return 0;
       }
 
@@ -42,16 +43,20 @@ export const ERA_WORK_OPTIONS: readonly WorkOption[] = [
         return null;
       }
 
-      return findMineWork(tick, ore);
+      return findMineWork(tick, ore.kind);
     },
     weight: (tick) => {
-      const ore = neediestOre(tick);
-
-      if (ore === null || !isExpeditionSeason(tick.context.environment.season)) {
+      if (!isExpeditionSeason(tick.context.environment.season)) {
         return 0;
       }
 
-      return 2.4 * oreNeed(tick, ore);
+      const ore = neediestOre(tick);
+
+      if (ore === null) {
+        return 0;
+      }
+
+      return 2.4 * ore.need;
     },
   },
   {
@@ -91,7 +96,7 @@ export const ERA_WORK_OPTIONS: readonly WorkOption[] = [
   },
 ];
 
-const ORE_TARGETS: Readonly<Record<DepositKind, number>> = { clay: 0, copper: 14, iron: 14, tin: 9 };
+const ORE_TARGETS: Readonly<Record<MinedDepositKind, number>> = { copper: 14, iron: 14, tin: 9 };
 const POTTERY_CLAY = 6;
 const POTTERY_STOCK = 12;
 const MINERS_SHARE = 8;
@@ -106,6 +111,11 @@ const CRAFT_WEIGHTS: Readonly<Record<RecipeId, number>> = {
   tools: 2.6,
 };
 
+interface OreNeed {
+  kind: MinedDepositKind;
+  need: number;
+}
+
 function clayWanted(tick: PersonTick, construction: ResourceAmounts): number {
   const { tribe } = tick;
 
@@ -114,38 +124,45 @@ function clayWanted(tick: PersonTick, construction: ResourceAmounts): number {
   return amountOf(construction, "clay") + forPottery;
 }
 
-function oreOnTheWay(tick: PersonTick, kind: DepositKind): number {
-  const { resource } = DEPOSITS[kind];
-
-  return tick.context.people.membersOf(tick.tribe).reduce((total, person) => {
-    const minerShare = person.job instanceof MineJob && person.job.ore === kind ? MINERS_SHARE : 0;
-
-    return total + carriedAmount(person, resource) + minerShare;
-  }, 0);
-}
-
-function oreNeed(tick: PersonTick, kind: DepositKind): number {
+function hasCompleteMine(tick: PersonTick, kind: MinedDepositKind): boolean {
   const mine = mineFor(tick.tribe, tick.context, kind);
 
-  if (mine === null || !isComplete(mine)) {
-    return 0;
-  }
-
-  const stocked = tick.tribe.stock[DEPOSITS[kind].resource] + oreOnTheWay(tick, kind);
-
-  return Math.max(0, 1 - stocked / ORE_TARGETS[kind]);
+  return mine !== null && isComplete(mine);
 }
 
-function neediestOre(tick: PersonTick): DepositKind | null {
-  let neediest: DepositKind | null = null;
-  let neediestNeed = 0;
+function oreOnTheWay(tick: PersonTick): Record<MinedDepositKind, number> {
+  const onTheWay: Record<MinedDepositKind, number> = { copper: 0, iron: 0, tin: 0 };
 
-  for (const kind of MINED_DEPOSIT_KINDS) {
-    const need = oreNeed(tick, kind);
+  for (const person of tick.context.people.membersOf(tick.tribe)) {
+    for (const kind of MINED_DEPOSIT_KINDS) {
+      const minerShare = person.job instanceof MineJob && person.job.ore === kind ? MINERS_SHARE : 0;
 
-    if (need > neediestNeed) {
-      neediest = kind;
-      neediestNeed = need;
+      onTheWay[kind] = onTheWay[kind] + carriedAmount(person, DEPOSITS[kind].resource) + minerShare;
+    }
+  }
+
+  return onTheWay;
+}
+
+function neediestOre(tick: PersonTick): OreNeed | null {
+  const mined = MINED_DEPOSIT_KINDS.filter((kind) => {
+    return hasCompleteMine(tick, kind);
+  });
+
+  if (mined.length === 0) {
+    return null;
+  }
+
+  const onTheWay = oreOnTheWay(tick);
+
+  let neediest: OreNeed | null = null;
+
+  for (const kind of mined) {
+    const stocked = tick.tribe.stock[DEPOSITS[kind].resource] + onTheWay[kind];
+    const need = Math.max(0, 1 - stocked / ORE_TARGETS[kind]);
+
+    if (need > (neediest === null ? 0 : neediest.need)) {
+      neediest = { kind, need };
     }
   }
 

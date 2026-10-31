@@ -1,8 +1,78 @@
 import { describe, expect, it } from "vitest";
-import { FULL_TURN } from "../../shared/math.ts";
+import { distanceSquared, FULL_TURN } from "../../shared/math.ts";
+import { NO_PLANT } from "../../world/vegetation-store.ts";
 import { MORNING, SocietyHarness } from "../testing/test-society.ts";
 import { floodCells } from "../testing/test-world.ts";
-import { nearestShore } from "./resources.ts";
+import type { WorldState } from "../world/world-state.ts";
+import { HOT_GROUND, nearestPlant, nearestShore } from "./resources.ts";
+
+interface Search {
+  accepts: (plant: number) => boolean;
+  radius: number;
+  x: number;
+  z: number;
+}
+
+function isAnyShore(): boolean {
+  return true;
+}
+
+function scanAllPlants(world: WorldState, search: Search): number | null {
+  const { fields, grid, vegetation } = world;
+
+  let nearest: number | null = null;
+  let nearestDistance = search.radius * search.radius;
+
+  for (let cell = 0; cell < grid.cellCount; cell += 1) {
+    if (fields.fire[cell] > 0 || fields.heat[cell] > HOT_GROUND || world.isWater(cell)) {
+      continue;
+    }
+
+    for (let plant = vegetation.firstPlantInCell(cell); plant !== NO_PLANT; plant = vegetation.nextPlantInCell(plant)) {
+      const distance = distanceSquared(search.x, search.z, vegetation.x[plant], vegetation.z[plant]);
+
+      if (distance < nearestDistance && search.accepts(plant)) {
+        nearest = plant;
+        nearestDistance = distance;
+      }
+    }
+  }
+
+  return nearest;
+}
+
+describe("plant search", () => {
+  it("finds the plant a full scan finds, passing over burning, hot and flooded cells", () => {
+    const harness = new SocietyHarness();
+
+    const { grid } = harness.world;
+
+    const cells = grid.cellsInRadius(0, 0, 300);
+
+    for (const [index, cell] of cells.entries()) {
+      if (index % 7 === 0) {
+        harness.world.fields.fire[cell] = 0.5;
+      } else if (index % 7 === 1) {
+        harness.world.fields.heat[cell] = HOT_GROUND * 2;
+      }
+    }
+
+    floodCells(harness.world, grid.cellsInRadius(120, -80, 40), 2);
+
+    for (let query = 0; query < 60; query += 1) {
+      const search = {
+        accepts: (plant: number) => {
+          return plant % 3 !== query % 3;
+        },
+        radius: 20 + harness.random.next() * 300,
+        x: harness.random.signed() * 400,
+        z: harness.random.signed() * 400,
+      };
+
+      expect(nearestPlant(harness.world, search)).toBe(scanAllPlants(harness.world, search));
+    }
+  });
+});
 
 describe("fishing", () => {
   it("stands the fisher on the shore rather than at the water's edge", () => {
@@ -21,7 +91,7 @@ describe("fishing", () => {
     });
 
     for (let attempt = 0; attempt < 100; attempt += 1) {
-      const spot = nearestShore(harness.world, { x: 0, z: 0 }, 200, harness.random);
+      const spot = nearestShore(harness.world, { x: 0, z: 0 }, 200, harness.random, isAnyShore);
 
       if (spot === null) {
         throw new Error("Expected a fishing spot");
@@ -52,7 +122,7 @@ describe("staying dry", () => {
     floodCells(harness.world, pond, 2);
 
     const spots = Array.from({ length: 200 }, () => {
-      return nearestShore(harness.world, { x: -25, z: -25 }, 15, harness.random);
+      return nearestShore(harness.world, { x: -25, z: -25 }, 15, harness.random, isAnyShore);
     });
 
     expect(

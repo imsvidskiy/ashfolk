@@ -9,11 +9,11 @@ import { Simulation } from "../simulation/simulation.ts";
 import { createVegetatedWorld } from "../simulation/testing/test-world.ts";
 import { createSimulationWorkerApi, type SimulationWorkerApi } from "./simulation-worker-api.ts";
 
+const TEST_DIMENSIONS = { cellSize: 10, cellsPerSide: 64 };
+
 interface WorldSender {
   createWorld: (request: WorldRequest) => InitialWorld;
 }
-
-const TEST_DIMENSIONS = { cellSize: 10, cellsPerSide: 64 };
 
 function createTestSimulation(): Simulation {
   return new Simulation(createVegetatedWorld({ dimensions: TEST_DIMENSIONS }));
@@ -71,12 +71,7 @@ describe("saving the world", () => {
     return createSimulationWorkerApi(createTestSimulation, createTestSimulation);
   }
 
-  function savedWorld(): SavedWorldState {
-    const api = createApi();
-
-    api.createWorld(DEFAULT_WORLD_REQUEST, ignore);
-    api.advance(0.25, [{ parameters: {}, powerId: "tribe", type: "usePower", x: 0, z: 0 }]);
-
+  function saveOf(api: SimulationWorkerApi): SavedWorldState {
     const saved = api.saveWorld();
 
     if (saved === null) {
@@ -84,6 +79,15 @@ describe("saving the world", () => {
     }
 
     return saved;
+  }
+
+  function savedWorld(request: WorldRequest = DEFAULT_WORLD_REQUEST): SavedWorldState {
+    const api = createApi();
+
+    api.createWorld(request, ignore);
+    api.advance(0.25, [{ parameters: {}, powerId: "tribe", type: "usePower", x: 0, z: 0 }]);
+
+    return saveOf(api);
   }
 
   it("saves nothing before a world exists", () => {
@@ -109,6 +113,19 @@ describe("saving the world", () => {
     const { world } = createApi().loadWorld(saved, ignore);
 
     expect([...world.vegetation.species]).toEqual(savedSpecies);
+  });
+
+  it("saves the request the world was made from, again after loading it", () => {
+    const request: WorldRequest = { options: { ...DEFAULT_WORLD_REQUEST.options, shape: "square" }, seed: 9 };
+    const saved = savedWorld(request);
+
+    expect(saved.request).toEqual(request);
+
+    const api = createApi();
+
+    api.loadWorld(saved, ignore);
+
+    expect(saveOf(api).request).toEqual(request);
   });
 
   it("saves the fingerprint of the generated land", () => {

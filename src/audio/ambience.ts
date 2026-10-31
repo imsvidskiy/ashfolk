@@ -12,6 +12,9 @@ import type { SoundEngine, SoundLoop } from "./sound-engine.ts";
 
 const SAMPLES_PER_SIDE = 7;
 const SAMPLE_COUNT = SAMPLES_PER_SIDE * SAMPLES_PER_SIDE;
+const REACH_VIEW_SHARE = 0.4;
+const NEAREST_REACH = 40;
+const FARTHEST_REACH = 1200;
 const LEVEL_SMOOTHING_SECONDS = 2.5;
 const STARTING_LEVEL = 0.02;
 const RELEASE_SECONDS = 30;
@@ -60,7 +63,7 @@ interface PlayingLayer {
 function landAround(world: AmbienceWorld, view: AmbienceView): LandAround {
   const { grid, terrain } = world;
 
-  const reach = clamp(view.viewDistance * 0.4, 40, 1200);
+  const reach = clamp(view.viewDistance * REACH_VIEW_SHARE, NEAREST_REACH, FARTHEST_REACH);
   const step = (reach * 2) / (SAMPLES_PER_SIDE - 1);
   const shares = { cold: 0, dry: 0, forest: 0, open: 0, swamp: 0 };
   let brook = 0;

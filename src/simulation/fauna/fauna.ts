@@ -1,9 +1,9 @@
 import { ADULT_YOUTH, ANIMALS, type AnimalKind } from "../../content/animals.ts";
 import type { WorldRules } from "../../content/world-rules.ts";
 import { clamp, distanceSquared, FULL_TURN } from "../../shared/math.ts";
-import { createRandom, type RandomSource, type RandomState } from "../../shared/random.ts";
+import { between, createRandom, type RandomSource, type RandomState } from "../../shared/random.ts";
 import type { AnimalPose } from "../../world/agent-poses.ts";
-import { isHopping } from "../agents/hops.ts";
+import type { Hop } from "../agents/hops.ts";
 import {
   createMover,
   hasArrived,
@@ -30,11 +30,22 @@ import { CALM_FEAR, startleAnimal } from "./fear.ts";
 import { canStand, escapeRoute, findNewHome, findPasture, herdKindAt, smallGameAt } from "./habitat.ts";
 
 const HERD_SPREAD = 30;
+const HERD_START_SCATTER = 15;
+const HERD_RETARGET_SECONDS: readonly [number, number] = [25, 65];
+const GRAZE_SECONDS: readonly [number, number] = [4, 12];
+const LINGER_SECONDS: readonly [number, number] = [3, 9];
+const FIRST_GRAZE_SECONDS = 5;
+const GAIT_PHASE_SPREAD = 10;
+const MAMMOTH_GAIT_RATE = 0.55;
+const CALF_OFFSET = 2;
+const SCATTER_ATTEMPTS_PER_HERD = 60;
+const SCATTER_REACH = 0.9;
 const BURNING_GROUND = 0.25;
 const FIRE_DAMAGE_PER_SECOND = 0.5;
 const FEAR_DECAY_PER_SECOND = 0.12;
 const FLEE_REPLAN_SECONDS = 2.5;
 const FIRE_AWARENESS = 60;
+const FIRE_STARTLE_DISTANCE = 5;
 const WANDER_DISTANCE_TO_FOLLOW = 35;
 const CORPSE_SECONDS = 30;
 const FALL_SECONDS = 1.3;
@@ -44,6 +55,7 @@ const MENACE_SEARCH_PADDING = 1;
 const ALERT_SECONDS: readonly [number, number] = [0.6, 1.2];
 const SKITTISH_ALERT_SECONDS: readonly [number, number] = [0.3, 0.6];
 const SKITTISH_REPLAN_SECONDS = 1.2;
+const HUNTER_FEAR = 0.8;
 const PREDATOR_FEAR = 0.9;
 const LIVED_SHARE: readonly [number, number] = [0.05, 0.85];
 const MOST_SMALL_GAME_GROUPS_PER_SQUARE_KILOMETER = 1.3;
@@ -122,7 +134,7 @@ function litterSize(range: readonly [number, number], random: RandomSource): num
 
 function phaseRate(kind: AnimalKind): number {
   if (kind === "mammoth") {
-    return 0.55;
+    return MAMMOTH_GAIT_RATE;
   }
 
   return 1;
@@ -230,7 +242,7 @@ export class FaunaSystem {
     const herd: Herd = { goalX: x, goalZ: z, id: this.#identifiers.next(), kind, memberIds: [], retargetSeconds: 0 };
 
     for (let member = 0; member < size; member += 1) {
-      this.#addAnimal(herd, x + random.signed() * 15, z + random.signed() * 15, random);
+      this.#addAnimal(herd, x + random.signed() * HERD_START_SCATTER, z + random.signed() * HERD_START_SCATTER, random);
     }
 
     this.#addHerd(herd);
@@ -239,56 +251,15 @@ export class FaunaSystem {
   }
 
   populate(herdCount: number, random: RandomSource): number {
-    const { halfSize } = this.#world.grid;
-
-    let created = 0;
-
-    for (let attempt = 0; attempt < herdCount * 60 && created < herdCount; attempt += 1) {
-      const x = random.signed() * halfSize * 0.9;
-      const z = random.signed() * halfSize * 0.9;
-
-      const kind = herdKindAt(this.#world, x, z, random);
-
-      if (kind === null) {
-        continue;
-      }
-
-      const [smallest, largest] = ANIMALS[kind].herdSizeRange;
-
-      this.spawnHerd(kind, x, z, random.integer(smallest, largest + 1), random);
-      created += 1;
-    }
-
-    return created;
+    return this.#scatterHerds(herdCount, random, (x, z) => {
+      return herdKindAt(this.#world, x, z, random);
+    });
   }
 
   populateSmallGame(groupCount: number): number {
-    const random = this.#smallGameRandom;
-    const { halfSize } = this.#world.grid;
-
-    let created = 0;
-
-    for (let attempt = 0; attempt < groupCount * 60 && created < groupCount; attempt += 1) {
-      const x = random.signed() * halfSize * 0.9;
-      const z = random.signed() * halfSize * 0.9;
-
-      const kind = smallGameAt(this.#world, x, z);
-
-      if (kind === null) {
-        continue;
-      }
-
-      const [smallest, largest] = ANIMALS[kind].herdSizeRange;
-
-      const herd = this.spawnHerd(kind, x, z, random.integer(smallest, largest + 1), random);
-
-      if (herd !== null) {
-        this.#ageFounders(herd, random);
-        created += 1;
-      }
-    }
-
-    return created;
+    return this.#scatterHerds(groupCount, this.#smallGameRandom, (x, z) => {
+      return smallGameAt(this.#world, x, z);
+    });
   }
 
   nearestAnimal(x: number, z: number, maximumDistance: number, accepts: (animal: Animal) => boolean): Animal | null {
@@ -431,8 +402,9 @@ export class FaunaSystem {
   }
 
   #addAnimal(herd: Herd, x: number, z: number, random: RandomSource): Animal {
-    const start = this.#spawnPoint(herd, x, z);
     const { bodyRadius, health, lifespanDays } = ANIMALS[herd.kind];
+
+    const start = this.#spawnPoint(herd, x, z);
 
     const animal: Animal = {
       appearanceSeed: random.next(),
@@ -446,16 +418,16 @@ export class FaunaSystem {
       id: this.#identifiers.next(),
       isAlive: true,
       kind: herd.kind,
-      lifeDays: lifespanDays === null ? Number.POSITIVE_INFINITY : random.between(lifespanDays[0], lifespanDays[1]),
+      lifeDays: lifespanDays === null ? Number.POSITIVE_INFINITY : between(random, lifespanDays),
       mover: {
         ...createMover(start.x, start.z, random.next() * FULL_TURN, bodyRadius),
         hopSpeed: hopSpeedOf(herd.kind),
       },
       offsetX: random.signed() * HERD_SPREAD * 0.5,
       offsetZ: random.signed() * HERD_SPREAD * 0.5,
-      phase: random.next() * 10,
+      phase: random.next() * GAIT_PHASE_SPREAD,
       pose: "graze",
-      poseSeconds: random.next() * 5,
+      poseSeconds: random.next() * FIRST_GRAZE_SECONDS,
       speed: 0,
       threatCheckSeconds: random.next(),
       youth: 0,
@@ -487,13 +459,42 @@ export class FaunaSystem {
     return { x: herd.goalX, z: herd.goalZ };
   }
 
-  #ageFounders(herd: Herd, random: RandomSource): void {
-    for (const id of herd.memberIds) {
-      const founder = this.findAnimal(id);
+  #scatterHerds(herdCount: number, random: RandomSource, kindAt: (x: number, z: number) => AnimalKind | null): number {
+    const { halfSize } = this.#world.grid;
 
-      if (founder !== null) {
-        founder.lifeDays *= 1 - random.between(LIVED_SHARE[0], LIVED_SHARE[1]);
+    let created = 0;
+
+    for (let attempt = 0; attempt < herdCount * SCATTER_ATTEMPTS_PER_HERD && created < herdCount; attempt += 1) {
+      const x = random.signed() * halfSize * SCATTER_REACH;
+      const z = random.signed() * halfSize * SCATTER_REACH;
+
+      const kind = kindAt(x, z);
+
+      if (kind === null) {
+        continue;
       }
+
+      const [smallest, largest] = ANIMALS[kind].herdSizeRange;
+
+      const herd = this.spawnHerd(kind, x, z, random.integer(smallest, largest + 1), random);
+
+      if (herd === null) {
+        continue;
+      }
+
+      if (ANIMALS[kind].isSmallGame) {
+        this.#ageFounders(herd, random);
+      }
+
+      created += 1;
+    }
+
+    return created;
+  }
+
+  #ageFounders(herd: Herd, random: RandomSource): void {
+    for (const founder of this.#membersOf(herd)) {
+      founder.lifeDays *= 1 - between(random, LIVED_SHARE);
     }
   }
 
@@ -512,7 +513,7 @@ export class FaunaSystem {
 
     const random = this.#randomFor(herd.kind, tick);
 
-    herd.retargetSeconds = random.between(25, 65);
+    herd.retargetSeconds = between(random, HERD_RETARGET_SECONDS);
 
     const pasture = findPasture(this.#world, herd.kind, leader.mover, random);
 
@@ -570,13 +571,14 @@ export class FaunaSystem {
     }
 
     const packHunt = this.#instincts.huntOf(animal.herdId);
-    const isEngaged = this.#instincts.isEngaged(animal, packHunt);
 
-    this.#lookForThreats(animal, isEngaged, tick);
+    this.#lookForThreats(animal, this.#instincts.isEngaged(animal, packHunt), tick);
     this.#instincts.watchCornered(animal, tick);
 
-    if (isHopping(animal.mover)) {
-      this.#keepHopping(animal, tick);
+    const { hop } = animal.mover;
+
+    if (hop !== null) {
+      this.#keepHopping(animal, tick, hop);
     } else if (isStranded(animal.mover, this.#world)) {
       this.#swimAshore(animal, tick);
     } else if (this.#instincts.isEngaged(animal, packHunt)) {
@@ -591,11 +593,9 @@ export class FaunaSystem {
     this.#keepOnIsland(animal);
   }
 
-  #keepHopping(animal: Animal, tick: FaunaTick): void {
-    const { hop } = animal.mover;
-
+  #keepHopping(animal: Animal, tick: FaunaTick, hop: Hop): void {
     animal.pose = animal.kind === "mammoth" ? "walk" : "run";
-    animal.speed = hop === null ? 0 : hop.speed;
+    animal.speed = hop.speed;
     moveAlong(animal.mover, tick.seconds, animal.speed, this.#world, this.#navigation);
   }
 
@@ -609,8 +609,8 @@ export class FaunaSystem {
     animal.health -= FIRE_DAMAGE_PER_SECOND * tick.seconds;
     startleAnimal(
       animal,
-      animal.mover.x - Math.sin(animal.mover.heading) * 5,
-      animal.mover.z - Math.cos(animal.mover.heading) * 5,
+      animal.mover.x - Math.sin(animal.mover.heading) * FIRE_STARTLE_DISTANCE,
+      animal.mover.z - Math.cos(animal.mover.heading) * FIRE_STARTLE_DISTANCE,
       1
     );
 
@@ -627,12 +627,11 @@ export class FaunaSystem {
     }
 
     const { fleeDistance, isSmallGame } = ANIMALS[animal.kind];
-
-    const [soonest, latest] = isSmallGame ? SKITTISH_ALERT_SECONDS : ALERT_SECONDS;
-
-    animal.threatCheckSeconds = this.#randomFor(animal.kind, tick).between(soonest, latest);
-
     const { x, z } = animal.mover;
+
+    const alertSeconds = isSmallGame ? SKITTISH_ALERT_SECONDS : ALERT_SECONDS;
+
+    animal.threatCheckSeconds = between(this.#randomFor(animal.kind, tick), alertSeconds);
 
     const fire = tick.threats.dangerNear(x, z, FIRE_AWARENESS);
     const hunter = tick.threats.hunterNear(x, z, fleeDistance);
@@ -642,7 +641,7 @@ export class FaunaSystem {
     }
 
     if (hunter !== null && !isEngaged) {
-      startleAnimal(animal, hunter.x, hunter.z, 0.8);
+      startleAnimal(animal, hunter.x, hunter.z, HUNTER_FEAR);
     }
 
     const predator = isSmallGame ? this.#nearestPredator(x, z, fleeDistance) : null;
@@ -718,7 +717,7 @@ export class FaunaSystem {
 
     if (moveAlong(animal.mover, tick.seconds, animal.speed, this.#world, this.#navigation)) {
       animal.pose = "graze";
-      animal.poseSeconds = this.#randomFor(animal.kind, tick).between(4, 12);
+      animal.poseSeconds = between(this.#randomFor(animal.kind, tick), GRAZE_SECONDS);
     }
   }
 
@@ -734,7 +733,7 @@ export class FaunaSystem {
     const targetZ = herd.goalZ + animal.offsetZ;
 
     if (Math.hypot(targetX - animal.mover.x, targetZ - animal.mover.z) <= WANDER_DISTANCE_TO_FOLLOW) {
-      animal.poseSeconds = this.#randomFor(animal.kind, tick).between(3, 9);
+      animal.poseSeconds = between(this.#randomFor(animal.kind, tick), LINGER_SECONDS);
 
       return;
     }
@@ -767,8 +766,9 @@ export class FaunaSystem {
   }
 
   #tryCalving(herd: Herd, chance: number, random: RandomSource): void {
-    const mother = this.#firstMember(herd);
     const { breeding, maximumHerdSize } = ANIMALS[herd.kind];
+
+    const mother = this.#firstMember(herd);
 
     if (mother === null || herd.memberIds.length >= maximumHerdSize) {
       return;
@@ -781,7 +781,7 @@ export class FaunaSystem {
     const litter = litterSize(breeding.litterSize, random);
 
     for (let young = 0; young < litter && herd.memberIds.length < maximumHerdSize; young += 1) {
-      const calf = this.#addAnimal(herd, mother.mover.x + 2, mother.mover.z + 2, random);
+      const calf = this.#addAnimal(herd, mother.mover.x + CALF_OFFSET, mother.mover.z + CALF_OFFSET, random);
 
       calf.youth = 1;
     }
@@ -840,7 +840,7 @@ export class FaunaSystem {
       memberIds: grown.map((member) => {
         return member.id;
       }),
-      retargetSeconds: random.between(25, 65),
+      retargetSeconds: between(random, HERD_RETARGET_SECONDS),
     };
 
     herd.memberIds = herd.memberIds.filter((id) => {

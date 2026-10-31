@@ -6,7 +6,7 @@ import { once, type Pose, STRIDE_TIMING, seconds } from "../rig/pose.ts";
 import type { HumanClip, HumanClipContext } from "./human-clips.ts";
 import { bendAnkle, bendElbow, bendKnee, bendTrunk, bendWrist, moveBody, swingArm, swingLeg } from "./human-joints.ts";
 import { HumanBone } from "./human-skeleton.ts";
-import { CHARGING, cycleLegs, MARCHING } from "./leg-cycles.ts";
+import { bounceBody, CHARGING, cycleLegs, MARCHING, strideScale } from "./leg-cycles.ts";
 import { plantFeet } from "./planted-feet.ts";
 
 export const FIGHT_CLIPS: Readonly<Record<FightPose, HumanClip>> = {
@@ -21,6 +21,7 @@ export const FIGHT_CLIPS: Readonly<Record<FightPose, HumanClip>> = {
 
 const WEAPON_SIDE: Side = -1;
 const GUARD_SIDE: Side = 1;
+const HELD_PHASE = 0.99;
 
 const THRUST_REACH: readonly Keyframe[] = [
   [0, 0],
@@ -49,7 +50,7 @@ const FLINCH_JOLT: readonly Keyframe[] = [
   [0, 0],
   [0.18, 1],
   [0.45, 0.7],
-  [0.99, 0],
+  [HELD_PHASE, 0],
 ];
 
 const FALL_DROP: readonly Keyframe[] = [
@@ -57,7 +58,7 @@ const FALL_DROP: readonly Keyframe[] = [
   [0.2, 0.12],
   [0.55, 0.85],
   [0.66, 1],
-  [0.99, 1],
+  [HELD_PHASE, 1],
 ];
 
 const FALL_STAGGER: readonly Keyframe[] = [
@@ -65,7 +66,7 @@ const FALL_STAGGER: readonly Keyframe[] = [
   [0.16, 1],
   [0.4, 0.6],
   [0.66, 0],
-  [0.99, 0],
+  [HELD_PHASE, 0],
 ];
 
 interface ArmAngles {
@@ -173,12 +174,6 @@ function poseUpperBody(pose: Pose, stance: Stance): void {
   poseArm(pose, WEAPON_SIDE, stance.weaponArm);
 }
 
-function strideOf(context: HumanClipContext): number {
-  const ageFactor = context.ageGroup === "elder" ? 0.8 : 1;
-
-  return context.motion.stride * ageFactor;
-}
-
 function fightingLegs(pose: Pose, crouch: number, lunge: number): void {
   swingLeg(pose, GUARD_SIDE, { forward: degrees(26) + degrees(18) * lunge, outward: degrees(10) });
   bendKnee(pose, GUARD_SIDE, degrees(22) + degrees(26) * crouch + degrees(22) * lunge);
@@ -189,10 +184,11 @@ function fightingLegs(pose: Pose, crouch: number, lunge: number): void {
 }
 
 function march(pose: Pose, phase: number, context: HumanClipContext): void {
-  const swing = cosineWave(phase);
-  const { armSwing } = context.motion;
+  const { armSwing, stride } = context.motion;
 
-  cycleLegs(pose, phase, strideOf(context), MARCHING);
+  const swing = cosineWave(phase);
+
+  cycleLegs(pose, phase, strideScale(context, stride), MARCHING);
   moveBody(pose, { forward: degrees(3), toLeft: degrees(2) * wave(phase), turnLeft: -degrees(4) * swing });
   bendTrunk(pose, HumanBone.Spine, { forward: degrees(2), turnLeft: degrees(4) * swing });
   bendTrunk(pose, HumanBone.Chest, { forward: -degrees(3), turnLeft: degrees(3) * swing });
@@ -204,11 +200,11 @@ function march(pose: Pose, phase: number, context: HumanClipContext): void {
 function charge(pose: Pose, phase: number, context: HumanClipContext): void {
   const swing = cosineWave(phase);
 
-  cycleLegs(pose, phase, strideOf(context), CHARGING);
+  cycleLegs(pose, phase, strideScale(context, context.motion.stride), CHARGING);
   poseUpperBody(pose, SPEAR_LEVELED);
   moveBody(pose, { turnLeft: -degrees(5) * swing });
   bendTrunk(pose, HumanBone.Spine, { forward: degrees(4), turnLeft: degrees(4) * swing });
-  pose.height = 0.05 * Math.max(0, wave(phase * 2, -0.05));
+  bounceBody(pose, phase);
 }
 
 function spearStance(reach: number): Stance {
@@ -261,7 +257,7 @@ function block(pose: Pose, phase: number): void {
 }
 
 function flinch(pose: Pose, phase: number): void {
-  const jolt = keyframes(Math.min(phase, 0.99), FLINCH_JOLT);
+  const jolt = keyframes(Math.min(phase, HELD_PHASE), FLINCH_JOLT);
 
   fightingLegs(pose, 0.3 + 0.5 * jolt, 0);
   moveBody(pose, { forward: -degrees(10) * jolt, toLeft: degrees(5) * jolt, turnLeft: degrees(14) * jolt });
@@ -278,7 +274,7 @@ function flinch(pose: Pose, phase: number): void {
 }
 
 function fall(pose: Pose, phase: number): void {
-  const progress = Math.min(phase, 0.99);
+  const progress = Math.min(phase, HELD_PHASE);
   const drop = keyframes(progress, FALL_DROP);
   const stagger = keyframes(progress, FALL_STAGGER);
   const bounce = arc(progress, 0.62, 0.12) * 0.12;

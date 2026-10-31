@@ -2,9 +2,9 @@ import { BUILDINGS, isEnclosure } from "../../content/buildings.ts";
 import { smoothstep } from "../../shared/math.ts";
 import type { WorldState } from "../world/world-state.ts";
 import { type Building, isComplete } from "./buildings.ts";
-import { tribeBuildings } from "./camp-plan.ts";
 import type { SocietyContext } from "./society-context.ts";
 import type { Tribe } from "./tribe.ts";
+import { tribeBuildings } from "./tribe-places.ts";
 
 const UPDATE_DAYS = 0.1;
 const REGROWTH_PER_DAY = 0.15;
@@ -52,7 +52,7 @@ function treadCamp(wear: Wear, tribe: Tribe, context: SocietyContext): void {
 
   treadPatch(wear, world, { radius: core, wear: 1, x: tribe.campX, z: tribe.campZ });
 
-  for (const building of tribeBuildings(tribe, context)) {
+  for (const building of tribeBuildings(tribe, context.buildings)) {
     treadAround(wear, world, tribe, building);
   }
 }

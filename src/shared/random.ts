@@ -2,6 +2,8 @@ import { uniformFloat64 } from "pure-rand/distribution/uniformFloat64";
 import { xoroshiro128plus, xoroshiro128plusFromState } from "pure-rand/generator/xoroshiro128plus";
 
 const WARM_UP_DRAWS = 4;
+const SEED_RANGE = 2_147_483_647;
+const LABEL_STRIDE = 7919;
 
 export type RandomState = readonly number[];
 
@@ -47,13 +49,11 @@ class SeededRandom implements RandomSource {
   }
 
   pick<Item>(items: readonly Item[]): Item {
-    const item = items[this.integer(0, items.length)];
-
-    if (item === undefined) {
+    if (items.length === 0) {
       throw new RangeError("Cannot pick from an empty list");
     }
 
-    return item;
+    return items[this.integer(0, items.length)];
   }
 
   state(): RandomState {
@@ -65,9 +65,7 @@ class SeededRandom implements RandomSource {
   }
 
   derive(label: number): RandomSource {
-    const seed = Math.floor(this.next() * 2_147_483_647) + label * 7919;
-
-    return createRandom(seed);
+    return randomFromUnitSeed(this.next(), label * LABEL_STRIDE);
   }
 }
 
@@ -82,7 +80,11 @@ export function createRandom(seed: number): RandomSource {
 }
 
 export function randomFromUnitSeed(seed: number, salt: number): RandomSource {
-  return createRandom(Math.floor(seed * 2_147_483_647) + salt);
+  return createRandom(Math.floor(seed * SEED_RANGE) + salt);
+}
+
+export function between(random: RandomSource, range: readonly [number, number]): number {
+  return random.between(range[0], range[1]);
 }
 
 export function shuffle<Items extends { [index: number]: unknown; length: number }>(

@@ -1,6 +1,15 @@
 import { describe, expect, it } from "vitest";
 import type { HeldView } from "../simulation/hand/grab-target.ts";
-import { BOUNCE_HEIGHT, FALL_SHARE, HandMotion, HELD_LIFT, LIFT_SECONDS, landing, liftPop } from "./hand-motion.ts";
+import {
+  BOUNCE_HEIGHT,
+  FALL_SHARE,
+  HandMotion,
+  type HandPose,
+  HELD_LIFT,
+  LIFT_SECONDS,
+  landing,
+  liftPop,
+} from "./hand-motion.ts";
 
 const FRAME = 1 / 60;
 const DEER: HeldView = { id: 4, isPlaceable: true, kind: "animal", x: 0, z: 0 };
@@ -11,8 +20,8 @@ function run(motion: HandMotion, held: HeldView | null, seconds: number): void {
   }
 }
 
-function poseOf(motion: HandMotion, restX = 0, restZ = 0) {
-  const pose = motion.poseOf("animal", DEER.id, restX, restZ);
+function poseOf(motion: HandMotion): HandPose {
+  const pose = motion.poseOf("animal", DEER.id, 0, 0);
 
   if (pose === null) {
     throw new Error("The deer should be in the hand");
@@ -98,8 +107,21 @@ describe("hand motion", () => {
 
     motion.update({ ...DEER, x: 200 }, FRAME);
 
-    expect(poseOf(motion).x).toBeCloseTo(midway.x);
-    expect(poseOf(motion).x).toBeLessThan(100);
+    const regrabbed = poseOf(motion);
+
+    motion.update({ ...DEER, x: 200 }, FRAME);
+
+    const carried = poseOf(motion);
+
+    expect(regrabbed.x).toBeCloseTo(midway.x);
+    expect(regrabbed.x).toBeLessThan(100);
+    expect(midway.lift).toBeGreaterThan(HELD_LIFT);
+    expect(regrabbed.lift).toBeCloseTo(midway.lift);
+    expect(carried.lift).toBeGreaterThan(HELD_LIFT);
+
+    run(motion, { ...DEER, x: 200 }, LIFT_SECONDS * 2);
+
+    expect(poseOf(motion).lift).toBeCloseTo(HELD_LIFT);
   });
 
   it("starts afresh when another thing is grabbed", () => {
@@ -110,5 +132,24 @@ describe("hand motion", () => {
 
     expect(motion.subject).toEqual({ id: 9, kind: "animal" });
     expect(motion.poseOf("animal", 9, 0, 0)).toMatchObject({ lift: 0, x: 40 });
+  });
+
+  it("pops another thing up from the ground while the last one is landing", () => {
+    const motion = new HandMotion();
+    const fresh = new HandMotion();
+    const fawn: HeldView = { ...DEER, id: 9, x: 40 };
+
+    run(motion, DEER, LIFT_SECONDS * 2);
+    motion.update(null, FRAME);
+
+    for (const hand of [motion, fresh]) {
+      hand.update(fawn, FRAME);
+      hand.update(fawn, FRAME);
+    }
+
+    const pose = motion.poseOf("animal", fawn.id, 0, 0);
+
+    expect(pose).toEqual(fresh.poseOf("animal", fawn.id, 0, 0));
+    expect(pose).toMatchObject({ lift: expect.closeTo(HELD_LIFT * liftPop(FRAME)) });
   });
 });

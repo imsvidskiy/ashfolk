@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { render } from "vitest-browser-react";
+import { FINISHED_INTRO } from "../testing/guide-fixtures.ts";
 import { GuideCard } from "./guide-card.tsx";
 import { useGuideStore } from "./guide-store.ts";
-import { FRESH_GUIDE, INTRO_TIPS } from "./guide-tips.ts";
 
 const LOOK_TIP = /Drag to look around/u;
 const PICK_TIP = /Pick Lightning/u;
@@ -29,7 +29,7 @@ describe("guide card", () => {
   });
 
   it("renders nothing once the intro is done and nothing has happened", async () => {
-    useGuideStore.setState({ progress: { ...FRESH_GUIDE, done: [...INTRO_TIPS] } });
+    useGuideStore.setState({ progress: FINISHED_INTRO });
 
     const screen = await render(<GuideCard />);
 

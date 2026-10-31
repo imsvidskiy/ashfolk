@@ -30,7 +30,6 @@ import {
   stanceFor,
 } from "./relations.ts";
 import { envoyText, fallText, stanceNews, truceText } from "./stories.ts";
-import type { Battleground } from "./strikes.ts";
 import { type Claim, claimOf } from "./territory.ts";
 
 const SURVEY_SECONDS = 2;
@@ -87,7 +86,7 @@ function claimFor(tribe: Tribe, context: SocietyContext): Claim {
     return building.tribeId === tribe.id && isComplete(building);
   });
 
-  return claimOf(tribe, tribe.memberCount, buildings);
+  return claimOf(tribe, buildings);
 }
 
 function recordFall(victim: Person, raid: Raid | null): void {
@@ -104,7 +103,7 @@ function recordFall(victim: Person, raid: Raid | null): void {
   raid.fallenDefenders.push(victim.name);
 }
 
-export class RivalrySystem implements Battleground {
+export class RivalrySystem {
   readonly campaigns: RaidCampaigns;
   readonly ledger = new CombatLedger();
   readonly random: RandomSource;
@@ -118,8 +117,8 @@ export class RivalrySystem implements Battleground {
 
   constructor(dependencies: RivalryDependencies) {
     this.#chronicle = dependencies.chronicle;
-    this.#arrows = new ArrowFlights(dependencies.effects);
     this.random = createRandom(dependencies.seed * 13 + 101);
+    this.#arrows = new ArrowFlights(dependencies.effects, this.random);
     this.campaigns = new RaidCampaigns({
       chronicle: dependencies.chronicle,
       random: this.random,
@@ -159,7 +158,7 @@ export class RivalrySystem implements Battleground {
   }
 
   loose(shooter: Person, weapon: CarriedWeapon, foe: Foe): void {
-    this.#arrows.loose(shooter, weapon, foe, this);
+    this.#arrows.loose(shooter, weapon, foe);
   }
 
   slay(victim: Person, slayer: Person, context: SocietyContext): void {
@@ -167,13 +166,14 @@ export class RivalrySystem implements Battleground {
 
     const victimTribe = people.findTribe(victim.tribeId);
     const slayerTribe = people.findTribe(slayer.tribeId);
-    const raid = this.campaigns.raidBetween(victim.tribeId, slayer.tribeId);
 
     if (victimTribe === null || slayerTribe === null) {
       people.kill(victim, "battle");
 
       return;
     }
+
+    const raid = this.campaigns.raidBetween(victimTribe.id, slayerTribe.id);
 
     people.kill(victim, "battle", { category: "death", text: fallText(victim, victimTribe, slayerTribe, raid) });
     recordFall(victim, raid);
@@ -200,7 +200,6 @@ export class RivalrySystem implements Battleground {
       return;
     }
 
-    relation.envoyId = null;
     this.#makePeace(relation, context);
     this.#chronicle.record({
       category: "peace",
@@ -213,7 +212,7 @@ export class RivalrySystem implements Battleground {
 
   update(seconds: number, days: number, context: SocietyContext): void {
     this.ledger.update(seconds);
-    this.#arrows.update(seconds, this, context);
+    this.#arrows.update(seconds, context);
     this.campaigns.advance(seconds, context);
     this.#surveySeconds -= seconds;
     this.#surveyDays += days;
@@ -354,16 +353,18 @@ export class RivalrySystem implements Battleground {
       return;
     }
 
-    if (!sendEnvoy(relation, seeker, host, context)) {
-      this.#makePeace(relation, context);
-      this.#chronicle.record({
-        category: "peace",
-        text: truceText(seeker, host),
-        tribeId: seeker.id,
-        x: (seeker.campX + host.campX) / 2,
-        z: (seeker.campZ + host.campZ) / 2,
-      });
+    if (sendEnvoy(relation, seeker, host, context)) {
+      return;
     }
+
+    this.#makePeace(relation, context);
+    this.#chronicle.record({
+      category: "peace",
+      text: truceText(seeker, host),
+      tribeId: seeker.id,
+      x: (seeker.campX + host.campX) / 2,
+      z: (seeker.campZ + host.campZ) / 2,
+    });
   }
 
   #makePeace(relation: Relation, context: SocietyContext): void {
@@ -378,16 +379,7 @@ export class RivalrySystem implements Battleground {
       })
     );
 
-    for (const relation of this.relations.all) {
-      if (!living.has(relation.first.tribeId)) {
-        this.relations.forgetTribe(relation.first.tribeId);
-      }
-
-      if (!living.has(relation.second.tribeId)) {
-        this.relations.forgetTribe(relation.second.tribeId);
-      }
-    }
-
+    this.relations.forgetVanished(living);
     this.campaigns.forgetVanished(living);
   }
 }

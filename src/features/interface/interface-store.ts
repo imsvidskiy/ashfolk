@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { storedLabelsShown, storedOutlinesShown, storeLabelsShown, storeOutlinesShown } from "../../app/preferences.ts";
+import { storedShown, storeShown } from "../../app/preferences.ts";
 import { COMPACT_QUERY } from "../../design/use-media-query.ts";
 
 export type JournalTab = "chronicle" | "relations" | "tribes";
@@ -27,8 +27,8 @@ export interface InterfaceStore {
 
 export const useInterfaceStore = create<InterfaceStore>()((set) => {
   return {
-    areLabelsShown: storedLabelsShown(),
-    areOutlinesShown: storedOutlinesShown(),
+    areLabelsShown: storedShown("labels"),
+    areOutlinesShown: storedShown("outlines"),
     closeJournal: () => {
       set({ isJournalOpen: false });
     },
@@ -46,11 +46,11 @@ export const useInterfaceStore = create<InterfaceStore>()((set) => {
       set({ journalTab: tab });
     },
     setLabelsShown: (areShown) => {
-      storeLabelsShown(areShown);
+      storeShown("labels", areShown);
       set({ areLabelsShown: areShown });
     },
     setOutlinesShown: (areShown) => {
-      storeOutlinesShown(areShown);
+      storeShown("outlines", areShown);
       set({ areOutlinesShown: areShown });
     },
     setSettingsOpen: (isOpen) => {

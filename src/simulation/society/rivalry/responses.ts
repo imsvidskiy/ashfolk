@@ -1,11 +1,11 @@
 import { hashToUnit } from "../../../shared/math.ts";
-import type { Job, JobKind } from "../jobs/job.ts";
+import type { Job } from "../jobs/job.ts";
 import type { Person } from "../person.ts";
 import type { PersonTick } from "../society-context.ts";
 import { armForHunt, carriedWeapon } from "../weapons.ts";
 import { DefendJob, FightJob, ShelterJob } from "./defense-jobs.ts";
 import { animalFoe } from "./foes.ts";
-import { canFight, isFitToDefend, livingRaiders } from "./raids.ts";
+import { canFight, isBusy, isFitToDefend, livingRaiders } from "./raids.ts";
 
 const CALL_TO_ARMS_RADIUS = 180;
 const GATES_RADIUS = 120;
@@ -14,7 +14,6 @@ const RAIDER_FLIGHT_RADIUS = 60;
 const BEAST_NOTICE_RADIUS = 60;
 const BRAVE_SHARE = 0.7;
 const BRAVERY_SALT = 3.1;
-const STEADY_JOBS: ReadonlySet<JobKind> = new Set(["defend", "envoy", "fight", "flee", "hide", "raid"]);
 
 function answerRaid(tick: PersonTick): Job | null {
   const { context, person, tribe } = tick;
@@ -80,10 +79,6 @@ function answerBeast(tick: PersonTick): Job | null {
   }
 
   return new ShelterJob(tick, null);
-}
-
-export function isBusy(person: Person): boolean {
-  return person.job !== null && STEADY_JOBS.has(person.job.kind);
 }
 
 export function respondToFoes(tick: PersonTick): Job | null {

@@ -23,6 +23,15 @@ describe("grounds", () => {
     expect(lateSummer[0]).toBeGreaterThan(midSummer[0]);
   });
 
+  it("blends late winter into the colors of spring", () => {
+    const spring = seasonalGroundColor(Ground.Meadow, 0.2);
+    const lateWinter = seasonalGroundColor(Ground.Meadow, 3.999);
+
+    for (const [channel, value] of lateWinter.entries()) {
+      expect(value).toBeCloseTo(spring[channel]);
+    }
+  });
+
   it("grows grass on soft ground and none on bare stone or eternal snow", () => {
     const covers = GROUNDS.map((ground) => {
       return ground.grass;

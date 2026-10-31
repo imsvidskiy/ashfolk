@@ -96,7 +96,7 @@ export interface FordSurroundings {
   readonly waterSurfaceAt: (x: number, z: number) => number;
 }
 
-export interface WaterSpan {
+interface WaterSpan {
   readonly end: number;
   readonly start: number;
 }

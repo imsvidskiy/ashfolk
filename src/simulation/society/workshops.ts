@@ -1,17 +1,20 @@
-import { RECIPES, type RecipeId, type ResourceAmounts } from "../../content/recipes.ts";
+import { RECIPES, type RecipeId } from "../../content/recipes.ts";
+import type { ResourceAmounts } from "../../content/resources.ts";
 import { isBetterMaterial, TOOL_MATERIAL_DEFINITIONS, type ToolMaterial } from "../../content/weapons.ts";
 import type { Building } from "./buildings.ts";
-import { completedOfKind } from "./camp-plan.ts";
 import type { SocietyContext } from "./society-context.ts";
 import { amountOf, hasResources } from "./stock.ts";
 import { knows, type Tribe } from "./tribe.ts";
+import { completedOfKind } from "./tribe-places.ts";
 import { headMaterial, METALS_BY_STRENGTH } from "./weapons.ts";
 
 const POTTERY_TARGET = 12;
 const METAL_TARGET = 10;
 const ARROW_TARGET = 36;
 const TOOLSET_METAL = 6;
+const BASE_SPEARS = 2;
 const SPEARS_PER_MEMBER = 0.25;
+const BASE_BOWS = 1;
 const BOWS_PER_MEMBER = 0.2;
 const CRAFT_ORDER: readonly RecipeId[] = ["tools", "pottery", "copper", "bronze", "iron", "spears", "bows", "arrows"];
 
@@ -48,7 +51,7 @@ function isWanted(tribe: Tribe, recipe: RecipeId, construction: ResourceAmounts)
     case "arrows":
       return stock.arrows < ARROW_TARGET;
     case "bows":
-      return stock.bows < 1 + members * BOWS_PER_MEMBER;
+      return stock.bows < BASE_BOWS + members * BOWS_PER_MEMBER;
     case "bronze":
       return stock.bronze < METAL_TARGET;
     case "copper":
@@ -58,7 +61,7 @@ function isWanted(tribe: Tribe, recipe: RecipeId, construction: ResourceAmounts)
     case "pottery":
       return stock.pottery < POTTERY_TARGET + amountOf(construction, "pottery");
     case "spears":
-      return stock.spears < 2 + members * SPEARS_PER_MEMBER;
+      return stock.spears < BASE_SPEARS + members * SPEARS_PER_MEMBER;
     case "tools":
       return nextToolMaterial(tribe) !== null;
     default:
@@ -83,7 +86,7 @@ function resolveOrder(tribe: Tribe, context: SocietyContext, recipe: RecipeId): 
     return null;
   }
 
-  const station = completedOfKind(tribe, context, definition.station);
+  const station = completedOfKind(tribe, context.buildings, definition.station);
 
   if (station === null && definition.station !== "workshop") {
     return null;

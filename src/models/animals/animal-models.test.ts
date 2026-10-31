@@ -1,8 +1,9 @@
 import { Vector3 } from "three";
 import { describe, expect, it, it as test } from "vitest";
-import { ANIMAL_KINDS } from "../../content/animals.ts";
-import { ANIMAL_POSES } from "../../world/agent-poses.ts";
+import { ANIMAL_KINDS, type AnimalKind } from "../../content/animals.ts";
+import { ANIMAL_POSES, type AnimalPose } from "../../world/agent-poses.ts";
 import { type MeshData, mergeMeshes } from "../mesh/mesh-data.ts";
+import type { Triple } from "../mesh/transforms.ts";
 import { Pose } from "../rig/pose.ts";
 import { SkeletonPoser } from "../rig/skeleton-poser.ts";
 import { measureStride } from "../rig/stride.ts";
@@ -17,6 +18,7 @@ import {
 } from "../testing/mesh-connectivity.ts";
 import { posedMesh } from "../testing/moved-mesh.ts";
 import { animalAppearance } from "./animal-appearance.ts";
+import type { AnimalDetailLevel } from "./animal-detail.ts";
 import { ANIMAL_SPECIES, animalBoneScales, buildAnimalParts, poseAnimal } from "./animal-models.ts";
 import { leapPerStride } from "./quadruped-clips.ts";
 import { QuadrupedBone } from "./quadruped-skeleton.ts";
@@ -24,9 +26,9 @@ import { QuadrupedBone } from "./quadruped-skeleton.ts";
 const ADULT = { seed: 0.31, youth: 0 };
 const THINNEST = 0.001;
 const PHASES = [0, 0.25, 0.5, 0.75];
-const LEVELS = ["high", "low", "far"] as const;
+const LEVELS: readonly AnimalDetailLevel[] = ["high", "low", "far"];
 
-function posedAnimal(kind: (typeof ANIMAL_KINDS)[number], clip: (typeof ANIMAL_POSES)[number], phase: number) {
+function posedAnimal(kind: AnimalKind, clip: AnimalPose, phase: number): SkeletonPoser {
   const species = ANIMAL_SPECIES[kind];
 
   const poser = new SkeletonPoser(species.skeleton);
@@ -68,7 +70,6 @@ describe.each(ANIMAL_KINDS)("%s model", (kind) => {
 
       for (const [index, extra] of extras.entries()) {
         const mesh = mergeMeshes([body, extra]);
-
         const detached = loosePieces(mesh);
 
         expect(detached, `${level} ${species.parts[index + 1].name}`).toEqual([]);
@@ -98,7 +99,6 @@ describe.each(ANIMAL_KINDS)("%s model", (kind) => {
           poser.pose(pose, scales);
 
           const posed = posedMesh(mesh, poser);
-
           const loose = loosePieces(posed, TOUCHING, isTorso);
 
           expect(loose, `${level} ${clip} ${phase}`).toEqual([]);
@@ -118,7 +118,7 @@ describe.each(ANIMAL_KINDS)("%s model", (kind) => {
   });
 
   test("uses fewer triangles at every lower level of detail", () => {
-    function count(level: (typeof LEVELS)[number]): number {
+    function count(level: AnimalDetailLevel): number {
       return buildAnimalParts(kind, level).reduce((sum, mesh) => {
         return sum + mesh.indices.length;
       }, 0);
@@ -192,7 +192,7 @@ describe.each(ANIMAL_KINDS)("%s model", (kind) => {
 describe("deer antlers", () => {
   function sinksInto(mesh: MeshData, tine: MeshPiece, beams: readonly MeshPiece[]): boolean {
     return tine.vertices.some((vertex) => {
-      const point: readonly [number, number, number] = [
+      const point: Triple = [
         mesh.positions[vertex * 3],
         mesh.positions[vertex * 3 + 1],
         mesh.positions[vertex * 3 + 2],

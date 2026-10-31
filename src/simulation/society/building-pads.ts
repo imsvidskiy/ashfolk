@@ -95,12 +95,11 @@ export function planPad(
 ): BuildingPad | null {
   const cells = groundUnderFootprint(world.grid, spot, BUILDINGS[kind].footprint);
 
-  if (
-    cells.length === 0 ||
-    !cells.every((cell) => {
-      return canReshape(world, cell);
-    })
-  ) {
+  const canReshapeAll = cells.every((cell) => {
+    return canReshape(world, cell);
+  });
+
+  if (!canReshapeAll) {
     return null;
   }
 

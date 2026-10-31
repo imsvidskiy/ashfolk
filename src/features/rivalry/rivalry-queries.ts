@@ -1,7 +1,14 @@
+import type { TribeSummary } from "../../simulation/frame.ts";
 import type { Stance } from "../../simulation/society/rivalry/relations.ts";
 import type { RaidView, RelationView, RivalryView } from "../../simulation/society/rivalry/rivalry-system.ts";
 
 const STANCE_ORDER: readonly Stance[] = ["hostile", "wary", "neutral", "friendly"];
+
+export function tribeWithId(tribes: readonly TribeSummary[], tribeId: number): TribeSummary | undefined {
+  return tribes.find((tribe) => {
+    return tribe.id === tribeId;
+  });
+}
 
 export function isRelationOf(relation: RelationView, tribeId: number): boolean {
   return relation.firstId === tribeId || relation.secondId === tribeId;

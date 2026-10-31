@@ -39,7 +39,8 @@ bun run test       # unit tests in Node, browser tests in Chromium
 - `/ship <worktree> [auto|light|full]` runs the saved workflow in `.claude/workflows/ship.js` on a committed branch:
   the checks, read-only reviewers from `.claude/agents`, a verifier per finding, one fixer, the `code-style` agent,
   screenshots before and after for rendering or interface changes, and the checks again. Light mode runs only the
-  bugs reviewer; auto picks full for changes over 200 lines or ones that touch the world, simulation, saves or shaders.
+  bugs reviewer; auto picks full for changes over 200 lines or ones that touch the world, generation, the simulation,
+  the game layer, saves or shaders.
 - It doesn't push or open the pull request. Read its report, then push and open the pull request yourself.
 
 ## Rules that are easy to miss
@@ -59,7 +60,7 @@ bun run test       # unit tests in Node, browser tests in Chromium
 - The island edge is one outline per shape, in `rendering/terrain/island-outline.ts`. Terrain, water, grass and rain
   are cut by it. Plants keep clear of the coast through `hasRoomFromCoast`.
 - Shaders are TSL node graphs. Keep large numbers out of float hashes: float32 loses precision past 16 million.
-- The engine projects compile with `noUncheckedIndexedAccess` off for typed arrays; the app keeps it on.
+- The engine project compiles with `noUncheckedIndexedAccess` off for typed arrays; the app and the tooling keep it on.
 - Game things (powers, resources, buildings, weather, events) use `design/game-icon.tsx` with the painted WebP icons
   in `design/icons`; commit only the final WebP, not masters. Interface controls use `lucide-react` in the text
   color.

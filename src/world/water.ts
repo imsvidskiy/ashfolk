@@ -27,7 +27,9 @@ const POND_NARROWEST_SWELL = 0.4;
 const POND_EXTENT_SAMPLES = 256;
 const POND_EXTENT_SLACK = 1.02;
 const POND_FEATURE_SALT = 59.3;
+const POND_DRAWS_PER_FEATURE = 7;
 const REMEMBERED_POND_SHAPES = 1024;
+const SHALLOWEST_WATER = 0.05;
 const NARROWEST_RIVER = 3.5;
 const WIDEST_RIVER = 26;
 const RIVER_WIDTH_PER_STRENGTH = 3.4;
@@ -123,7 +125,7 @@ export function mirroredWater({ lakes, springs, waterfalls }: WaterFeatures): Mi
 }
 
 function featureDraw(spring: Spring, feature: number, index: number): number {
-  return hashToUnit(spring.seed, feature * 7 + index, POND_FEATURE_SALT);
+  return hashToUnit(spring.seed, feature * POND_DRAWS_PER_FEATURE + index, POND_FEATURE_SALT);
 }
 
 function waistOf(spring: Spring, axis: number): PondFeature {
@@ -263,7 +265,7 @@ export function pondEdgeReach(spring: Spring, x: number, z: number): number {
 }
 
 export function hasWater(waterSurface: number, ground: number): boolean {
-  return waterSurface !== NO_WATER && waterSurface > ground + 0.05;
+  return waterSurface !== NO_WATER && waterSurface > ground + SHALLOWEST_WATER;
 }
 
 export function riverWidthOfStrength(strength: number): number {

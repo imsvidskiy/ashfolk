@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { FINISHED_INTRO } from "../testing/guide-fixtures.ts";
 import {
   applyGuideEvent,
   currentTip,
@@ -6,12 +7,9 @@ import {
   FRESH_GUIDE,
   type GuideEvent,
   type GuideProgress,
-  INTRO_TIPS,
   isGuideTipId,
   suggestedPowerId,
 } from "./guide-tips.ts";
-
-const FINISHED_INTRO: GuideProgress = { ...FRESH_GUIDE, done: [...INTRO_TIPS] };
 
 function applyAll(progress: GuideProgress, events: readonly GuideEvent[]): GuideProgress {
   return events.reduce(applyGuideEvent, progress);
@@ -45,6 +43,13 @@ describe("guide tips", () => {
 
   it("does not count slowing time as a faster speed", () => {
     expect(applyGuideEvent(FRESH_GUIDE, { kind: "speedChanged", speed: 1 }).done).toEqual([]);
+  });
+
+  it("keeps the same progress when an event changes nothing", () => {
+    const looked = applyGuideEvent(FRESH_GUIDE, { kind: "cameraMoved" });
+
+    expect(applyGuideEvent(looked, { kind: "cameraMoved" })).toBe(looked);
+    expect(applyGuideEvent(FINISHED_INTRO, { kind: "season", name: "Summer" })).toBe(FINISHED_INTRO);
   });
 
   it("skips the intro tip on dismiss", () => {

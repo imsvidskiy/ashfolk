@@ -37,11 +37,7 @@ function selectedTribeIdOf(state: { readonly snapshot: WorldSnapshot | null }): 
   return inspection.summary.id;
 }
 
-function moodOf(rivalry: RivalryView | undefined, tribeId: number): TribeMood {
-  if (rivalry === undefined) {
-    return "calm";
-  }
-
+function moodOf(rivalry: RivalryView, tribeId: number): TribeMood {
   if (raidOf(rivalry, tribeId) !== null) {
     return "raiding";
   }
@@ -154,7 +150,7 @@ function TribeLabels() {
   });
   const selectedTribeId = useWorldStore(selectedTribeIdOf);
 
-  if (tribes === undefined || tribes.length === 0) {
+  if (tribes === undefined || rivalry === undefined || tribes.length === 0) {
     return null;
   }
 

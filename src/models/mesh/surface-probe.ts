@@ -29,9 +29,14 @@ function everyTriangle(): boolean {
 }
 
 function readCorners(surface: Surface, triangle: number, corners: Corners): void {
-  for (const [corner, target] of corners.entries()) {
-    target.fromArray(surface.positions, surface.indices[triangle * 3 + corner] * 3);
-  }
+  const { indices, positions } = surface;
+  const [first, second, third] = corners;
+
+  const offset = triangle * 3;
+
+  first.fromArray(positions, indices[offset] * 3);
+  second.fromArray(positions, indices[offset + 1] * 3);
+  third.fromArray(positions, indices[offset + 2] * 3);
 }
 
 function crossingDistance(origin: Vector3, direction: Vector3, corners: Corners): number | null {

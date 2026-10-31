@@ -1,22 +1,19 @@
 import type { Waypoint } from "../../agents/navigation.ts";
-import { dropCarrying, isCarryingAnything, walkSpeed } from "../person.ts";
+import { dropCarrying, walkSpeed } from "../person.ts";
 import type { PersonTick } from "../society-context.ts";
-import { completedBuilding, nearCamp } from "../tribe-places.ts";
+import { campPoint, completedBuilding, nearPoint } from "../tribe-places.ts";
 import { headTo, type Job, walk } from "./job.ts";
 
 const HEAVY_LOAD = 3;
 const HEAVY_LOAD_SPEED = 0.85;
+const DROP_SPREAD = 3;
 
 function deliveryPoint(tick: PersonTick): Waypoint {
-  const { random } = tick.context;
+  const { buildings, random } = tick.context;
 
-  const storehouse = completedBuilding(tick.context.buildings, tick.tribe.buildings.storehouseId);
+  const storehouse = completedBuilding(buildings, tick.tribe.buildings.storehouseId);
 
-  if (storehouse === null) {
-    return nearCamp(tick.tribe, 3, random);
-  }
-
-  return { x: storehouse.x + random.signed() * 3, z: storehouse.z + random.signed() * 3 };
+  return nearPoint(storehouse === null ? campPoint(tick.tribe) : storehouse, DROP_SPREAD, random);
 }
 
 function storeCarrying(tick: PersonTick): void {
@@ -39,7 +36,7 @@ export class DeliverJob implements Job {
   update(tick: PersonTick): Job | null {
     const { carrying } = tick.person;
 
-    const isHeavy = isCarryingAnything(tick.person) && carrying.item !== "berries" && carrying.amount > HEAVY_LOAD;
+    const isHeavy = carrying.item !== "berries" && carrying.amount > HEAVY_LOAD;
 
     if (!walk(tick, walkSpeed(tick.person) * (isHeavy ? HEAVY_LOAD_SPEED : 1))) {
       return this;

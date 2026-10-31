@@ -12,13 +12,11 @@ import type { PowerSelection } from "../../game/tools/power-tool.ts";
 import type { SimulationCommand } from "../../simulation/commands.ts";
 import { Simulation } from "../../simulation/simulation.ts";
 import { createVegetatedWorld } from "../../simulation/testing/test-world.ts";
+import { createListeners } from "./listener-fixtures.ts";
+
+export const TEST_DIMENSIONS = { cellSize: 10, cellsPerSide: 64 };
 
 const TEST_CAMERA: CameraState = { distance: 300, pitch: 0.6, targetX: 0, targetZ: 0, yaw: 0.8 };
-
-interface Renders {
-  readonly renderFrame: () => void;
-  readonly subscribeToRenders: (listener: () => void) => () => void;
-}
 
 interface TestEngine {
   readonly clearSelection: Mock<() => void>;
@@ -38,30 +36,19 @@ interface TestEngineOptions {
   readonly landmarks?: readonly Landmark[];
 }
 
-function createRenders(): Renders {
-  const listeners = new Set<() => void>();
-
-  return {
-    renderFrame: () => {
-      for (const listener of listeners) {
-        listener();
-      }
-    },
-    subscribeToRenders: (listener) => {
-      listeners.add(listener);
-
-      return () => {
-        listeners.delete(listener);
-      };
-    },
-  };
-}
-
 export async function createTestSession(): Promise<GameSession> {
-  const simulation = new Simulation(createVegetatedWorld({ dimensions: { cellSize: 10, cellsPerSide: 64 } }));
+  const simulation = new Simulation(createVegetatedWorld({ dimensions: TEST_DIMENSIONS }));
   const { session } = await createLocalSession(simulation);
 
   return session;
+}
+
+export function nextFrame(): Promise<void> {
+  return new Promise((resolve) => {
+    requestAnimationFrame(() => {
+      resolve();
+    });
+  });
 }
 
 export async function startTestEngine(options: TestEngineOptions = {}): Promise<TestEngine> {
@@ -69,7 +56,7 @@ export async function startTestEngine(options: TestEngineOptions = {}): Promise<
   let { landmarks = [] } = options;
 
   const session = await createTestSession();
-  const { renderFrame, subscribeToRenders } = createRenders();
+  const renders = createListeners();
   const camera = {
     camera: { matrixWorld: new Matrix4() },
     groundFootprint: () => {
@@ -120,7 +107,7 @@ export async function startTestEngine(options: TestEngineOptions = {}): Promise<
     session,
     setOutlinesShown: vi.fn<(areShown: boolean) => void>(),
     stopFollowing,
-    subscribeToRenders,
+    subscribeToRenders: renders.subscribe,
   };
 
   useEngineStore.setState({ status: { engine, kind: "ready" } });
@@ -131,7 +118,7 @@ export async function startTestEngine(options: TestEngineOptions = {}): Promise<
     focusOn,
     followSelection,
     placeLabel,
-    renderFrame,
+    renderFrame: renders.emit,
     send,
     setFollowing,
     setLandmarks,

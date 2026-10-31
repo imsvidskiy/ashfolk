@@ -17,7 +17,7 @@ branch. You don't push and don't open pull requests.
 
 ## Finishing
 
-1. Run `bun run check`, `bun run typecheck` and `bun run test`. When a browser test fails, run its file once more
-   alone; report it as flaky only if it passes then.
+1. Run `bun run check`, `bun run typecheck`, `bun run knip` and `bun run test`. When a browser test fails, run its
+   file once more alone; report it as flaky only if it passes then.
 2. Commit with a Conventional Commit message per CONTRIBUTING.md, without trailers.
 3. Report each finding as fixed or left, with the reason, and the commits you made.

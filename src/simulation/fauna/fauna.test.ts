@@ -397,6 +397,36 @@ describe("hares", () => {
     expect(fauna.herds.length).toBeGreaterThan(1);
   });
 
+  it("found no new groups once the island holds as many as it can feed", () => {
+    const { fauna } = createFauna();
+
+    const settled = fauna.populateSmallGame(4);
+
+    runFor(fauna, 150, { days: 0.01, season: SUMMER });
+
+    expect(fauna.herds.length).toBeLessThanOrEqual(settled);
+    expect(
+      fauna.herds.some((herd) => {
+        return herd.memberIds.length === ANIMALS.hare.maximumHerdSize;
+      })
+    ).toBe(true);
+  });
+
+  it("start part-way through their lives when they settle the island", () => {
+    const { fauna } = createFauna();
+    const { lifespanDays } = ANIMALS.hare;
+
+    fauna.populateSmallGame(4);
+
+    const shortestLife = Math.min(
+      ...hares(fauna).map((hare) => {
+        return hare.lifeDays;
+      })
+    );
+
+    expect(shortestLife).toBeLessThan(lifespanDays === null ? 0 : lifespanDays[0]);
+  });
+
   it("die of age within a few years while deer live on", () => {
     const { fauna } = createFauna();
 

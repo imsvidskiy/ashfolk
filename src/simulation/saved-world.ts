@@ -10,14 +10,19 @@ import type { WorldState } from "./world/world-state.ts";
 export const SAVE_VERSION = 1;
 
 const LARGEST_CELLS_PER_SIDE = 4096;
+const SPECIES_CODES = 256;
 const MISSING_SPECIES = -1;
 const FEWEST_TELLING_RIVER_POINTS = 50;
 const SHARE_OF_RIVER_ON_WATER = 0.9;
 const SPECIES_BY_NAME = new Map<string, number>(Object.entries(PlantSpecies));
 
-export const PLANT_SPECIES_NAMES: readonly string[] = [...SPECIES_BY_NAME.keys()].sort((first, second) => {
-  return speciesNamed(first) - speciesNamed(second);
-});
+export const PLANT_SPECIES_NAMES: readonly string[] = [...SPECIES_BY_NAME]
+  .sort(([, first], [, second]) => {
+    return first - second;
+  })
+  .map(([name]) => {
+    return name;
+  });
 
 const OLDER_SAVE_PLANT_SPECIES = [
   "Spruce",
@@ -182,7 +187,7 @@ function doRiversFollowTerrain(world: WorldState): boolean {
 }
 
 export function restoreSavedWorld(simulation: Simulation, state: SavedWorldState): void {
-  const currentSpecies = new Int16Array(256).fill(MISSING_SPECIES);
+  const currentSpecies = new Int16Array(SPECIES_CODES).fill(MISSING_SPECIES);
 
   for (const [savedSpecies, name] of state.plantSpecies.entries()) {
     currentSpecies[savedSpecies] = speciesNamed(name);

@@ -5,7 +5,7 @@ import { isClosed, shellsOf, withoutBuriedOverlaps, withoutBuriedTriangles } fro
 import { type MeshData, mergeMeshes, vertexCount } from "../mesh/mesh-data.ts";
 import { MONUMENT_HEIGHTS, meshMonument } from "../structures/monuments.ts";
 import { berryClusters } from "./berries.ts";
-import { CACTUS_FORMS, cactusForm, meshCactus } from "./cacti.ts";
+import { CACTUS_FORMS, CACTUS_HEIGHT, meshCactus } from "./cacti.ts";
 import { isOrchardModel, meshOrchardPlant, ORCHARD_HEIGHTS, ORCHARD_VARIANT_COUNTS } from "./orchard-plants.ts";
 import { isRockModel, meshRock, ROCK_HEIGHTS, ROCK_VARIANT_COUNTS } from "./rocks.ts";
 import { BROADLEAF_LOOK, isDistantLevel, meshTree, type PlantDetailLevel, type TreeLook } from "./tree-mesher.ts";
@@ -74,6 +74,7 @@ const CANONICAL_HEIGHTS: Readonly<Record<PlantSpeciesIndex, number>> = {
   ...ROCK_HEIGHTS,
   ...MONUMENT_HEIGHTS,
   ...ORCHARD_HEIGHTS,
+  [PlantSpecies.Cactus]: CACTUS_HEIGHT,
 };
 
 const CROWNS_WITHOUT_BURIED_FOLIAGE: ReadonlySet<PlantSpeciesIndex> = new Set([
@@ -137,7 +138,7 @@ export function buildPlantVariant(species: PlantSpeciesIndex, variant: number, l
   const seed = variantSeed(species, variant);
 
   if (species === PlantSpecies.Cactus) {
-    return meshCactus(seed, level, cactusForm(variant));
+    return meshCactus(seed, level, CACTUS_FORMS[variant]);
   }
 
   if (isRockModel(species)) {

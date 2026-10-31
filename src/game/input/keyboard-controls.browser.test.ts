@@ -1,6 +1,7 @@
 import { PerspectiveCamera } from "three/webgpu";
 import { afterEach, describe, expect, it } from "vitest";
 import { GodCamera } from "../camera/god-camera.ts";
+import { flatGround, settle } from "../testing/view-fixtures.ts";
 import { KeyboardControls } from "./keyboard-controls.ts";
 
 const WORLD_HALF_SIZE = 4000;
@@ -13,17 +14,11 @@ interface Rig {
 const rigs: Rig[] = [];
 
 function createRig(): Rig {
-  const camera = new GodCamera(
-    new PerspectiveCamera(45, 1.5, 1, 40_000),
-    () => {
-      return 0;
-    },
-    WORLD_HALF_SIZE
-  );
+  const camera = new GodCamera(new PerspectiveCamera(45, 1.5, 1, 40_000), flatGround, WORLD_HALF_SIZE);
 
   camera.jumpTo({ distance: 500, targetX: 0, targetZ: 0, yaw: 0 });
 
-  const rig = { camera, controls: new KeyboardControls(window, camera) };
+  const rig = { camera, controls: new KeyboardControls(camera) };
 
   rigs.push(rig);
 
@@ -34,12 +29,9 @@ function press(target: EventTarget, code: string): void {
   target.dispatchEvent(new KeyboardEvent("keydown", { bubbles: true, cancelable: true, code }));
 }
 
-function settle(rig: Rig): void {
+function applyHeldKeys(rig: Rig): void {
   rig.controls.update(0.5);
-
-  for (let step = 0; step < 60; step += 1) {
-    rig.camera.update(0.1);
-  }
+  settle(rig.camera);
 }
 
 describe("keyboard controls", () => {
@@ -55,7 +47,7 @@ describe("keyboard controls", () => {
     const rig = createRig();
 
     press(window, "ArrowUp");
-    settle(rig);
+    applyHeldKeys(rig);
 
     expect(rig.camera.state.targetZ).toBeLessThan(-100);
   });
@@ -77,7 +69,7 @@ describe("keyboard controls", () => {
 
     press(window, "ArrowUp");
     window.dispatchEvent(new KeyboardEvent("keyup", { code: "ArrowUp" }));
-    settle(rig);
+    applyHeldKeys(rig);
 
     expect(rig.camera.state.targetZ).toBeCloseTo(0, 3);
   });
@@ -88,7 +80,7 @@ describe("keyboard controls", () => {
 
     document.body.append(field);
     press(field, "ArrowUp");
-    settle(rig);
+    applyHeldKeys(rig);
 
     expect(rig.camera.state.targetZ).toBeCloseTo(0, 3);
   });
@@ -102,7 +94,7 @@ describe("keyboard controls", () => {
     });
     document.body.append(tabs);
     press(tabs, "ArrowRight");
-    settle(rig);
+    applyHeldKeys(rig);
 
     expect(rig.camera.state.targetX).toBeCloseTo(0, 3);
   });

@@ -1,19 +1,9 @@
 import { describe, expect, it, onTestFinished, vi } from "vitest";
 import { defaultPowerParameters } from "../../content/powers.ts";
 import type { PowerSelection } from "../../game/tools/power-tool.ts";
+import { addCanvas } from "../testing/canvas-fixtures.ts";
 import { connectPowers } from "./connect-powers.ts";
 import { usePowerStore } from "./power-store.ts";
-
-function addCanvas(): HTMLCanvasElement {
-  const canvas = document.createElement("canvas");
-
-  document.body.append(canvas);
-  onTestFinished(() => {
-    canvas.remove();
-  });
-
-  return canvas;
-}
 
 function connectSpy() {
   const canvas = addCanvas();

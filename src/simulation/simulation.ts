@@ -134,20 +134,20 @@ export class Simulation {
   readonly fauna: FaunaSystem;
   readonly fire: FireSystem;
   readonly hazards: HazardMap;
-  readonly identifiers = new IdentifierSource();
   readonly navigation: NavigationGrid;
   readonly random: RandomSource;
   readonly rivalry: RivalrySystem;
   readonly services: PowerServices;
   readonly society: SocietySystem;
-  readonly surface: SurfaceSystem;
-  readonly tornadoes = new TornadoSystem();
   readonly volcanoes = new VolcanoSystem();
   readonly waterRecomputation: WaterRecomputation;
   readonly weather = new WeatherSystem();
   readonly world: WorldState;
   readonly #faunaThreats: FaunaThreats;
   readonly #frameBuilder: FrameBuilder;
+  readonly #identifiers = new IdentifierSource();
+  readonly #surface: SurfaceSystem;
+  readonly #tornadoes = new TornadoSystem();
   readonly #vegetationGrowth: VegetationGrowthSystem;
   #grab: Grab | null = null;
   #isPaused: boolean;
@@ -168,15 +168,15 @@ export class Simulation {
     this.fire = new FireSystem(this.world);
     this.hazards = new HazardMap(this.world, this.fire);
     this.embers = new EmberSystem(this.world, this.effects);
-    this.surface = new SurfaceSystem(this.world);
+    this.#surface = new SurfaceSystem(this.world);
     this.#vegetationGrowth = new VegetationGrowthSystem(this.world);
     this.waterRecomputation = new WaterRecomputation(this.world);
-    this.fauna = new FaunaSystem(this.world, this.navigation, this.identifiers);
-    this.buildings = new BuildingSystem(this.world, this.identifiers);
+    this.fauna = new FaunaSystem(this.world, this.navigation, this.#identifiers);
+    this.buildings = new BuildingSystem(this.world, this.#identifiers);
     this.society = new SocietySystem({
       buildings: this.buildings,
       chronicle: this.chronicle,
-      identifiers: this.identifiers,
+      identifiers: this.#identifiers,
       world: this.world,
     });
     this.rivalry = new RivalrySystem({ chronicle: this.chronicle, effects: this.effects, seed: generated.seed });
@@ -203,7 +203,7 @@ export class Simulation {
       this.#tasks.length > 0 ||
       this.#stroke !== null ||
       this.#grab !== null ||
-      this.tornadoes.isActive ||
+      this.#tornadoes.isActive ||
       this.waterRecomputation.isPending
     );
   }
@@ -281,14 +281,14 @@ export class Simulation {
       fauna: this.fauna.snapshot(),
       fire: this.fire.snapshot(),
       hazards: this.hazards.snapshot(),
-      identifiers: this.identifiers.upcoming,
+      identifiers: this.#identifiers.upcoming,
       isPaused: this.#isPaused,
       random: this.random.state(),
       rivalry: this.rivalry.snapshot(this.society.people),
       rules: structuredClone(this.rules),
       society: this.society.snapshot(),
       speed: this.#speed,
-      surfaceRow: this.surface.nextRow,
+      surfaceRow: this.#surface.nextRow,
       tick: this.#tick,
       tickBacklog: this.#tickBacklog,
       vegetationGrowth: this.#vegetationGrowth.snapshot(),
@@ -307,12 +307,12 @@ export class Simulation {
     this.calendar.restore(snapshot.calendar);
     this.weather.restore(snapshot.weather);
     this.chronicle.restore(snapshot.chronicle);
-    this.identifiers.restore(snapshot.identifiers);
+    this.#identifiers.restore(snapshot.identifiers);
     this.random.restore(snapshot.random);
     this.fire.restore(snapshot.fire);
     this.embers.restore(snapshot.embers);
     this.hazards.restore(snapshot.hazards);
-    this.surface.restore(snapshot.surfaceRow);
+    this.#surface.restore(snapshot.surfaceRow);
     this.#vegetationGrowth.restore(snapshot.vegetationGrowth);
     this.buildings.restore(snapshot.buildings);
     this.society.restore(snapshot.society);
@@ -320,14 +320,14 @@ export class Simulation {
     this.rivalry.restore(snapshot.rivalry, this.society);
     this.volcanoes.restore(snapshot.volcanoes === undefined ? [] : snapshot.volcanoes);
     this.setRules(readWorldRules(snapshot.rules));
-    this.services.environment = describeEnvironment(this.calendar, this.weather);
+    this.services.environment = this.environment;
     this.#isPaused = snapshot.isPaused;
     this.#speed = snapshot.speed;
     this.#tick = snapshot.tick;
     this.#tickBacklog = snapshot.tickBacklog;
     this.#viewFocus = { ...snapshot.viewFocus };
     this.#tasks = [];
-    this.tornadoes.clear();
+    this.#tornadoes.clear();
     this.#stroke = null;
     this.#grab = null;
     this.#notices = [];
@@ -357,7 +357,7 @@ export class Simulation {
     this.#recordOutcome(applyPower(powerId, parameters, target, this.services));
   }
 
-  beginStroke(powerId: PowerId, x: number, z: number, values: Readonly<Record<string, unknown>>): void {
+  beginStroke(powerId: PowerId, x: number, z: number, values: unknown): void {
     const parameters = parsePowerParameters(powerId, values);
 
     if (parameters === null) {
@@ -534,7 +534,7 @@ export class Simulation {
     this.chronicle.day = this.calendar.day;
     this.#updateWeather(days);
 
-    const environment = describeEnvironment(this.calendar, this.weather);
+    const { environment } = this;
 
     this.services.environment = environment;
     this.#updateNature(days, environment);
@@ -568,11 +568,11 @@ export class Simulation {
       chronicle: this.chronicle,
       effects: this.effects,
       embers: this.embers,
-      environment: describeEnvironment(this.calendar, this.weather),
+      environment: this.environment,
       fauna: this.fauna,
       fire: this.fire,
       hazards: this.hazards,
-      identifiers: this.identifiers,
+      identifiers: this.#identifiers,
       navigation: this.navigation,
       people: this.society,
       random: this.random,
@@ -581,7 +581,7 @@ export class Simulation {
       schedule: (delaySeconds, run) => {
         this.#schedule(delaySeconds, run);
       },
-      tornadoes: this.tornadoes,
+      tornadoes: this.#tornadoes,
       volcanoes: this.volcanoes,
       world: this.world,
     };
@@ -614,7 +614,6 @@ export class Simulation {
       canSettleRoughGround,
       context: this.services,
       people: STARTING_TRIBE_SIZE,
-      technologies: [],
       x,
       z,
     });
@@ -686,7 +685,7 @@ export class Simulation {
 
   #settleNewWater(): void {
     for (const building of [...this.buildings.all]) {
-      if (building.cell >= 0 && this.world.isWater(building.cell)) {
+      if (this.world.isWater(building.cell)) {
         this.buildings.remove(building, "destroyed");
       }
     }
@@ -750,9 +749,9 @@ export class Simulation {
     this.embers.update(TICK_SECONDS, (ember) => {
       this.#landEmber(ember);
     });
-    this.tornadoes.update(TICK_SECONDS, this.services);
+    this.#tornadoes.update(TICK_SECONDS, this.services);
     this.volcanoes.update(TICK_SECONDS, this.services);
-    this.surface.update(TICK_SECONDS, days, environment, rules);
+    this.#surface.update(TICK_SECONDS, days, environment, rules);
     this.#vegetationGrowth.update(days, environment, rules, this.random);
   }
 

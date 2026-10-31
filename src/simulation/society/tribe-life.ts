@@ -2,7 +2,6 @@ import { BUILDINGS } from "../../content/buildings.ts";
 import { personName } from "../../content/names.ts";
 import { nearestWalkableSpot } from "../agents/walkable-ground.ts";
 import { isComplete } from "./buildings.ts";
-import { completedOfKind, tribeBuildings } from "./camp-plan.ts";
 import { planConstruction } from "./construction.ts";
 import { abandonFloodedFields, updateFields } from "./farming.ts";
 import { assignHomes, housingCapacity } from "./housing.ts";
@@ -12,7 +11,8 @@ import { discover, isReadyToDiscover } from "./progress.ts";
 import { considerMoving, considerSplit, updateMigration } from "./settlement.ts";
 import type { SocietyContext } from "./society-context.ts";
 import { type Storage, spoilFood, totalFood } from "./stock.ts";
-import { knows, learn, type Tribe, upcomingTechnology } from "./tribe.ts";
+import { FAITH_BASELINE, knows, learn, type Tribe, upcomingTechnology } from "./tribe.ts";
+import { completedOfKind, tribeBuildings } from "./tribe-places.ts";
 
 const BASE_LEARNING_PER_DAY = 24;
 const ADULT_LEARNING = 4.5;
@@ -26,13 +26,14 @@ const DAILY_CHECK_DAYS = 0.5;
 const CROP_DISPLAY_DAYS = 0.08;
 const WORKSHOP_LEARNING = 4;
 const TOTEM_LEARNING = 2;
-const FAITH_BASELINE = 30;
 const FAITH_DRIFT = 0.05;
 const MOTHER_YOUNGEST = 15;
 const MOTHER_OLDEST = 45;
 const FATHER_YOUNGEST = 16;
 const DAYS_BETWEEN_CHILDREN = 2;
 const FOOD_PER_PERSON_FOR_BIRTHS = 2.5;
+const BIRTH_ODDS_PER_DAY = 0.4;
+const BIRTH_ODDS_PER_FAITH = 0.004;
 const MAXIMUM_MOTHERS_COUNTED = 4;
 const BIRTHPLACE_SEARCH_RADIUS = 30;
 
@@ -57,28 +58,34 @@ export function updateTribe(tick: TribeTick): void {
 function buildingLearning(tick: TribeTick): number {
   const { context, tribe } = tick;
 
-  const workshop = completedOfKind(tribe, context, "workshop") === null ? 0 : WORKSHOP_LEARNING;
-  const totem = completedOfKind(tribe, context, "totem") === null ? 0 : TOTEM_LEARNING;
+  const workshop = completedOfKind(tribe, context.buildings, "workshop") === null ? 0 : WORKSHOP_LEARNING;
+  const totem = completedOfKind(tribe, context.buildings, "totem") === null ? 0 : TOTEM_LEARNING;
 
   return workshop + totem;
+}
+
+function memberLearning(members: readonly Person[]): number {
+  let adults = 0;
+  let elders = 0;
+
+  for (const person of members) {
+    if (!isChild(person)) {
+      adults += 1;
+    }
+
+    if (isElder(person)) {
+      elders += 1;
+    }
+  }
+
+  return adults * ADULT_LEARNING + elders * ELDER_LEARNING;
 }
 
 function learnAndDiscover(tick: TribeTick): void {
   const { context, members, tribe } = tick;
 
-  const adults = members.filter((person) => {
-    return !isChild(person);
-  }).length;
-  const elders = members.filter((person) => {
-    return isElder(person);
-  }).length;
-
   const learning =
-    BASE_LEARNING_PER_DAY +
-    adults * ADULT_LEARNING +
-    elders * ELDER_LEARNING +
-    tribe.faith * FAITH_LEARNING +
-    buildingLearning(tick);
+    BASE_LEARNING_PER_DAY + memberLearning(members) + tribe.faith * FAITH_LEARNING + buildingLearning(tick);
 
   learn(tribe, tick.days * learning, context.rules);
   discoverUpcoming(tribe, context);
@@ -106,7 +113,7 @@ function discoverUpcoming(tribe: Tribe, context: SocietyContext): void {
 }
 
 function storageOf(tribe: Tribe, context: SocietyContext): Storage {
-  const stores = tribeBuildings(tribe, context).filter((building) => {
+  const stores = tribeBuildings(tribe, context.buildings).filter((building) => {
     return isComplete(building) && BUILDINGS[building.kind].storage > 0;
   });
 
@@ -205,7 +212,7 @@ function chooseMother(tick: TribeTick, elapsedDays: number): Person | null {
 
   const odds =
     elapsedDays *
-    (0.4 + tribe.faith * 0.004) *
+    (BIRTH_ODDS_PER_DAY + tribe.faith * BIRTH_ODDS_PER_FAITH) *
     Math.min(MAXIMUM_MOTHERS_COUNTED, mothers.length) *
     context.rules.life.birthRate;
 

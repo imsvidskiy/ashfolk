@@ -15,6 +15,7 @@ import { type Triple, transformOf } from "./transforms.ts";
 
 const GOLDEN_RATIO = (1 + Math.sqrt(5)) / 2;
 const LENGTHWISE = transformOf({ rotation: [Math.PI / 2, 0, 0] });
+const PLACEHOLDER_NORMAL = new Vector3(0, 1, 0);
 
 const BOX_CORNERS: readonly (readonly [number, number])[] = [
   [-1, -1],
@@ -76,7 +77,7 @@ const BOX_FACES: readonly BoxFace[] = [
   { normal: new Vector3(0, 0, -1), tangentU: new Vector3(0, 1, 0), tangentV: new Vector3(1, 0, 0) },
 ];
 
-interface ProfilePoint {
+export interface ProfilePoint {
   readonly radius: number;
   readonly y: number;
 }
@@ -220,6 +221,10 @@ export function sphere(radius: number, segments = 12, rings = 8): Shape {
   return lathe(profile, segments);
 }
 
+function noRipple(): number {
+  return 1;
+}
+
 function sectionLengths(sections: readonly LoftSection[]): number[] {
   const lengths = [0];
 
@@ -239,18 +244,10 @@ function sectionLengths(sections: readonly LoftSection[]): number[] {
 }
 
 function loftRing(writer: ShapeWriter, section: LoftSection, along: number, segments: number): Ring {
-  const {
-    centerX = 0,
-    centerZ = 0,
-    ripple = () => {
-      return 1;
-    },
-  } = section;
-
-  const placeholderNormal = new Vector3(0, 1, 0);
+  const { centerX = 0, centerZ = 0, ripple = noRipple } = section;
 
   if (section.radiusX <= POLE_RADIUS && section.radiusZ <= POLE_RADIUS) {
-    return [writer.vertex(new Vector3(centerX, section.y, centerZ), placeholderNormal, along, 0)];
+    return [writer.vertex(new Vector3(centerX, section.y, centerZ), PLACEHOLDER_NORMAL, along, 0)];
   }
 
   const ring: number[] = [];
@@ -267,7 +264,7 @@ function loftRing(writer: ShapeWriter, section: LoftSection, along: number, segm
       centerZ + section.radiusZ * scale * Math.sin(angle)
     );
 
-    ring.push(writer.vertex(position, placeholderNormal, along, around));
+    ring.push(writer.vertex(position, PLACEHOLDER_NORMAL, along, around));
   }
 
   return ring;
@@ -302,16 +299,9 @@ function panelRow(
   along: number,
   offset: number
 ): number[] {
-  const {
-    centerX = 0,
-    centerZ = 0,
-    ripple = () => {
-      return 1;
-    },
-  } = section;
+  const { centerX = 0, centerZ = 0, ripple = noRipple } = section;
   const { angularSegments, endAngle, startAngle } = options;
 
-  const placeholderNormal = new Vector3(0, 1, 0);
   const row: number[] = [];
 
   for (let column = 0; column <= angularSegments; column += 1) {
@@ -326,7 +316,7 @@ function panelRow(
       centerZ + (section.radiusZ * scale + offset) * Math.sin(angle)
     );
 
-    row.push(writer.vertex(position, placeholderNormal, along, around));
+    row.push(writer.vertex(position, PLACEHOLDER_NORMAL, along, around));
   }
 
   return row;

@@ -3,9 +3,9 @@ import { useState } from "react";
 import { TextButton } from "../design/buttons.tsx";
 import { cn } from "../design/cn.ts";
 import { Island } from "../design/island.tsx";
-import type { GenerationProgress, GenerationStage } from "../generation/generation-options.ts";
+import type { IslandSketch } from "../generation/generation-options.ts";
 import { CloudSeaBackdrop } from "./cloud-sea-backdrop.tsx";
-import type { EngineStatus } from "./engine-launcher.ts";
+import type { EngineStatus, LoadingStage } from "./engine-launcher.ts";
 import { useEngineStore } from "./engine-store.ts";
 import { IslandSketchView } from "./island-sketch-view.tsx";
 import { useLaunchStore } from "./launch-store.ts";
@@ -13,23 +13,26 @@ import { reloadPage } from "./reload-page.ts";
 
 const CAPTION_GLOW = "[text-shadow:0_0_12px_rgb(255_255_255/0.9),0_0_2px_rgb(255_255_255/0.9)]";
 
-const STAGE_LABELS: Readonly<Record<GenerationStage, string>> = {
+const STAGE_LABELS: Readonly<Record<LoadingStage, string>> = {
   climate: "Settling the climate",
   erosion: "Weathering the mountains",
+  lighting: "Lighting the island",
   relief: "Raising the island",
   vegetation: "Planting the forests",
+  waking: "Waking the world",
   water: "Filling rivers and lakes",
 };
 
 interface LoadingSceneProps {
+  readonly island: IslandSketch | null;
   readonly name: string;
-  readonly progress: GenerationProgress | null;
   readonly seed: number;
+  readonly stage: LoadingStage;
 }
 
 interface CaptionProps {
   readonly name: string;
-  readonly progress: GenerationProgress | null;
+  readonly stage: LoadingStage;
 }
 
 interface FailureMessageProps {
@@ -37,20 +40,23 @@ interface FailureMessageProps {
   readonly title: string;
 }
 
-function stageLabel(progress: GenerationProgress | null): string {
-  if (progress === null) {
-    return "Waking the world";
-  }
-
-  return STAGE_LABELS[progress.stage];
-}
-
 function startAgain(): void {
   useLaunchStore.getState().relaunch({});
 }
 
-function Caption({ name, progress }: CaptionProps) {
-  const label = stageLabel(progress);
+function useReloadAfterSave(saved: Promise<unknown>) {
+  const [isReloading, setIsReloading] = useState(false);
+
+  function handleReload(): void {
+    setIsReloading(true);
+    saved.then(reloadPage, reloadPage);
+  }
+
+  return { handleReload, isReloading };
+}
+
+function Caption({ name, stage }: CaptionProps) {
+  const label = STAGE_LABELS[stage];
 
   return (
     <div className="p-safe absolute inset-x-0 bottom-0">
@@ -65,18 +71,18 @@ function Caption({ name, progress }: CaptionProps) {
   );
 }
 
-function LoadingScene({ name, progress, seed }: LoadingSceneProps) {
+function LoadingScene({ island, name, seed, stage }: LoadingSceneProps) {
   return (
     <div className="absolute inset-0 overflow-hidden">
       <div aria-hidden="true" className="animate-descend absolute inset-0">
         <CloudSeaBackdrop seed={seed} />
 
         <div className="absolute inset-0 grid place-items-center">
-          <IslandSketchView className="size-[min(72dvh,86vw)]" island={progress === null ? null : progress.island} />
+          <IslandSketchView className="size-[min(72dvh,86vw)]" island={island} />
         </div>
       </div>
 
-      <Caption name={name} progress={progress} />
+      <Caption name={name} stage={stage} />
     </div>
   );
 }
@@ -102,17 +108,6 @@ function StoppedMessage({ message }: { readonly message: string }) {
       </TextButton>
     </div>
   );
-}
-
-function useReloadAfterSave(saved: Promise<unknown>) {
-  const [isReloading, setIsReloading] = useState(false);
-
-  function handleReload(): void {
-    setIsReloading(true);
-    saved.then(reloadPage, reloadPage);
-  }
-
-  return { handleReload, isReloading };
 }
 
 function GraphicsLostMessage({ saved }: { readonly saved: Promise<unknown> }) {
@@ -144,7 +139,7 @@ function StatusMessage({ status }: { readonly status: Exclude<EngineStatus, { ki
     case "graphicsLost":
       return <GraphicsLostMessage saved={status.saved} />;
     case "loading":
-      return <LoadingScene name={name} progress={status.progress} seed={seed} />;
+      return <LoadingScene island={status.island} name={name} seed={seed} stage={status.stage} />;
     case "stopped":
       return <StoppedMessage message={status.message} />;
     default:

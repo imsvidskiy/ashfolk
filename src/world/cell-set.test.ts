@@ -41,4 +41,23 @@ describe("cell set", () => {
 
     expect([...set.values()]).toEqual([6]);
   });
+
+  it("sorts its cells whether it holds few or most of them", () => {
+    const few = new CellSet(100);
+    const most = new CellSet(10);
+
+    for (const cell of [42, 7, 19]) {
+      few.add(cell);
+    }
+
+    for (const cell of [9, 2, 5, 0]) {
+      most.add(cell);
+    }
+
+    few.sort();
+    most.sort();
+
+    expect([...few.values()]).toEqual([7, 19, 42]);
+    expect([...most.values()]).toEqual([0, 2, 5, 9]);
+  });
 });

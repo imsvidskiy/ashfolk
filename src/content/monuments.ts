@@ -18,6 +18,8 @@ export const MONUMENT_SLOPE = 0.3;
 const OPEN_LAND: readonly BiomeIndex[] = [Biome.Meadow, Biome.Steppe, Biome.Scrub, Biome.Tundra];
 const DRY_LAND: readonly BiomeIndex[] = [Biome.Desert, Biome.Steppe, Biome.Scrub, Biome.Mesa];
 const WOODS: readonly BiomeIndex[] = [Biome.Forest, Biome.Taiga];
+const FORM_SEED_MARGIN = 0.1;
+const FORM_SEED_SPAN = 1 - 2 * FORM_SEED_MARGIN;
 
 export type MonumentPiece =
   | typeof PlantSpecies.Arch
@@ -90,7 +92,7 @@ export function pieceFormIndex<Piece extends MonumentPiece>(piece: Piece, form: 
 }
 
 export function seedOfForm(piece: MonumentPiece, formIndex: number, jitter: number): number {
-  return (formIndex + 0.1 + 0.8 * jitter) / PIECE_FORMS[piece].length;
+  return (formIndex + FORM_SEED_MARGIN + FORM_SEED_SPAN * jitter) / PIECE_FORMS[piece].length;
 }
 
 export function pieceSeed<Piece extends MonumentPiece>(piece: Piece, form: PieceForm<Piece>, jitter: number): number {
@@ -106,5 +108,5 @@ export function formIndexOf(piece: MonumentPiece, seed: number): number {
 export function jitterOf(piece: MonumentPiece, seed: number): number {
   const count = PIECE_FORMS[piece].length;
 
-  return saturate((seed * count - formIndexOf(piece, seed) - 0.1) / 0.8);
+  return saturate((seed * count - formIndexOf(piece, seed) - FORM_SEED_MARGIN) / FORM_SEED_SPAN);
 }

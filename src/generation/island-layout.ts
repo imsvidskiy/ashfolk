@@ -442,7 +442,7 @@ export function mountainMaskAt(layout: Pick<IslandLayout, "ranges">, x: number, 
     negated = smoothMinimum(negated, -rangeProfile(x, z, range), RANGE_BLEND);
   }
 
-  return Number.isFinite(negated) ? clamp(-negated, 0, 1.1) : 0;
+  return clamp(-negated, 0, 1.1);
 }
 
 export function coneHeightAt(cones: readonly Cone[], x: number, z: number): number {

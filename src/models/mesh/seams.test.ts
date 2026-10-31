@@ -1,11 +1,18 @@
 import { describe, expect, it } from "vitest";
+import { smoothstep } from "../../shared/math.ts";
+import { verticesWhere } from "../testing/mesh-checks.ts";
 import { MeshBuilder } from "./mesh-builder.ts";
 import { type MeshData, vertexCount } from "./mesh-data.ts";
-import { sphere } from "./shapes.ts";
+import { disc, sphere } from "./shapes.ts";
 import { transformOf } from "./transforms.ts";
 import { tube } from "./tubes.ts";
 
+const DISC_REACH = 0.3;
+
 const LIMB = [0, 0.9, 1.05, 1.3, 2].map((y) => {
+  return { radius: 0.3, x: 0, y, z: 0 };
+});
+const PIERCING_LIMB = [-1, 0.05, 0.15, 0.25, 1].map((y) => {
   return { radius: 0.3, x: 0, y, z: 0 };
 });
 
@@ -33,10 +40,8 @@ function normalAngle(first: MeshData, second: MeshData, vertex: number): number 
   return Math.acos(Math.min(1, dot));
 }
 
-function verticesWhere(mesh: MeshData, test: (x: number, y: number, z: number, part: number) => boolean): number[] {
-  return Array.from({ length: vertexCount(mesh) }, (_, vertex) => {
-    return vertex;
-  }).filter((vertex) => {
+function pointsWhere(mesh: MeshData, test: (x: number, y: number, z: number, part: number) => boolean): number[] {
+  return verticesWhere(mesh, (vertex) => {
     return test(
       mesh.positions[vertex * 3],
       mesh.positions[vertex * 3 + 1],
@@ -59,10 +64,10 @@ describe("seam normals", () => {
   const blended = limbOnBody(0.3, 0.3);
 
   it("turns both surfaces toward each other where a limb leaves a body", () => {
-    const limbAtSeam = verticesWhere(plain, (_x, y, _z, part) => {
+    const limbAtSeam = pointsWhere(plain, (_x, y, _z, part) => {
       return part === 1 && Math.abs(y - 1.05) < 1e-4;
     });
-    const bodyAtSeam = verticesWhere(plain, (x, y, z, part) => {
+    const bodyAtSeam = pointsWhere(plain, (x, y, z, part) => {
       return part === 0 && y > 0.9 && Math.hypot(x, z) > 0.3;
     });
 
@@ -73,7 +78,7 @@ describe("seam normals", () => {
   });
 
   it("leaves normals away from the seam alone", () => {
-    const far = verticesWhere(plain, (_x, y) => {
+    const far = pointsWhere(plain, (_x, y) => {
       return y < 0.2 || y > 1.6;
     });
 
@@ -97,12 +102,11 @@ describe("seam normals", () => {
     builder.addSeamReference(sphere(1, 24, 16));
 
     const limb = builder.build();
-    const alone = limbOnBody(null, null);
 
-    const limbOnly = verticesWhere(alone, (_x, _y, _z, part) => {
+    const limbOnly = pointsWhere(plain, (_x, _y, _z, part) => {
       return part === 1;
     });
-    const atSeam = verticesWhere(limb, (_x, y) => {
+    const atSeam = pointsWhere(limb, (_x, y) => {
       return Math.abs(y - 1.05) < 1e-4;
     });
 
@@ -125,6 +129,40 @@ describe("seam normals", () => {
 
     for (let vertex = 0; vertex < vertexCount(bare); vertex += 1) {
       expect(normalAngle(bare, shaded, vertex)).toBeLessThan(1e-3);
+    }
+  });
+
+  it("blends toward coarse triangles whose centers lie beyond the reach", () => {
+    function limbThroughDisc(seam: number | null): MeshData {
+      const builder = new MeshBuilder();
+
+      builder.add(tube(PIERCING_LIMB, { radialSegments: 12 }), seamOf(seam));
+      builder.addSeamReference(disc(3, 6));
+
+      return builder.build();
+    }
+
+    const unblendedLimb = limbThroughDisc(null);
+    const blendedLimb = limbThroughDisc(DISC_REACH);
+    const aboveDisc = pointsWhere(unblendedLimb, (_x, y) => {
+      return y > 0 && y < DISC_REACH;
+    });
+
+    expect(aboveDisc.length).toBeGreaterThan(0);
+
+    for (const vertex of aboveDisc) {
+      const offset = vertex * 3;
+      const heightAboveDisc = unblendedLimb.positions[offset + 1];
+
+      const weight = smoothstep(DISC_REACH, 0, heightAboveDisc);
+      const towardX = unblendedLimb.normals[offset] * (1 - weight);
+      const towardY = unblendedLimb.normals[offset + 1] * (1 - weight) + weight;
+      const towardZ = unblendedLimb.normals[offset + 2] * (1 - weight);
+      const length = Math.hypot(towardX, towardY, towardZ);
+
+      expect(blendedLimb.normals[offset]).toBeCloseTo(towardX / length, 4);
+      expect(blendedLimb.normals[offset + 1]).toBeCloseTo(towardY / length, 4);
+      expect(blendedLimb.normals[offset + 2]).toBeCloseTo(towardZ / length, 4);
     }
   });
 });

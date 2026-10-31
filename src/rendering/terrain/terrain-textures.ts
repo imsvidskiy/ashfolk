@@ -36,6 +36,7 @@ export class TerrainTextures {
   readonly daylight = uniform(1);
   readonly fields: FieldPlan;
   readonly fords: FordField;
+  readonly groundAlbedo: GroundAlbedo;
   readonly height: DataTexture;
   readonly lava: LavaField;
   readonly outline: IslandOutline;
@@ -46,13 +47,13 @@ export class TerrainTextures {
   readonly surface: DataTexture;
   readonly water: DataTexture;
   readonly wetland: DataTexture;
-  readonly #albedo: GroundAlbedo;
   readonly #mirror: WorldMirror;
   readonly #patchStepData: Float32Array;
   readonly #pondDepths: Float32Array;
   readonly #shoreData: Float32Array;
+  readonly #shoreSource: ShoreSource;
   readonly #wetlandData: Uint8Array;
-  #albedoSeason = Number.NaN;
+  #albedoSeason = Number.NEGATIVE_INFINITY;
 
   constructor(mirror: WorldMirror) {
     const size = mirror.grid.cellsPerSide;
@@ -69,18 +70,21 @@ export class TerrainTextures {
     this.water = floatDataTexture(mirror.terrain.waterSurface, size, size, RedFormat);
     this.#shoreData = new Float32Array(size * size * SHORE_CHANNELS);
     this.#pondDepths = new Float32Array(size * size);
+    this.#shoreSource = {
+      cellSize: mirror.grid.cellSize,
+      heights: mirror.terrain.height,
+      levels: mirror.terrain.waterSurface,
+      pondDepths: this.#pondDepths,
+      size,
+    };
     this.shore = floatDataTexture(this.#shoreData, size, size, RGBAFormat);
     this.#buildShore();
     this.surface = byteTexture(mirror.surface, size, RGBAFormat);
     this.#wetlandData = new Uint8Array(size * size * WETLAND_CHANNELS);
     this.#paintWetland({ firstRow: 0, rowCount: size });
     this.wetland = byteTexture(this.#wetlandData, size, RGFormat);
-    this.#albedo = new GroundAlbedo(mirror);
+    this.groundAlbedo = new GroundAlbedo(mirror);
     this.fields = new FieldPlan(mirror);
-  }
-
-  get groundAlbedo(): GroundAlbedo {
-    return this.#albedo;
   }
 
   shoreDepthAt(x: number, z: number): number {
@@ -129,7 +133,7 @@ export class TerrainTextures {
     }
 
     if (changes.groundRuns.length > 0) {
-      this.#albedo.groundChanged();
+      this.groundAlbedo.groundChanged();
       this.fields.groundChanged(changes.groundRuns);
 
       for (const run of changes.groundRuns) {
@@ -139,16 +143,16 @@ export class TerrainTextures {
       this.wetland.needsUpdate = true;
     }
 
-    const hasSeasonChanged = Number.isNaN(this.#albedoSeason) || Math.abs(season - this.#albedoSeason) >= SEASON_STEP;
+    const hasSeasonChanged = Math.abs(season - this.#albedoSeason) >= SEASON_STEP;
 
     if (hasSeasonChanged || changes.groundRuns.length > 0) {
-      this.#albedo.paint(renderer, season);
+      this.groundAlbedo.paint(renderer, season);
       this.#albedoSeason = season;
     }
   }
 
   dispose(): void {
-    this.#albedo.dispose();
+    this.groundAlbedo.dispose();
     this.caveOutlets.dispose();
     this.fords.dispose();
     this.fields.dispose();
@@ -166,7 +170,7 @@ export class TerrainTextures {
     const { grid, terrain } = this.#mirror;
 
     const firstCell = firstRow * grid.cellsPerSide;
-    const lastCell = Math.min(grid.cellCount, (firstRow + rowCount) * grid.cellsPerSide);
+    const lastCell = (firstRow + rowCount) * grid.cellsPerSide;
 
     for (let cell = firstCell; cell < lastCell; cell += 1) {
       const ground = terrain.ground[cell];
@@ -175,18 +179,6 @@ export class TerrainTextures {
       this.#wetlandData[cell * WETLAND_CHANNELS] = isPool || ground === Ground.Swamp ? BYTE : 0;
       this.#wetlandData[cell * WETLAND_CHANNELS + 1] = isPool ? BYTE : 0;
     }
-  }
-
-  #shoreSource(): ShoreSource {
-    const { grid, terrain } = this.#mirror;
-
-    return {
-      cellSize: grid.cellSize,
-      heights: terrain.height,
-      levels: terrain.waterSurface,
-      pondDepths: this.#pondDepths,
-      size: grid.cellsPerSide,
-    };
   }
 
   #measurePondShores(): void {
@@ -213,20 +205,18 @@ export class TerrainTextures {
 
   #buildShore(): void {
     this.#measurePondShores();
-    buildShoreField(this.#shoreSource(), this.#shoreData);
+    buildShoreField(this.#shoreSource, this.#shoreData);
     this.shore.needsUpdate = true;
   }
 
   #updateShore(levelRegion: CellRegion | null, heightRegion: CellRegion | null): void {
-    const source = this.#shoreSource();
-
     if (levelRegion !== null) {
-      updateShoreField(source, levelRegion, this.#shoreData);
+      updateShoreField(this.#shoreSource, levelRegion, this.#shoreData);
       this.shore.needsUpdate = true;
     }
 
     if (heightRegion !== null) {
-      updateShoreDepths(source, heightRegion, this.#shoreData);
+      updateShoreDepths(this.#shoreSource, heightRegion, this.#shoreData);
       this.shore.needsUpdate = true;
     }
   }

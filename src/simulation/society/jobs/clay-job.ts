@@ -10,13 +10,15 @@ import { Errand, headTo, type Job } from "./job.ts";
 
 const DIGGING_SECONDS = 8;
 const CLAY_PER_TRIP = 6;
+const KNOWLEDGE_PER_TRIP = 0.3;
 
 export function findClay(tick: PersonTick): ClayJob | null {
   const { context, tribe } = tick;
 
-  const deposit = nearestDeposit(context.world, "clay", campPoint(tribe), DEPOSITS.clay.reach);
+  const camp = campPoint(tribe);
+  const deposit = nearestDeposit(context.world, "clay", camp, DEPOSITS.clay.reach);
 
-  if (deposit === null || !context.navigation.isWithinWalk(campPoint(tribe), deposit)) {
+  if (deposit === null || !context.navigation.isWithinWalk(camp, deposit)) {
     markScarce(tribe, "clay", context.environment.day);
 
     return null;
@@ -47,7 +49,7 @@ class ClayJob implements Job {
     }
 
     pickUp(tick.person, "clay", CLAY_PER_TRIP, "clay");
-    learn(tick.tribe, 0.3, tick.context.rules);
+    learn(tick.tribe, KNOWLEDGE_PER_TRIP, tick.context.rules);
 
     return new DeliverJob(tick);
   }

@@ -1,6 +1,7 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, onTestFinished } from "vitest";
 import { render } from "vitest-browser-react";
-import { blockSavedWorlds } from "../features/testing/save-fixtures.ts";
+import { useSavesStore } from "../features/saves/saves-store.ts";
+import { blockSavedWorlds, deleteAllSavedWorlds, saveWorld } from "../features/testing/save-fixtures.ts";
 import { useLaunchStore } from "./launch-store.ts";
 import { StartScreen } from "./start-screen.tsx";
 
@@ -52,6 +53,26 @@ describe("start screen", () => {
 
     expect(isChoosingWorld).toBe(false);
     expect(launch).toMatchObject({ name: "Old Ford", seed: 42, shape: "square" });
+  });
+
+  it("offers the saved world without showing the new-world form first", async () => {
+    onTestFinished(deleteAllSavedWorlds);
+    await saveWorld("old-ford", "Old Ford");
+
+    const screen = await render(<StartScreen />);
+
+    expect(screen.getByRole("button", { name: "Grow the island" }).query()).toBeNull();
+    await expect.element(screen.getByRole("button", { name: "Continue Old Ford" })).toBeVisible();
+  });
+
+  it("offers the saved worlds it already knows at once when the player comes back", async () => {
+    onTestFinished(deleteAllSavedWorlds);
+    await saveWorld("old-ford", "Old Ford");
+    await useSavesStore.getState().refresh();
+
+    const screen = await render(<StartScreen />);
+
+    expect(screen.getByRole("button", { name: "Continue Old Ford" }).query()).not.toBeNull();
   });
 
   it("says saved worlds are unavailable when the browser blocks them", async () => {

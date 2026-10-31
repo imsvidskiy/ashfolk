@@ -84,26 +84,11 @@ function placeLabels(engine: EngineHandle, layer: HTMLElement): void {
   }
 }
 
-function viewOf(engine: EngineHandle): number[] {
-  return [
-    ...engine.camera.camera.matrixWorld.elements,
-    window.innerWidth,
-    window.innerHeight,
-    engine.session.mirror.landVersion,
-  ];
-}
-
-function isSameView(first: readonly number[], second: readonly number[]): boolean {
-  return (
-    first.length === second.length &&
-    first.every((value, index) => {
-      return value === second[index];
-    })
-  );
-}
-
 function keepLabelsPlaced(engine: EngineHandle, layer: HTMLElement): () => void {
-  let placedView: readonly number[] = [];
+  const placedMatrix = engine.camera.camera.matrixWorld.clone();
+  let placedWidth = 0;
+  let placedHeight = 0;
+  let placedLandVersion = 0;
   let haveLabelsChanged = true;
 
   const observer = new MutationObserver(() => {
@@ -111,13 +96,24 @@ function keepLabelsPlaced(engine: EngineHandle, layer: HTMLElement): () => void 
   });
 
   function place(): void {
-    const view = viewOf(engine);
+    const { matrixWorld } = engine.camera.camera;
+    const { innerHeight, innerWidth } = window;
+    const { landVersion } = engine.session.mirror;
 
-    if (!haveLabelsChanged && isSameView(view, placedView)) {
+    const isSameView =
+      matrixWorld.equals(placedMatrix) &&
+      innerWidth === placedWidth &&
+      innerHeight === placedHeight &&
+      landVersion === placedLandVersion;
+
+    if (!haveLabelsChanged && isSameView) {
       return;
     }
 
-    placedView = view;
+    placedMatrix.copy(matrixWorld);
+    placedWidth = innerWidth;
+    placedHeight = innerHeight;
+    placedLandVersion = landVersion;
     haveLabelsChanged = false;
     placeLabels(engine, layer);
   }

@@ -25,6 +25,8 @@ export const Ground = {
 
 export type GroundIndex = (typeof Ground)[keyof typeof Ground];
 
+const SEASON_BLEND_START = 0.55;
+
 export type Color = readonly [number, number, number];
 
 interface GroundDefinition {
@@ -386,7 +388,7 @@ export function seasonalGroundColor(index: number, season: number): Color {
   const seasonIndex = Math.floor(season) % SEASON_COUNT;
   const current = seasonalColors[seasonIndex];
   const following = seasonalColors[(seasonIndex + 1) % SEASON_COUNT];
-  const blend = smoothstep(0.55, 1, fractionalPart(season));
+  const blend = smoothstep(SEASON_BLEND_START, 1, fractionalPart(season));
 
   return [
     lerp(current[0], following[0], blend),

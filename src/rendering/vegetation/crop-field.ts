@@ -39,7 +39,7 @@ import { gustAt, type PlantWeather } from "./plant-material.ts";
 
 const BYTE = 255;
 const NO_CROP = -1;
-const FLOATS_PER_PLANT = 8;
+const FLOATS_PER_CROP = 8;
 const GROWTH_OFFSET = 4;
 const LEVEL_DISTANCES: readonly number[] = [150, 480];
 const FIELD_MARGIN = 0.45;
@@ -73,6 +73,8 @@ const LEAF_GREEN = vec3(0.27, 0.47, 0.18);
 const EAR_GREEN = vec3(0.52, 0.62, 0.28);
 const SEED_CAPSULE = vec3(0.55, 0.42, 0.24);
 
+const MODEL_CHANNELS = ["part", "shade", "slot", "sway"] as const;
+
 const CROP_FIELDS = [
   { name: "cropPlacement", size: 4 },
   { name: "cropLook", size: 4 },
@@ -85,12 +87,12 @@ const FENCE_FIELDS = [
 
 interface FieldCell {
   readonly bounds: Sphere;
-  fences: Float32Array;
+  readonly fences: Float32Array;
   growth: number;
-  kind: number;
-  layout: string;
+  readonly kind: number;
+  readonly layout: string;
   level: number;
-  plants: Float32Array;
+  readonly plants: Float32Array;
 }
 
 interface FieldEdge {
@@ -278,12 +280,7 @@ export class CropField {
     fields: typeof CROP_FIELDS | typeof FENCE_FIELDS,
     shouldCastShadow: boolean
   ): InstanceBatch {
-    const batch = new InstanceBatch(
-      geometryFromMeshData(data, ["part", "shade", "slot", "sway"]),
-      material,
-      fields,
-      256
-    );
+    const batch = new InstanceBatch(geometryFromMeshData(data, MODEL_CHANNELS), material, fields, 256);
 
     batch.mesh.castShadow = shouldCastShadow;
     batch.mesh.receiveShadow = true;
@@ -335,8 +332,6 @@ export class CropField {
 
   #refreshCell(column: number, row: number, isForced: boolean): void {
     const cell = this.#mirror.grid.index(column, row);
-    const code = this.#groundAt(column, row, GroundChannel.CropKind);
-    const kind = cropOfCode(code);
 
     if (!this.#isFarm(column, row)) {
       if (this.#cells.delete(cell)) {
@@ -346,6 +341,8 @@ export class CropField {
       return;
     }
 
+    const code = this.#groundAt(column, row, GroundChannel.CropKind);
+    const kind = cropOfCode(code);
     const edges = this.#edges(column, row);
     const axis = this.#plan.axisAt(cell);
     const growth = this.#groundAt(column, row, GroundChannel.Crop);
@@ -379,7 +376,7 @@ export class CropField {
 
     const share = growth / BYTE;
 
-    for (let offset = GROWTH_OFFSET; offset < field.plants.length; offset += FLOATS_PER_PLANT) {
+    for (let offset = GROWTH_OFFSET; offset < field.plants.length; offset += FLOATS_PER_CROP) {
       field.plants[offset] = share;
     }
 
@@ -457,7 +454,7 @@ export class CropField {
     const firstPlant = Math.ceil((alongStart + firstAlong) / spacing - 0.5);
     const lastPlant = Math.ceil((alongStart + lastAlong) / spacing - 0.5) - 1;
 
-    const data = new Float32Array(rows * Math.max(0, lastPlant - firstPlant + 1) * FLOATS_PER_PLANT);
+    const data = new Float32Array(rows * Math.max(0, lastPlant - firstPlant + 1) * FLOATS_PER_CROP);
 
     let offset = 0;
 
@@ -481,7 +478,7 @@ export class CropField {
         data[offset + 5] = 0.85 + hashToUnit(plant, cell, line) * 0.3;
         data[offset + 6] = kindIndex;
         data[offset + 7] = hashToUnit(line, plant, cell);
-        offset += FLOATS_PER_PLANT;
+        offset += FLOATS_PER_CROP;
       }
     }
 

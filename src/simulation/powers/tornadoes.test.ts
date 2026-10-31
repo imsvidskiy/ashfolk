@@ -6,6 +6,7 @@ import type { Simulation } from "../simulation.ts";
 import { createPowerSimulation } from "../testing/test-powers.ts";
 import { plantInCell } from "../testing/test-world.ts";
 import { cellsInArea } from "../world/terrain-editing.ts";
+import { tornadoDuration, tornadoPositionAt } from "./tornadoes.ts";
 
 function runFor(simulation: Simulation, seconds: number): string[] {
   const texts: string[] = [];
@@ -180,5 +181,20 @@ describe("tornadoes", () => {
       "A tornado has to touch down on the island.",
     ]);
     expect(simulation.advance(0).effects).toEqual([]);
+  });
+});
+
+describe("tornado paths", () => {
+  const path = [0, 0, 10, 0, 10, 20];
+
+  it("last half a second for every leg", () => {
+    expect(tornadoDuration(path)).toBeCloseTo(1);
+  });
+
+  it("move along each leg in turn and stay at the end once spent", () => {
+    expect(tornadoPositionAt(path, 0)).toEqual({ x: 0, z: 0 });
+    expect(tornadoPositionAt(path, 0.25)).toEqual({ x: 5, z: 0 });
+    expect(tornadoPositionAt(path, 0.75)).toEqual({ x: 10, z: 10 });
+    expect(tornadoPositionAt(path, 5)).toEqual({ x: 10, z: 20 });
   });
 });

@@ -2,14 +2,8 @@ import { z } from "zod";
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { mergeStoredField } from "../../app/preferences.ts";
-import {
-  defaultPowerParameters,
-  isPowerId,
-  type ParameterValue,
-  type ParameterValueMap,
-  type PowerId,
-  readPowerParameters,
-} from "../../content/powers.ts";
+import type { ParameterValue, ParameterValueMap } from "../../content/parameters.ts";
+import { defaultPowerParameters, isPowerId, type PowerId, readPowerParameters } from "../../content/powers.ts";
 
 const STORAGE_KEY = "ashfolk.powers";
 
@@ -87,6 +81,10 @@ export function readStoredParameters(value: unknown): StoredParameters {
   }
 
   return parameters;
+}
+
+export function isPowerPicked(state: PowerStore, previous: PowerStore): boolean {
+  return state.selectedPowerId !== null && state.selectedPowerId !== previous.selectedPowerId;
 }
 
 export function parametersOf(parameters: StoredParameters, powerId: PowerId): ParameterValueMap {

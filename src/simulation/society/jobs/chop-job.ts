@@ -12,6 +12,7 @@ const CHOPPING_SECONDS = 7;
 const FELLING_YIELD = 2;
 const AXE_REACH = 0.75;
 const SEARCH_RADIUS = 320;
+const KNOWLEDGE_PER_TREE = 0.4;
 
 export function findTree(tick: PersonTick): ChopJob | null {
   const { person, tribe } = tick;
@@ -24,7 +25,7 @@ export function findTree(tick: PersonTick): ChopJob | null {
       return (
         isFreePlant(tick, plant) &&
         isTreeSpecies(vegetation.species[plant]) &&
-        !isProtectedPlant(tribe, plant, vegetation.species[plant], day) &&
+        !isProtectedPlant(tribe, world, plant, day) &&
         canWorkAtPlant(tick, plant, AXE_REACH)
       );
     },
@@ -73,7 +74,7 @@ class ChopJob implements Job {
 
     pickUp(tick.person, "wood", plantSpeciesDefinition(world.vegetation.species[tree]).wood * FELLING_YIELD, "wood");
     world.removePlant(tree);
-    learn(tick.tribe, 0.4, tick.context.rules);
+    learn(tick.tribe, KNOWLEDGE_PER_TREE, tick.context.rules);
 
     return new DeliverJob(tick);
   }

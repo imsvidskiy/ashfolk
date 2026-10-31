@@ -21,11 +21,17 @@ const SPLIT_ADULTS = 8;
 const MAXIMUM_TRIBES = 10;
 const LATEST_SPLIT_SEASON = 2.3;
 const SPLIT_SHARE = 0.4;
+const FOUNDERS_OF_EACH_SEX = 2;
+const OFFSHOOT_FOOD_SHARE = 0.35;
+const OFFSHOOT_WOOD_SHARE = 0.3;
+const OFFSHOOT_SPEAR_SHARE = 0.4;
+const OFFSHOOT_KNOWLEDGE_SHARE = 0.5;
 const YOUNG_ADULT_AGE = 32;
 const SETTLED_DISTANCE = 60;
 const SETTLED_SHARE = 0.7;
 const BURNT_CAMP = 0.8;
 const PROSPECTING_SHARE = 0.5;
+const FORAGING_PATIENCE_DAYS = 0.6;
 
 export function updateMigration(tribe: Tribe, members: readonly Person[], context: SocietyContext): void {
   const arrived = members.filter((person) => {
@@ -86,8 +92,8 @@ function reasonToMove(tribe: Tribe, context: SocietyContext): string | null {
 
   const isStarving =
     totalFood(tribe.stock) < 1 &&
-    !isWorthLookingFor(tribe, "berries", environment.day, 0.6) &&
-    !isWorthLookingFor(tribe, "game", environment.day, 0.6);
+    !isWorthLookingFor(tribe, "berries", environment.day, FORAGING_PATIENCE_DAYS) &&
+    !isWorthLookingFor(tribe, "game", environment.day, FORAGING_PATIENCE_DAYS);
 
   if (isStarving) {
     return "there was no food left nearby";
@@ -199,12 +205,12 @@ function chooseSettlers(members: readonly Person[]): Person[] {
     .filter((person) => {
       return person.isFemale;
     })
-    .slice(0, 2);
+    .slice(0, FOUNDERS_OF_EACH_SEX);
   const men = youngAdults
     .filter((person) => {
       return !person.isFemale;
     })
-    .slice(0, 2);
+    .slice(0, FOUNDERS_OF_EACH_SEX);
 
   if (women.length === 0 || men.length === 0) {
     return [];
@@ -273,16 +279,16 @@ export function considerSplit(tribe: Tribe, members: readonly Person[], context:
 }
 
 function shareWithOffshoot(tribe: Tribe, offshoot: Tribe, context: SocietyContext): void {
-  const wood = Math.floor(tribe.stock.wood * 0.3);
-  const spears = Math.floor(tribe.stock.spears * 0.4);
+  const wood = Math.floor(tribe.stock.wood * OFFSHOOT_WOOD_SHARE);
+  const spears = Math.floor(tribe.stock.spears * OFFSHOOT_SPEAR_SHARE);
 
   for (const technology of tribe.technologies) {
     offshoot.technologies.add(technology);
   }
 
   syncEra(offshoot);
-  offshoot.stock = shareFood(tribe.stock, 0.35);
-  offshoot.knowledge = tribe.knowledge * 0.5;
+  offshoot.stock = shareFood(tribe.stock, OFFSHOOT_FOOD_SHARE);
+  offshoot.knowledge = tribe.knowledge * OFFSHOOT_KNOWLEDGE_SHARE;
   offshoot.tools = tribe.tools;
   offshoot.stock.wood = wood;
   offshoot.stock.spears = spears;

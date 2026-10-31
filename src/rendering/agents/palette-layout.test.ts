@@ -5,17 +5,19 @@ import { colorIndexBySlot, colorTexel, paletteWidth, rootTexel, TEXELS_PER_BONE 
 const LAYOUT = { boneCount: 4, colorSlots: [MaterialSlot.Skin, MaterialSlot.Hair] };
 
 describe("palette layout", () => {
-  it("places the root right after the bone matrices", () => {
-    expect(rootTexel(LAYOUT)).toBe(4 * TEXELS_PER_BONE);
-  });
+  it("gives every bone row, the root and each color a texel of its own and wastes none", () => {
+    const boneTexels = Array.from({ length: LAYOUT.boneCount * TEXELS_PER_BONE }, (_, texel) => {
+      return texel;
+    });
+    const colorTexels = LAYOUT.colorSlots.map((_slot, index) => {
+      return colorTexel(LAYOUT, index);
+    });
+    const texels = [...boneTexels, rootTexel(LAYOUT), ...colorTexels];
 
-  it("places the colors after the root", () => {
-    expect(colorTexel(LAYOUT, 0)).toBe(rootTexel(LAYOUT) + 1);
-    expect(colorTexel(LAYOUT, 1)).toBe(rootTexel(LAYOUT) + 2);
-  });
-
-  it("is wide enough for every texel", () => {
-    expect(paletteWidth(LAYOUT)).toBe(colorTexel(LAYOUT, 1) + 1);
+    expect(new Set(texels).size).toBe(texels.length);
+    expect(Math.min(...texels)).toBe(0);
+    expect(Math.max(...texels)).toBe(paletteWidth(LAYOUT) - 1);
+    expect(texels).toHaveLength(paletteWidth(LAYOUT));
   });
 
   it("maps each palette slot to its color and every other slot to none", () => {

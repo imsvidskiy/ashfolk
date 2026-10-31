@@ -1,6 +1,6 @@
 import { ANIMAL_KINDS, ANIMALS, type AnimalKind, animalsAt } from "../../content/animals.ts";
 import { FULL_TURN } from "../../shared/math.ts";
-import type { RandomSource } from "../../shared/random.ts";
+import { between, type RandomSource } from "../../shared/random.ts";
 import { aroundPoint, type Waypoint } from "../agents/navigation.ts";
 import type { WorldState } from "../world/world-state.ts";
 import type { Animal } from "./fauna.ts";
@@ -101,13 +101,11 @@ export function canStand(world: WorldState, kind: AnimalKind, x: number, z: numb
 }
 
 export function herdKindAt(world: WorldState, x: number, z: number, random: RandomSource): AnimalKind | null {
-  const cell = world.grid.cellAt(x, z);
-
-  if (cell < 0 || !world.isWalkableAt(x, z)) {
+  if (!world.isWalkableAt(x, z)) {
     return null;
   }
 
-  return kindForBiome(world.terrain.biome[cell], random);
+  return kindForBiome(world.terrain.biome[world.grid.cellAt(x, z)], random);
 }
 
 export function smallGameAt(world: WorldState, x: number, z: number): AnimalKind | null {
@@ -140,7 +138,7 @@ export function findPasture(
 
   for (let attempt = 0; attempt < PASTURE_ATTEMPTS; attempt += 1) {
     const angle = random.next() * FULL_TURN;
-    const distance = random.between(pastureRange[0], pastureRange[1]);
+    const distance = between(random, pastureRange);
 
     const pasture = aroundPoint(from, distance, angle);
 
@@ -167,7 +165,7 @@ export function findNewHome(
   random: RandomSource
 ): Waypoint | null {
   for (let attempt = 0; attempt < PASTURE_ATTEMPTS; attempt += 1) {
-    const home = aroundPoint(from, random.between(DISPERSAL_RANGE[0], DISPERSAL_RANGE[1]), random.next() * FULL_TURN);
+    const home = aroundPoint(from, between(random, DISPERSAL_RANGE), random.next() * FULL_TURN);
 
     if (isOpenPasture(world, kind, home.x, home.z, false)) {
       return home;

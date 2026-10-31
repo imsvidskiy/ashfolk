@@ -24,7 +24,8 @@ interface LegChain {
   readonly knee: Vector3;
 }
 
-const LEG_CHAINS: Readonly<Record<Side, LegChain>> = { [-1]: legChain(-1), 1: legChain(1) };
+const LEFT_LEG = legChain(1);
+const RIGHT_LEG = legChain(-1);
 
 function angleOf(pose: Pose, bone: number, axis: number): number {
   return pose.angles[bone * ANGLES_PER_BONE + axis];
@@ -68,7 +69,7 @@ function lowestContact(pose: Pose, side: Side): number {
 
 function lowestBelowThigh(pose: Pose, side: Side): number {
   const bones = sideBones(side);
-  const chain = LEG_CHAINS[side];
+  const chain = side === 1 ? LEFT_LEG : RIGHT_LEG;
 
   boneRotation(pose.angles, bones.shin, true, shinRotation);
   boneRotation(pose.angles, bones.foot, true, footRotation);

@@ -42,13 +42,12 @@ export interface ChannelTargets {
   waterSurface: Float32Array;
 }
 
-interface ChannelSample {
-  along: number;
-  distance: number;
-  segment: number;
+interface ChannelSamples {
+  readonly alongs: Float64Array;
+  readonly cells: number[];
+  readonly distances: Float64Array;
+  readonly segments: Int32Array;
 }
-
-type ChannelSamples = Map<number, ChannelSample>;
 
 interface PinchedBank {
   readonly cell: number;
@@ -98,7 +97,18 @@ function sideCut(distanceFromCenter: number, point: RiverPoint, uncarvedHeight: 
   return uncarvedHeight - Math.min(rise, DEEPEST_BANK_LOWERING) * (1 - blend);
 }
 
+function createChannelSamples(cellCount: number): ChannelSamples {
+  return {
+    alongs: new Float64Array(cellCount),
+    cells: [],
+    distances: new Float64Array(cellCount).fill(Number.POSITIVE_INFINITY),
+    segments: new Int32Array(cellCount),
+  };
+}
+
 function sampleSegment(grid: WorldGrid, points: readonly RiverPoint[], segment: number, samples: ChannelSamples): void {
+  const { alongs, cells, distances, segments } = samples;
+
   const start = points[segment];
   const end = points[segment + 1];
 
@@ -122,23 +132,20 @@ function sampleSegment(grid: WorldGrid, points: readonly RiverPoint[], segment: 
       const along = saturate(((x - start.x) * segmentX + (z - start.z) * segmentZ) / lengthSquared);
       const distance = Math.hypot(x - (start.x + segmentX * along), z - (start.z + segmentZ * along));
       const cell = grid.index(column, row);
-      const nearest = samples.get(cell);
 
-      if (nearest === undefined || distance < nearest.distance) {
-        samples.set(cell, { along, distance, segment });
+      if (distance >= distances[cell]) {
+        continue;
       }
+
+      if (distances[cell] === Number.POSITIVE_INFINITY) {
+        cells.push(cell);
+      }
+
+      alongs[cell] = along;
+      distances[cell] = distance;
+      segments[cell] = segment;
     }
   }
-}
-
-function nearestChannelSamples(grid: WorldGrid, points: readonly RiverPoint[]): ChannelSamples {
-  const samples: ChannelSamples = new Map();
-
-  for (let segment = 0; segment < points.length - 1; segment += 1) {
-    sampleSegment(grid, points, segment, samples);
-  }
-
-  return samples;
 }
 
 function settledOnGround(point: RiverPoint, ground: number): RiverPoint {
@@ -215,12 +222,27 @@ function pastCoastSegment(targets: ChannelTargets, river: River): number {
   return river.points.length - 2;
 }
 
-function carveChannel(targets: ChannelTargets, points: readonly RiverPoint[], coastSegment = NO_CELL): void {
-  for (const [cell, sample] of nearestChannelSamples(targets.grid, points)) {
-    const point = interpolatePoint(points[sample.segment], points[sample.segment + 1], sample.along);
+function carveChannel(
+  targets: ChannelTargets,
+  samples: ChannelSamples,
+  points: readonly RiverPoint[],
+  coastSegment = NO_CELL
+): void {
+  const { alongs, cells, distances, segments } = samples;
 
-    carveCell(targets, cell, sample.distance, point, sample.segment === coastSegment);
+  for (let segment = 0; segment < points.length - 1; segment += 1) {
+    sampleSegment(targets.grid, points, segment, samples);
   }
+
+  for (const cell of cells) {
+    const segment = segments[cell];
+    const point = interpolatePoint(points[segment], points[segment + 1], alongs[cell]);
+
+    carveCell(targets, cell, distances[cell], point, segment === coastSegment);
+    distances[cell] = Number.POSITIVE_INFINITY;
+  }
+
+  cells.length = 0;
 }
 
 function matchStrengthUnderPoints(targets: ChannelTargets, points: readonly RiverPoint[]): void {
@@ -235,9 +257,9 @@ function matchStrengthUnderPoints(targets: ChannelTargets, points: readonly Rive
   }
 }
 
-function carveRivers(targets: ChannelTargets, rivers: readonly River[]): void {
+function carveRivers(targets: ChannelTargets, samples: ChannelSamples, rivers: readonly River[]): void {
   for (const river of rivers) {
-    carveChannel(targets, river.points, pastCoastSegment(targets, river));
+    carveChannel(targets, samples, river.points, pastCoastSegment(targets, river));
     matchStrengthUnderPoints(targets, river.points);
   }
 }
@@ -544,10 +566,12 @@ export function carveWaterways(
   channels: readonly (readonly RiverPoint[])[],
   springs: readonly Spring[]
 ): void {
-  carveRivers(targets, rivers);
+  const samples = createChannelSamples(targets.grid.cellCount);
+
+  carveRivers(targets, samples, rivers);
 
   for (const channel of channels) {
-    carveChannel(targets, channel);
+    carveChannel(targets, samples, channel);
   }
 
   for (const spring of springs) {

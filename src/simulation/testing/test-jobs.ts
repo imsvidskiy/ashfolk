@@ -1,8 +1,12 @@
 import { type PlantSpeciesIndex, plantSpeciesDefinition } from "../../content/plants.ts";
 import { wrapAngle } from "../../shared/math.ts";
+import type { Mover } from "../agents/movement.ts";
+import type { Waypoint } from "../agents/navigation.ts";
 import type { Job } from "../society/jobs/job.ts";
-import type { Weapon } from "../society/person.ts";
+import type { Person, Weapon } from "../society/person.ts";
 import type { PersonTick } from "../society/society-context.ts";
+import { MONUMENT_GROUND } from "../world/world-state.ts";
+import type { SocietyHarness } from "./test-society.ts";
 
 export const STONE_SPEAR: Weapon = { kind: "spear", material: "stone" };
 export const WORK_SPOT_TOLERANCE = 0.35;
@@ -11,6 +15,17 @@ export const FACING_TOLERANCE = 0.05;
 interface WorkPlacement {
   readonly missedBy: number;
   readonly turnedAwayBy: number;
+}
+
+export function wallIn(harness: SocietyHarness, person: Person): void {
+  const { mover } = person;
+  const { world } = harness;
+
+  for (const cell of world.grid.cellsInRadius(mover.x, mover.z, 30)) {
+    if (Math.hypot(world.grid.cellCenterX(cell) - mover.x, world.grid.cellCenterZ(cell) - mover.z) > 15) {
+      world.occupancy[cell] = MONUMENT_GROUND;
+    }
+  }
 }
 
 export function plantNear(tick: PersonTick, species: PlantSpeciesIndex, height: number): number {
@@ -41,6 +56,10 @@ export function workUntilPosed(job: Job, tick: PersonTick, pose: string): void {
   throw new Error(`Expected the person to start the ${pose} pose`);
 }
 
+export function turnedAwayFrom(mover: Mover, point: Waypoint): number {
+  return Math.abs(wrapAngle(Math.atan2(point.x - mover.x, point.z - mover.z) - mover.heading));
+}
+
 export function placementAt(tick: PersonTick, plant: number, reach: number): WorkPlacement {
   const { vegetation } = tick.context.world;
   const { mover } = tick.person;
@@ -51,6 +70,6 @@ export function placementAt(tick: PersonTick, plant: number, reach: number): Wor
 
   return {
     missedBy: Math.abs(Math.hypot(towardX, towardZ) - (radius + reach)),
-    turnedAwayBy: Math.abs(wrapAngle(Math.atan2(towardX, towardZ) - mover.heading)),
+    turnedAwayBy: turnedAwayFrom(mover, { x: vegetation.x[plant], z: vegetation.z[plant] }),
   };
 }

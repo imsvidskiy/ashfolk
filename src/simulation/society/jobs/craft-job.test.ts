@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
-  completeStructure,
+  addStructure,
   firstMemberTick,
   MORNING,
   runToCompletion,
@@ -21,13 +21,7 @@ function smeltingTick(harness: SocietyHarness): PersonTick {
   const tribe = settle(harness, 4);
 
   teach(tribe, [...THROUGH_MINING, "copper"], 2);
-  completeStructure(
-    tribe,
-    harness.buildings.add(
-      { kind: "smelter", rotation: 0, tribeId: tribe.id, x: tribe.campX + 20, z: tribe.campZ },
-      harness.random
-    )
-  );
+  addStructure(harness, tribe, { kind: "smelter", x: tribe.campX + 20, z: tribe.campZ });
   tribe.stock.copperOre = 9;
   tribe.stock.wood = 20;
 
