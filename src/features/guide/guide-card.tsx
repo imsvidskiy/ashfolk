@@ -1,5 +1,6 @@
 import { Lightbulb } from "lucide-react";
 import { TextButton } from "../../design/buttons.tsx";
+import { cn } from "../../design/cn.ts";
 import { GameIcon } from "../../design/game-icon.tsx";
 import { Island } from "../../design/island.tsx";
 import { POWER_ICONS } from "../powers/power-icons.ts";
@@ -32,7 +33,7 @@ function TipIcon({ tip }: { readonly tip: GuideTip }) {
   return <GameIcon name={POWER_ICONS[tip.powerId]} size={28} />;
 }
 
-export function GuideCard() {
+export function GuideCard({ className }: { readonly className?: string | undefined }) {
   const { handleDismiss, handleHide, tip } = useGuideCard();
 
   if (tip === null) {
@@ -40,7 +41,12 @@ export function GuideCard() {
   }
 
   return (
-    <Island className="motion-safe:animate-notice-in pointer-events-auto flex items-center gap-3 py-2 pr-2 pl-4">
+    <Island
+      className={cn(
+        "motion-safe:animate-notice-in pointer-events-auto flex items-center gap-3 py-2 pr-2 pl-4",
+        className
+      )}
+    >
       <TipIcon tip={tip} />
 
       <p aria-live="polite" className="min-w-0 flex-1 text-sm leading-snug">
