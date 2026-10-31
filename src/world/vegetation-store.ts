@@ -405,8 +405,8 @@ export class VegetationStore implements VegetationChannels {
       const source = this[channel];
       const target = patch[channel];
 
-      for (const [position, index] of indices.entries()) {
-        target[position] = source[index];
+      for (let position = 0; position < indices.length; position += 1) {
+        target[position] = source[indices[position]];
       }
     }
 
