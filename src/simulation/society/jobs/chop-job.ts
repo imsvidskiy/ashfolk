@@ -24,7 +24,7 @@ export function findTree(tick: PersonTick): ChopJob | null {
       return (
         isFreePlant(tick, plant) &&
         isTreeSpecies(vegetation.species[plant]) &&
-        !isProtectedPlant(tribe, plant, vegetation.species[plant], day) &&
+        !isProtectedPlant(tribe, world, plant, day) &&
         canWorkAtPlant(tick, plant, AXE_REACH)
       );
     },

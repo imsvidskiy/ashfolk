@@ -187,7 +187,14 @@ export function abandonPlots(tribe: Tribe, world: WorldState): void {
 }
 
 function isSpotEmpty(spot: PlotSpot, world: WorldState): boolean {
-  return spot.plant === NO_PLANT || !world.vegetation.isAlive(spot.plant);
+  const { vegetation } = world;
+  const { plant } = spot;
+
+  if (plant === NO_PLANT || !vegetation.isAlive(plant)) {
+    return true;
+  }
+
+  return vegetation.x[plant] !== Math.fround(spot.x) || vegetation.z[plant] !== Math.fround(spot.z);
 }
 
 export function emptySpot(tribe: Tribe, world: WorldState, taken: ReadonlySet<PlotSpot>): PlotSpot | null {
@@ -271,14 +278,14 @@ function plotAge(spot: PlotSpot, plotKind: PlotKind, day: number): number {
   return saturate((day - spot.plantedDay) / matureDays(spot, plotKind));
 }
 
-export function isProtectedPlant(tribe: Tribe, plant: number, species: number, day: number): boolean {
-  if (isFruitTreeSpecies(species)) {
+export function isProtectedPlant(tribe: Tribe, world: WorldState, plant: number, day: number): boolean {
+  if (isFruitTreeSpecies(world.vegetation.species[plant])) {
     return true;
   }
 
   for (const plot of tribe.plots) {
     const spot = plot.spots.find((candidate) => {
-      return candidate.plant === plant;
+      return candidate.plant === plant && !isSpotEmpty(candidate, world);
     });
 
     if (spot !== undefined) {
