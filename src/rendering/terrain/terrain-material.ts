@@ -174,8 +174,8 @@ function terrainPosition(textures: TerrainTextures, grid: WorldGrid, plinth: num
 
   return Fn(() => {
     const cell = clamp(origin.add(localCell), vec2(0, 0), vec2(lastCell, lastCell)).toVar();
-    const height = heightAt(cell, 0, 0).toVar();
-    const normal = slopeAt(cell).toVar();
+    const height = float(0).toVar();
+    const normal = vec3(0, 1, 0).toVar();
 
     If(isCenter, () => {
       const [first, right, below, diagonal] = [
@@ -194,6 +194,9 @@ function terrainPosition(textures: TerrainTextures, grid: WorldGrid, plinth: num
       );
       normal.assign(slopeAt(first).add(slopeAt(right)).add(slopeAt(below)).add(slopeAt(diagonal)));
       cell.assign(first.add(diagonal).mul(0.5));
+    }).Else(() => {
+      height.assign(heightAt(cell, 0, 0));
+      normal.assign(slopeAt(cell));
     });
 
     normalLocal.assign(normalize(normal));
