@@ -106,9 +106,7 @@ function turnToward(heading: number, goal: number, share: number): number {
 function isOnLand(point: Waypoint, services: PowerServices): boolean {
   const { world } = services;
 
-  const cell = world.grid.cellAt(point.x, point.z);
-
-  return cell >= 0 && world.isOnIsland(cell);
+  return world.isOnIsland(world.grid.cellAt(point.x, point.z));
 }
 
 function rage(tornado: Tornado, center: Waypoint, seconds: number, services: PowerServices): void {

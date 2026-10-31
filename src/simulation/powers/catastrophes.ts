@@ -1,6 +1,6 @@
 import { isShrubSpecies, isTreeSpecies, PlantSpecies, plantSpeciesDefinition } from "../../content/plants.ts";
 import { clamp, FULL_TURN, hashToUnit, lerp, smoothstep } from "../../shared/math.ts";
-import type { Waypoint } from "../agents/navigation.ts";
+import { isDryLand, type Waypoint } from "../agents/navigation.ts";
 import { setAlight } from "../society/buildings.ts";
 import { discover } from "../society/progress.ts";
 import { type Catastrophe, ruinText, type Shock, shakeMonuments } from "../world/monument-damage.ts";
@@ -137,7 +137,7 @@ export function naturalStrikeSite(focus: Waypoint, services: PowerServices): Way
 function isStrikeSite(cell: number, acceptsAnyLand: boolean, services: PowerServices): boolean {
   const { world } = services;
 
-  if (!world.isOnIsland(cell) || world.isWater(cell)) {
+  if (!isDryLand(world, cell)) {
     return false;
   }
 

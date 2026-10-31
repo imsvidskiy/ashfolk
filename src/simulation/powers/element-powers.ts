@@ -1,6 +1,7 @@
 import type { PowerParameters } from "../../content/powers.ts";
 import { FULL_TURN } from "../../shared/math.ts";
 import type { RandomSource } from "../../shared/random.ts";
+import { isDryLand } from "../agents/navigation.ts";
 import { cellsInArea } from "../world/terrain-editing.ts";
 import { SNOW_CAPACITY } from "../world/world-state.ts";
 import { explode, shakeLand, strikeLightning } from "./catastrophes.ts";
@@ -232,7 +233,7 @@ export function volcanoPower(
 
   const cell = world.grid.cellAt(target.x, target.z);
 
-  if (!world.isOnIsland(cell) || world.isWater(cell)) {
+  if (!isDryLand(world, cell)) {
     return refused("A volcano needs dry land.");
   }
 

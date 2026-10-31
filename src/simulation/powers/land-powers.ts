@@ -6,6 +6,7 @@ import { plantHeight } from "../../generation/vegetation.ts";
 import { FULL_TURN } from "../../shared/math.ts";
 import type { RandomSource } from "../../shared/random.ts";
 import { NO_PLANT } from "../../world/vegetation-store.ts";
+import { isDryLand } from "../agents/navigation.ts";
 import { brushFalloff, cellsInArea, flattenTerrain, raiseTerrain, smoothTerrain } from "../world/terrain-editing.ts";
 import { NO_BUILDING, type WorldState } from "../world/world-state.ts";
 import {
@@ -193,7 +194,7 @@ export function forestPower(
 }
 
 function paintCell(world: WorldState, cell: number, ground: GroundIndex): void {
-  if (!world.isOnIsland(cell) || world.isWater(cell) || world.terrain.ground[cell] === ground) {
+  if (!isDryLand(world, cell) || world.terrain.ground[cell] === ground) {
     return;
   }
 
