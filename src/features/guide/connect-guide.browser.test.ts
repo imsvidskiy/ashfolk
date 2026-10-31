@@ -60,10 +60,13 @@ function doneTips(): readonly string[] {
 }
 
 describe("connecting the guide", () => {
-  it("counts a cast or a brush stroke as using a power", () => {
+  it.each([
+    ["a cast", "usePower"],
+    ["a brush stroke", "beginStroke"],
+  ] as const)("counts %s as using a power", (_, type) => {
     const { send } = connectSession();
 
-    send({ ...CAST, type: "beginStroke" });
+    send({ ...CAST, type });
 
     expect(doneTips()).toEqual(["use"]);
   });
@@ -159,6 +162,9 @@ describe("connecting the guide", () => {
     send({ ...CAST, type: "usePower" });
     usePowerStore.getState().selectPower("rain");
     addCanvas().dispatchEvent(new WheelEvent("wheel", { bubbles: true, deltaY: 100 }));
+
+    expect(doneTips()).toEqual([]);
+
     finishIntro();
     receive({ chronicle: [createChronicleEntry({ category: "fire" })] });
 

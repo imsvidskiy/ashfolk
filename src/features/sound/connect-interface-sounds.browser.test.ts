@@ -54,10 +54,16 @@ describe("connecting the interface sounds", () => {
 
   it("stays quiet after disconnecting", () => {
     const { disconnect, request } = connectSounds();
+    const button = document.createElement("button");
 
+    document.body.append(button);
+    onTestFinished(() => {
+      button.remove();
+    });
     disconnect();
     usePowerStore.getState().selectPower("rain");
     useInterfaceStore.getState().openSettings();
+    button.click();
 
     expect(request).not.toHaveBeenCalled();
   });

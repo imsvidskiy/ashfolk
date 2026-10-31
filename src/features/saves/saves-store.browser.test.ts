@@ -92,6 +92,22 @@ describe("autosave", () => {
 
     expect(useSavesStore.getState().saver).toBeNull();
   });
+
+  it("stops saving after disconnecting", async () => {
+    vi.useFakeTimers({ toFake: ["setInterval", "clearInterval"] });
+
+    const { disconnect, session } = await connectWorld();
+    const saveWorld = vi.spyOn(session, "saveWorld");
+
+    disconnect();
+    window.dispatchEvent(new PageTransitionEvent("pagehide"));
+    vi.spyOn(document, "visibilityState", "get").mockReturnValue("hidden");
+    document.dispatchEvent(new Event("visibilitychange"));
+    vi.advanceTimersByTime(AUTOSAVE_MILLISECONDS);
+
+    expect(saveWorld).not.toHaveBeenCalled();
+    expect(await savedIds()).toEqual([]);
+  });
 });
 
 describe("saving before leaving", () => {
