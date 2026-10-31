@@ -7,6 +7,7 @@ import { FieldPlan, FurrowAxis } from "./field-plan.ts";
 
 const FIRST_COLUMN = 20;
 const FIRST_ROW = 24;
+const RISE = 60;
 
 type CellStep = readonly [column: number, row: number];
 
@@ -98,6 +99,33 @@ describe("field plan", () => {
     ]);
 
     plow(mirror, plan, field, Ground.Farm);
+
+    expect(
+      field.every((cell) => {
+        return plan.axisAt(cell) === FurrowAxis.AlongZ;
+      })
+    ).toBe(true);
+  });
+
+  it("turns the furrows of a field when the ground just beside it rises", () => {
+    const mirror = createVegetatedMirror();
+    const plan = new FieldPlan(mirror);
+
+    const field = cellsOf(mirror, [
+      [0, 0],
+      [1, 0],
+      [2, 0],
+    ]);
+    const [beside] = cellsOf(mirror, [[3, 0]]);
+
+    plow(mirror, plan, field, Ground.Farm);
+    mirror.terrain.height[beside] += RISE;
+    plan.heightsChanged({
+      firstColumn: mirror.grid.columnOf(beside),
+      firstRow: FIRST_ROW,
+      lastColumn: mirror.grid.columnOf(beside),
+      lastRow: FIRST_ROW,
+    });
 
     expect(
       field.every((cell) => {

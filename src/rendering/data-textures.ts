@@ -20,6 +20,18 @@ export function floatDataTexture(data: Float32Array, width: number, height: numb
   return texture;
 }
 
+export function cellByteTexture(data: Uint8Array, size: number, format: PixelFormat): DataTexture {
+  const texture = new DataTexture(data, size, size, format, UnsignedByteType);
+
+  texture.minFilter = NearestFilter;
+  texture.magFilter = NearestFilter;
+  texture.wrapS = ClampToEdgeWrapping;
+  texture.wrapT = ClampToEdgeWrapping;
+  texture.needsUpdate = true;
+
+  return texture;
+}
+
 export function byteTexture(data: Uint8Array, size: number, format: PixelFormat): DataTexture {
   const texture = new DataTexture(data, size, size, format, UnsignedByteType);
 

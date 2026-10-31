@@ -14,7 +14,7 @@ import {
   smoothstep,
   vec3,
 } from "three/tsl";
-import { Mesh, MeshLambertNodeMaterial, MeshStandardNodeMaterial, type Node } from "three/webgpu";
+import { type BufferGeometry, Mesh, MeshLambertNodeMaterial, MeshStandardNodeMaterial, type Node } from "three/webgpu";
 import type { WorldMirror } from "../../game/world-mirror.ts";
 import type { WorldGrid } from "../../world/world-grid.ts";
 import { renderedHeightNode } from "./height-sampling.ts";
@@ -81,8 +81,8 @@ function createUndersideMaterial(plinth: number): MeshLambertNodeMaterial {
 }
 
 export class IslandBase {
-  readonly mesh: Mesh;
-  readonly #underside: Mesh;
+  readonly mesh: Mesh<BufferGeometry, MeshStandardNodeMaterial>;
+  readonly #underside: Mesh<BufferGeometry, MeshLambertNodeMaterial>;
 
   constructor(mirror: WorldMirror, textures: TerrainTextures, plinth: number) {
     const geometry = buildIslandBaseGeometry(mirror, textures.outline, plinth);
@@ -97,7 +97,9 @@ export class IslandBase {
   }
 
   dispose(): void {
-    this.mesh.geometry.dispose();
-    this.#underside.geometry.dispose();
+    for (const mesh of [this.mesh, this.#underside]) {
+      mesh.geometry.dispose();
+      mesh.material.dispose();
+    }
   }
 }

@@ -1,8 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { Biome } from "../../content/biomes.ts";
 import { isPoolGround } from "../../content/grounds.ts";
-import { DEFAULT_GENERATION_OPTIONS } from "../../generation/generation-options.ts";
-import { generateWorld } from "../../generation/world-generator.ts";
+import { coarseWorld } from "../../generation/testing/generated-worlds.ts";
 import { WorldGrid } from "../../world/world-grid.ts";
 import {
   DEEPEST_LILY_WATER,
@@ -82,7 +81,7 @@ describe("lily placement", () => {
   });
 
   it("puts no lily outside marsh pools and shallow still water by a marsh on a generated island", () => {
-    const { dimensions, terrain } = generateWorld(7, DEFAULT_GENERATION_OPTIONS);
+    const { dimensions, terrain } = coarseWorld(7);
     const world = { grid: new WorldGrid(dimensions), terrain };
 
     const cells = lilyCells(world);

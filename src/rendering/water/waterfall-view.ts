@@ -57,6 +57,13 @@ interface Lip {
   readonly top: number;
 }
 
+interface CurtainColumn {
+  readonly offset: number;
+  readonly rimX: number;
+  readonly rimZ: number;
+  readonly sideAmount: number;
+}
+
 interface CurtainWriter {
   readonly coordinates: number[];
   readonly drops: number[];
@@ -66,7 +73,7 @@ interface CurtainWriter {
   readonly sides: number[];
 }
 
-function lipCrossing(waterfall: Waterfall, outline: IslandOutline): readonly [number, number] {
+function lipCrossing(outline: IslandOutline, waterfall: Waterfall): readonly [number, number] {
   const { directionX, directionZ, x, z } = waterfall;
 
   let inside = 0;
@@ -97,7 +104,7 @@ function lipCrossing(waterfall: Waterfall, outline: IslandOutline): readonly [nu
   return [x - directionX * inside, z - directionZ * inside];
 }
 
-function wetEdge(lip: Omit<Lip, "left" | "right">, side: 1 | -1, textures: TerrainTextures): number {
+function wetEdge(textures: TerrainTextures, lip: Omit<Lip, "left" | "right">, side: 1 | -1): number {
   const sideX = -lip.outwardZ * side;
   const sideZ = lip.outwardX * side;
   const baseX = lip.centerX - lip.outwardX * SPAN_INSET;
@@ -120,13 +127,13 @@ function wetEdge(lip: Omit<Lip, "left" | "right">, side: 1 | -1, textures: Terra
   return WIDEST_HALF_SPAN;
 }
 
-function findLip(waterfall: Waterfall, textures: TerrainTextures): Lip {
-  const [centerX, centerZ] = lipCrossing(waterfall, textures.outline);
+function findLip(textures: TerrainTextures, waterfall: Waterfall): Lip {
+  const [centerX, centerZ] = lipCrossing(textures.outline, waterfall);
   const [outwardX, outwardZ] = textures.outline.outwardAt(centerX, centerZ);
 
   const lip = { centerX, centerZ, outwardX, outwardZ, top: waterfall.top };
-  const left = wetEdge(lip, -1, textures);
-  const right = wetEdge(lip, 1, textures);
+  const left = wetEdge(textures, lip, -1);
+  const right = wetEdge(textures, lip, 1);
 
   if (left + right < NARROWEST_SPAN) {
     return { ...lip, left: waterfall.width / 2, right: waterfall.width / 2 };
@@ -145,13 +152,22 @@ function acrossSegments(lip: Lip): number {
   return Math.max(4, Math.ceil((lip.left + lip.right) / SEGMENT_LENGTH));
 }
 
-function addCurtain(writer: CurtainWriter, lip: Lip, outline: IslandOutline, plinth: number): void {
+function addCurtain(writer: CurtainWriter, outline: IslandOutline, lip: Lip, plinth: number): void {
   const faceDepth = Math.max(1, lip.top - plinth);
   const across = acrossSegments(lip);
   const sideX = -lip.outwardZ;
   const sideZ = lip.outwardX;
   const firstVertex = writer.progress.length;
   const width = lip.left + lip.right;
+  const columns: CurtainColumn[] = [];
+
+  for (let step = 0; step <= across; step += 1) {
+    const sideAmount = step / across;
+    const offset = -lip.left + sideAmount * width;
+    const [rimX, rimZ] = outline.atCoast(lip.centerX + sideX * offset, lip.centerZ + sideZ * offset);
+
+    columns.push({ offset, rimX, rimZ, sideAmount });
+  }
 
   for (let along = 0; along <= ALONG_SEGMENTS; along += 1) {
     const amount = FADE_END * (along / ALONG_SEGMENTS) ** ROW_CROWDING;
@@ -159,10 +175,7 @@ function addCurtain(writer: CurtainWriter, lip: Lip, outline: IslandOutline, pli
     const outward = faceOffset(drop, faceDepth);
     const spread = 1 + (BOTTOM_SPREAD - 1) * amount;
 
-    for (let step = 0; step <= across; step += 1) {
-      const sideAmount = step / across;
-      const offset = -lip.left + sideAmount * width;
-      const [rimX, rimZ] = outline.atCoast(lip.centerX + sideX * offset, lip.centerZ + sideZ * offset);
+    for (const { offset, rimX, rimZ, sideAmount } of columns) {
       const spreadX = sideX * offset * (spread - 1);
       const spreadZ = sideZ * offset * (spread - 1);
 
@@ -220,7 +233,7 @@ function createCurtainMaterial(): MeshBasicNodeMaterial {
 }
 
 export class WaterfallView {
-  readonly mesh: Mesh;
+  readonly mesh: Mesh<BufferGeometry, MeshBasicNodeMaterial>;
   #lips: readonly Lip[] = [];
 
   constructor() {
@@ -229,15 +242,15 @@ export class WaterfallView {
     this.mesh.renderOrder = 3;
   }
 
-  rebuild(waterfalls: readonly Waterfall[], textures: TerrainTextures, plinth: number): void {
+  rebuild(textures: TerrainTextures, waterfalls: readonly Waterfall[], plinth: number): void {
     const writer: CurtainWriter = { coordinates: [], drops: [], indices: [], positions: [], progress: [], sides: [] };
 
     this.#lips = waterfalls.map((waterfall) => {
-      return findLip(waterfall, textures);
+      return findLip(textures, waterfall);
     });
 
     for (const lip of this.#lips) {
-      addCurtain(writer, lip, textures.outline, plinth);
+      addCurtain(writer, textures.outline, lip, plinth);
     }
 
     const geometry = new BufferGeometry();
@@ -254,7 +267,7 @@ export class WaterfallView {
     this.mesh.visible = writer.indices.length > 0;
   }
 
-  isShapedBy(region: CellRegion | null, grid: WorldGrid): boolean {
+  isShapedBy(grid: WorldGrid, region: CellRegion | null): boolean {
     if (region === null) {
       return false;
     }
@@ -268,5 +281,6 @@ export class WaterfallView {
 
   dispose(): void {
     this.mesh.geometry.dispose();
+    this.mesh.material.dispose();
   }
 }

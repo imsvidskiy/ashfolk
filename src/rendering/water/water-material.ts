@@ -150,12 +150,7 @@ function surfaceNormal(
   return normalize(waves.add(vec3(flow.x, 0, flow.y)));
 }
 
-export function createWaterMaterial(
-  textures: TerrainTextures,
-  grid: WorldGrid,
-  look: WaterLook
-): MeshStandardNodeMaterial {
-  const material = new MeshPhysicalNodeMaterial({ transparent: true });
+function waterPosition(textures: TerrainTextures, grid: WorldGrid): Node<"vec3"> {
   const last = grid.cellsPerSide - 1;
   const cellSize = float(grid.cellSize);
   const halfSize = float(grid.halfSize);
@@ -170,19 +165,17 @@ export function createWaterMaterial(
     return select(level.greaterThan(PRESENT_LEVEL), level, float(NO_LOWER_WATER));
   }
 
-  function lowestAround(base: Node<"vec2">, offsets: readonly Node<"vec2">[]): Node<"float"> {
-    return offsets.reduce<Node<"float">>((lowest, offset) => {
-      return min(lowest, levelAt(base, offset));
-    }, float(NO_LOWER_WATER));
-  }
-
   function bankAround(base: Node<"vec2">, offsets: readonly Node<"vec2">[]): Node<"float"> {
-    const highest = offsets.reduce<Node<"float">>((top, offset) => {
-      const level = levelAt(base, offset);
+    const levels = offsets.map((offset) => {
+      return levelAt(base, offset);
+    });
 
+    const highest = levels.reduce<Node<"float">>((top, level) => {
       return max(top, select(level.lessThan(NO_LOWER_WATER), level, float(-NO_LOWER_WATER)));
     }, float(-NO_LOWER_WATER));
-    const lowest = lowestAround(base, offsets);
+    const lowest = levels.reduce<Node<"float">>((bottom, level) => {
+      return min(bottom, level);
+    }, float(NO_LOWER_WATER));
 
     return select(lowest.lessThan(NO_LOWER_WATER), min(highest, lowest.add(BANK_STEP)), float(NO_LOWER_WATER));
   }
@@ -220,7 +213,7 @@ export function createWaterMaterial(
     return clamp(cell.add(vec2(column, row).mul(step)), vec2(0, 0), vec2(last, last));
   }
 
-  material.positionNode = Fn(() => {
+  return Fn(() => {
     const point = cell.toVar();
     const level = float(0).toVar();
 
@@ -237,6 +230,16 @@ export function createWaterMaterial(
 
     return vec3(point.x.add(0.5).mul(cellSize).sub(halfSize), level, point.y.add(0.5).mul(cellSize).sub(halfSize));
   })();
+}
+
+export function createWaterMaterial(
+  textures: TerrainTextures,
+  grid: WorldGrid,
+  look: WaterLook
+): MeshStandardNodeMaterial {
+  const material = new MeshPhysicalNodeMaterial({ transparent: true });
+
+  material.positionNode = waterPosition(textures, grid);
 
   const shore = sampleCellsNode(textures.shore, grid, positionWorld.xz);
   const viewDistance = distance(positionWorld, cameraPosition);

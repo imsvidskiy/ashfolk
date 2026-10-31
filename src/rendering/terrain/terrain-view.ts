@@ -45,8 +45,7 @@ export class TerrainView {
 
     this.#mirror = mirror;
     this.#outline = textures.outline;
-    this.#warp = new GroundWarp(grid);
-    this.#warp.bake(renderer);
+    this.#warp = new GroundWarp(grid, renderer);
 
     const options = {
       glow,

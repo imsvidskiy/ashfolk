@@ -1,12 +1,13 @@
 import { clamp, floor, int, ivec2, max, mix, smoothstep, textureLoad, vec2 } from "three/tsl";
-import { ClampToEdgeWrapping, DataTexture, NearestFilter, type Node, RedFormat, UnsignedByteType } from "three/webgpu";
+import { type DataTexture, type Node, RedFormat } from "three/webgpu";
 import { Ground } from "../../content/grounds.ts";
 import type { WorldMirror } from "../../game/world-mirror.ts";
 import { hashToUnit } from "../../shared/math.ts";
 import { GROUND_CHANNELS, GroundChannel } from "../../world/agent-buffers.ts";
-import type { CellRegion, RowRun } from "../../world/change-tracking.ts";
+import { type CellRegion, grownRegion, type RowRun } from "../../world/change-tracking.ts";
 import { gradientXAt, gradientZAt } from "../../world/footing.ts";
 import { NEIGHBOR_OFFSETS, type WorldGrid } from "../../world/world-grid.ts";
+import { cellByteTexture } from "../data-textures.ts";
 
 export const FurrowAxis = {
   AlongX: 1,
@@ -14,11 +15,11 @@ export const FurrowAxis = {
   None: 0,
 } as const;
 
-type FurrowAxisCode = (typeof FurrowAxis)[keyof typeof FurrowAxis];
-
 const BYTE = 255;
 const CONTOUR_SLOPE = 0.04;
 const TIE_SALT = 23.9;
+
+type FurrowAxisCode = (typeof FurrowAxis)[keyof typeof FurrowAxis];
 
 interface FieldShape {
   readonly cells: readonly number[];
@@ -98,14 +99,9 @@ export class FieldPlan {
 
     this.#mirror = mirror;
     this.#axes = new Uint8Array(cellCount);
-    this.texture = new DataTexture(this.#axes, cellsPerSide, cellsPerSide, RedFormat, UnsignedByteType);
-    this.texture.minFilter = NearestFilter;
-    this.texture.magFilter = NearestFilter;
-    this.texture.wrapS = ClampToEdgeWrapping;
-    this.texture.wrapT = ClampToEdgeWrapping;
+    this.texture = cellByteTexture(this.#axes, cellsPerSide, RedFormat);
 
     this.groundChanged([{ firstRow: 0, rowCount: cellsPerSide }]);
-    this.texture.needsUpdate = true;
   }
 
   get revision(): number {
@@ -135,15 +131,17 @@ export class FieldPlan {
   heightsChanged(region: CellRegion): void {
     const { grid } = this.#mirror;
 
+    const slopeRegion = grownRegion(region, 1, grid.cellsPerSide);
+
     for (const cell of this.#farms) {
       const column = grid.columnOf(cell);
       const row = grid.rowOf(cell);
 
       if (
-        column >= region.firstColumn &&
-        column <= region.lastColumn &&
-        row >= region.firstRow &&
-        row <= region.lastRow
+        column >= slopeRegion.firstColumn &&
+        column <= slopeRegion.lastColumn &&
+        row >= slopeRegion.firstRow &&
+        row <= slopeRegion.lastRow
       ) {
         this.#plan();
 
