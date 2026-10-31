@@ -320,7 +320,7 @@ export class Simulation {
     this.rivalry.restore(snapshot.rivalry, this.society);
     this.volcanoes.restore(snapshot.volcanoes === undefined ? [] : snapshot.volcanoes);
     this.setRules(readWorldRules(snapshot.rules));
-    this.services.environment = describeEnvironment(this.calendar, this.weather);
+    this.services.environment = this.environment;
     this.#isPaused = snapshot.isPaused;
     this.#speed = snapshot.speed;
     this.#tick = snapshot.tick;
@@ -534,7 +534,7 @@ export class Simulation {
     this.chronicle.day = this.calendar.day;
     this.#updateWeather(days);
 
-    const environment = describeEnvironment(this.calendar, this.weather);
+    const { environment } = this;
 
     this.services.environment = environment;
     this.#updateNature(days, environment);
@@ -568,7 +568,7 @@ export class Simulation {
       chronicle: this.chronicle,
       effects: this.effects,
       embers: this.embers,
-      environment: describeEnvironment(this.calendar, this.weather),
+      environment: this.environment,
       fauna: this.fauna,
       fire: this.fire,
       hazards: this.hazards,
