@@ -15,6 +15,7 @@ function settledTick(): PersonTick {
 describe("needs", () => {
   it("hold still while time is frozen", () => {
     const tick = settledTick();
+
     const { person } = tick;
 
     tick.context.environment = { ...tick.context.environment, isTimeFrozen: true };
@@ -28,6 +29,7 @@ describe("needs", () => {
 
   it("heal people who are fed and warm, and only them", () => {
     const tick = settledTick();
+
     const { person } = tick;
 
     person.health = 0.5;
@@ -50,6 +52,7 @@ describe("needs", () => {
 
   it("name the need that killed", () => {
     const tick = settledTick();
+
     const { person } = tick;
     const { fields, grid } = tick.context.world;
 
