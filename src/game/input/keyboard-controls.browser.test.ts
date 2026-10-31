@@ -23,7 +23,7 @@ function createRig(): Rig {
 
   camera.jumpTo({ distance: 500, targetX: 0, targetZ: 0, yaw: 0 });
 
-  const rig = { camera, controls: new KeyboardControls(window, camera) };
+  const rig = { camera, controls: new KeyboardControls(camera) };
 
   rigs.push(rig);
 

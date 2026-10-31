@@ -177,7 +177,7 @@ export class GameEngine implements EngineHandle {
         this.#selectAt(point, screen);
       }
     );
-    this.#keyboard = new KeyboardControls(window, this.camera);
+    this.#keyboard = new KeyboardControls(this.camera);
     this.#resizeObserver = new ResizeObserver(() => {
       this.#resize();
     });

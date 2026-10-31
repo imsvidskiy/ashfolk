@@ -58,26 +58,26 @@ export class KeyboardControls {
   readonly #camera: GodCamera;
   readonly #held = new Set<CameraAction>();
 
-  constructor(target: Window, camera: GodCamera) {
+  constructor(camera: GodCamera) {
     this.#camera = camera;
 
     const options = { signal: this.#abort.signal };
 
-    target.addEventListener(
+    window.addEventListener(
       "keydown",
       (event) => {
         this.#press(event);
       },
       options
     );
-    target.addEventListener(
+    window.addEventListener(
       "keyup",
       (event) => {
         this.#release(event);
       },
       options
     );
-    target.addEventListener(
+    window.addEventListener(
       "blur",
       () => {
         this.#held.clear();
