@@ -102,7 +102,7 @@ interface Flag {
   readonly width: number;
 }
 
-function addLog(context: StructureContext, start: Triple, end: Triple, radius: number, order: number): void {
+function addTaperedLog(context: StructureContext, start: Triple, end: Triple, radius: number, order: number): void {
   const sides = detail(context, 6, 4);
 
   context.builder.add(
@@ -119,7 +119,7 @@ function addLog(context: StructureContext, start: Triple, end: Triple, radius: n
   );
 }
 
-function addFlag(context: StructureContext, pole: Triple, flag: Flag): void {
+function addFlagCloth(context: StructureContext, pole: Triple, flag: Flag): void {
   const [x, , z] = pole;
 
   const halfWidth = flag.width / 2;
@@ -133,7 +133,7 @@ function addFlag(context: StructureContext, pole: Triple, flag: Flag): void {
   });
 }
 
-function addStone(context: StructureContext, position: Triple, radius: number, order: number): void {
+function addFlatStone(context: StructureContext, position: Triple, radius: number, order: number): void {
   const [x, y, z] = position;
 
   context.builder.add(
@@ -159,7 +159,7 @@ function addCampfire(context: StructureContext): void {
   for (let stone = 0; stone < stones; stone += 1) {
     const angle = (stone / stones) * FULL_TURN + random.signed() * 0.15;
 
-    addStone(
+    addFlatStone(
       context,
       [Math.cos(angle) * 0.62, 0.08, Math.sin(angle) * 0.62],
       random.between(0.13, 0.18),
@@ -177,7 +177,7 @@ function addCampfire(context: StructureContext): void {
   for (let log = 0; log < logs; log += 1) {
     const angle = (log / logs) * FULL_TURN + random.signed() * 0.2;
 
-    addLog(
+    addTaperedLog(
       context,
       [Math.cos(angle) * 0.48, 0.04, Math.sin(angle) * 0.48],
       [Math.cos(angle) * 0.06, 0.62, Math.sin(angle) * 0.06],
@@ -203,7 +203,7 @@ function addTentPole(context: StructureContext, angle: number, order: number): v
     return [Math.cos(angle) * reach, height, Math.sin(angle) * reach];
   }
 
-  addLog(context, pointAt(0), pointAt(TENT_HEIGHT + TENT_POLE_OVERHANG), 0.045, order);
+  addTaperedLog(context, pointAt(0), pointAt(TENT_HEIGHT + TENT_POLE_OVERHANG), 0.045, order);
 }
 
 function addTentDoor(context: StructureContext, sides: number): void {
@@ -312,7 +312,7 @@ function addHutDoor(context: StructureContext): void {
   for (const side of [-1, 1]) {
     const x = side * (HUT_DOOR_HALF_WIDTH + HUT_POST_RADIUS * 0.4);
 
-    addLog(
+    addTaperedLog(
       context,
       [x, 0, onWall(x, HUT_SILL, HUT_POST_SINK + 0.06)],
       [x, HUT_DOOR_TOP + 0.08, onWall(x, HUT_DOOR_TOP, HUT_POST_SINK)],
@@ -323,7 +323,7 @@ function addHutDoor(context: StructureContext): void {
 
   const lintelEnd = HUT_DOOR_HALF_WIDTH + 0.15;
 
-  addLog(
+  addTaperedLog(
     context,
     [-lintelEnd, HUT_DOOR_TOP + 0.02, onWall(0, HUT_DOOR_TOP, -0.02)],
     [lintelEnd, HUT_DOOR_TOP + 0.02, onWall(0, HUT_DOOR_TOP, -0.02)],
@@ -401,8 +401,8 @@ function addHut(context: StructureContext): void {
   addHutWall(context);
   addHutThatch(context);
   addHutDoor(context);
-  addFlag(context, [0, 0, 0], { bottom: 3.75, height: 0.35, turn: 0.3, width: 0.5 });
-  addLog(context, [0, 3.4, 0], [0, 4.2, 0], 0.03, 0.98);
+  addFlagCloth(context, [0, 0, 0], { bottom: 3.75, height: 0.35, turn: 0.3, width: 0.5 });
+  addTaperedLog(context, [0, 3.4, 0], [0, 4.2, 0], 0.03, 0.98);
 }
 
 function gableShape(): Shape {
@@ -431,7 +431,7 @@ function addStorehouseBody(context: StructureContext): void {
     [-1.1, 0.9],
     [1.1, 0.9],
   ] as const) {
-    addLog(context, [x, 0, z], [x, 1, z], 0.09, 0.1);
+    addTaperedLog(context, [x, 0, z], [x, 1, z], 0.09, 0.1);
   }
 
   builder.add(box(2.6, 0.16, 2.2), {
@@ -457,7 +457,7 @@ function addStorehouseRoof(context: StructureContext): void {
     });
   }
 
-  addLog(context, [0, RIDGE_HEIGHT, -1.38], [0, RIDGE_HEIGHT, 1.38], 0.075, 0.88);
+  addTaperedLog(context, [0, RIDGE_HEIGHT, -1.38], [0, RIDGE_HEIGHT, 1.38], 0.075, 0.88);
 }
 
 function addStorehouseLadder(context: StructureContext): void {
@@ -467,7 +467,7 @@ function addStorehouseLadder(context: StructureContext): void {
   });
 
   for (const offset of [-0.25, 0.25]) {
-    addLog(context, [offset, 0, 1.75], [offset, 1.15, 1], 0.03, 0.5);
+    addTaperedLog(context, [offset, 0, 1.75], [offset, 1.15, 1], 0.03, 0.5);
   }
 
   for (let rung = 1; rung < 4; rung += 1) {
@@ -476,7 +476,7 @@ function addStorehouseLadder(context: StructureContext): void {
     const y = 1.15 * amount;
     const z = 1.75 - 0.75 * amount;
 
-    addLog(context, [-0.25, y, z], [0.25, y, z], 0.022, 0.5);
+    addTaperedLog(context, [-0.25, y, z], [0.25, y, z], 0.022, 0.5);
   }
 }
 
@@ -507,8 +507,8 @@ function addStorehouse(context: StructureContext): void {
   addStorehouseRoof(context);
   addStorehouseLadder(context);
   addStorehouseJars(context);
-  addFlag(context, [0, 0, 1.2], { bottom: 3.55, height: 0.4, turn: 0, width: 0.6 });
-  addLog(context, [0, 3, 1.2], [0, 4, 1.2], 0.025, 0.99);
+  addFlagCloth(context, [0, 0, 1.2], { bottom: 3.55, height: 0.4, turn: 0, width: 0.6 });
+  addTaperedLog(context, [0, 3, 1.2], [0, 4, 1.2], 0.025, 0.99);
 }
 
 function totemRadius(head: number): number {
@@ -619,7 +619,7 @@ function addTotem(context: StructureContext): void {
   for (let stone = 0; stone < 5; stone += 1) {
     const angle = (stone / 5) * FULL_TURN;
 
-    addStone(context, [Math.cos(angle) * 0.42, 0.1, Math.sin(angle) * 0.42], 0.17, 0.05);
+    addFlatStone(context, [Math.cos(angle) * 0.42, 0.1, Math.sin(angle) * 0.42], 0.17, 0.05);
   }
 
   const log = totemLog(segments);
