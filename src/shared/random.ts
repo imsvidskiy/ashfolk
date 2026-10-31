@@ -21,10 +21,6 @@ export interface RandomSource {
 
 type Generator = ReturnType<typeof xoroshiro128plus>;
 
-function seedOfUnit(unit: number): number {
-  return Math.floor(unit * SEED_RANGE);
-}
-
 class SeededRandom implements RandomSource {
   #generator: Generator;
 
@@ -69,7 +65,7 @@ class SeededRandom implements RandomSource {
   }
 
   derive(label: number): RandomSource {
-    return createRandom(seedOfUnit(this.next()) + label * LABEL_STRIDE);
+    return randomFromUnitSeed(this.next(), label * LABEL_STRIDE);
   }
 }
 
@@ -84,7 +80,7 @@ export function createRandom(seed: number): RandomSource {
 }
 
 export function randomFromUnitSeed(seed: number, salt: number): RandomSource {
-  return createRandom(seedOfUnit(seed) + salt);
+  return createRandom(Math.floor(seed * SEED_RANGE) + salt);
 }
 
 export function shuffle<Items extends { [index: number]: unknown; length: number }>(
