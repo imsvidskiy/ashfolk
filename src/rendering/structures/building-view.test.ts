@@ -34,6 +34,7 @@ const HUT: BuildingSnapshot = {
 
 interface PlacedHut {
   readonly floor: number;
+  readonly glow: number;
   readonly isFading: boolean;
   readonly visibility: number;
 }
@@ -92,20 +93,20 @@ function hutFrom(view: BuildingView, mirror: WorldMirror, y: number): PlacedHut 
     throw new Error("The hut isn't drawn");
   }
 
+  const state = mesh.geometry.getAttribute("buildingState");
+
   return {
     floor: mesh.geometry.getAttribute("buildingPlacement").getY(0),
+    glow: state.getY(0),
     isFading: isFading(mesh),
-    visibility: mesh.geometry.getAttribute("buildingState").getW(0),
+    visibility: state.getW(0),
   };
 }
 
 function glowOf(view: BuildingView, mirror: WorldMirror, building: Partial<BuildingSnapshot>): number {
   mirror.frame = { ...mirror.frame, buildings: [{ ...HUT, ...building }] };
-  hutFrom(view, mirror, 2000);
 
-  const [, glow] = firstInstance(drawnMeshes(view.group, "buildingState"), "buildingState");
-
-  return glow;
+  return hutFrom(view, mirror, 2000).glow;
 }
 
 describe("building view", () => {
