@@ -202,10 +202,10 @@ function terrainPosition(textures: TerrainTextures, grid: WorldGrid, plinth: num
     normalLocal.assign(normalize(normal));
 
     const border = origin.add(localCell);
-    const hangs = skirt.greaterThan(0).and(mix(border.x, border.y, skirtAxis).mod(PATCH_CELLS).equal(0));
-    const drop = select(hangs, skirt.mul(SKIRT_DROP_PER_STEP), float(0));
+    const isHanging = skirt.greaterThan(0).and(mix(border.x, border.y, skirtAxis).mod(PATCH_CELLS).equal(0));
+    const drop = select(isHanging, skirt.mul(SKIRT_DROP_PER_STEP), float(0));
     const outward = vec2(edgeSide(cell.x, lastCell), edgeSide(cell.y, lastCell));
-    const inset = outward.mul(select(hangs, float(EDGE_SKIRT_INSET), float(0)));
+    const inset = outward.mul(select(isHanging, float(EDGE_SKIRT_INSET), float(0)));
 
     return vec3(
       cell.x.add(0.5).mul(cellSize).sub(halfSize).sub(inset.x),

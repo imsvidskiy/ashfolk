@@ -96,8 +96,8 @@ export function fieldGroundNode(
   grain: Node<"vec2">
 ): FieldGround {
   const { earth, soil } = textures.groundAlbedo;
-  const point = positionWorld.xz;
 
+  const point = positionWorld.xz;
   const wobbled = point.add(grain.mul(EDGE_WOBBLE));
   const blur = fwidth(point.x)
     .add(fwidth(point.y))
@@ -120,8 +120,8 @@ export function fieldGroundNode(
 
     If(axis.greaterThan(int(FurrowAxis.None)), () => {
       const [tilled, reach] = shares;
-      const cellGround = textureLoad(textures.groundAlbedo.cells, cell);
 
+      const cellGround = textureLoad(textures.groundAlbedo.cells, cell);
       const phase = fract(rows).sub(0.5).mul(FULL_TURN);
       const relief = smoothstep(0.66, 0.92, reach).mul(float(1).sub(smoothstep(0.3, 0.6, rowBlur)));
       const crop = cropColor(int(cellGround.a.mul(BYTE).add(0.5)), cellGround.g);
