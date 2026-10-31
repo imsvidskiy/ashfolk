@@ -10,10 +10,6 @@ const FORMATION_SPACING = 2.6;
 const PURSUIT_RADIUS = 40;
 
 export function formationOffset(slot: number): Waypoint {
-  if (slot === 0) {
-    return { x: 0, z: 0 };
-  }
-
   const angle = (slot * GOLDEN_ANGLE) % FULL_TURN;
   const distance = FORMATION_SPACING * Math.sqrt(slot);
 

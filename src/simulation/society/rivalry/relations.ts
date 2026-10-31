@@ -22,7 +22,7 @@ export type Stance = "friendly" | "hostile" | "neutral" | "wary";
 
 export type Grudge = "blood" | "burning" | "hunting" | "land" | "plunder" | "trespass";
 
-interface RelationSide {
+export interface RelationSide {
   deaths: number;
   grievance: number;
   readonly tribeId: number;
@@ -170,9 +170,9 @@ export class RelationBook {
     return relation;
   }
 
-  forgetTribe(tribeId: number): void {
+  forgetVanished(living: ReadonlySet<number>): void {
     for (const [key, relation] of this.#relations) {
-      if (relation.first.tribeId === tribeId || relation.second.tribeId === tribeId) {
+      if (!(living.has(relation.first.tribeId) && living.has(relation.second.tribeId))) {
         this.#relations.delete(key);
       }
     }

@@ -17,7 +17,7 @@ import {
 } from "./frame-packing.ts";
 import { createPerson, type Person } from "./society/person.ts";
 import { createTribe } from "./society/tribe.ts";
-import { idleJob } from "./testing/test-rivalry.ts";
+import { steadyJob } from "./testing/test-rivalry.ts";
 import { createTestWorld } from "./testing/test-world.ts";
 
 function raidingArcher(): Person {
@@ -33,7 +33,7 @@ function raidingArcher(): Person {
   person.phase = 2.75;
   person.carrying = { amount: 2, item: "fish", resource: "fish" };
   person.weapon = { kind: "bow", material: "bronze" };
-  person.job = { ...idleJob(), kind: "raid" };
+  person.job = steadyJob("raid");
 
   return person;
 }

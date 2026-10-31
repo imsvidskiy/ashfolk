@@ -1,10 +1,12 @@
 import { BUILDINGS, type BuildingRole, isFlammable } from "../../../content/buildings.ts";
 import type { Waypoint } from "../../agents/navigation.ts";
 import { type Building, isComplete } from "../buildings.ts";
+import type { JobKind } from "../jobs/job.ts";
 import { isChild, isElder, NEED_SECONDS, type Person } from "../person.ts";
 import type { SocietySystem } from "../society.ts";
 import type { Stock } from "../stock.ts";
 import type { Tribe } from "../tribe.ts";
+import type { Relation } from "./relations.ts";
 
 export const MARCH_SPEED = 4.2;
 
@@ -19,6 +21,8 @@ const DEFENDING_HUNGER = 0.85;
 const PARTY_SHARE = 0.5;
 const SMALLEST_PARTY = 3;
 const LARGEST_PARTY = 6;
+const BURNING_STANDING = -50;
+const STEADY_JOBS: ReadonlySet<JobKind> = new Set(["defend", "envoy", "fight", "flee", "hide", "raid"]);
 
 export type RaidPhase = "assault" | "march" | "muster" | "retreat";
 
@@ -41,6 +45,10 @@ export interface Raid {
   readonly struckIds: Set<number>;
   readonly target: Waypoint;
   readonly warriorIds: readonly number[];
+}
+
+export function isBusy(person: Person): boolean {
+  return person.job !== null && STEADY_JOBS.has(person.job.kind);
 }
 
 export function canFight(person: Person): boolean {
@@ -89,18 +97,18 @@ function strongerFirst(first: Person, second: Person): number {
 
 export function chooseWarriors(members: readonly Person[]): Person[] {
   const able = members.filter((person) => {
-    return isFitForRaid(person) && person.job?.kind !== "flee";
+    return isFitForRaid(person) && !isBusy(person);
   });
 
   return able.toSorted(strongerFirst).slice(0, partySize(able.length));
 }
 
-export function chooseAim(isAvengingBlood: boolean, canBurn: boolean, bitterness: number): RaidAim {
-  if (isAvengingBlood) {
+export function chooseAim(relation: Relation, canBurn: boolean): RaidAim {
+  if (relation.lastGrudge === "blood") {
     return "revenge";
   }
 
-  if (canBurn && bitterness > 0.5) {
+  if (canBurn && relation.standing < BURNING_STANDING) {
     return "burn";
   }
 
@@ -122,7 +130,7 @@ export function livingRaiders(people: SocietySystem, raid: Raid): Person[] {
 }
 
 export function lossShare(raid: Raid): number {
-  return (raid.fallenRaiders.length + raid.routedIds.size) / Math.max(1, raid.warriorIds.length);
+  return (raid.fallenRaiders.length + raid.routedIds.size) / raid.warriorIds.length;
 }
 
 export function burnableBuilding(buildings: readonly Building[], tribe: Tribe): Building | null {

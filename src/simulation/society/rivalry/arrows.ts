@@ -1,16 +1,18 @@
+import type { RandomSource } from "../../../shared/random.ts";
 import type { EffectLog } from "../../effects.ts";
 import type { Person } from "../person.ts";
 import type { SocietyContext } from "../society-context.ts";
 import type { CarriedWeapon } from "../weapons.ts";
 import { WEAPON_STATS } from "./combat-stats.ts";
 import { distanceTo, type Foe, foeGirth, foeMover, isFoeAlive } from "./foes.ts";
-import { type Battleground, hurtAnimal, hurtPerson, rolledDamage } from "./strikes.ts";
+import { hurtAnimal, hurtPerson, rolledDamage } from "./strikes.ts";
 
 export const ARROW_SPEED = 38;
 const SHORTEST_FLIGHT = 0.15;
 const LONG_SHOT_PENALTY = 0.45;
 const MOVING_TARGET = 3;
 const MOVING_TARGET_PENALTY = 0.7;
+const MISS_ANGLE_SPREAD = 0.5;
 const SHORTEST_MISS = 1.5;
 const LONGEST_MISS = 5;
 const LANDING_TOLERANCE = 3;
@@ -35,7 +37,7 @@ function hitChance(weapon: CarriedWeapon, foe: Foe, distance: number): number {
   return accuracy * range * (speed > MOVING_TARGET ? MOVING_TARGET_PENALTY : 1);
 }
 
-function land(flight: ArrowFlight, battleground: Battleground, context: SocietyContext): void {
+function land(flight: ArrowFlight, context: SocietyContext): void {
   const { foe } = flight;
 
   const target = foeMover(foe);
@@ -52,36 +54,37 @@ function land(flight: ArrowFlight, battleground: Battleground, context: SocietyC
     return;
   }
 
-  hurtPerson(foe.person, flight.damage, flight.shooter, battleground, context);
+  hurtPerson(foe.person, flight.damage, flight.shooter, context);
 }
 
 export class ArrowFlights {
   readonly #effects: EffectLog;
+  readonly #random: RandomSource;
   #flights: ArrowFlight[] = [];
 
-  constructor(effects: EffectLog) {
+  constructor(effects: EffectLog, random: RandomSource) {
     this.#effects = effects;
+    this.#random = random;
   }
 
-  loose(shooter: Person, weapon: CarriedWeapon, foe: Foe, battleground: Battleground): void {
-    const { random } = battleground;
-
+  loose(shooter: Person, weapon: CarriedWeapon, foe: Foe): void {
     const target = foeMover(foe);
 
     const distance = distanceTo(shooter.mover, foe);
-    const isHit = random.chance(hitChance(weapon, foe, distance));
+    const isHit = this.#random.chance(hitChance(weapon, foe, distance));
     const durationSeconds = Math.max(SHORTEST_FLIGHT, distance / ARROW_SPEED);
 
     const aimX = target.x + target.velocityX * durationSeconds;
     const aimZ = target.z + target.velocityZ * durationSeconds;
-    const missAngle = Math.atan2(aimX - shooter.mover.x, aimZ - shooter.mover.z) + random.signed() * 0.5;
-    const miss = isHit ? 0 : random.between(SHORTEST_MISS, LONGEST_MISS) + foeGirth(foe);
+    const missAngle =
+      Math.atan2(aimX - shooter.mover.x, aimZ - shooter.mover.z) + this.#random.signed() * MISS_ANGLE_SPREAD;
+    const miss = isHit ? 0 : this.#random.between(SHORTEST_MISS, LONGEST_MISS) + foeGirth(foe);
 
     const landX = aimX + Math.sin(missAngle) * miss;
     const landZ = aimZ + Math.cos(missAngle) * miss;
 
     this.#flights.push({
-      damage: rolledDamage(weapon, random),
+      damage: rolledDamage(weapon, this.#random),
       foe,
       isHit,
       landX,
@@ -104,7 +107,7 @@ export class ArrowFlights {
     this.#flights = [];
   }
 
-  update(seconds: number, battleground: Battleground, context: SocietyContext): void {
+  update(seconds: number, context: SocietyContext): void {
     if (this.#flights.length === 0) {
       return;
     }
@@ -122,7 +125,7 @@ export class ArrowFlights {
     });
 
     for (const flight of landed) {
-      land(flight, battleground, context);
+      land(flight, context);
     }
   }
 }

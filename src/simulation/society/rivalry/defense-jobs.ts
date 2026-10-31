@@ -2,15 +2,14 @@ import type { RandomSource } from "../../../shared/random.ts";
 import { faceTowards } from "../../agents/movement.ts";
 import type { Waypoint } from "../../agents/navigation.ts";
 import { Errand, headTo, type Job, standStill, walk } from "../jobs/job.ts";
-import { dropCarrying, type Person, runSpeed, walkSpeed } from "../person.ts";
+import { dropCarrying, type Person, runSpeed } from "../person.ts";
 import type { PersonTick } from "../society-context.ts";
 import type { Tribe } from "../tribe.ts";
 import { nearCamp } from "../tribe-places.ts";
 import type { CarriedWeapon } from "../weapons.ts";
 import { Engagement } from "./engagement.ts";
 import { distanceTo, type Foe, foeMover, isFoeAlive, personFoe } from "./foes.ts";
-import { packFood } from "./provisions.ts";
-import { eatRation, livingRaiders, type Raid } from "./raids.ts";
+import { livingRaiders, type Raid } from "./raids.ts";
 import { assailantOf, nearestFoeAmong } from "./war-parties.ts";
 
 const GUARD_RADIUS = 110;
@@ -18,7 +17,10 @@ const DEFEND_ENGAGE_RADIUS = 35;
 const WOUNDED_HEALTH = 0.25;
 const POST_DISTANCE = 16;
 const POST_SPREAD = 7;
+const POST_FILES = 5;
+const MIDDLE_FILE = (POST_FILES - 1) / 2;
 const LONGEST_FIGHT_SECONDS = 40;
+const FIGHT_FIRST_DELAY_SHARE = 0.5;
 const GIVE_UP_DISTANCE = 45;
 const FLED_BEAST_DISTANCE = 12;
 const REFUGE_SPREAD = 4;
@@ -32,7 +34,7 @@ function guardPost(tribe: Tribe, raid: Raid, person: Person): Waypoint {
   const towardX = raid.rally.x - tribe.campX;
   const towardZ = raid.rally.z - tribe.campZ;
   const length = Math.max(1, Math.hypot(towardX, towardZ));
-  const sideways = ((person.id % 5) - 2) / 2;
+  const sideways = ((person.id % POST_FILES) - MIDDLE_FILE) / MIDDLE_FILE;
 
   return {
     x: tribe.campX + (towardX / length) * POST_DISTANCE - (towardZ / length) * POST_SPREAD * sideways,
@@ -146,7 +148,7 @@ export class FightJob implements Job {
 
   constructor(tick: PersonTick, foe: Foe, weapon: CarriedWeapon) {
     this.#foe = foe;
-    this.#engagement = new Engagement(weapon, tick.context.rivalry.random.next() * 0.5);
+    this.#engagement = new Engagement(weapon, tick.context.rivalry.random.next() * FIGHT_FIRST_DELAY_SHARE);
   }
 
   update(tick: PersonTick): Job | null {
@@ -190,40 +192,6 @@ export class ShelterJob implements Job {
     }
 
     return this;
-  }
-}
-
-export class EnvoyJob implements Job {
-  readonly kind = "envoy";
-  readonly #giftAmount: number;
-  readonly #hostId: number;
-  #rations: number;
-
-  constructor(tick: PersonTick, host: Tribe, giftAmount: number, rations: number) {
-    this.#giftAmount = giftAmount;
-    this.#hostId = host.id;
-    this.#rations = rations;
-    headTo(tick.person, nearCamp(host, REFUGE_SPREAD, tick.context.rivalry.random), tick.context);
-  }
-
-  update(tick: PersonTick): Job | null {
-    const { person, tribe } = tick;
-
-    const host = tick.context.people.findTribe(this.#hostId);
-
-    if (host === null) {
-      return null;
-    }
-
-    this.#rations = eatRation(person, this.#rations);
-
-    if (!walk(tick, walkSpeed(person))) {
-      return this;
-    }
-
-    tick.context.rivalry.receiveEnvoy(tribe, host, packFood(tribe.stock, this.#giftAmount), tick.context);
-
-    return null;
   }
 }
 

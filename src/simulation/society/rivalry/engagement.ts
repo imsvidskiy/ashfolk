@@ -25,8 +25,6 @@ const LONGEST_SHUFFLE_SECONDS = 2;
 const ARRIVAL_DISTANCE = 0.4;
 const MELEE_POSES: Readonly<Record<"none" | "spear", PersonPose>> = { none: "brawl", spear: "thrust" };
 
-type EngagementState = "closing" | "striking";
-
 function isCrowded(tick: PersonTick): boolean {
   const { person } = tick;
 
@@ -41,6 +39,10 @@ function faceFoe(tick: PersonTick, foe: Foe): void {
   faceTowards(tick.person.mover, target.x, target.z);
 }
 
+export function runningPose(weapon: CarriedWeapon): PersonPose {
+  return weapon.kind === "spear" ? "charge" : "run";
+}
+
 export class Engagement {
   readonly #weapon: CarriedWeapon;
   #cooldownSeconds: number;
@@ -52,30 +54,33 @@ export class Engagement {
     this.#cooldownSeconds = firstDelay * WEAPON_STATS[weapon.kind].strikeSeconds;
   }
 
-  update(tick: PersonTick, foe: Foe): EngagementState {
+  update(tick: PersonTick, foe: Foe): void {
     const { person } = tick;
-    const { ledger } = tick.context.rivalry;
 
-    if (ledger.isStaggered(person.id)) {
+    if (tick.context.rivalry.ledger.isStaggered(person.id)) {
       standStill(person, "flinch");
 
-      return "striking";
+      return;
     }
 
     const distance = distanceTo(person.mover, foe);
 
     if (this.#weapon.kind !== "bow") {
-      return this.#fight(tick, foe, distance, this.#weapon);
+      this.#fight(tick, foe, distance, this.#weapon);
+
+      return;
     }
 
     if (!canShoot(tick.tribe)) {
-      return this.#fight(tick, foe, distance, BARE_HANDS);
+      this.#fight(tick, foe, distance, BARE_HANDS);
+
+      return;
     }
 
-    return this.#shoot(tick, foe, distance);
+    this.#shoot(tick, foe, distance);
   }
 
-  #fight(tick: PersonTick, foe: Foe, distance: number, weapon: CarriedWeapon): EngagementState {
+  #fight(tick: PersonTick, foe: Foe, distance: number, weapon: CarriedWeapon): void {
     const { person } = tick;
     const { kind } = weapon;
 
@@ -84,7 +89,7 @@ export class Engagement {
     if (distance > reach || this.#makesRoom(tick)) {
       this.#close(tick, foe, WEAPON_STATS[kind].reach * CLOSING_SHARE + foeGirth(foe));
 
-      return "closing";
+      return;
     }
 
     const isGuarding = tick.context.rivalry.ledger.isGuarding(person.id);
@@ -94,34 +99,32 @@ export class Engagement {
     this.#cooldownSeconds -= tick.seconds;
 
     if (this.#cooldownSeconds > 0 || isGuarding) {
-      return "striking";
+      return;
     }
 
     this.#cooldownSeconds = this.#nextCooldown(tick);
-    strike(person, weapon, foe, tick.context.rivalry, tick.context);
-
-    return "striking";
+    strike(person, weapon, foe, tick.context);
   }
 
-  #shoot(tick: PersonTick, foe: Foe, distance: number): EngagementState {
+  #shoot(tick: PersonTick, foe: Foe, distance: number): void {
     const { person } = tick;
 
     if (distance > WEAPON_STATS.bow.reach) {
       this.#close(tick, foe, BOW_PREFERRED + foeGirth(foe));
 
-      return "closing";
+      return;
     }
 
     if (distance < BOW_CLOSEST) {
       this.#backOff(tick, foe);
 
-      return "closing";
+      return;
     }
 
     if (this.#makesRoom(tick)) {
       this.#close(tick, foe, distance);
 
-      return "closing";
+      return;
     }
 
     standStill(person, "shoot");
@@ -129,14 +132,12 @@ export class Engagement {
     this.#cooldownSeconds -= tick.seconds;
 
     if (this.#cooldownSeconds > 0) {
-      return "striking";
+      return;
     }
 
     this.#cooldownSeconds = this.#nextCooldown(tick);
     tick.tribe.stock.arrows -= 1;
     tick.context.rivalry.loose(person, this.#weapon, foe);
-
-    return "striking";
   }
 
   #makesRoom(tick: PersonTick): boolean {
@@ -175,7 +176,7 @@ export class Engagement {
     }
 
     walk(tick, runSpeed(person));
-    person.pose = this.#weapon.kind === "spear" ? "charge" : "run";
+    person.pose = runningPose(this.#weapon);
   }
 
   #backOff(tick: PersonTick, foe: Foe): void {
