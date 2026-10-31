@@ -308,14 +308,11 @@ function widen(volcano: Volcano, from: number, cell: number, services: PowerServ
   const alongRow = row - grid.rowOf(from);
 
   for (const side of [-1, 1]) {
-    const sideColumn = column - alongRow * side;
-    const sideRow = row + alongColumn * side;
+    const neighbor = grid.neighborIndex(column, row, { column: -alongRow * side, row: alongColumn * side });
 
-    if (!grid.contains(sideColumn, sideRow)) {
+    if (neighbor < 0) {
       continue;
     }
-
-    const neighbor = grid.index(sideColumn, sideRow);
 
     const isSpreading = hashToUnit(neighbor, SPLIT_SALT) < WIDENING_CHANCE * (0.5 + volcano.strength * 0.5);
     const isLevel = terrain.height[neighbor] <= terrain.height[cell] + POOLING_RISE;
