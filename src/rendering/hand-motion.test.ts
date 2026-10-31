@@ -109,10 +109,15 @@ describe("hand motion", () => {
 
     const regrabbed = poseOf(motion);
 
+    motion.update({ ...DEER, x: 200 }, FRAME);
+
+    const carried = poseOf(motion);
+
     expect(regrabbed.x).toBeCloseTo(midway.x);
     expect(regrabbed.x).toBeLessThan(100);
     expect(midway.lift).toBeGreaterThan(HELD_LIFT);
     expect(regrabbed.lift).toBeCloseTo(midway.lift);
+    expect(carried.lift).toBeGreaterThan(HELD_LIFT);
 
     run(motion, { ...DEER, x: 200 }, LIFT_SECONDS * 2);
 
@@ -127,5 +132,24 @@ describe("hand motion", () => {
 
     expect(motion.subject).toEqual({ id: 9, kind: "animal" });
     expect(motion.poseOf("animal", 9, 0, 0)).toMatchObject({ lift: 0, x: 40 });
+  });
+
+  it("pops another thing up from the ground while the last one is landing", () => {
+    const motion = new HandMotion();
+    const fresh = new HandMotion();
+    const fawn: HeldView = { ...DEER, id: 9, x: 40 };
+
+    run(motion, DEER, LIFT_SECONDS * 2);
+    motion.update(null, FRAME);
+
+    for (const hand of [motion, fresh]) {
+      hand.update(fawn, FRAME);
+      hand.update(fawn, FRAME);
+    }
+
+    const pose = motion.poseOf("animal", fawn.id, 0, 0);
+
+    expect(pose).toEqual(fresh.poseOf("animal", fawn.id, 0, 0));
+    expect(pose).toMatchObject({ lift: expect.closeTo(HELD_LIFT * liftPop(FRAME)) });
   });
 });
