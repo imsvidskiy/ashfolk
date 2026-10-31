@@ -141,6 +141,8 @@ function compress(cue: Cue, cleaned: string, encoded: string, gain: number): voi
     "libopus",
     "-b:a",
     cue.kind === "music" ? "64k" : "48k",
+    "-fflags",
+    "+bitexact",
     encoded,
   ]);
 }
