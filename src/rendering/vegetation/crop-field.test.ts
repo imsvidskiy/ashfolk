@@ -1,0 +1,142 @@
+import { Frustum, InstancedBufferGeometry, Matrix4, Mesh, PerspectiveCamera } from "three/webgpu";
+import { describe, expect, it } from "vitest";
+import { cropCode, FENCED_CROP_OFFSET } from "../../content/crops.ts";
+import { Ground } from "../../content/grounds.ts";
+import type { WorldMirror } from "../../game/world-mirror.ts";
+import { GROUND_CHANNELS, GroundChannel } from "../../world/agent-buffers.ts";
+import { FieldPlan } from "../terrain/field-plan.ts";
+import { createVegetatedMirror } from "../testing/vegetated-mirror.ts";
+import { CropField } from "./crop-field.ts";
+import { PlantWeather } from "./plant-material.ts";
+
+const FIELD_ROW = 30;
+const FIELD_COLUMNS = [30, 31];
+const WHEAT = cropCode("wheat");
+const FENCED_WHEAT = WHEAT + FENCED_CROP_OFFSET;
+const SPROUTING = 60;
+const GROWN = 200;
+
+interface Farm {
+  readonly field: CropField;
+  readonly mirror: WorldMirror;
+}
+
+interface FirstCrop {
+  readonly count: number;
+  readonly growth: number;
+  readonly x: number;
+}
+
+function setGround(mirror: WorldMirror, column: number, channel: number, value: number): void {
+  mirror.ground[mirror.grid.index(column, FIELD_ROW) * GROUND_CHANNELS + channel] = value;
+}
+
+function createFarm(code: number): Farm {
+  const mirror = createVegetatedMirror();
+
+  for (const column of FIELD_COLUMNS) {
+    setGround(mirror, column, GroundChannel.Ground, Ground.Farm);
+    setGround(mirror, column, GroundChannel.CropKind, code);
+    setGround(mirror, column, GroundChannel.Crop, SPROUTING);
+  }
+
+  return { field: new CropField(mirror, new PlantWeather(), new FieldPlan(mirror)), mirror };
+}
+
+function drawnMeshes({ field, mirror }: Farm, attribute: string): Mesh<InstancedBufferGeometry>[] {
+  const { grid } = mirror;
+
+  const x = grid.centerX(FIELD_COLUMNS[0]);
+  const z = grid.centerZ(FIELD_ROW);
+  const camera = new PerspectiveCamera(60, 1.5, 0.5, 40_000);
+
+  camera.position.set(x, mirror.heightAt(x, z) + 30, z + 1);
+  camera.lookAt(x, mirror.heightAt(x, z), z);
+  camera.updateMatrixWorld();
+  field.update(
+    camera,
+    new Frustum().setFromProjectionMatrix(
+      new Matrix4().multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse)
+    ),
+    1
+  );
+
+  return field.group.children.filter((child): child is Mesh<InstancedBufferGeometry> => {
+    return (
+      child instanceof Mesh &&
+      child.visible &&
+      child.geometry instanceof InstancedBufferGeometry &&
+      child.geometry.getAttribute(attribute) !== undefined
+    );
+  });
+}
+
+function drawnCount(farm: Farm, attribute: string): number {
+  return drawnMeshes(farm, attribute).reduce((total, mesh) => {
+    return total + mesh.geometry.instanceCount;
+  }, 0);
+}
+
+function firstCrop(farm: Farm): FirstCrop {
+  const [mesh] = drawnMeshes(farm, "cropPlacement");
+
+  if (mesh === undefined) {
+    throw new Error("No crops are drawn");
+  }
+
+  const { geometry } = mesh;
+
+  return {
+    count: geometry.instanceCount,
+    growth: geometry.getAttribute("cropLook").getX(0),
+    x: geometry.getAttribute("cropPlacement").getX(0),
+  };
+}
+
+function groundChanged({ field }: Farm): void {
+  field.groundChanged([{ firstRow: FIELD_ROW, rowCount: 1 }]);
+}
+
+describe("crop field", () => {
+  it("rows crops over every farm cell and fences the sides that face open ground", () => {
+    const fenced = createFarm(FENCED_WHEAT);
+    const open = createFarm(WHEAT);
+
+    expect(drawnCount(fenced, "cropPlacement")).toBeGreaterThan(20);
+    expect(drawnCount(fenced, "fenceStart")).toBe(6);
+    expect(drawnCount(open, "cropPlacement")).toBe(drawnCount(fenced, "cropPlacement"));
+    expect(drawnCount(open, "fenceStart")).toBe(0);
+  });
+
+  it("grows the crops where they stand", () => {
+    const farm = createFarm(FENCED_WHEAT);
+
+    const before = firstCrop(farm);
+
+    for (const column of FIELD_COLUMNS) {
+      setGround(farm.mirror, column, GroundChannel.Crop, GROWN);
+    }
+
+    groundChanged(farm);
+
+    const after = firstCrop(farm);
+
+    expect(before.growth).toBeCloseTo(SPROUTING / 255);
+    expect(after).toEqual({ count: before.count, growth: expect.closeTo(GROWN / 255), x: before.x });
+  });
+
+  it("clears a field once its ground is no longer farmland", () => {
+    const farm = createFarm(FENCED_WHEAT);
+
+    expect(drawnCount(farm, "cropPlacement")).toBeGreaterThan(0);
+
+    for (const column of FIELD_COLUMNS) {
+      setGround(farm.mirror, column, GroundChannel.Ground, Ground.Meadow);
+    }
+
+    groundChanged(farm);
+
+    expect(drawnCount(farm, "cropPlacement")).toBe(0);
+    expect(drawnCount(farm, "fenceStart")).toBe(0);
+  });
+});
