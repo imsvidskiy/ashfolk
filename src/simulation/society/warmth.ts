@@ -1,9 +1,9 @@
-import { BUILDINGS, type BuildingRole } from "../../content/buildings.ts";
+import { BUILDINGS, type BuildingRole, isLitCampfire } from "../../content/buildings.ts";
 import { type Building, isComplete } from "./buildings.ts";
 import { walkSpeed } from "./person.ts";
 import type { PersonTick } from "./society-context.ts";
 import { knows, type Tribe } from "./tribe.ts";
-import { completedBuilding, litCampfireOf, tribeBuildings } from "./tribe-places.ts";
+import { completedBuilding, tribeBuildings } from "./tribe-places.ts";
 
 const COMFORTABLE_TEMPERATURE = 9;
 const WET_COLD_FACTOR = 1.4;
@@ -59,43 +59,46 @@ export function chillPerDay(tick: PersonTick): number {
   return coldness * CHILL_RATE * clothing(tick.tribe);
 }
 
-function warmPlaces(tick: PersonTick): WarmPlace[] {
-  const campfire = litCampfireOf(tick.tribe, tick.context.buildings);
-
-  const hearths = tribeBuildings(tick.tribe, tick.context.buildings)
-    .filter((building) => {
-      return isComplete(building) && HEARTH_ROLES.has(BUILDINGS[building.kind].role);
-    })
-    .map((building) => {
-      return {
-        building,
-        reach: BUILDINGS[building.kind].footprint + SHELTER_REACH,
-        seat: BUILDINGS[building.kind].footprint + HEARTH_SEAT,
-      };
-    });
-
-  if (campfire === null) {
-    return hearths;
-  }
-
-  return [{ building: campfire, reach: FIRESIDE_RADIUS, seat: FIRESIDE_SEAT }, ...hearths];
+function isHearth(building: Building): boolean {
+  return isComplete(building) && HEARTH_ROLES.has(BUILDINGS[building.kind].role);
 }
 
-function distanceTo(tick: PersonTick, place: WarmPlace): number {
+function warmReach(building: Building): number {
+  if (isLitCampfire(building)) {
+    return FIRESIDE_RADIUS;
+  }
+
+  if (!isHearth(building)) {
+    return 0;
+  }
+
+  return BUILDINGS[building.kind].footprint + SHELTER_REACH;
+}
+
+function warmSeat(building: Building): number {
+  if (isLitCampfire(building)) {
+    return FIRESIDE_SEAT;
+  }
+
+  return BUILDINGS[building.kind].footprint + HEARTH_SEAT;
+}
+
+function distanceTo(tick: PersonTick, building: Building): number {
   const { mover } = tick.person;
 
-  return Math.hypot(mover.x - place.building.x, mover.z - place.building.z);
+  return Math.hypot(mover.x - building.x, mover.z - building.z);
 }
 
 export function nearestWarmPlace(tick: PersonTick): WarmPlace | null {
   let nearest: WarmPlace | null = null;
   let nearestDistance = Number.POSITIVE_INFINITY;
 
-  for (const place of warmPlaces(tick)) {
-    const distance = distanceTo(tick, place);
+  for (const building of tribeBuildings(tick.tribe, tick.context.buildings)) {
+    const reach = warmReach(building);
+    const distance = distanceTo(tick, building);
 
-    if (distance < nearestDistance) {
-      nearest = place;
+    if (reach > 0 && distance < nearestDistance) {
+      nearest = { building, reach, seat: warmSeat(building) };
       nearestDistance = distance;
     }
   }
@@ -104,13 +107,33 @@ export function nearestWarmPlace(tick: PersonTick): WarmPlace | null {
 }
 
 function isSleepingAtHome(tick: PersonTick, isAsleep: boolean): boolean {
-  const home = completedBuilding(tick.context.buildings, tick.person.homeId);
-
-  if (!isAsleep || home === null) {
+  if (!isAsleep) {
     return false;
   }
 
-  return Math.hypot(tick.person.mover.x - home.x, tick.person.mover.z - home.z) < SLEEPING_RADIUS;
+  const home = completedBuilding(tick.context.buildings, tick.person.homeId);
+
+  if (home === null) {
+    return false;
+  }
+
+  return distanceTo(tick, home) < SLEEPING_RADIUS;
+}
+
+function isWarmedBy(tick: PersonTick, id: number | null): boolean {
+  const building = tick.context.buildings.find(id);
+
+  return building !== null && distanceTo(tick, building) < warmReach(building);
+}
+
+function isWarmedByAny(tick: PersonTick, ids: readonly number[]): boolean {
+  for (const id of ids) {
+    if (isWarmedBy(tick, id)) {
+      return true;
+    }
+  }
+
+  return false;
 }
 
 export function isSheltered(tick: PersonTick, isAsleep: boolean): boolean {
@@ -118,17 +141,23 @@ export function isSheltered(tick: PersonTick, isAsleep: boolean): boolean {
     return true;
   }
 
-  return warmPlaces(tick).some((place) => {
-    return isWithinReach(tick, place);
-  });
+  const { campfireId, shelterIds, storehouseId, structureIds, totemId } = tick.tribe.buildings;
+
+  return (
+    isWarmedBy(tick, campfireId) ||
+    isWarmedBy(tick, storehouseId) ||
+    isWarmedBy(tick, totemId) ||
+    isWarmedByAny(tick, shelterIds) ||
+    isWarmedByAny(tick, structureIds)
+  );
 }
 
 export function isWithinReach(tick: PersonTick, place: WarmPlace): boolean {
-  return distanceTo(tick, place) < place.reach;
+  return distanceTo(tick, place.building) < place.reach;
 }
 
 export function warmthOnArrival(tick: PersonTick, place: WarmPlace): number {
-  const distance = Math.max(0, distanceTo(tick, place) - place.reach);
+  const distance = Math.max(0, distanceTo(tick, place.building) - place.reach);
   const days = (distance * ROAD_SAFETY) / walkSpeed(tick.person) / tick.context.environment.daySeconds;
 
   return tick.person.warmth - chillPerDay(tick) * days;

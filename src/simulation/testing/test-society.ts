@@ -248,6 +248,16 @@ export class SocietyHarness {
     this.hazards.update(TICK_SECONDS);
   }
 
+  spawnTribe(people: number): Tribe | null {
+    return this.society.spawnTribe({
+      canSettleRoughGround: false,
+      context: this.context,
+      people,
+      x: 0,
+      z: 0,
+    });
+  }
+
   #wakeFauna(days: number): void {
     if (!this.isFaunaAwake) {
       return;
@@ -269,17 +279,6 @@ export class SocietyHarness {
         },
         people: this.rivalry.senses(this.context),
       },
-    });
-  }
-
-  spawnTribe(people: number): Tribe | null {
-    return this.society.spawnTribe({
-      canSettleRoughGround: false,
-      context: this.context,
-      people,
-      technologies: [],
-      x: 0,
-      z: 0,
     });
   }
 }

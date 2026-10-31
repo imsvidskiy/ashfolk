@@ -1,8 +1,7 @@
 import { personName, tribeIdentity } from "../../content/names.ts";
-import type { TechnologyId } from "../../content/technologies.ts";
 import type { RandomSource } from "../../shared/random.ts";
 import { NO_PLANT, type VegetationStore } from "../../world/vegetation-store.ts";
-import { isHopping, isLeaping } from "../agents/hops.ts";
+import { type Hop, isLeaping } from "../agents/hops.ts";
 import { isStranded, moveAlong, placeMover, savedMover, stopMoving } from "../agents/movement.ts";
 import type { Waypoint } from "../agents/navigation.ts";
 import { nearestWalkableSpot } from "../agents/walkable-ground.ts";
@@ -19,7 +18,6 @@ import { walk } from "./jobs/job.ts";
 import { updateNeeds } from "./needs.ts";
 import { createPerson, type DeathCause, type Person, walkSpeed } from "./person.ts";
 import { abandonPlots } from "./plots.ts";
-import { syncEra } from "./progress.ts";
 import type { DeathAccount, PersonTick, SocietyContext } from "./society-context.ts";
 import { createTribe, type Tribe } from "./tribe.ts";
 import { updateTribe } from "./tribe-life.ts";
@@ -66,7 +64,6 @@ interface TribeArrival {
   canSettleRoughGround: boolean;
   context: SocietyContext;
   people: number;
-  technologies: readonly TechnologyId[];
   x: number;
   z: number;
 }
@@ -123,12 +120,11 @@ function newcomerAge(isGrownUp: boolean, random: RandomSource): number {
   return random.between(4, 11);
 }
 
-function keepHopping(tick: PersonTick): void {
+function keepHopping(tick: PersonTick, hop: Hop): void {
   const { context, person, seconds } = tick;
-  const { hop } = person.mover;
 
-  person.pose = isLeaping(person.mover) ? "leap" : "run";
-  person.speed = hop === null ? 0 : hop.speed;
+  person.pose = isLeaping(hop) ? "leap" : "run";
+  person.speed = hop.speed;
   moveAlong(person.mover, seconds, person.speed, context.world, context.navigation);
 }
 
@@ -281,12 +277,6 @@ export class SocietySystem {
     }
 
     const tribe = this.createTribe(site.x, site.z);
-
-    for (const technology of arrival.technologies) {
-      tribe.technologies.add(technology);
-    }
-
-    syncEra(tribe);
 
     for (let member = 0; member < arrival.people; member += 1) {
       this.addPerson(tribe, this.#newcomer(tribe, site, member, arrival));
@@ -561,8 +551,10 @@ export class SocietySystem {
       return;
     }
 
-    if (isHopping(person.mover)) {
-      keepHopping(tick);
+    const { hop } = person.mover;
+
+    if (hop !== null) {
+      keepHopping(tick, hop);
     } else if (isStranded(person.mover, context.world)) {
       dropJob(tribe, person);
       walk(tick, walkSpeed(person));

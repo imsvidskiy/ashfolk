@@ -3,7 +3,7 @@ import type { WorldRules } from "../../content/world-rules.ts";
 import { clamp, distanceSquared, FULL_TURN } from "../../shared/math.ts";
 import { createRandom, type RandomSource, type RandomState } from "../../shared/random.ts";
 import type { AnimalPose } from "../../world/agent-poses.ts";
-import { isHopping } from "../agents/hops.ts";
+import type { Hop } from "../agents/hops.ts";
 import {
   createMover,
   hasArrived,
@@ -431,8 +431,9 @@ export class FaunaSystem {
   }
 
   #addAnimal(herd: Herd, x: number, z: number, random: RandomSource): Animal {
-    const start = this.#spawnPoint(herd, x, z);
     const { bodyRadius, health, lifespanDays } = ANIMALS[herd.kind];
+
+    const start = this.#spawnPoint(herd, x, z);
 
     const animal: Animal = {
       appearanceSeed: random.next(),
@@ -575,8 +576,10 @@ export class FaunaSystem {
     this.#lookForThreats(animal, isEngaged, tick);
     this.#instincts.watchCornered(animal, tick);
 
-    if (isHopping(animal.mover)) {
-      this.#keepHopping(animal, tick);
+    const { hop } = animal.mover;
+
+    if (hop !== null) {
+      this.#keepHopping(animal, tick, hop);
     } else if (isStranded(animal.mover, this.#world)) {
       this.#swimAshore(animal, tick);
     } else if (this.#instincts.isEngaged(animal, packHunt)) {
@@ -591,11 +594,9 @@ export class FaunaSystem {
     this.#keepOnIsland(animal);
   }
 
-  #keepHopping(animal: Animal, tick: FaunaTick): void {
-    const { hop } = animal.mover;
-
+  #keepHopping(animal: Animal, tick: FaunaTick, hop: Hop): void {
     animal.pose = animal.kind === "mammoth" ? "walk" : "run";
-    animal.speed = hop === null ? 0 : hop.speed;
+    animal.speed = hop.speed;
     moveAlong(animal.mover, tick.seconds, animal.speed, this.#world, this.#navigation);
   }
 
@@ -767,8 +768,9 @@ export class FaunaSystem {
   }
 
   #tryCalving(herd: Herd, chance: number, random: RandomSource): void {
-    const mother = this.#firstMember(herd);
     const { breeding, maximumHerdSize } = ANIMALS[herd.kind];
+
+    const mother = this.#firstMember(herd);
 
     if (mother === null || herd.memberIds.length >= maximumHerdSize) {
       return;

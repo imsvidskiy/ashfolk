@@ -157,10 +157,6 @@ function reactToDanger(tick: PersonTick): void {
 }
 
 function answerFoes(tick: PersonTick): void {
-  if (tick.person.job?.kind === "flee") {
-    return;
-  }
-
   const response = respondToFoes(tick);
 
   if (response !== null) {
@@ -329,7 +325,7 @@ function shouldGatherBerries(tick: PersonTick): boolean {
     return false;
   }
 
-  if (!isWorthIt(tick, "berries", 0.3)) {
+  if (!isWorthIt(tick, "berries")) {
     return false;
   }
 

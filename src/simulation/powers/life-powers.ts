@@ -31,7 +31,6 @@ export function tribePower(
     canSettleRoughGround: true,
     context: services,
     people: parameters.people,
-    technologies: [],
     x: target.x,
     z: target.z,
   });

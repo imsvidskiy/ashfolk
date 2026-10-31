@@ -116,6 +116,7 @@ function standsInWater(simulation: Simulation, subject: Subject): boolean {
 
 function createSimulation(): Simulation {
   const simulation = new Simulation(createVegetatedWorld({ dimensions: { cellSize: 10, cellsPerSide: 64 } }));
+
   const { grid } = simulation.world;
 
   const shore: number[] = [];
@@ -133,7 +134,6 @@ function createSimulation(): Simulation {
     canSettleRoughGround: true,
     context: simulation.services,
     people: 3,
-    technologies: [],
     x: -120,
     z: 60,
   });
@@ -152,6 +152,7 @@ describe("grab handlers", () => {
   describe.each(GRABBABLE_KINDS)("a held %s", (kind) => {
     it("lifts, follows the pointer and is set down there", () => {
       const simulation = createSimulation();
+
       const subject = SUBJECTS[kind](simulation);
 
       simulation.execute({ target: subject.target, type: "grab" });
@@ -167,6 +168,7 @@ describe("grab handlers", () => {
 
     it("refuses water and goes back where it was picked up", () => {
       const simulation = createSimulation();
+
       const subject = SUBJECTS[kind](simulation);
       const origin = subject.position();
 
@@ -182,6 +184,7 @@ describe("grab handlers", () => {
 
     it("goes back where it was picked up when the grab is cancelled", () => {
       const simulation = createSimulation();
+
       const subject = SUBJECTS[kind](simulation);
       const origin = subject.position();
 
@@ -195,7 +198,9 @@ describe("grab handlers", () => {
 
     it("goes to dry ground when the spot it was picked up from floods while it is held", () => {
       const simulation = createSimulation();
+
       const { grid } = simulation.world;
+
       const subject = SUBJECTS[kind](simulation);
       const origin = subject.position();
 
@@ -208,6 +213,7 @@ describe("grab handlers", () => {
 
     it("is never saved in the air", () => {
       const simulation = createSimulation();
+
       const subject = SUBJECTS[kind](simulation);
 
       simulation.execute({ target: subject.target, type: "grab" });
@@ -238,6 +244,7 @@ describe("grab handlers", () => {
 
   it("drops the job of a person once they are set down", () => {
     const simulation = createSimulation();
+
     const [person] = simulation.society.people;
 
     advanceFor(simulation, 2);
@@ -260,7 +267,9 @@ describe("grab handlers", () => {
 
   it("takes a plant out of its cell while it is held and keeps its look when set down", () => {
     const simulation = createSimulation();
+
     const { grid, vegetation } = simulation.world;
+
     const subject = SUBJECTS.plant(simulation);
     const plant = subject.target.id;
     const origin = subject.position();
@@ -283,7 +292,9 @@ describe("grab handlers", () => {
 
   it("refuses to set a plant down in a cell another plant has taken", () => {
     const simulation = createSimulation();
+
     const { vegetation } = simulation.world;
+
     const subject = SUBJECTS.plant(simulation);
     const origin = subject.position();
     const taken = otherPlant(simulation, subject.target.id);
@@ -300,7 +311,9 @@ describe("grab handlers", () => {
 
   it("refuses to set a plant down too close to the coast", () => {
     const simulation = createSimulation();
+
     const { grid, terrain } = simulation.world;
+
     const subject = SUBJECTS.plant(simulation);
     const origin = subject.position();
 
@@ -322,7 +335,9 @@ describe("grab handlers", () => {
 
   it("refuses to set a plant down on a slope too steep for it", () => {
     const simulation = createSimulation();
+
     const { grid, terrain } = simulation.world;
+
     const subject = SUBJECTS.plant(simulation);
     const origin = subject.position();
 
@@ -344,7 +359,9 @@ describe("grab handlers", () => {
 
   it("puts a plant lifted from a tribe plot back on its spot", () => {
     const simulation = createSimulation();
+
     const { grid, occupancy, vegetation } = simulation.world;
+
     const subject = SUBJECTS.plant(simulation);
     const plant = subject.target.id;
     const origin = subject.position();
@@ -374,7 +391,9 @@ describe("grab handlers", () => {
 
   it("does not put a plant back on a spot another plant took while it was held", () => {
     const simulation = createSimulation();
+
     const { grid, vegetation } = simulation.world;
+
     const subject = SUBJECTS.plant(simulation);
     const plant = subject.target.id;
     const origin = subject.position();
@@ -399,6 +418,7 @@ describe("grab handlers", () => {
 
   it("takes a lifted plant away from the tribe that was working on it", () => {
     const harness = new SocietyHarness({ day: MORNING });
+
     const tribe = settle(harness, 1);
     const tick = firstMemberTick(harness, tribe);
 
@@ -434,6 +454,7 @@ describe("grab handlers", () => {
 
   it("calms an animal that was charging once it is lifted", () => {
     const simulation = createSimulation();
+
     const herd = simulation.fauna.spawnHerd("mammoth", -60, -120, 1, simulation.random);
     const mammoth = herd === null ? null : simulation.fauna.findAnimal(herd.memberIds[0]);
 

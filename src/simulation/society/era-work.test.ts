@@ -80,6 +80,24 @@ describe("mining work", () => {
 
     expect(eraOption("mine").weight(tick, NO_CONSTRUCTION)).toBeCloseTo(1.2);
   });
+
+  it("waits for the expedition season", () => {
+    const harness = createMiningHarness();
+
+    const tribe = teach(settle(harness, 4), THROUGH_MINING, 2);
+
+    addStructure(harness, tribe, { depositId: 0, kind: "mine", x: 150, z: 40 });
+    moveToSeason(harness, 3.5);
+
+    const tick = firstMemberTick(harness, tribe);
+    const option = eraOption("mine");
+
+    expect(option.weight(tick, NO_CONSTRUCTION)).toBe(0);
+
+    moveToSeason(harness, 1);
+
+    expect(option.weight(tick, NO_CONSTRUCTION)).toBeCloseTo(2.4);
+  });
 });
 
 describe("planting work", () => {
