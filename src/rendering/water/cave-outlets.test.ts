@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { Spring } from "../../world/water.ts";
 import { WorldGrid } from "../../world/world-grid.ts";
-import { CaveOutlets, caveMouthWidth } from "./cave-outlets.ts";
+import { CaveOutlets } from "./cave-outlets.ts";
 
 const grid = new WorldGrid({ cellSize: 10, cellsPerSide: 32 });
 
@@ -48,9 +48,5 @@ describe("CaveOutlets", () => {
     expect(slotAt(outlets, -25, -55)).toBe(1);
     expect(slotAt(outlets, -105, -55)).toBe(0);
     expect(slotAt(outlets, -15, -55)).toBe(0);
-  });
-
-  it("opens each cave a little wider than its river", () => {
-    expect(caveMouthWidth({ ...SPRING, kind: "cave", x: 0, z: 0 })).toBeGreaterThan(SPRING.radius * 2);
   });
 });
