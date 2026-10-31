@@ -32,44 +32,6 @@ export function canAfford(tribe: Tribe, kind: BuildingKind): boolean {
   return hasResources(tribe.stock, BUILDINGS[kind].cost);
 }
 
-export function planConstruction(tribe: Tribe, context: SocietyContext): void {
-  if (tribe.buildings.constructionSiteId !== null || tribe.isMigrating) {
-    return;
-  }
-
-  addFieldIfNeeded(tribe, context);
-  addPlotIfNeeded(tribe, context);
-
-  const plans = buildingPlans(tribe, context);
-
-  const goal = savingGoals(tribe, plans, context).at(0);
-  const plan = plans.find((candidate) => {
-    return canAfford(tribe, candidate.kind);
-  });
-
-  if (plan === undefined) {
-    if (goal !== undefined) {
-      noteStall(tribe, goal.kind, context);
-    }
-
-    return;
-  }
-
-  if (plan === goal) {
-    tribe.stall.kind = null;
-  }
-
-  const site = placeBuilding(tribe, plan, context);
-
-  if (site === null) {
-    tribe.postponed[plan.kind] = context.environment.day + POSTPONE_DAYS;
-
-    return;
-  }
-
-  assignSlot(tribe, plan, site, context);
-}
-
 function noteStall(tribe: Tribe, kind: BuildingKind, context: SocietyContext): void {
   const { day } = context.environment;
 
@@ -98,57 +60,6 @@ function savingGoals(tribe: Tribe, plans: readonly BuildingPlan[], context: Soci
   return plans.filter((plan) => {
     return !isStalled(tribe, plan.kind, context.environment.day);
   });
-}
-
-export function constructionNeeds(tribe: Tribe, context: SocietyContext): ResourceAmounts {
-  const needs = emptyStock();
-
-  for (const plan of savingGoals(tribe, buildingPlans(tribe, context), context).slice(0, PLANS_TO_SAVE_FOR)) {
-    addResources(needs, BUILDINGS[plan.kind].cost);
-  }
-
-  return needs;
-}
-
-function placeBuilding(tribe: Tribe, plan: BuildingPlan, context: SocietyContext): Building | null {
-  if (isEnclosure(plan.kind)) {
-    return startBuilding(tribe, plan, { pad: null, spot: plan.origin }, context);
-  }
-
-  const { random, world } = context;
-
-  let flattest: Site | null = null;
-
-  for (let attempt = 0; attempt < PLACEMENT_ATTEMPTS; attempt += 1) {
-    const angle = random.next() * FULL_TURN;
-    const distance = random.between(plan.nearest, plan.farthest);
-
-    const spot = aroundPoint(plan.origin, distance, angle);
-
-    if (!(isBuildable(spot, plan.kind, context) && isDryWay(world, plan.origin, spot))) {
-      continue;
-    }
-
-    if (!isLeveled(plan.kind)) {
-      return startBuilding(tribe, plan, { pad: null, spot }, context);
-    }
-
-    const site: Site = { pad: planPad(world, context.buildings.all, spot, plan.kind), spot };
-
-    if (unevenness(site) <= DEEPEST_LEVELING) {
-      return startBuilding(tribe, plan, site, context);
-    }
-
-    if (flattest === null || unevenness(site) < unevenness(flattest)) {
-      flattest = site;
-    }
-  }
-
-  if (flattest === null) {
-    return null;
-  }
-
-  return startBuilding(tribe, plan, flattest, context);
 }
 
 function unevenness(site: Site): number {
@@ -262,6 +173,55 @@ function startBuilding(tribe: Tribe, plan: BuildingPlan, { pad, spot }: Site, co
   return site;
 }
 
+function placeBuilding(tribe: Tribe, plan: BuildingPlan, context: SocietyContext): Building | null {
+  if (isEnclosure(plan.kind)) {
+    return startBuilding(tribe, plan, { pad: null, spot: plan.origin }, context);
+  }
+
+  const { random, world } = context;
+
+  let flattest: Site | null = null;
+
+  for (let attempt = 0; attempt < PLACEMENT_ATTEMPTS; attempt += 1) {
+    const angle = random.next() * FULL_TURN;
+    const distance = random.between(plan.nearest, plan.farthest);
+
+    const spot = aroundPoint(plan.origin, distance, angle);
+
+    if (!(isBuildable(spot, plan.kind, context) && isDryWay(world, plan.origin, spot))) {
+      continue;
+    }
+
+    if (!isLeveled(plan.kind)) {
+      return startBuilding(tribe, plan, { pad: null, spot }, context);
+    }
+
+    const site: Site = { pad: planPad(world, context.buildings.all, spot, plan.kind), spot };
+
+    if (unevenness(site) <= DEEPEST_LEVELING) {
+      return startBuilding(tribe, plan, site, context);
+    }
+
+    if (flattest === null || unevenness(site) < unevenness(flattest)) {
+      flattest = site;
+    }
+  }
+
+  if (flattest === null) {
+    return null;
+  }
+
+  return startBuilding(tribe, plan, flattest, context);
+}
+
+function markForRetirement(buildingId: number | null, context: SocietyContext): void {
+  const building = context.buildings.find(buildingId);
+
+  if (building !== null) {
+    building.isRetiring = true;
+  }
+}
+
 function assignSlot(tribe: Tribe, plan: BuildingPlan, site: Building, context: SocietyContext): void {
   const { buildings } = tribe;
 
@@ -290,11 +250,86 @@ function assignSlot(tribe: Tribe, plan: BuildingPlan, site: Building, context: S
   }
 }
 
-function markForRetirement(buildingId: number | null, context: SocietyContext): void {
-  const building = context.buildings.find(buildingId);
+export function planConstruction(tribe: Tribe, context: SocietyContext): void {
+  if (tribe.buildings.constructionSiteId !== null || tribe.isMigrating) {
+    return;
+  }
 
-  if (building !== null) {
-    building.isRetiring = true;
+  addFieldIfNeeded(tribe, context);
+  addPlotIfNeeded(tribe, context);
+
+  const plans = buildingPlans(tribe, context);
+
+  const goal = savingGoals(tribe, plans, context).at(0);
+  const plan = plans.find((candidate) => {
+    return canAfford(tribe, candidate.kind);
+  });
+
+  if (plan === undefined) {
+    if (goal !== undefined) {
+      noteStall(tribe, goal.kind, context);
+    }
+
+    return;
+  }
+
+  if (plan === goal) {
+    tribe.stall.kind = null;
+  }
+
+  const site = placeBuilding(tribe, plan, context);
+
+  if (site === null) {
+    tribe.postponed[plan.kind] = context.environment.day + POSTPONE_DAYS;
+
+    return;
+  }
+
+  assignSlot(tribe, plan, site, context);
+}
+
+export function constructionNeeds(tribe: Tribe, context: SocietyContext): ResourceAmounts {
+  const needs = emptyStock();
+
+  for (const plan of savingGoals(tribe, buildingPlans(tribe, context), context).slice(0, PLANS_TO_SAVE_FOR)) {
+    addResources(needs, BUILDINGS[plan.kind].cost);
+  }
+
+  return needs;
+}
+
+function depositName(site: Building, context: SocietyContext): string {
+  const deposit = context.world.depositById(site.depositId);
+
+  if (deposit === null) {
+    return "hills";
+  }
+
+  return `${deposit.kind} vein`;
+}
+
+function constructionMessage(tribe: Tribe, site: Building, context: SocietyContext): string {
+  switch (site.kind) {
+    case "campfire":
+      return `${tribe.name} lit a campfire`;
+    case "mine":
+      return `${tribe.name} opened a mine at the ${depositName(site, context)}`;
+    case "palisade":
+      return `${tribe.name} raised a palisade around the camp`;
+    case "stoneWall":
+      return `${tribe.name} walled their village in stone`;
+    default:
+      return `${tribe.name} built a ${BUILDINGS[site.kind].name.toLowerCase()}`;
+  }
+}
+
+function retireReplaced(site: Building, context: SocietyContext): void {
+  const replaced = context.buildings.find(site.replacesId);
+
+  site.replacesId = null;
+
+  if (replaced !== null) {
+    context.buildings.remove(replaced, "replaced");
   }
 }
 
@@ -316,39 +351,12 @@ export function completeConstruction(tribe: Tribe, site: Building, context: Soci
   learn(tribe, 2, context.rules);
 }
 
-function constructionMessage(tribe: Tribe, site: Building, context: SocietyContext): string {
-  switch (site.kind) {
-    case "campfire":
-      return `${tribe.name} lit a campfire`;
-    case "mine":
-      return `${tribe.name} opened a mine at the ${depositName(site, context)}`;
-    case "palisade":
-      return `${tribe.name} raised a palisade around the camp`;
-    case "stoneWall":
-      return `${tribe.name} walled their village in stone`;
-    default:
-      return `${tribe.name} built a ${BUILDINGS[site.kind].name.toLowerCase()}`;
-  }
-}
-
-function depositName(site: Building, context: SocietyContext): string {
-  const deposit = context.world.depositById(site.depositId);
-
-  if (deposit === null) {
-    return "hills";
+function clearedId(id: number | null, lost: Building): number | null {
+  if (id === lost.id) {
+    return null;
   }
 
-  return `${deposit.kind} vein`;
-}
-
-function retireReplaced(site: Building, context: SocietyContext): void {
-  const replaced = context.buildings.find(site.replacesId);
-
-  site.replacesId = null;
-
-  if (replaced !== null) {
-    context.buildings.remove(replaced, "replaced");
-  }
+  return id;
 }
 
 export function handleBuildingLoss(tribe: Tribe, loss: BuildingLoss, context: SocietyContext): void {
@@ -383,12 +391,4 @@ export function handleBuildingLoss(tribe: Tribe, loss: BuildingLoss, context: So
   }
 
   assignHomes(tribe, context.buildings, context.people.membersOf(tribe));
-}
-
-function clearedId(id: number | null, lost: Building): number | null {
-  if (id === lost.id) {
-    return null;
-  }
-
-  return id;
 }

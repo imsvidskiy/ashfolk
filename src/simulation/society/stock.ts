@@ -84,6 +84,16 @@ export function shareFood(stock: Stock, share: number): Stock {
   return portion;
 }
 
+export function amountOf(amounts: ResourceAmounts, kind: ResourceKind): number {
+  const amount = amounts[kind];
+
+  if (amount === undefined) {
+    return 0;
+  }
+
+  return amount;
+}
+
 export function hasResources(stock: Stock, amounts: ResourceAmounts): boolean {
   return RESOURCE_KINDS.every((kind) => {
     return stock[kind] >= amountOf(amounts, kind);
@@ -100,16 +110,6 @@ export function addResources(stock: Stock, amounts: ResourceAmounts): void {
   for (const kind of RESOURCE_KINDS) {
     stock[kind] += amountOf(amounts, kind);
   }
-}
-
-export function amountOf(amounts: ResourceAmounts, kind: ResourceKind): number {
-  const amount = amounts[kind];
-
-  if (amount === undefined) {
-    return 0;
-  }
-
-  return amount;
 }
 
 function spoilageFactor(kind: FoodKind, storage: Storage): number {

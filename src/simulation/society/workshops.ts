@@ -77,28 +77,6 @@ function headedInputs(inputs: ResourceAmounts, material: ToolMaterial): Resource
   return { ...inputs, [metal]: amountOf(inputs, metal) + 1, stone: 0 };
 }
 
-function resolveOrder(tribe: Tribe, context: SocietyContext, recipe: RecipeId): CraftOrder | null {
-  const definition = RECIPES[recipe];
-
-  if (!knows(tribe, definition.technology)) {
-    return null;
-  }
-
-  const station = completedOfKind(tribe, context, definition.station);
-
-  if (station === null && definition.station !== "workshop") {
-    return null;
-  }
-
-  const order = orderFor(tribe, recipe, station);
-
-  if (order === null || !hasResources(tribe.stock, order.inputs)) {
-    return null;
-  }
-
-  return order;
-}
-
 function orderFor(tribe: Tribe, recipe: RecipeId, station: Building | null): CraftOrder | null {
   const definition = RECIPES[recipe];
 
@@ -123,6 +101,28 @@ function orderFor(tribe: Tribe, recipe: RecipeId, station: Building | null): Cra
   const material = headMaterial(tribe);
 
   return { inputs: headedInputs(definition.inputs, material), material, outputs: definition.outputs, recipe, station };
+}
+
+function resolveOrder(tribe: Tribe, context: SocietyContext, recipe: RecipeId): CraftOrder | null {
+  const definition = RECIPES[recipe];
+
+  if (!knows(tribe, definition.technology)) {
+    return null;
+  }
+
+  const station = completedOfKind(tribe, context, definition.station);
+
+  if (station === null && definition.station !== "workshop") {
+    return null;
+  }
+
+  const order = orderFor(tribe, recipe, station);
+
+  if (order === null || !hasResources(tribe.stock, order.inputs)) {
+    return null;
+  }
+
+  return order;
 }
 
 export function chooseCraft(tribe: Tribe, context: SocietyContext, construction: ResourceAmounts): CraftOrder | null {
