@@ -23,6 +23,8 @@ const ANIMAL_DAMAGE_PER_SECOND = 0.9;
 const BUILDING_DAMAGE_PER_SECOND = 60;
 const SCARE_REACH = 4;
 const DANGER_REACH = 2.5;
+const SWIRL_SWAY = 0.6;
+const SWIRL_SALT = 41;
 
 interface Twister {
   lifetime: number;
@@ -146,9 +148,11 @@ function uproot(center: Waypoint, core: number, force: number, services: PowerSe
     for (const plant of vegetation.plantsInCell(cell).filter((index) => {
       return vegetation.isAlive(index);
     })) {
-      if (isTreeSpecies(vegetation.species[plant])) {
+      const species = vegetation.species[plant];
+
+      if (isTreeSpecies(species)) {
         world.fellPlant(plant, environment.day, swirlAngle(plant, center, world));
-      } else if (isShrubSpecies(vegetation.species[plant])) {
+      } else if (isShrubSpecies(species)) {
         world.removePlant(plant);
       }
     }
@@ -172,7 +176,7 @@ function swirlAngle(plant: number, center: Waypoint, world: WorldState): number 
 
   const outward = Math.atan2(vegetation.x[plant] - center.x, vegetation.z[plant] - center.z);
 
-  return outward + Math.PI / 2 + (hashToUnit(vegetation.seed[plant] * 41, plant) - 0.5) * 0.6;
+  return outward + Math.PI / 2 + (hashToUnit(vegetation.seed[plant] * SWIRL_SALT, plant) - 0.5) * SWIRL_SWAY;
 }
 
 function whirl(mover: Mover, center: Waypoint, radius: number, force: number, services: PowerServices): void {
