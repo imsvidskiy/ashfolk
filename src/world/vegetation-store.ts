@@ -63,6 +63,8 @@ export interface VegetationSnapshot extends VegetationBuffers {
   wear: Uint8Array;
 }
 
+type DeadState = typeof PlantState.Burnt | typeof PlantState.Fallen;
+
 interface BurntPlant {
   day: number;
   index: number;
@@ -492,7 +494,7 @@ export class VegetationStore implements VegetationChannels {
     this.#changed.clear();
   }
 
-  #kill(index: number, day: number, state: number): void {
+  #kill(index: number, day: number, state: DeadState): void {
     if (this.state[index] !== PlantState.Alive) {
       return;
     }
