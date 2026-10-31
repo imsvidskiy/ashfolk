@@ -19,6 +19,7 @@ const ABUNDANCE_FAITH = 8;
 const DEFAULT_ABUNDANCE = 0.6;
 const INSPIRATION_REACH = 600;
 const INSPIRATION_FAITH = 5;
+const INSPIRATION_GLOW_RADIUS = 40;
 const HEALING_FAITH = 1;
 const HEALED_HUNGER = 0.2;
 
@@ -131,7 +132,13 @@ export function inspirationPower(
 
   tribe.knowledge += upcoming.cost * percent(parameters.strength);
   tribe.faith = Math.min(MAXIMUM_FAITH, tribe.faith + INSPIRATION_FAITH);
-  services.effects.add({ kind: "blessing", radius: 40, style: "inspiration", x: tribe.campX, z: tribe.campZ });
+  services.effects.add({
+    kind: "blessing",
+    radius: INSPIRATION_GLOW_RADIUS,
+    style: "inspiration",
+    x: tribe.campX,
+    z: tribe.campZ,
+  });
   services.chronicle.record({
     category: "gift",
     text: `${tribe.name} were struck by sudden insight`,

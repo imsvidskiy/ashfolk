@@ -23,6 +23,9 @@ const FRAGMENTS_PER_PIECE = 2;
 const FALL_SWAY = 0.4;
 const BROKEN_TOP_TURN = 0.9;
 const FRAGMENT_SPREAD = 2.4;
+const NEAREST_FRAGMENT = 2.2;
+const FARTHEST_FRAGMENT = 5.5;
+const PILE_SHARE = 0.5;
 const ROLL_SALT = 41.3;
 const FRAGMENT_SALT = 7.7;
 
@@ -292,7 +295,7 @@ function scatterRubble(world: WorldState, plant: number, shock: Shock, day: numb
     const salt = plant * FRAGMENTS_PER_PIECE + fragment;
 
     const angle = away + (hashToUnit(salt, 1, FRAGMENT_SALT) - 0.5) * FRAGMENT_SPREAD;
-    const reach = lerp(2.2, 5.5, hashToUnit(salt, 2, FRAGMENT_SALT));
+    const reach = lerp(NEAREST_FRAGMENT, FARTHEST_FRAGMENT, hashToUnit(salt, 2, FRAGMENT_SALT));
 
     const fragmentX = x + Math.cos(angle) * reach;
     const fragmentZ = z + Math.sin(angle) * reach;
@@ -302,7 +305,7 @@ function scatterRubble(world: WorldState, plant: number, shock: Shock, day: numb
       continue;
     }
 
-    const isPile = hashToUnit(salt, 3, FRAGMENT_SALT) < 0.5;
+    const isPile = hashToUnit(salt, 3, FRAGMENT_SALT) < PILE_SHARE;
     const jitter = hashToUnit(salt, 4, FRAGMENT_SALT);
 
     world.plant({

@@ -10,14 +10,17 @@ import { APPLIED, type PowerOutcome, type PowerServices, type PowerTarget, perce
 const FIRE_BRUSH_STRENGTH = 0.75;
 const FIRE_EDGE_FADE = 0.6;
 const RAIN_PER_SECOND = 1.2;
+const RAIN_DOUSING = 2;
 const DEFAULT_RAIN_INTENSITY = 0.7;
 const SNOW_PER_SECOND = 0.6;
+const SNOW_DOUSING = 3;
 const DEFAULT_SNOW_INTENSITY = 0.6;
 const DEFAULT_BLAST_POWER = 0.8;
 const METEOR_DISTANCE = 2600;
 const METEOR_ALTITUDE = 3200;
 const METEOR_REFERENCE_CRATER = 140;
 const METEOR_POWER = 2.4;
+const METEOR_HEADING_SPREAD = 0.45;
 const DEFAULT_MAGNITUDE = 0.7;
 const DEFAULT_TORNADO_STRENGTH = 0.7;
 
@@ -89,7 +92,7 @@ export function rainPower(
     const falloff = weatherFalloff(distance, parameters.radius);
 
     world.fields.wetness[cell] = Math.min(1, world.fields.wetness[cell] + soaking * falloff);
-    fire.douse(cell, soaking * 2 * falloff);
+    fire.douse(cell, soaking * RAIN_DOUSING * falloff);
     world.markSurfaceCell(cell);
   }
 
@@ -115,7 +118,7 @@ export function snowPower(
     const falloff = weatherFalloff(distance, parameters.radius);
 
     world.fields.snow[cell] = Math.min(SNOW_CAPACITY, world.fields.snow[cell] + snowfall * falloff);
-    fire.douse(cell, snowfall * 3 * falloff);
+    fire.douse(cell, snowfall * SNOW_DOUSING * falloff);
     world.markSurfaceCell(cell);
   }
 
@@ -149,7 +152,8 @@ export function meteorPower(
 ): PowerOutcome {
   const { environment, random, world } = services;
 
-  const fromWindward = Math.atan2(environment.windZ, environment.windX) + Math.PI + random.signed() * 0.45;
+  const fromWindward =
+    Math.atan2(environment.windZ, environment.windX) + Math.PI + random.signed() * METEOR_HEADING_SPREAD;
   const ground = world.surfaceAt(target.x, target.z);
 
   services.effects.add({
