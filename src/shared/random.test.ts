@@ -55,4 +55,8 @@ describe("seeded random", () => {
       return createRandom(1).pick([]);
     }).toThrow(RangeError);
   });
+
+  it("picks an undefined item from a list that holds one", () => {
+    expect(createRandom(1).pick([undefined])).toBeUndefined();
+  });
 });
