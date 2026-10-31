@@ -81,6 +81,7 @@ async function openSessionOrRelease(
 
 export class GameEngine implements EngineHandle {
   readonly camera: GodCamera;
+  readonly canvas: HTMLCanvasElement;
   readonly filming = new Filming();
   readonly graphicsLost: Promise<void>;
   readonly hand: HandTool;
@@ -88,7 +89,6 @@ export class GameEngine implements EngineHandle {
   readonly session: GameSession;
   readonly #activity = new AbortController();
   readonly #cameraPlacement = new Matrix4();
-  readonly #canvas: HTMLCanvasElement;
   readonly #entityPicker: EntityPicker;
   readonly #keyboard: KeyboardControls;
   readonly #labels: LabelProjector;
@@ -107,20 +107,21 @@ export class GameEngine implements EngineHandle {
   #viewport: ViewportSize = { height: 1, width: 1 };
 
   constructor(parts: EngineParts) {
-    this.#canvas = parts.canvas;
+    this.canvas = parts.canvas;
     this.graphicsLost = parts.graphicsLost;
-    this.#resolution = new ResolutionGovernor(RENDER_QUALITY[parts.quality].maximumPixelRatio);
     this.#renderer = parts.renderer;
     this.session = parts.session;
 
     const { mirror } = parts.session;
 
+    const quality = RENDER_QUALITY[parts.quality];
     const perspective = new PerspectiveCamera(FIELD_OF_VIEW, 1, NEAR_PLANE, FAR_PLANE);
 
     function heightAt(x: number, z: number): number {
       return mirror.heightAt(x, z);
     }
 
+    this.#resolution = new ResolutionGovernor(quality.maximumPixelRatio);
     this.camera = new GodCamera(perspective, heightAt, mirror.grid.halfSize);
     this.#world = new WorldRenderer({
       camera: perspective,
@@ -128,7 +129,7 @@ export class GameEngine implements EngineHandle {
       onShake: (amount, x, z) => {
         this.#shake(amount, x, z);
       },
-      quality: RENDER_QUALITY[parts.quality],
+      quality,
       renderer: parts.renderer,
     });
     this.#entityPicker = new EntityPicker(
@@ -228,10 +229,6 @@ export class GameEngine implements EngineHandle {
     engine.run();
 
     return engine;
-  }
-
-  get canvas(): HTMLCanvasElement {
-    return this.#canvas;
   }
 
   get landmarks(): readonly Landmark[] {
@@ -368,7 +365,7 @@ export class GameEngine implements EngineHandle {
 
     if (cursor !== this.#handCursor) {
       this.#handCursor = cursor;
-      showHandCursor(this.#canvas, cursor);
+      showHandCursor(this.canvas, cursor);
     }
   }
 
@@ -446,8 +443,8 @@ export class GameEngine implements EngineHandle {
   }
 
   #resize(): void {
-    const width = Math.max(1, this.#canvas.clientWidth);
-    const height = Math.max(1, this.#canvas.clientHeight);
+    const width = Math.max(1, this.canvas.clientWidth);
+    const height = Math.max(1, this.canvas.clientHeight);
 
     this.#devicePixelRatio = window.devicePixelRatio;
     this.#viewport = { height, width };
