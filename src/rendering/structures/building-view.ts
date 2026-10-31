@@ -33,6 +33,7 @@ import { createBuildingMaterial, createPlinthMaterial } from "./building-materia
 
 const LEVEL_DISTANCES = { high: 320, low: 3200 } as const;
 const PIECE_RADIUS = 9;
+const PIECE_CENTER_LIFT = 2;
 const WORKPLACE_GLOW = 0.55;
 const SMALLEST_RING = 10;
 const ROUND_KINDS: ReadonlySet<BuildingKind> = new Set(["hut", "kiln", "smelter", "tent"]);
@@ -48,6 +49,7 @@ const TALLEST_PLINTH = 3;
 const SINKING_ALLOWANCE = 0.6;
 const ROUND_PLINTH_SIDES = 14;
 const FADING_BATCH = 2;
+const FLOATS_PER_INSTANCE = 12;
 
 const BUILDING_FIELDS = [
   { name: "buildingPlacement", size: 4 },
@@ -174,6 +176,13 @@ function plinthFooting(high: MeshData, isRound: boolean): Footing {
   }
 
   return { lift: TALLEST_PLINTH, plinth: box, probes, sinking: SINKING_ALLOWANCE };
+}
+
+function writeVec4(target: Float32Array, offset: number, x: number, y: number, z: number, w: number): void {
+  target[offset] = x;
+  target[offset + 1] = y;
+  target[offset + 2] = z;
+  target[offset + 3] = w;
 }
 
 function seatOf(mirror: WorldMirror, piece: PiecePlacement, footing: Footing): Seat {
@@ -345,6 +354,7 @@ export class BuildingView {
   readonly #fading: readonly InstanceBatch[];
   readonly #fadingPlinths: readonly InstanceBatch[];
   readonly #footings = new Map<ModelKey, Footing>();
+  readonly #instance = new Float32Array(FLOATS_PER_INSTANCE);
   readonly #plinths: readonly InstanceBatch[];
   readonly #tribes: TribeLooks;
   #isWarmingFading: boolean;
@@ -465,7 +475,7 @@ export class BuildingView {
 
     const y = seat.floor;
 
-    this.#bounds.center.set(piece.x, y + 2, piece.z);
+    this.#bounds.center.set(piece.x, y + PIECE_CENTER_LIFT, piece.z);
 
     const distance = input.camera.position.distanceTo(this.#bounds.center);
 
@@ -476,12 +486,12 @@ export class BuildingView {
     const level = distance < LEVEL_DISTANCES.high * input.detail ? 0 : 1;
     const accent = this.#tribes.accent(building.tribeId);
     const visibility = columnVisibility(input.camera.position, this.#base.set(piece.x, y, piece.z), piece.extent);
+    const instance = this.#instance;
 
-    piece.batches[visibility < 1 ? FADING_BATCH : level].add(
-      [piece.x, y, piece.z, piece.rotation],
-      [piece.progress, accent.r, accent.g, accent.b],
-      [saturate(1 - building.health), glowOf(building), building.style, visibility]
-    );
+    writeVec4(instance, 0, piece.x, y, piece.z, piece.rotation);
+    writeVec4(instance, 4, piece.progress, accent.r, accent.g, accent.b);
+    writeVec4(instance, 8, saturate(1 - building.health), glowOf(building), building.style, visibility);
+    piece.batches[visibility < 1 ? FADING_BATCH : level].add(instance);
 
     if (piece.plinth !== null) {
       this.#placePlinth(piece, piece.plinth, visibility);
@@ -494,12 +504,12 @@ export class BuildingView {
 
     const plinths = box.isRound ? rounds : boxes;
     const depth = seat.floor - seat.lowest + PLINTH_FOOTING;
+    const instance = this.#instance;
 
-    plinths.add(
-      [piece.x, seat.floor + PLINTH_TOP, piece.z, piece.rotation],
-      [box.centerX, box.centerZ, box.width, box.length],
-      [depth, saturate(1 - building.health), building.style, visibility]
-    );
+    writeVec4(instance, 0, piece.x, seat.floor + PLINTH_TOP, piece.z, piece.rotation);
+    writeVec4(instance, 4, box.centerX, box.centerZ, box.width, box.length);
+    writeVec4(instance, 8, depth, saturate(1 - building.health), building.style, visibility);
+    plinths.add(instance);
   }
 
   #warmFadingBatches(): void {
