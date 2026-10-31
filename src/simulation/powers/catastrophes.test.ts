@@ -5,27 +5,11 @@ import { isTreeSpecies, PlantSpecies, plantSpeciesDefinition } from "../../conte
 import { PlantState } from "../../world/vegetation-store.ts";
 import { WorldGrid } from "../../world/world-grid.ts";
 import { Simulation } from "../simulation.ts";
+import { createValleySimulation, valleyHeight } from "../testing/test-simulation.ts";
 import { createVegetatedWorld, floodCells, monumentAround, plantInCell } from "../testing/test-world.ts";
 import { raiseTerrain } from "../world/terrain-editing.ts";
 
-const VALLEY_SIDES = 0.25;
-const VALLEY_FALL = 0.02;
 const METEOR_Z = -200;
-
-function valleyHeight(x: number, z: number): number {
-  return 200 + Math.abs(x - 5) * VALLEY_SIDES + z * VALLEY_FALL;
-}
-
-function createValley(): Simulation {
-  const simulation = new Simulation(
-    createVegetatedWorld({ dimensions: { cellSize: 10, cellsPerSide: 96 }, heightAt: valleyHeight })
-  );
-
-  simulation.weather.setKind("clear");
-  simulation.waterRecomputation.recompute();
-
-  return simulation;
-}
 
 function settle(simulation: Simulation, seconds: number): void {
   for (let elapsed = 0; elapsed < seconds; elapsed += 0.1) {
@@ -47,7 +31,7 @@ function depthAt(simulation: Simulation, x: number, z: number): number {
 
 describe("water after the land changes", () => {
   it("runs a river down the valley before anything happens", () => {
-    const simulation = createValley();
+    const simulation = createValleySimulation();
 
     expect(simulation.world.water.rivers.length).toBeGreaterThan(0);
     expect(simulation.world.isWaterAt(0, 0)).toBe(true);
@@ -55,7 +39,7 @@ describe("water after the land changes", () => {
   });
 
   it("fills an explosion crater on a river as a pond and lets the river flow on", () => {
-    const simulation = createValley();
+    const simulation = createValleySimulation();
 
     simulation.usePower("explosion", 0, 0, {});
     settle(simulation, 8);
@@ -66,7 +50,7 @@ describe("water after the land changes", () => {
   });
 
   it("starts filling a crater lake at once and fills it over a few seconds", () => {
-    const simulation = createValley();
+    const simulation = createValleySimulation();
 
     simulation.usePower("meteor", 0, METEOR_Z, { craterRadius: 140, fallTime: 0.5 });
     settle(simulation, 0.7);
@@ -89,7 +73,7 @@ describe("water after the land changes", () => {
   });
 
   it("draws a river into a crater that tears through its bank", () => {
-    const simulation = createValley();
+    const simulation = createValleySimulation();
 
     expect(simulation.world.isWaterAt(35, 0)).toBe(false);
 
@@ -101,7 +85,7 @@ describe("water after the land changes", () => {
   });
 
   it("dams a river that the rim of a nearby crater falls across", () => {
-    const simulation = createValley();
+    const simulation = createValleySimulation();
 
     const before = simulation.world.water.lakes.length;
 
@@ -117,7 +101,7 @@ describe("water after the land changes", () => {
   });
 
   it("washes away the buildings that a new lake covers", () => {
-    const simulation = createValley();
+    const simulation = createValleySimulation();
 
     const shelter = simulation.buildings.add({ kind: "tent", rotation: 0, tribeId: 0, x: 5, z: 80 }, simulation.random);
 
@@ -130,7 +114,7 @@ describe("water after the land changes", () => {
   });
 
   it("puts out the fire and clears the shore where lowered land floods", () => {
-    const simulation = createValley();
+    const simulation = createValleySimulation();
     const { world } = simulation;
 
     const area = world.grid.cellsInRadius(5, 0, 200);
@@ -162,7 +146,7 @@ describe("water after the land changes", () => {
   });
 
   it("drowns the plants that the rising water reaches", () => {
-    const simulation = createValley();
+    const simulation = createValleySimulation();
     const { vegetation } = simulation.world;
 
     simulation.usePower("meteor", 0, METEOR_Z, { craterRadius: 140, fallTime: 0.5 });

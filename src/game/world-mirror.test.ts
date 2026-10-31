@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { allRows, packGroundRows, packSurfaceRows } from "../simulation/frame-packing.ts";
 import { Simulation } from "../simulation/simulation.ts";
+import { createValleySimulation } from "../simulation/testing/test-simulation.ts";
 import {
   centerCell,
   createVegetatedWorld,
@@ -30,22 +31,6 @@ function createSimulation(): Simulation {
   );
 
   simulation.weather.setKind("clear");
-
-  return simulation;
-}
-
-function createValleySimulation(): Simulation {
-  const simulation = new Simulation(
-    createVegetatedWorld({
-      dimensions: { cellSize: 10, cellsPerSide: 96 },
-      heightAt: (x, z) => {
-        return 200 + Math.abs(x - 5) * 0.25 + z * 0.02;
-      },
-    })
-  );
-
-  simulation.weather.setKind("clear");
-  simulation.waterRecomputation.recompute();
 
   return simulation;
 }
