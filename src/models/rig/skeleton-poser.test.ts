@@ -4,7 +4,7 @@ import { HUMAN_SKELETON, HumanBone } from "../people/human-skeleton.ts";
 import { uniformScales } from "../testing/uniform-scales.ts";
 import { degrees } from "./curves.ts";
 import { Pose } from "./pose.ts";
-import { contactsFor, NO_PARENT } from "./skeleton.ts";
+import { contactsFor, type Grounding, NO_PARENT } from "./skeleton.ts";
 import { boneRotation, PALETTE_FLOATS_PER_BONE, SkeletonPoser } from "./skeleton-poser.ts";
 
 const IDENTITY_ROWS = [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0];
@@ -14,21 +14,11 @@ const YAW = new Quaternion().setFromAxisAngle(new Vector3(0, 1, 0), 0.7);
 const UNIT_SCALE = new Vector3(1, 1, 1);
 const UNIT_STEPS = [new Vector3(), new Vector3(1, 0, 0), new Vector3(0, 1, 0), new Vector3(0, 0, 1)];
 
-function lowestFoot(poser: SkeletonPoser): number {
+function lowestContact(poser: SkeletonPoser, grounding: Grounding): number {
   const point = new Vector3();
 
   return Math.min(
-    ...HUMAN_SKELETON.footContacts.map((contact) => {
-      return poser.skinPoint(contact.bone, point.set(...contact.position), point).y;
-    })
-  );
-}
-
-function lowestBody(poser: SkeletonPoser): number {
-  const point = new Vector3();
-
-  return Math.min(
-    ...contactsFor(HUMAN_SKELETON, "body").map((contact) => {
+    ...contactsFor(HUMAN_SKELETON, grounding).map((contact) => {
       return poser.skinPoint(contact.bone, point.set(...contact.position), point).y;
     })
   );
@@ -174,7 +164,7 @@ describe("skeleton poser", () => {
       poser.pose(pose, scaledTo(factor));
       poser.skinPoint(HumanBone.Head, new Vector3(0, 1.75, 0), top);
 
-      expect(lowestFoot(poser)).toBeCloseTo(0, 5);
+      expect(lowestContact(poser, "feet")).toBeCloseTo(0, 5);
       expect(top.y).toBeCloseTo(1.75 * factor, 2);
     }
   });
@@ -186,7 +176,7 @@ describe("skeleton poser", () => {
     pose.height = 0.3;
     poser.pose(pose, uniformScales(HUMAN_SKELETON));
 
-    expect(lowestFoot(poser)).toBeCloseTo(0.3, 5);
+    expect(lowestContact(poser, "feet")).toBeCloseTo(0.3, 5);
   });
 
   it("rests a lying body on its lowest body contact", () => {
@@ -198,7 +188,7 @@ describe("skeleton poser", () => {
     pose.rotate(HumanBone.Pelvis, -degrees(90), 0, 0);
     poser.pose(pose, uniformScales(HUMAN_SKELETON));
 
-    expect(lowestBody(poser)).toBeCloseTo(0.1, 5);
+    expect(lowestContact(poser, "body")).toBeCloseTo(0.1, 5);
   });
 
   it("bends limbs away from the midline whatever their swing", () => {
