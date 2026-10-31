@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { isFruitTreeSpecies } from "../../content/cultivated-plants.ts";
 import { PlantSpecies } from "../../content/plants.ts";
+import type { TechnologyId } from "../../content/technologies.ts";
 import { NO_PLANT } from "../../world/vegetation-store.ts";
 import { MORNING, moveToSeason, SocietyHarness, settle, teach } from "../testing/test-society.ts";
 import { NO_BUILDING, PLOT_GROUND } from "../world/world-state.ts";
@@ -13,60 +14,71 @@ import {
   ripestFruitTree,
   updatePlots,
 } from "./plots.ts";
-import type { Plot, Tribe } from "./tribe.ts";
+import type { Plot, PlotSpot, Tribe } from "./tribe.ts";
 
-interface PlantedOrchard {
+const LONG_AFTER_DAYS = 100;
+
+interface OpenedPlot {
   harness: SocietyHarness;
-  orchard: Plot;
+  plot: Plot;
   tribe: Tribe;
-  vacatedSlot: number;
 }
 
-function orchardWithVacatedSlot(): PlantedOrchard {
+function openPlot(technology: TechnologyId): OpenedPlot {
   const harness = new SocietyHarness({ day: MORNING });
 
-  const tribe = teach(settle(harness, 6), ["farming", "orchards"]);
+  const tribe = teach(settle(harness, 6), ["farming", technology]);
 
   addPlotIfNeeded(tribe, harness.context);
 
-  const [orchard] = tribe.plots;
+  const [plot] = tribe.plots;
 
-  if (orchard === undefined) {
-    throw new Error("Expected an orchard");
+  if (plot === undefined) {
+    throw new Error("Expected a plot");
   }
 
-  const [first] = orchard.spots;
+  return { harness, plot, tribe };
+}
 
-  plantSpot(tribe, first, harness.context);
+function fruitTreeSpot(plot: Plot): PlotSpot {
+  const tree = plot.spots.find((spot) => {
+    return isFruitTreeSpecies(spot.species);
+  });
 
-  const vacatedSlot = first.plant;
+  if (tree === undefined) {
+    throw new Error("Expected a fruit tree spot");
+  }
 
-  harness.world.removePlant(vacatedSlot);
+  return tree;
+}
 
-  return { harness, orchard, tribe, vacatedSlot };
+function vacateSpot(harness: SocietyHarness, tribe: Tribe, spot: PlotSpot): number {
+  plantSpot(tribe, spot, harness.context);
+
+  const slot = spot.plant;
+
+  harness.world.removePlant(slot);
+
+  return slot;
+}
+
+function plantStranger(harness: SocietyHarness, tribe: Tribe): number {
+  return harness.world.plant({
+    bornDay: harness.context.environment.day,
+    height: 8,
+    rotation: 0,
+    seed: 0.5,
+    species: PlantSpecies.Oak,
+    x: tribe.campX - 150,
+    z: tribe.campZ,
+  });
 }
 
 describe("orchards", () => {
   it("are planted with fruit trees and berry bushes that grow and bear fruit in autumn", () => {
-    const harness = new SocietyHarness({ day: MORNING });
+    const { harness, plot: orchard, tribe } = openPlot("orchards");
 
-    const tribe = teach(settle(harness, 6), ["farming", "orchards"]);
-
-    addPlotIfNeeded(tribe, harness.context);
-
-    const [orchard] = tribe.plots;
-
-    if (orchard === undefined) {
-      throw new Error("Expected an orchard");
-    }
-
-    const tree = orchard.spots.find((spot) => {
-      return isFruitTreeSpecies(spot.species);
-    });
-
-    if (tree === undefined) {
-      throw new Error("Expected a fruit tree spot");
-    }
+    const tree = fruitTreeSpot(orchard);
 
     expect(orchard.kind).toBe("orchard");
     expect(
@@ -92,17 +104,7 @@ describe("orchards", () => {
   });
 
   it("count a planting only once the sapling has taken root", () => {
-    const harness = new SocietyHarness({ day: MORNING });
-
-    const tribe = teach(settle(harness, 6), ["farming", "orchards"]);
-
-    addPlotIfNeeded(tribe, harness.context);
-
-    const [orchard] = tribe.plots;
-
-    if (orchard === undefined) {
-      throw new Error("Expected an orchard");
-    }
+    const { harness, plot: orchard, tribe } = openPlot("orchards");
 
     const [spot] = orchard.spots;
 
@@ -116,17 +118,7 @@ describe("orchards", () => {
   });
 
   it("are given back to the land when their tribe dies out", () => {
-    const harness = new SocietyHarness({ day: MORNING });
-
-    const tribe = teach(settle(harness, 6), ["farming", "orchards"]);
-
-    addPlotIfNeeded(tribe, harness.context);
-
-    const [orchard] = tribe.plots;
-
-    if (orchard === undefined) {
-      throw new Error("Expected an orchard");
-    }
+    const { harness, plot: orchard, tribe } = openPlot("orchards");
 
     const { cells } = orchard;
     const { occupancy } = harness.world;
@@ -150,9 +142,11 @@ describe("orchards", () => {
 
 describe("plot spots", () => {
   it("are replanted once their plant is gone, even after another plant takes over its slot", () => {
-    const { harness, orchard, tribe, vacatedSlot } = orchardWithVacatedSlot();
+    const { harness, plot: orchard, tribe } = openPlot("orchards");
 
     const [first, second] = orchard.spots;
+
+    const vacatedSlot = vacateSpot(harness, tribe, first);
 
     plantSpot(tribe, second, harness.context);
 
@@ -161,22 +155,49 @@ describe("plot spots", () => {
     expect(plantedCount(tribe, harness.world, "orchard")).toBe(1);
   });
 
-  it("protect only the plants that still stand on them", () => {
-    const { harness, tribe, vacatedSlot } = orchardWithVacatedSlot();
+  it("protect a woodlot sapling until it has grown", () => {
+    const { harness, plot: woodlot, tribe } = openPlot("forestry");
+
+    const [spot] = woodlot.spots;
 
     const { day } = harness.context.environment;
 
-    const stranger = harness.world.plant({
-      bornDay: day,
-      height: 8,
-      rotation: 0,
-      seed: 0.5,
-      species: PlantSpecies.Oak,
-      x: tribe.campX - 150,
-      z: tribe.campZ,
-    });
+    expect(woodlot.kind).toBe("woodlot");
+    expect(plantSpot(tribe, spot, harness.context)).toBe(true);
+    expect(isProtectedPlant(tribe, harness.world, spot.plant, day)).toBe(true);
+    expect(isProtectedPlant(tribe, harness.world, spot.plant, day + LONG_AFTER_DAYS)).toBe(false);
+  });
+
+  it("protect only the plants that still stand on them", () => {
+    const { harness, plot: orchard, tribe } = openPlot("orchards");
+
+    const [first] = orchard.spots;
+
+    const vacatedSlot = vacateSpot(harness, tribe, first);
+    const stranger = plantStranger(harness, tribe);
 
     expect(stranger).toBe(vacatedSlot);
-    expect(isProtectedPlant(tribe, harness.world, stranger, day)).toBe(false);
+    expect(isProtectedPlant(tribe, harness.world, stranger, harness.context.environment.day)).toBe(false);
+  });
+
+  it("neither tend nor offer for picking a plant that took over their slot elsewhere", () => {
+    const { harness, plot: orchard, tribe } = openPlot("orchards");
+
+    const tree = fruitTreeSpot(orchard);
+
+    const { vegetation } = harness.world;
+
+    const vacatedSlot = vacateSpot(harness, tribe, tree);
+    const stranger = plantStranger(harness, tribe);
+
+    vegetation.setFruit(stranger, 0.5);
+    tree.plantedDay = harness.context.environment.day - 30;
+    moveToSeason(harness, 2);
+    updatePlots(tribe, harness.context, 0.5);
+
+    expect(stranger).toBe(vacatedSlot);
+    expect(vegetation.height[stranger]).toBe(8);
+    expect(vegetation.fruit[stranger]).toBe(0.5);
+    expect(ripestFruitTree(tribe, harness.world)).toBeNull();
   });
 });
