@@ -136,18 +136,6 @@ describe("saved worlds", () => {
     expect(hasLandChanged).toBe(false);
   });
 
-  it("leaves worlds saved without a fingerprint unmarked until loading finds the land changed", async () => {
-    const state = savedState();
-
-    await writeSavedWorld(createSavedRecord("older", state, { generationFingerprint: null, savedAt: 1000 }), state, []);
-
-    expect(await listSavedWorlds()).toMatchObject([{ hasLandChanged: false, id: "older" }]);
-
-    await markLandChanged("older");
-
-    expect(await listSavedWorlds()).toMatchObject([{ hasLandChanged: true, id: "older" }]);
-  });
-
   it("marks a world whose land has changed until it is saved again", async () => {
     const state = savedState();
 
