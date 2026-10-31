@@ -1,3 +1,4 @@
+import { Maximize2, Minimize2 } from "lucide-react";
 import { useSyncExternalStore } from "react";
 
 function subscribe(onChange: () => void): () => void {
@@ -31,7 +32,7 @@ export function useFullscreen() {
 
   return {
     canGoFullscreen: document.fullscreenEnabled,
-    isFullscreen,
+    icon: isFullscreen ? Minimize2 : Maximize2,
     label: isFullscreen ? "Leave full screen" : "Full screen",
     toggleFullscreen,
   };

@@ -1,4 +1,4 @@
-import { BookOpen, Download, Map as MapIcon, Maximize2, Minimize2, Settings, Volume2, VolumeX } from "lucide-react";
+import { BookOpen, Download, Map as MapIcon, Settings, Volume2, VolumeX } from "lucide-react";
 import { IconButton } from "../../design/buttons.tsx";
 import { cn } from "../../design/cn.ts";
 import { WithTooltip } from "../../design/tooltip.tsx";
@@ -24,13 +24,11 @@ function useMenuActions() {
 }
 
 function FullscreenButton() {
-  const { canGoFullscreen, isFullscreen, label, toggleFullscreen } = useFullscreen();
+  const { canGoFullscreen, icon: Icon, label, toggleFullscreen } = useFullscreen();
 
   if (!canGoFullscreen) {
     return null;
   }
-
-  const Icon = isFullscreen ? Minimize2 : Maximize2;
 
   return (
     <WithTooltip content={label} side="bottom">
