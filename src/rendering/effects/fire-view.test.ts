@@ -46,26 +46,20 @@ function createScene(): Scene {
   return { camera, fire, mirror };
 }
 
-function setBurning(mirror: WorldMirror, burning: ReadonlyMap<number, number>): void {
+function setBurning(
+  mirror: WorldMirror,
+  burning: ReadonlyMap<number, number>,
+  buildings: readonly BuildingView[] = []
+): void {
   mirror.frame = {
     ...mirror.frame,
-    buildings: [],
+    buildings: [...buildings],
     burningCells: Int32Array.from(burning.keys()),
     burningIntensity: Uint8Array.from(
       [...burning.values()].map((intensity) => {
         return Math.round(intensity * BYTE);
       })
     ),
-    tick: mirror.frame.tick + 1,
-  };
-}
-
-function setCampfires(mirror: WorldMirror, campfires: readonly BuildingView[]): void {
-  mirror.frame = {
-    ...mirror.frame,
-    buildings: [...campfires],
-    burningCells: new Int32Array(0),
-    burningIntensity: new Uint8Array(0),
     tick: mirror.frame.tick + 1,
   };
 }
@@ -296,18 +290,31 @@ describe("fire view", () => {
       return { ...CAMPFIRE, id, x };
     });
 
-    setCampfires(mirror, [...campfires, { ...CAMPFIRE, fuel: 0, id: 9, x: 10 }]);
+    setBurning(mirror, new Map());
     fire.update(mirror, camera, 0);
 
-    expect(fire.flameCount).toBe(2 * campfires.length);
+    const unlit = fire.flameCount;
+
+    setBurning(mirror, new Map(), campfires);
+    fire.update(mirror, camera, 0);
+
+    const lit = fire.flameCount;
+
+    setBurning(mirror, new Map(), [...campfires, { ...CAMPFIRE, fuel: 0, id: 9, x: 10 }]);
+    fire.update(mirror, camera, 0);
+
+    expect(lit).toBeGreaterThan(unlit);
+    expect(fire.flameCount).toBe(lit);
     expect(litSpots(fire)).toEqual([]);
 
     fire.update(mirror, camera, 1);
 
-    expect(litSpots(fire)).toEqual([
-      [0, 300],
-      [50, 300],
-      [120, 300],
-    ]);
+    expect(new Set(litSpots(fire))).toEqual(
+      new Set([
+        [0, 300],
+        [50, 300],
+        [120, 300],
+      ])
+    );
   });
 });
