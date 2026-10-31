@@ -1,17 +1,17 @@
 import { describe, expect, it } from "vitest";
-import { WorldGrid } from "../../../world/world-grid.ts";
-import { firstMemberTick, MORNING, runToCompletion, SocietyHarness, settle } from "../../testing/test-society.ts";
-import { depositAround } from "../../testing/test-world.ts";
+import {
+  createMiningHarness,
+  firstMemberTick,
+  MORNING,
+  runToCompletion,
+  SocietyHarness,
+  settle,
+} from "../../testing/test-society.ts";
 import { findClay } from "./clay-job.ts";
-
-const DIMENSIONS = { cellSize: 10, cellsPerSide: 96 };
 
 describe("digging clay", () => {
   it("digs at the clay bank and carries the clay home", () => {
-    const harness = new SocietyHarness({
-      day: MORNING,
-      world: { deposits: [depositAround(new WorldGrid(DIMENSIONS), "clay", 120, 40)], dimensions: DIMENSIONS },
-    });
+    const harness = createMiningHarness("clay");
 
     const tribe = settle(harness, 1);
     const tick = firstMemberTick(harness, tribe);

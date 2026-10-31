@@ -1,4 +1,5 @@
 import type { BuildingKind } from "../../content/buildings.ts";
+import type { DepositKind } from "../../content/deposits.ts";
 import type { TechnologyId } from "../../content/technologies.ts";
 import { DEFAULT_WORLD_RULES, type WorldRules } from "../../content/world-rules.ts";
 import { createRandom, type RandomSource } from "../../shared/random.ts";
@@ -114,12 +115,12 @@ export function completeStructure(tribe: Tribe, building: Building): Building {
   return building;
 }
 
-export function createMiningHarness(): SocietyHarness {
+export function createMiningHarness(kind: DepositKind = "copper"): SocietyHarness {
   const grid = new WorldGrid(MINING_DIMENSIONS);
 
   return new SocietyHarness({
     day: MORNING,
-    world: { deposits: [depositAround(grid, "copper", 160, 40)], dimensions: MINING_DIMENSIONS },
+    world: { deposits: [depositAround(grid, kind, 160, 40)], dimensions: MINING_DIMENSIONS },
   });
 }
 
