@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
+import { ignore } from "../../shared/ignore.ts";
 import type { MeteorEffect } from "../../simulation/effects.ts";
 import { CameraAxes, createBillboardBatch } from "./billboards.ts";
 import { EffectMeshes } from "./effect-meshes.ts";
@@ -29,14 +30,14 @@ function createMeteor() {
 
   const meteor = new MeteorFall(
     {
-      flash: vi.fn(),
+      flash: ignore,
       heightAt: () => {
         return 0;
       },
-      light: vi.fn(),
+      light: ignore,
       meshes: new EffectMeshes(),
-      releaseRing: vi.fn(),
-      shake: vi.fn(),
+      releaseRing: ignore,
+      shake: ignore,
       takeRing: vi.fn(),
     },
     METEOR

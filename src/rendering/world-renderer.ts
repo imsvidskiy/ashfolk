@@ -48,6 +48,10 @@ import { WorldChangeReader, type WorldChanges } from "./world-changes.ts";
 
 const CLOUD_SEA_DEPTH = 760;
 const WATER_DRIFT = 0.08;
+const NIGHT_SPRITE_BRIGHTNESS = 0.25;
+const NIGHT_SMOKE_BRIGHTNESS = 0.3;
+const SMOKE_LEANING_WIND = 5;
+const STRONGEST_SMOKE_LEAN = 1.5;
 const SELECTION_COLOR = 0xff_f2_c8;
 const HELD_RING_RADIUS = 2.5;
 const PLACEABLE_COLOR = 0xff_ff_ff;
@@ -451,17 +455,17 @@ export class WorldRenderer {
     const { weather } = this.#mirror.frame;
 
     const darkness = 1 - this.#atmosphere.daylight;
-    const brightness = 0.25 + this.#atmosphere.daylight * 0.75;
+    const brightness = lerp(NIGHT_SPRITE_BRIGHTNESS, 1, this.#atmosphere.daylight);
 
     this.#axes.update(view.camera);
-    this.#fire.smoke.brightness.value = 0.3 + this.#atmosphere.daylight * 0.7;
+    this.#fire.smoke.brightness.value = lerp(NIGHT_SMOKE_BRIGHTNESS, 1, this.#atmosphere.daylight);
     this.#fire.smoke.sunlight.value = this.#atmosphere.daylight;
     this.#fire.smoke.sunDirection.value
       .subVectors(this.#atmosphere.sun.position, this.#atmosphere.sun.target.position)
       .normalize();
     this.#fire.smoke.wind.value
       .set(weather.windX, weather.windZ)
-      .multiplyScalar(Math.min(1.5, wind.metersPerSecond / 5));
+      .multiplyScalar(Math.min(STRONGEST_SMOKE_LEAN, wind.metersPerSecond / SMOKE_LEANING_WIND));
     this.#fire.update(this.#mirror, view.camera, darkness);
     this.#effects.add(view.effects);
     this.#effects.update(view.realSeconds, gameSeconds);

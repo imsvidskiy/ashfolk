@@ -18,8 +18,10 @@ const FARTHEST_FILMED_SHADOW_REACH = 8000;
 const SHADOW_REACH_SHARE_OF_DISTANCE = 0.9;
 const FILMED_DEPTH_SHARE_OF_REACH = 1.5;
 const WORLD_UP = new Vector3(0, 1, 0);
-const SKY_CLOUD_DRIFT = 0.000_02;
-const SEA_CLOUD_DRIFT = 0.000_004;
+const SKY_CLOUD_DRIFT = 0.0012;
+const SEA_CLOUD_DRIFT = 0.000_24;
+const SEA_BREEZE_X = 1;
+const SEA_BREEZE_Z = 0.4;
 const LEAST_NORMAL_BIAS = 0.4;
 const TEXELS_OF_NORMAL_BIAS = 1.2;
 
@@ -57,10 +59,10 @@ function quantizedReach(reach: number): number {
 export class Atmosphere {
   readonly sun: DirectionalLight;
   readonly #cloudSea: CloudSea;
-  readonly #group = new Group();
-  readonly #hemisphere: HemisphereLight;
   readonly #fogColor = uniform(new Color(0xcf_e2_f0));
+  readonly #group = new Group();
   readonly #heightFog = new HeightFog();
+  readonly #hemisphere: HemisphereLight;
   readonly #islandReach: number;
   readonly #lightDirection = new Vector3(0, 1, 0);
   readonly #shadowFocus = new Vector3();
@@ -151,10 +153,13 @@ export class Atmosphere {
   }
 
   #driftClouds(state: AtmosphereState, realSeconds: number): void {
-    this.#sky.cloudOffset.value.x += state.windX * SKY_CLOUD_DRIFT * realSeconds * 60;
-    this.#sky.cloudOffset.value.y += state.windZ * SKY_CLOUD_DRIFT * realSeconds * 60;
-    this.#cloudSea.drift.value.x += (state.windX + 1) * SEA_CLOUD_DRIFT * realSeconds * 60;
-    this.#cloudSea.drift.value.y += (state.windZ + 0.4) * SEA_CLOUD_DRIFT * realSeconds * 60;
+    const skyDrift = SKY_CLOUD_DRIFT * realSeconds;
+    const seaDrift = SEA_CLOUD_DRIFT * realSeconds;
+
+    this.#sky.cloudOffset.value.x += state.windX * skyDrift;
+    this.#sky.cloudOffset.value.y += state.windZ * skyDrift;
+    this.#cloudSea.drift.value.x += (state.windX + SEA_BREEZE_X) * seaDrift;
+    this.#cloudSea.drift.value.y += (state.windZ + SEA_BREEZE_Z) * seaDrift;
   }
 
   #light(palette: SkyPalette, sun: Direction, moon: Direction, overcast: number, gloom: number): void {

@@ -1,11 +1,11 @@
-import { PerspectiveCamera } from "three/webgpu";
+import { PerspectiveCamera, PointLight } from "three/webgpu";
 import { describe, expect, it } from "vitest";
 import { isTreeSpecies } from "../../content/plants.ts";
-import { WorldMirror } from "../../game/world-mirror.ts";
-import { Simulation } from "../../simulation/simulation.ts";
-import { createVegetatedWorld } from "../../simulation/testing/test-world.ts";
+import type { WorldMirror } from "../../game/world-mirror.ts";
+import type { BuildingView } from "../../simulation/frame.ts";
 import { SURFACE_CHANNELS, SurfaceChannel } from "../../world/agent-buffers.ts";
 import { PlantState } from "../../world/vegetation-store.ts";
+import { createVegetatedMirror } from "../testing/vegetated-mirror.ts";
 import { VegetationChunks } from "../vegetation/vegetation-chunks.ts";
 import { CameraAxes } from "./billboards.ts";
 import { FireView } from "./fire-view.ts";
@@ -13,6 +13,21 @@ import { FireView } from "./fire-view.ts";
 const BYTE = 255;
 const LIGHT_SMOKE_PUFFS = 16;
 const SPARKS_PER_CELL = 2;
+const CAMPFIRE: BuildingView = {
+  extent: 2,
+  fuel: 1,
+  health: 1,
+  id: 1,
+  kind: "campfire",
+  progress: 1,
+  rotation: 0,
+  seed: 0,
+  style: 0,
+  tribeId: 1,
+  variant: 0,
+  x: 0,
+  z: 300,
+};
 
 interface Scene {
   readonly camera: PerspectiveCamera;
@@ -21,11 +36,8 @@ interface Scene {
 }
 
 function createScene(): Scene {
-  const simulation = new Simulation(createVegetatedWorld({ dimensions: { cellSize: 10, cellsPerSide: 64 } }));
   const camera = new PerspectiveCamera(45, 1.5, 1, 40_000);
-
-  const mirror = new WorldMirror(simulation.initialWorld(), 0);
-
+  const mirror = createVegetatedMirror();
   const fire = new FireView({ axes: new CameraAxes(), chunks: new VegetationChunks(mirror) });
 
   camera.position.set(0, 300, 300);
@@ -33,10 +45,14 @@ function createScene(): Scene {
   return { camera, fire, mirror };
 }
 
-function setBurning(mirror: WorldMirror, burning: ReadonlyMap<number, number>): void {
+function setBurning(
+  mirror: WorldMirror,
+  burning: ReadonlyMap<number, number>,
+  buildings: readonly BuildingView[] = []
+): void {
   mirror.frame = {
     ...mirror.frame,
-    buildings: [],
+    buildings: [...buildings],
     burningCells: Int32Array.from(burning.keys()),
     burningIntensity: Uint8Array.from(
       [...burning.values()].map((intensity) => {
@@ -45,6 +61,19 @@ function setBurning(mirror: WorldMirror, burning: ReadonlyMap<number, number>): 
     ),
     tick: mirror.frame.tick + 1,
   };
+}
+
+function litSpots(fire: FireView): number[][] {
+  return fire.group.children
+    .filter((child) => {
+      return child instanceof PointLight && child.intensity > 0;
+    })
+    .map((light) => {
+      return [light.position.x, light.position.z];
+    })
+    .toSorted((first, second) => {
+      return first[0] - second[0];
+    });
 }
 
 function burnTreesIn(mirror: WorldMirror, cell: number): void {
@@ -254,5 +283,38 @@ describe("fire view", () => {
     fire.update(mirror, camera, 0);
 
     expect(fire.flameCount).toBe(0);
+  });
+
+  it("burns lit campfires and lights the three nearest once it gets dark", () => {
+    const { camera, fire, mirror } = createScene();
+
+    const campfires = [400, 0, -300, 120, 50].map((x, id) => {
+      return { ...CAMPFIRE, id, x };
+    });
+
+    setBurning(mirror, new Map());
+    fire.update(mirror, camera, 0);
+
+    const unlit = fire.flameCount;
+
+    setBurning(mirror, new Map(), campfires);
+    fire.update(mirror, camera, 0);
+
+    const lit = fire.flameCount;
+
+    setBurning(mirror, new Map(), [...campfires, { ...CAMPFIRE, fuel: 0, id: 9, x: 10 }]);
+    fire.update(mirror, camera, 0);
+
+    expect(lit).toBeGreaterThan(unlit);
+    expect(fire.flameCount).toBe(lit);
+    expect(litSpots(fire)).toEqual([]);
+
+    fire.update(mirror, camera, 1);
+
+    expect(litSpots(fire)).toEqual([
+      [0, 300],
+      [50, 300],
+      [120, 300],
+    ]);
   });
 });

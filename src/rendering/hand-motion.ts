@@ -113,7 +113,7 @@ export class HandMotion {
 
     this.#x += stepX;
     this.#z += stepZ;
-    this.#lift = HELD_LIFT * liftPop(this.#seconds);
+    this.#lift = lerp(this.#fromLift, HELD_LIFT, liftPop(this.#seconds));
 
     if (seconds <= 0) {
       return;
@@ -131,12 +131,15 @@ export class HandMotion {
     this.#subject = { id: held.id, kind: held.kind };
     this.#phase = "carried";
     this.#seconds = 0;
-    this.#lift = 0;
 
     if (isRegrab) {
+      this.#fromLift = this.#lift;
+
       return;
     }
 
+    this.#fromLift = 0;
+    this.#lift = 0;
     this.#x = held.x;
     this.#z = held.z;
     this.#tiltX = 0;

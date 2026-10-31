@@ -19,18 +19,16 @@ export type BurningCells = Pick<SimulationFrame, "burningCells" | "burningIntens
 function blur(source: Float32Array, target: Float32Array, step: number, resolution: number): void {
   for (let texel = 0; texel < target.length; texel += 1) {
     const along = Math.floor(texel / step) % resolution;
+    const first = Math.max(-BLUR_RADIUS, -along);
+    const last = Math.min(BLUR_RADIUS, resolution - 1 - along);
 
     let sum = 0;
-    let count = 0;
 
-    for (let offset = -BLUR_RADIUS; offset <= BLUR_RADIUS; offset += 1) {
-      if (along + offset >= 0 && along + offset < resolution) {
-        sum += source[texel + offset * step];
-        count += 1;
-      }
+    for (let offset = first; offset <= last; offset += 1) {
+      sum += source[texel + offset * step];
     }
 
-    target[texel] = (sum / count) * BLUR_GAIN;
+    target[texel] = (sum / (last - first + 1)) * BLUR_GAIN;
   }
 }
 
@@ -92,14 +90,17 @@ export class FireGlow {
   }
 
   #accumulate(frame: BurningCells): void {
+    const { burningCells, burningIntensity } = frame;
+    const { cells, heat } = this.#lava;
+
     this.#accumulated.fill(0);
 
-    for (const [index, cell] of frame.burningCells.entries()) {
-      this.#light(cell, frame.burningIntensity[index] / BYTE);
+    for (let index = 0; index < burningCells.length; index += 1) {
+      this.#light(burningCells[index], burningIntensity[index] / BYTE);
     }
 
-    for (const [index, cell] of this.#lava.cells.entries()) {
-      this.#light(cell, (this.#lava.heat[index] / BYTE) * LAVA_GLOW);
+    for (let index = 0; index < cells.length; index += 1) {
+      this.#light(cells[index], (heat[index] / BYTE) * LAVA_GLOW);
     }
   }
 
@@ -113,10 +114,12 @@ export class FireGlow {
   }
 
   #writeTexture(): void {
+    const accumulated = this.#accumulated;
+
     let litTexels = 0;
 
-    for (const [texel, value] of this.#accumulated.entries()) {
-      const byte = Math.round(Math.min(1, value / FULL_GLOW) * BYTE);
+    for (let texel = 0; texel < accumulated.length; texel += 1) {
+      const byte = Math.round(Math.min(1, accumulated[texel] / FULL_GLOW) * BYTE);
 
       this.#data[texel] = byte;
 

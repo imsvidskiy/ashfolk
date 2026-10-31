@@ -50,7 +50,6 @@ export function geometryFromMeshData(mesh: MeshData, channels: readonly VertexCh
   const radius = center.distanceTo(new Vector3(maximumX, maximumY, maximumZ));
 
   geometry.boundingSphere = new Sphere(center, radius);
-  geometry.instanceCount = 0;
 
   return geometry;
 }
