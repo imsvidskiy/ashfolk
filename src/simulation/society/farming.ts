@@ -32,6 +32,7 @@ const FARTHEST_FIELD = 80;
 const TENDED_GROWTH = 0.45;
 const TENDING_DECAY = 0.5;
 const SPROUT_DISPLAY = 0.04;
+const SOWN_TENDING = 0.3;
 
 export type FieldTask = "harvest" | "sow" | "tend";
 
@@ -305,5 +306,5 @@ export function sowField(tribe: Tribe, field: Field, season: number): void {
   field.isSown = true;
   field.growth = 0;
   field.plantings += 1;
-  field.tending = 0.3;
+  field.tending = SOWN_TENDING;
 }

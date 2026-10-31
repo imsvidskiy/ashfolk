@@ -8,6 +8,10 @@ import type { Tribe } from "./tribe.ts";
 
 export const GOLDEN_ANGLE = 2.399;
 
+const NEAREST_SLEEPER = 5;
+const SLEEPING_RINGS = 4;
+const SLEEPING_RING_GAP = 1.5;
+
 export function campPoint(tribe: Tribe): Waypoint {
   return { x: tribe.campX, z: tribe.campZ };
 }
@@ -80,7 +84,7 @@ export function sleepingSpot(person: Person, tribe: Tribe, buildings: BuildingSy
   }
 
   const angle = (person.id * GOLDEN_ANGLE) % FULL_TURN;
-  const distance = 5 + (person.id % 4) * 1.5;
+  const distance = NEAREST_SLEEPER + (person.id % SLEEPING_RINGS) * SLEEPING_RING_GAP;
   const center = fireOrCamp(tribe, buildings);
 
   return aroundPoint(center, distance, angle);

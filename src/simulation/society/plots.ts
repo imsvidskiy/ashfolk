@@ -27,6 +27,7 @@ const FRUIT_START = 1.45;
 const FRUIT_END = 2.75;
 const FRUIT_GROWTH_PER_DAY = 0.75;
 const FRUIT_FALL_PER_DAY = 1.5;
+const RIPE_FRUIT = 0.25;
 const SPECIES_SALT = 7.7;
 const HEIGHT_SALT = 3.3;
 const FALLBACK_TIMBER: readonly PlantSpeciesIndex[] = [PlantSpecies.Oak, PlantSpecies.Birch, PlantSpecies.Pine];
@@ -344,7 +345,7 @@ export function updatePlots(tribe: Tribe, context: SocietyContext, days: number)
 
 export function ripestFruitTree(tribe: Tribe, world: WorldState): number | null {
   let ripest: number | null = null;
-  let ripestFruit = 0.25;
+  let ripestFruit = RIPE_FRUIT;
 
   for (const plot of tribe.plots) {
     for (const spot of plot.spots) {

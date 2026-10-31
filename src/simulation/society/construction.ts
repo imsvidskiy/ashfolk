@@ -22,6 +22,7 @@ const LONGEST_STALL_DAYS = 2.5;
 const PLANS_TO_SAVE_FOR = 3;
 const CLEARING = 4;
 const SLOPE_PROBE = 3;
+const BUILDING_LEARNING = 2;
 
 interface Site {
   readonly pad: BuildingPad | null;
@@ -313,7 +314,7 @@ export function completeConstruction(tribe: Tribe, site: Building, context: Soci
 
   retireReplaced(site, context);
   assignHomes(tribe, context.buildings, context.people.membersOf(tribe));
-  learn(tribe, 2, context.rules);
+  learn(tribe, BUILDING_LEARNING, context.rules);
 }
 
 function constructionMessage(tribe: Tribe, site: Building, context: SocietyContext): string {
