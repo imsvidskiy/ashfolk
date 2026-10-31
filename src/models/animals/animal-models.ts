@@ -22,6 +22,12 @@ import { type AnimalClipContext, applyAnimalClip, type ExtraMotion, type GaitSty
 import { createQuadrupedSkeleton, LEG_ENDS, legBones, QuadrupedBone } from "./quadruped-skeleton.ts";
 import { addRuff, addWolfBody, WOLF_FRAME, WOLF_GAIT } from "./wolf-model.ts";
 
+const LARGE_ANTLERS = 0.95;
+const SHORTEST_HORNS = 0.2;
+const LONG_HORNS = 0.8;
+const SHORTEST_TUSKS = 0.3;
+const LONG_TUSKS = 0.8;
+
 type PartBuilder = (builder: MeshBuilder, detail: AnimalDetail) => void;
 
 interface PartDefinition {
@@ -46,14 +52,14 @@ export const ANIMAL_SPECIES: Readonly<Record<AnimalKind, AnimalSpecies>> = {
       {
         build: addSmallAntlers,
         isShown: (appearance) => {
-          return appearance.hasAntlers && appearance.antlerSize <= 0.95;
+          return appearance.hasAntlers && appearance.antlerSize <= LARGE_ANTLERS;
         },
         name: "antlersSmall",
       },
       {
         build: addLargeAntlers,
         isShown: (appearance) => {
-          return appearance.hasAntlers && appearance.antlerSize > 0.95;
+          return appearance.hasAntlers && appearance.antlerSize > LARGE_ANTLERS;
         },
         name: "antlersLarge",
       },
@@ -81,14 +87,14 @@ export const ANIMAL_SPECIES: Readonly<Record<AnimalKind, AnimalSpecies>> = {
       {
         build: addShortHorns,
         isShown: (appearance) => {
-          return appearance.hornLength > 0.2 && appearance.hornLength <= 0.8;
+          return appearance.hornLength > SHORTEST_HORNS && appearance.hornLength <= LONG_HORNS;
         },
         name: "hornsShort",
       },
       {
         build: addLongHorns,
         isShown: (appearance) => {
-          return appearance.hornLength > 0.8;
+          return appearance.hornLength > LONG_HORNS;
         },
         name: "hornsLong",
       },
@@ -103,14 +109,14 @@ export const ANIMAL_SPECIES: Readonly<Record<AnimalKind, AnimalSpecies>> = {
       {
         build: addShortTusks,
         isShown: (appearance) => {
-          return appearance.tuskLength > 0.3 && appearance.tuskLength <= 0.8;
+          return appearance.tuskLength > SHORTEST_TUSKS && appearance.tuskLength <= LONG_TUSKS;
         },
         name: "tusksShort",
       },
       {
         build: addLongTusks,
         isShown: (appearance) => {
-          return appearance.tuskLength > 0.8;
+          return appearance.tuskLength > LONG_TUSKS;
         },
         name: "tusksLong",
       },

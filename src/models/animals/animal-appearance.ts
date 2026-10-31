@@ -14,6 +14,8 @@ const HARE_STATURE = 1.3;
 const WOLF_COATS: readonly number[] = [0x5a_56_52, 0x7a_74_6c, 0x8c_84_78, 0x96_86_6c, 0xb8_b2_a8];
 const WOLF_BLACK = 0x2e_2a_28;
 const WOLF_BELLY = 0xd8_d0_c2;
+const FULL_GROWN = 0.3;
+const SPOTTED_FAWN = 0.35;
 
 const APPEARANCES: Readonly<Record<AnimalKind, (random: RandomSource, youth: number) => AnimalAppearance>> = {
   deer: deerAppearance,
@@ -67,7 +69,7 @@ function antlerChoice(random: RandomSource, youth: number): Pick<AnimalAppearanc
   const isStag = random.chance(0.45);
   const antlerSize = random.between(0.7, 1.2);
 
-  return { antlerSize, hasAntlers: isStag && youth < 0.3 };
+  return { antlerSize, hasAntlers: isStag && youth < FULL_GROWN };
 }
 
 function deerAppearance(random: RandomSource, youth: number): AnimalAppearance {
@@ -79,7 +81,7 @@ function deerAppearance(random: RandomSource, youth: number): AnimalAppearance {
     ...antlerChoice(random, youth),
     coat,
     coatLight: mixColors(DEER_BELLY, coat, random.between(0.05, 0.25)),
-    hasSpots: youth > 0.35,
+    hasSpots: youth > SPOTTED_FAWN,
     headScale: lerp(1, 1.32, youth),
     legScale: lerp(1, 1.14, youth),
     size,
@@ -147,7 +149,7 @@ function wolfAppearance(random: RandomSource, youth: number): AnimalAppearance {
     ...PLAIN_FEATURES,
     coat,
     coatLight: mixColors(WOLF_BELLY, coat, random.between(0.1, 0.35)),
-    hasRuff: youth < 0.3 && random.chance(0.7),
+    hasRuff: youth < FULL_GROWN && random.chance(0.7),
     headScale: lerp(1, 1.35, youth),
     legScale: lerp(1, 1.1, youth),
     size,
