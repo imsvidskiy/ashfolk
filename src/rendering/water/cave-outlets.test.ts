@@ -26,7 +26,7 @@ function slotAt(outlets: CaveOutlets, x: number, z: number): number {
   return cells instanceof Float32Array ? cells[grid.cellAt(x, z)] : Number.NaN;
 }
 
-describe("CaveOutlets", () => {
+describe("cave outlets", () => {
   it("marks the cells from inside each cave to where its river runs free, and leaves ponds out", () => {
     const outlets = new CaveOutlets(grid, SPRINGS);
 

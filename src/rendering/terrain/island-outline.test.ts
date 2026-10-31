@@ -23,9 +23,9 @@ function sampledSides(outline: IslandOutline, area: GroundArea): Set<boolean> {
 
 describe("island outline", () => {
   it("tells areas wholly inside or outside the coast from those it crosses", () => {
-    const outline = new IslandOutline(round);
-
     const { halfSize } = round.grid;
+
+    const outline = new IslandOutline(round);
     const found = new Set<OutlineSide>();
     const misplaced: string[] = [];
 
@@ -67,6 +67,7 @@ describe("island outline", () => {
     const outline = new IslandOutline(square);
 
     const { cellSize, halfSize } = square.grid;
+
     const edge = halfSize - cellSize / 2;
 
     expect(outline.coast).toBeNull();
