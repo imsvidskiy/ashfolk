@@ -26,6 +26,9 @@ describe("project links", () => {
   it("leaves the stars out when GitHub does not answer", async () => {
     const screen = await render(<ProjectLinks />);
 
-    await expect.element(screen.getByRole("link", { name: "Ashfolk on GitHub" })).not.toHaveTextContent("K");
+    const link = screen.getByRole("link", { name: "Ashfolk on GitHub" });
+
+    await expect.element(link).toBeVisible();
+    expect(link.element().textContent).toBe("GitHub");
   });
 });
