@@ -4,6 +4,7 @@ import type { Triple } from "./transforms.ts";
 const INSIDE_TOLERANCE = 1e-4;
 const SEAM_EPSILON = 1e-4;
 const SHORTEST_SUM = 0.3;
+const ROUNDING_SLACK = 1e-9;
 const barycentric = new Float64Array(3);
 
 export interface SeamSurface {
@@ -222,6 +223,20 @@ function closestWeights(
   setWeights(1 - (secondArea + thirdArea) * total, secondArea * total, thirdArea * total);
 }
 
+function exceeds(x: number, y: number, z: number, offset: number, limit: number): boolean {
+  const rough = Math.sqrt(x * x + y * y + z * z) - offset;
+
+  if (rough > limit + ROUNDING_SLACK) {
+    return true;
+  }
+
+  if (rough < limit - ROUNDING_SLACK) {
+    return false;
+  }
+
+  return Math.hypot(x, y, z) - offset > limit;
+}
+
 function nearestOnSurface(
   geometry: SeamGeometry,
   prepared: PreparedSurface,
@@ -237,13 +252,11 @@ function nearestOnSurface(
   let nearest: Nearest | null = null;
 
   for (let triangle = 0; triangle < surface.triangleCount; triangle += 1) {
-    const centerDistance = Math.hypot(
-      x - sphereCenters[triangle * 3],
-      y - sphereCenters[triangle * 3 + 1],
-      z - sphereCenters[triangle * 3 + 2]
-    );
+    const centerX = x - sphereCenters[triangle * 3];
+    const centerY = y - sphereCenters[triangle * 3 + 1];
+    const centerZ = z - sphereCenters[triangle * 3 + 2];
 
-    if (centerDistance - sphereRadii[triangle] > best) {
+    if (exceeds(centerX, centerY, centerZ, sphereRadii[triangle], best)) {
       continue;
     }
 
@@ -270,11 +283,11 @@ function nearestOnSurface(
       normalZ += normals[vertex + 2] * weight;
     }
 
-    const distance = Math.hypot(x - pointX, y - pointY, z - pointZ);
-
-    if (distance > best) {
+    if (exceeds(x - pointX, y - pointY, z - pointZ, 0, best)) {
       continue;
     }
+
+    const distance = Math.hypot(x - pointX, y - pointY, z - pointZ);
 
     const length = Math.hypot(normalX, normalY, normalZ);
 
