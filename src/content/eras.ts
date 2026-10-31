@@ -11,44 +11,42 @@ interface EraDefinition {
   unlockedBy: TechnologyId | null;
 }
 
-export const ERAS: readonly EraDefinition[] = [
+const ERA_LIST: readonly Omit<EraDefinition, "index">[] = [
   {
     id: "wanderers",
-    index: 0,
     name: "Wanderers",
     unlockedBy: null,
   },
   {
     id: "stoneAge",
-    index: 1,
     name: "Stone Age",
     unlockedBy: "fire",
   },
   {
     id: "neolithic",
-    index: 2,
     name: "Neolithic",
     unlockedBy: "farming",
   },
   {
     id: "copperAge",
-    index: 3,
     name: "Copper Age",
     unlockedBy: "copper",
   },
   {
     id: "bronzeAge",
-    index: 4,
     name: "Bronze Age",
     unlockedBy: "bronze",
   },
   {
     id: "ironAge",
-    index: 5,
     name: "Iron Age",
     unlockedBy: "iron",
   },
 ];
+
+export const ERAS: readonly EraDefinition[] = ERA_LIST.map((era, index) => {
+  return { ...era, index };
+});
 
 export const ERA_COUNT = ERAS.length;
 
