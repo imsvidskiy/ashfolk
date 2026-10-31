@@ -1,13 +1,16 @@
-import { Vector3 } from "three";
+import { Quaternion, Vector3 } from "three";
 import { describe, expect, it } from "vitest";
 import { HUMAN_SKELETON, HumanBone } from "../people/human-skeleton.ts";
 import { uniformScales } from "../testing/uniform-scales.ts";
 import { degrees } from "./curves.ts";
 import { Pose } from "./pose.ts";
 import { NO_PARENT } from "./skeleton.ts";
-import { PALETTE_FLOATS_PER_BONE, SkeletonPoser } from "./skeleton-poser.ts";
+import { boneRotation, PALETTE_FLOATS_PER_BONE, SkeletonPoser } from "./skeleton-poser.ts";
 
 const IDENTITY_ROWS = [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0];
+const PITCH = new Quaternion().setFromAxisAngle(new Vector3(1, 0, 0), 0.3);
+const ROLL = new Quaternion().setFromAxisAngle(new Vector3(0, 0, 1), -0.5);
+const YAW = new Quaternion().setFromAxisAngle(new Vector3(0, 1, 0), 0.7);
 
 function lowestFoot(poser: SkeletonPoser): number {
   const point = new Vector3();
@@ -24,6 +27,27 @@ function scaledTo(factor: number): Float32Array {
     return scale * factor;
   });
 }
+
+describe("bone rotation", () => {
+  it("turns a limb by its pitch first and the trunk by its roll first", () => {
+    const angles = new Float32Array([0.3, -0.5, 0.7]);
+
+    const limb = boneRotation(angles, 0, true, new Quaternion());
+    const trunk = boneRotation(angles, 0, false, new Quaternion());
+
+    expect(limb.angleTo(PITCH.clone().multiply(ROLL).multiply(YAW))).toBeLessThan(1e-6);
+    expect(trunk.angleTo(ROLL.clone().multiply(PITCH).multiply(YAW))).toBeLessThan(1e-6);
+  });
+
+  it("leaves out the turns a bone does not make", () => {
+    const pitchOnly = new Float32Array([0.3, 0, 0]);
+    const yawOnly = new Float32Array([0, 0, 0.7]);
+
+    expect(boneRotation(pitchOnly, 0, true, new Quaternion()).angleTo(PITCH)).toBeLessThan(1e-6);
+    expect(boneRotation(yawOnly, 0, false, new Quaternion()).angleTo(YAW)).toBeLessThan(1e-6);
+    expect(boneRotation(new Float32Array(3), 0, true, new Quaternion()).angleTo(new Quaternion())).toBe(0);
+  });
+});
 
 describe("skeleton poser", () => {
   it("leaves the rest pose untouched", () => {
