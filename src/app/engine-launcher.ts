@@ -150,9 +150,14 @@ export class EngineLauncher {
   async #start(launch: LaunchOptions, worldId: string): Promise<void> {
     const [{ openSession }, world] = await Promise.all([loadSessionOpener(), worldSourceFor(launch, worldId)]);
 
+    let markGrowing = ignore;
+    const isGrowing = new Promise<void>((resolve) => {
+      markGrowing = resolve;
+    });
     const session = openSession(
       world,
       (progress) => {
+        markGrowing();
         this.#reportProgress(progress);
       },
       this.#opening.signal
@@ -161,6 +166,8 @@ export class EngineLauncher {
     session.then(() => {
       this.#reportStage("lighting");
     }, ignore);
+
+    await Promise.race([isGrowing, session]);
 
     const [engineModule] = await Promise.all([loadGameEngine(), loadHud()]);
 

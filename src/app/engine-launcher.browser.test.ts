@@ -33,6 +33,12 @@ const LAUNCH: LaunchOptions = {
   size: "large",
 };
 
+function waitAWhile(): Promise<void> {
+  return new Promise((resolve) => {
+    setTimeout(resolve, 50);
+  });
+}
+
 function stageOf(status: EngineStatus): string {
   return status.kind === "loading" ? status.stage : status.kind;
 }
@@ -47,7 +53,7 @@ describe("engine launcher", () => {
     });
   });
 
-  it("says the island is being lit once the world has grown", async () => {
+  it("fetches the engine once the world starts growing and says it is lit once it has grown", async () => {
     const session = await createTestSession();
     let grow: (progress: GenerationProgress) => void = ignore;
     let open: (opened: GameSession) => void = ignore;
@@ -74,6 +80,9 @@ describe("engine launcher", () => {
     await vi.waitFor(() => {
       expect(openSession).toHaveBeenCalledOnce();
     });
+    await waitAWhile();
+
+    expect(startEngine).not.toHaveBeenCalled();
 
     grow({ island: null, stage: "relief" });
     open(session);
