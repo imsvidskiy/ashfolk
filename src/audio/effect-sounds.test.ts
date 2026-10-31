@@ -27,7 +27,7 @@ describe("effect sounds", () => {
     expect(loops[0]?.stop).toHaveBeenCalledOnce();
   });
 
-  it("hears far natural lightning as thunder once the sound has travelled, waiting a few seconds at most", () => {
+  it("hears far natural lightning as thunder once the sound has traveled, waiting a few seconds at most", () => {
     const { engine, play } = createTestSoundEngine();
     const effects = new EffectSounds(engine, flatGroundPoint);
     const place = { x: 686, y: 0, z: 0 };
