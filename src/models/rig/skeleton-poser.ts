@@ -1,6 +1,6 @@
 import { Matrix4, Quaternion, Vector3 } from "three";
 import { ANGLES_PER_BONE, type Pose, RotationAxis } from "./pose.ts";
-import { contactsFor, NO_PARENT, type Skeleton } from "./skeleton.ts";
+import { type ContactPoint, contactsFor, type Grounding, NO_PARENT, type Skeleton } from "./skeleton.ts";
 
 export const PALETTE_FLOATS_PER_BONE = 12;
 
@@ -9,6 +9,11 @@ const AXIS_Y = new Vector3(0, 1, 0);
 const AXIS_Z = new Vector3(0, 0, 1);
 const UNIT_SCALE = new Vector3(1, 1, 1);
 const turn = new Quaternion();
+
+interface RestContact {
+  readonly bone: number;
+  readonly point: Vector3;
+}
 
 function turned(rotation: Quaternion, axis: Vector3, angle: number): Quaternion {
   if (angle === 0) {
@@ -32,6 +37,12 @@ export function boneRotation(angles: Float32Array, bone: number, isLimb: boolean
   return turned(turned(target.setFromAxisAngle(AXIS_Z, roll), AXIS_X, pitch), AXIS_Y, yaw);
 }
 
+function restContacts(contacts: readonly ContactPoint[]): RestContact[] {
+  return contacts.map((contact) => {
+    return { bone: contact.bone, point: new Vector3(...contact.position) };
+  });
+}
+
 function restOffset(joints: readonly Vector3[], parent: number, index: number): Vector3 {
   const joint = joints[index];
 
@@ -43,13 +54,13 @@ function restOffset(joints: readonly Vector3[], parent: number, index: number): 
 }
 
 export class SkeletonPoser {
+  readonly #contacts: Readonly<Record<Grounding, readonly RestContact[]>>;
   readonly #fromJoints: readonly Vector3[];
   readonly #isLimb: readonly boolean[];
   readonly #offsets: readonly Vector3[];
   readonly #parents: readonly number[];
   readonly #point = new Vector3();
   readonly #rotation = new Quaternion();
-  readonly #skeleton: Skeleton;
   readonly #skin: readonly Matrix4[];
   readonly #translation = new Vector3();
   readonly #world: readonly Matrix4[];
@@ -59,7 +70,10 @@ export class SkeletonPoser {
       return new Vector3(...bone.joint);
     });
 
-    this.#skeleton = skeleton;
+    this.#contacts = {
+      body: restContacts(contactsFor(skeleton, "body")),
+      feet: restContacts(contactsFor(skeleton, "feet")),
+    };
     this.#fromJoints = restJoints.map((joint) => {
       return joint.clone().negate();
     });
@@ -162,8 +176,8 @@ export class SkeletonPoser {
   #placeOnGround(pose: Pose): void {
     let lowest = Number.POSITIVE_INFINITY;
 
-    for (const contact of contactsFor(this.#skeleton, pose.grounding)) {
-      this.#point.set(...contact.position).applyMatrix4(this.#skin[contact.bone]);
+    for (const contact of this.#contacts[pose.grounding]) {
+      this.#point.copy(contact.point).applyMatrix4(this.#skin[contact.bone]);
       lowest = Math.min(lowest, this.#point.y);
     }
 
