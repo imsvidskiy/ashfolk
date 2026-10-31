@@ -8,7 +8,7 @@ import {
   teach,
 } from "../testing/test-society.ts";
 import type { Building } from "./buildings.ts";
-import { buildingsOfKind } from "./camp-plan.ts";
+import { mineFor } from "./camp-plan.ts";
 import { canAfford, completeConstruction, handleBuildingLoss, planConstruction } from "./construction.ts";
 import type { Tribe } from "./tribe.ts";
 
@@ -91,9 +91,9 @@ describe("construction planning", () => {
       }
     }
 
-    const [mine] = buildingsOfKind(tribe, harness.context, "mine");
+    const mine = mineFor(tribe, harness.context, "copper");
 
-    if (mine === undefined) {
+    if (mine === null) {
       throw new Error("Expected a mine");
     }
 

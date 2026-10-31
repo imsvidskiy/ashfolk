@@ -60,15 +60,9 @@ function campPlan(tribe: Tribe, kind: BuildingKind, nearest: number, farthest: n
   };
 }
 
-export function buildingsOfKind(tribe: Tribe, context: SocietyContext, kind: BuildingKind): Building[] {
-  return tribeBuildings(tribe, context.buildings).filter((building) => {
-    return building.kind === kind;
-  });
-}
-
 export function completedOfKind(tribe: Tribe, context: SocietyContext, kind: BuildingKind): Building | null {
-  const building = buildingsOfKind(tribe, context, kind).find((candidate) => {
-    return isComplete(candidate);
+  const building = tribeBuildings(tribe, context.buildings).find((candidate) => {
+    return candidate.kind === kind && isComplete(candidate);
   });
 
   if (building === undefined) {
