@@ -38,7 +38,6 @@ interface Scene {
 function createScene(): Scene {
   const camera = new PerspectiveCamera(45, 1.5, 1, 40_000);
   const mirror = createVegetatedMirror();
-
   const fire = new FireView({ axes: new CameraAxes(), chunks: new VegetationChunks(mirror) });
 
   camera.position.set(0, 300, 300);
@@ -73,7 +72,7 @@ function litSpots(fire: FireView): number[][] {
       return [light.position.x, light.position.z];
     })
     .toSorted((first, second) => {
-      return first[0] - second[0] || first[1] - second[1];
+      return first[0] - second[0];
     });
 }
 

@@ -14,7 +14,6 @@ const EMBER: EmberEffect = { durationSeconds: 3, fromX: 0, fromZ: 0, kind: "embe
 
 function createEffects() {
   const mirror = createVegetatedMirror();
-
   const textures = new TerrainTextures(mirror);
 
   const createRing = vi.fn(() => {
