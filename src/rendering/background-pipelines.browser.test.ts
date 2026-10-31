@@ -4,18 +4,9 @@ import { ignore } from "../shared/ignore.ts";
 import { BackgroundPipelines } from "./background-pipelines.ts";
 import { createGraphics, type Graphics, webGPUDevice } from "./create-graphics.ts";
 import { RENDER_QUALITY } from "./render-quality.ts";
+import { HARDWARE_ADAPTER } from "./testing/hardware-adapter.ts";
 
 const SETTLE_LIMIT_MILLISECONDS = 1000;
-
-const HARDWARE_ADAPTER: GPUAdapterInfo = {
-  architecture: "metal-3",
-  description: "",
-  device: "",
-  isFallbackAdapter: false,
-  subgroupMaxSize: 64,
-  subgroupMinSize: 4,
-  vendor: "apple",
-};
 
 interface Stage {
   readonly backgroundPipelines: BackgroundPipelines;
@@ -58,11 +49,7 @@ class FakePipelines {
   readonly readyObjects = new Set<object>();
   readonly updates: object[] = [];
 
-  getForRender(renderObject: object, promises: Promise<void>[] | null = null): void {
-    if (promises === null) {
-      return;
-    }
-
+  getForRender(renderObject: object, promises: Promise<void>[]): void {
     this.backgroundCompiles.push(renderObject);
     promises.push(...this.compiles);
   }
@@ -77,8 +64,6 @@ class FakePipelines {
 }
 
 afterEach(() => {
-  vi.useRealTimers();
-
   if (stage === null) {
     return;
   }
@@ -123,7 +108,7 @@ describe("background pipelines", () => {
 
   it("stops waiting at the limit and lets a failed compile go", async () => {
     const { backgroundPipelines, pipelines, scene } = await createStage();
-    const isSettled = vi.fn();
+    const onSettled = vi.fn();
 
     vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
     pipelines.compiles.push(new Promise(ignore), Promise.reject(new Error("The pipeline failed to compile")));
@@ -131,10 +116,10 @@ describe("background pipelines", () => {
 
     const settling = backgroundPipelines.settle(SETTLE_LIMIT_MILLISECONDS);
 
-    settling.then(isSettled, ignore);
+    settling.then(onSettled, ignore);
     await vi.advanceTimersByTimeAsync(SETTLE_LIMIT_MILLISECONDS - 1);
 
-    expect(isSettled).not.toHaveBeenCalled();
+    expect(onSettled).not.toHaveBeenCalled();
 
     await vi.advanceTimersByTimeAsync(1);
 
