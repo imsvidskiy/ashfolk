@@ -2,7 +2,7 @@ import { personName, tribeIdentity } from "../../content/names.ts";
 import type { TechnologyId } from "../../content/technologies.ts";
 import type { RandomSource } from "../../shared/random.ts";
 import { NO_PLANT, type VegetationStore } from "../../world/vegetation-store.ts";
-import { isHopping, isLeaping } from "../agents/hops.ts";
+import { type Hop, isLeaping } from "../agents/hops.ts";
 import { isStranded, moveAlong, placeMover, savedMover, stopMoving } from "../agents/movement.ts";
 import type { Waypoint } from "../agents/navigation.ts";
 import { nearestWalkableSpot } from "../agents/walkable-ground.ts";
@@ -123,12 +123,11 @@ function newcomerAge(isGrownUp: boolean, random: RandomSource): number {
   return random.between(4, 11);
 }
 
-function keepHopping(tick: PersonTick): void {
+function keepHopping(tick: PersonTick, hop: Hop): void {
   const { context, person, seconds } = tick;
-  const { hop } = person.mover;
 
   person.pose = isLeaping(person.mover) ? "leap" : "run";
-  person.speed = hop === null ? 0 : hop.speed;
+  person.speed = hop.speed;
   moveAlong(person.mover, seconds, person.speed, context.world, context.navigation);
 }
 
@@ -561,8 +560,10 @@ export class SocietySystem {
       return;
     }
 
-    if (isHopping(person.mover)) {
-      keepHopping(tick);
+    const { hop } = person.mover;
+
+    if (hop !== null) {
+      keepHopping(tick, hop);
     } else if (isStranded(person.mover, context.world)) {
       dropJob(tribe, person);
       walk(tick, walkSpeed(person));
