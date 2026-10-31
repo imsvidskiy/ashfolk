@@ -22,9 +22,7 @@ export interface ToolGestures {
   readonly move: (point: Vector3) => void;
 }
 
-export interface TapHandler {
-  readonly tap: (point: Vector3 | null, screen: ScreenPoint) => void;
-}
+export type TapListener = (point: Vector3 | null, screen: ScreenPoint) => void;
 
 interface TrackedPointer {
   readonly startX: number;
@@ -96,9 +94,9 @@ export class PointerControls {
   readonly #abort = new AbortController();
   readonly #camera: GodCamera;
   readonly #canvas: HTMLCanvasElement;
+  readonly #onTap: TapListener;
   readonly #picker: GroundPicker;
   readonly #pointers = new Map<number, TrackedPointer>();
-  readonly #tap: TapHandler;
   readonly #tools: readonly ToolGestures[];
   readonly #viewAtPick = new Matrix4();
   #carriedX = Number.NaN;
@@ -114,62 +112,62 @@ export class PointerControls {
     camera: GodCamera,
     picker: GroundPicker,
     tools: readonly ToolGestures[],
-    tap: TapHandler
+    onTap: TapListener
   ) {
     this.#canvas = canvas;
     this.#camera = camera;
     this.#picker = picker;
     this.#tools = tools;
-    this.#tap = tap;
+    this.#onTap = onTap;
 
     const options = { signal: this.#abort.signal };
 
     canvas.addEventListener(
       "pointerdown",
       (event) => {
-        return this.#down(event);
+        this.#down(event);
       },
       options
     );
     canvas.addEventListener(
       "pointermove",
       (event) => {
-        return this.#move(event);
+        this.#move(event);
       },
       options
     );
     canvas.addEventListener(
       "pointerup",
       (event) => {
-        return this.#up(event, true);
+        this.#up(event, true);
       },
       options
     );
     canvas.addEventListener(
       "pointercancel",
       (event) => {
-        return this.#up(event, false);
+        this.#up(event, false);
       },
       options
     );
     canvas.addEventListener(
       "pointerleave",
       () => {
-        return this.#leave();
+        this.#leave();
       },
       options
     );
     canvas.addEventListener(
       "wheel",
       (event) => {
-        return this.#wheel(event);
+        this.#wheel(event);
       },
       { ...options, passive: false }
     );
     canvas.addEventListener(
       "contextmenu",
       (event) => {
-        return event.preventDefault();
+        event.preventDefault();
       },
       options
     );
@@ -248,7 +246,7 @@ export class PointerControls {
     this.#gesture = waiting;
     waiting.tool.hover(waiting.point, waiting.screen);
     this.#holdTimer = window.setTimeout(() => {
-      return this.#commitTool(this.#onlyPointer());
+      this.#commitTool(this.#onlyPointer());
     }, TOUCH_HOLD_MILLISECONDS);
   }
 
@@ -507,7 +505,7 @@ export class PointerControls {
     }
 
     if (gesture.kind === "pan" && gesture.travel < TAP_TOLERANCE && this.#activeTool() === null) {
-      this.#tap.tap(this.#pick(pointer.x, pointer.y), { x: pointer.x, y: pointer.y });
+      this.#onTap(this.#pick(pointer.x, pointer.y), { x: pointer.x, y: pointer.y });
     }
   }
 

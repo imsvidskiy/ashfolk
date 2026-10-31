@@ -48,13 +48,13 @@ export class WorkerSimulationConnection implements SimulationConnection {
   }
 
   advance(realSeconds: number): Promise<SimulationFrame> {
-    return Promise.race([this.#remote.advance(realSeconds, this.#commands.splice(0)), this.#failure]);
+    return this.#raceFailure(this.#remote.advance(realSeconds, this.#commands.splice(0)));
   }
 
   createWorld(request: WorldRequest, onProgress: (progress: GenerationProgress) => void): Promise<InitialWorld> {
     this.#commands.splice(0);
 
-    return Promise.race([this.#remote.createWorld(request, proxy(onProgress)), this.#failure]);
+    return this.#raceFailure(this.#remote.createWorld(request, proxy(onProgress)));
   }
 
   loadWorld(saved: SavedWorldState, onProgress: (progress: GenerationProgress) => void): Promise<LoadedWorld> {
@@ -62,11 +62,11 @@ export class WorkerSimulationConnection implements SimulationConnection {
 
     const sent = transfer(saved, buffersWithin(saved));
 
-    return Promise.race([this.#remote.loadWorld(sent, proxy(onProgress)), this.#failure]);
+    return this.#raceFailure(this.#remote.loadWorld(sent, proxy(onProgress)));
   }
 
   saveWorld(): Promise<SavedWorldState | null> {
-    return Promise.race([this.#remote.saveWorld(), this.#failure]);
+    return this.#raceFailure(this.#remote.saveWorld());
   }
 
   dispose(): void {
@@ -75,5 +75,9 @@ export class WorkerSimulationConnection implements SimulationConnection {
 
   send(command: SimulationCommand): void {
     this.#commands.push(command);
+  }
+
+  #raceFailure<Value>(request: Promise<Value>): Promise<Value> {
+    return Promise.race([request, this.#failure]);
   }
 }

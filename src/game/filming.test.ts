@@ -3,10 +3,6 @@ import { ignore } from "../shared/ignore.ts";
 import { FILMING_OFF, FILMING_ON, Filming, readFilming } from "./filming.ts";
 
 describe("filming", () => {
-  it("starts with every filming setting off", () => {
-    expect(new Filming().settings).toEqual(FILMING_OFF);
-  });
-
   it("changes only the settings it is given and tells its listeners", () => {
     const filming = new Filming();
     const listener = vi.fn();

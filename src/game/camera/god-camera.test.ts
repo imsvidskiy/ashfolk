@@ -1,21 +1,80 @@
 import { PerspectiveCamera } from "three/webgpu";
 import { describe, expect, it } from "vitest";
+import { flatGround, settle } from "../testing/view-fixtures.ts";
 import { GodCamera, type GroundPoint } from "./god-camera.ts";
 
 const HALF_SIZE = 2560;
 const REACH = 10_000;
 
-function createCamera(): GodCamera {
-  return new GodCamera(
-    new PerspectiveCamera(50, 1.6, 1, 50_000),
-    () => {
-      return 0;
-    },
-    HALF_SIZE
-  );
+function createCamera(heightAt: (x: number, z: number) => number = flatGround): GodCamera {
+  return new GodCamera(new PerspectiveCamera(50, 1.6, 1, 50_000), heightAt, HALF_SIZE);
+}
+
+function panDistance(pitch: number): number {
+  const camera = createCamera();
+
+  camera.jumpTo({ distance: 1000, pitch, targetX: 0, targetZ: 0, yaw: 0 });
+  camera.pan(0, 40, 900);
+  settle(camera);
+
+  return Math.abs(camera.state.targetZ);
 }
 
 describe("god camera", () => {
+  it("keeps the view within the island and its distance and pitch limits", () => {
+    const camera = createCamera();
+
+    camera.jumpTo({ distance: 1e9, pitch: 3, targetX: 1e9, targetZ: -1e9 });
+
+    expect(camera.state).toMatchObject({ distance: HALF_SIZE * 3.5, pitch: 1.48 });
+    expect(camera.state.targetX).toBeCloseTo(HALF_SIZE * 1.05);
+    expect(camera.state.targetZ).toBeCloseTo(-HALF_SIZE * 1.05);
+
+    camera.jumpTo({ distance: 0, pitch: -1 });
+
+    expect(camera.state).toMatchObject({ distance: 4, pitch: 0.08 });
+  });
+
+  it("zooms toward the ground under the pointer", () => {
+    const camera = createCamera();
+
+    camera.jumpTo({ distance: 1000, targetX: 0, targetZ: 0 });
+    camera.zoom(0.5, { x: 400, z: -200 });
+    settle(camera);
+
+    expect(camera.state.distance).toBeCloseTo(500);
+    expect(camera.state.targetX).toBeCloseTo(200);
+    expect(camera.state.targetZ).toBeCloseTo(-100);
+  });
+
+  it("pans farther across the ground in a low view than from above", () => {
+    expect(panDistance(0.2)).toBeGreaterThan(panDistance(1.4) * 1.5);
+  });
+
+  it("lifts the eye over higher ground behind it", () => {
+    const camera = createCamera((_x, z) => {
+      return z > 100 ? 500 : 0;
+    });
+
+    camera.jumpTo({ distance: 300, pitch: 0.1, targetX: 0, targetZ: 0, yaw: 0 });
+
+    expect(camera.camera.position.y).toBeCloseTo(500 + 1.2 + 300 * 0.02);
+  });
+
+  it("arrives from straight above and settles into the opening view", () => {
+    const camera = createCamera();
+
+    camera.arriveFromAbove();
+
+    expect(camera.state).toMatchObject({ pitch: 1.48, yaw: 0 });
+
+    settle(camera);
+
+    expect(camera.state.pitch).toBeCloseTo(0.82);
+    expect(camera.state.yaw).toBeCloseTo(0.6);
+    expect(camera.state.distance).toBeCloseTo(HALF_SIZE * 1.6);
+  });
+
   it("frames the ground around the target when looking down", () => {
     const camera = createCamera();
 

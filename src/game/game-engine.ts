@@ -2,10 +2,11 @@ import { Matrix4, PerspectiveCamera, type Vector3, type WebGPURenderer } from "t
 import type { GenerationProgress, WorldRequest } from "../generation/generation-options.ts";
 import { ANIMAL_WADING_DEPTH, PERSON_WADING_DEPTH, standingHeight } from "../rendering/agents/agent-view-input.ts";
 import { createGraphics } from "../rendering/create-graphics.ts";
-import { type QualityLevel, RENDER_QUALITY } from "../rendering/render-quality.ts";
+import { type QualityLevel, RENDER_QUALITY, type RenderQuality } from "../rendering/render-quality.ts";
 import { WorldRenderer } from "../rendering/world-renderer.ts";
 import { clamp } from "../shared/math.ts";
 import type { ChronicleEntry } from "../simulation/chronicle.ts";
+import type { SimulationCommand } from "../simulation/commands.ts";
 import type { SimulationFrame } from "../simulation/frame.ts";
 import type { GrabTarget } from "../simulation/hand/grab-target.ts";
 import type { SavedWorldState } from "../simulation/saved-world.ts";
@@ -54,7 +55,7 @@ interface EngineOptions {
 interface EngineParts {
   readonly canvas: HTMLCanvasElement;
   readonly graphicsLost: Promise<void>;
-  readonly quality: QualityLevel;
+  readonly quality: RenderQuality;
   readonly renderer: WebGPURenderer;
   readonly session: GameSession;
 }
@@ -81,6 +82,7 @@ async function openSessionOrRelease(
 
 export class GameEngine implements EngineHandle {
   readonly camera: GodCamera;
+  readonly canvas: HTMLCanvasElement;
   readonly filming = new Filming();
   readonly graphicsLost: Promise<void>;
   readonly hand: HandTool;
@@ -88,7 +90,6 @@ export class GameEngine implements EngineHandle {
   readonly session: GameSession;
   readonly #activity = new AbortController();
   readonly #cameraPlacement = new Matrix4();
-  readonly #canvas: HTMLCanvasElement;
   readonly #entityPicker: EntityPicker;
   readonly #keyboard: KeyboardControls;
   readonly #labels: LabelProjector;
@@ -107,28 +108,35 @@ export class GameEngine implements EngineHandle {
   #viewport: ViewportSize = { height: 1, width: 1 };
 
   constructor(parts: EngineParts) {
-    this.#canvas = parts.canvas;
+    this.canvas = parts.canvas;
     this.graphicsLost = parts.graphicsLost;
-    this.#resolution = new ResolutionGovernor(RENDER_QUALITY[parts.quality].maximumPixelRatio);
     this.#renderer = parts.renderer;
     this.session = parts.session;
 
-    const { mirror } = parts.session;
-
-    const perspective = new PerspectiveCamera(FIELD_OF_VIEW, 1, NEAR_PLANE, FAR_PLANE);
+    const { quality, session } = parts;
+    const { mirror } = session;
+    const { halfSize } = mirror.grid;
 
     function heightAt(x: number, z: number): number {
       return mirror.heightAt(x, z);
     }
 
-    this.camera = new GodCamera(perspective, heightAt, mirror.grid.halfSize);
+    function send(command: SimulationCommand): void {
+      session.send(command);
+    }
+
+    const perspective = new PerspectiveCamera(FIELD_OF_VIEW, 1, NEAR_PLANE, FAR_PLANE);
+    const groundPicker = new GroundPicker(perspective, heightAt, halfSize);
+
+    this.#resolution = new ResolutionGovernor(quality.maximumPixelRatio);
+    this.camera = new GodCamera(perspective, heightAt, halfSize);
     this.#world = new WorldRenderer({
       camera: perspective,
       mirror,
       onShake: (amount, x, z) => {
         this.#shake(amount, x, z);
       },
-      quality: RENDER_QUALITY[parts.quality],
+      quality,
       renderer: parts.renderer,
     });
     this.#entityPicker = new EntityPicker(
@@ -149,35 +157,29 @@ export class GameEngine implements EngineHandle {
           return mirror.surfaceAt(x, z);
         },
       },
-      mirror.grid.halfSize
+      halfSize
     );
-
-    const groundPicker = new GroundPicker(perspective, heightAt, mirror.grid.halfSize);
-
-    this.powers = new PowerTool(
-      (command) => {
-        this.session.send(command);
+    this.powers = new PowerTool(send, {
+      hide: () => {
+        this.#world.cursor.hide();
       },
-      {
-        hide: () => {
-          this.#world.cursor.hide();
-        },
-        show: (point, radius, isPressed) => {
-          this.#showCursor(point, radius, isPressed);
-        },
-      }
-    );
-
-    this.hand = new HandTool((command) => {
-      this.session.send(command);
-    }, this.#pickGrabbable.bind(this));
-
-    this.#pointer = new PointerControls(parts.canvas, this.camera, groundPicker, [this.hand, this.powers], {
-      tap: (point, screen) => {
-        return this.#selectAt(point, screen);
+      show: (point, radius, isPressed) => {
+        this.#showCursor(point, radius, isPressed);
       },
     });
-    this.#keyboard = new KeyboardControls(window, this.camera);
+    this.hand = new HandTool(send, (point, screen) => {
+      return this.#pickGrabbable(point, screen);
+    });
+    this.#pointer = new PointerControls(
+      parts.canvas,
+      this.camera,
+      groundPicker,
+      [this.hand, this.powers],
+      (point, screen) => {
+        this.#selectAt(point, screen);
+      }
+    );
+    this.#keyboard = new KeyboardControls(this.camera);
     this.#resizeObserver = new ResizeObserver(() => {
       this.#resize();
     });
@@ -202,7 +204,9 @@ export class GameEngine implements EngineHandle {
   }
 
   static async start(options: EngineOptions): Promise<GameEngine> {
-    const { lost, renderer } = await createGraphics(options.canvas, RENDER_QUALITY[options.quality]);
+    const quality = RENDER_QUALITY[options.quality];
+
+    const { lost, renderer } = await createGraphics(options.canvas, quality);
 
     const session = await openSessionOrRelease(
       renderer,
@@ -214,7 +218,7 @@ export class GameEngine implements EngineHandle {
     const engine = new GameEngine({
       canvas: options.canvas,
       graphicsLost: lost,
-      quality: options.quality,
+      quality,
       renderer,
       session,
     });
@@ -229,10 +233,6 @@ export class GameEngine implements EngineHandle {
     engine.run();
 
     return engine;
-  }
-
-  get canvas(): HTMLCanvasElement {
-    return this.#canvas;
   }
 
   get landmarks(): readonly Landmark[] {
@@ -369,7 +369,7 @@ export class GameEngine implements EngineHandle {
 
     if (cursor !== this.#handCursor) {
       this.#handCursor = cursor;
-      showHandCursor(this.#canvas, cursor);
+      showHandCursor(this.canvas, cursor);
     }
   }
 
@@ -447,8 +447,8 @@ export class GameEngine implements EngineHandle {
   }
 
   #resize(): void {
-    const width = Math.max(1, this.#canvas.clientWidth);
-    const height = Math.max(1, this.#canvas.clientHeight);
+    const width = Math.max(1, this.canvas.clientWidth);
+    const height = Math.max(1, this.canvas.clientHeight);
 
     this.#devicePixelRatio = window.devicePixelRatio;
     this.#viewport = { height, width };
