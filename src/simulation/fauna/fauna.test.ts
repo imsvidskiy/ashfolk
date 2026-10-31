@@ -414,7 +414,6 @@ describe("hares", () => {
 
   it("start part-way through their lives when they settle the island", () => {
     const { fauna } = createFauna();
-
     const { lifespanDays } = ANIMALS.hare;
 
     fauna.populateSmallGame(4);
