@@ -132,6 +132,7 @@ const SKIN_SEAM = 0.035;
 const FACE_SEAM = 0.012;
 const HAND_SEAM = 0.02;
 const SHOULDER_RADIUS = 0.058;
+const STROKE_DEPTH = 0.001;
 const SKIN = { slot: MaterialSlot.Skin };
 
 const BROW: readonly Triple[] = [
@@ -160,7 +161,7 @@ export function headShape(detail: HumanDetail): Shape {
   return loft(alongSections(HEAD_SECTIONS, detail), detail.headSegments);
 }
 
-function onHead(head: Shape, point: Triple, lift: number): Vector3 {
+function onHead(head: Shape, point: Triple): Vector3 {
   const [x, y, z] = point;
 
   const hit = outermostHit(head, new Vector3(0, y, HEAD_AXIS_Z), new Vector3(x, 0, z - HEAD_AXIS_Z));
@@ -169,12 +170,12 @@ function onHead(head: Shape, point: Triple, lift: number): Vector3 {
     return new Vector3(x, y, z);
   }
 
-  return hit.point.addScaledVector(hit.normal, lift);
+  return hit.point.addScaledVector(hit.normal, -STROKE_DEPTH);
 }
 
-export function headStroke(head: Shape, points: readonly Triple[], radius: number, lift: number): TubePoint[] {
+export function headStroke(head: Shape, points: readonly Triple[], radius: number): TubePoint[] {
   return points.map((point) => {
-    const surface = onHead(head, point, lift);
+    const surface = onHead(head, point);
 
     return { radius, x: surface.x, y: surface.y, z: surface.z };
   });
@@ -219,7 +220,7 @@ function addFace(builder: MeshBuilder, detail: HumanDetail, head: Shape): void {
       style: { ...style, slot: MaterialSlot.Eye },
       transform: combine(mirror, transformOf({ position: [0.034, 1.632, 0.094] })),
     });
-    builder.add(tube(headStroke(head, BROW, 0.0045, -0.001), { radialSegments: 4 }), {
+    builder.add(tube(headStroke(head, BROW, 0.0045), { radialSegments: 4 }), {
       style: { ...style, slot: MaterialSlot.Hair },
       transform: mirror,
     });
