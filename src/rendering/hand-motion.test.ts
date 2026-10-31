@@ -107,8 +107,16 @@ describe("hand motion", () => {
 
     motion.update({ ...DEER, x: 200 }, FRAME);
 
-    expect(poseOf(motion).x).toBeCloseTo(midway.x);
-    expect(poseOf(motion).x).toBeLessThan(100);
+    const regrabbed = poseOf(motion);
+
+    expect(regrabbed.x).toBeCloseTo(midway.x);
+    expect(regrabbed.x).toBeLessThan(100);
+    expect(midway.lift).toBeGreaterThan(HELD_LIFT);
+    expect(regrabbed.lift).toBeCloseTo(midway.lift);
+
+    run(motion, { ...DEER, x: 200 }, LIFT_SECONDS * 2);
+
+    expect(poseOf(motion).lift).toBeCloseTo(HELD_LIFT);
   });
 
   it("starts afresh when another thing is grabbed", () => {
