@@ -148,12 +148,6 @@ function sampleSegment(grid: WorldGrid, points: readonly RiverPoint[], segment: 
   }
 }
 
-function sampleChannel(grid: WorldGrid, points: readonly RiverPoint[], samples: ChannelSamples): void {
-  for (let segment = 0; segment < points.length - 1; segment += 1) {
-    sampleSegment(grid, points, segment, samples);
-  }
-}
-
 function settledOnGround(point: RiverPoint, ground: number): RiverPoint {
   const highest = ground + LIFT_ALLOWANCE;
 
@@ -236,7 +230,9 @@ function carveChannel(
 ): void {
   const { alongs, cells, distances, segments } = samples;
 
-  sampleChannel(targets.grid, points, samples);
+  for (let segment = 0; segment < points.length - 1; segment += 1) {
+    sampleSegment(targets.grid, points, segment, samples);
+  }
 
   for (const cell of cells) {
     const segment = segments[cell];
