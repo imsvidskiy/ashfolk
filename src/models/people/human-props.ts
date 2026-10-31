@@ -192,6 +192,7 @@ export function addCarriedFish(builder: MeshBuilder, detail: HumanDetail): void 
   const [x, y, z] = RIGHT_FIST;
 
   const style = inRightHand(MaterialSlot.Fish);
+  const transform = transformOf({ position: [x, y, z + 0.02] });
   const segments = segmentsAtLeast(detail, 6, detail.limbSegments);
 
   builder.add(
@@ -206,7 +207,7 @@ export function addCarriedFish(builder: MeshBuilder, detail: HumanDetail): void 
       ],
       segments
     ),
-    { style, transform: transformOf({ position: [x, y, z + 0.02] }) }
+    { style, transform }
   );
   builder.add(
     loft(
@@ -218,7 +219,7 @@ export function addCarriedFish(builder: MeshBuilder, detail: HumanDetail): void 
       ],
       segments
     ),
-    { style, transform: transformOf({ position: [x, y, z + 0.02] }) }
+    { style, transform }
   );
 }
 
