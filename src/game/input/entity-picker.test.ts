@@ -90,7 +90,11 @@ function grabBetweenTicks(camera: PerspectiveCamera, scene: GrabScene, screen: S
   return pickerOver(camera).pickGrabbable(scene, screen, VIEWPORT, ground);
 }
 
-function grabRunningHare(camera: PerspectiveCamera, frame: SimulationFrame, secondsSinceTick: number) {
+function grabRunningHare(
+  camera: PerspectiveCamera,
+  frame: SimulationFrame,
+  secondsSinceTick: number
+): GrabTarget | null {
   const scene = { frame, plantsNear: everyPlant, secondsSinceTick, vegetation: plantAt(PlantSpecies.Oak, 400, 0) };
 
   return grabBetweenTicks(camera, scene, screenOf(camera, 0, 0.2, 0));
@@ -182,7 +186,7 @@ function besidePersonBehindOak(pixels: number): ScreenPoint {
   return { x: person.x + pixels, y: person.y };
 }
 
-function plantsNearSpots(vegetation: VegetationBuffers) {
+function plantsNearSpots(vegetation: VegetationBuffers): GrabScene["plantsNear"] {
   return (spots: readonly GroundPoint[], radius: number): readonly number[] => {
     const isNear = spots.some((spot) => {
       return Math.max(Math.abs(spot.x - vegetation.x[0]), Math.abs(spot.z - vegetation.z[0])) <= radius;
@@ -223,7 +227,7 @@ function grabOver(
   camera: PerspectiveCamera,
   vegetation: VegetationBuffers,
   screen: ScreenPoint
-) {
+): GrabTarget | null {
   const ground = new GroundPicker(camera, heightAt, WIDE_WORLD_HALF_SIZE).pick(screen, VIEWPORT);
   const scene = { frame: frameWithPeople(), plantsNear: plantsNearSpots(vegetation), secondsSinceTick: 0, vegetation };
 
@@ -234,7 +238,7 @@ function noPlants(): readonly number[] {
   return [];
 }
 
-function grabAt(vegetation: VegetationBuffers, ...people: readonly (readonly [number, number])[]) {
+function grabAt(vegetation: VegetationBuffers, ...people: readonly (readonly [number, number])[]): GrabTarget | null {
   const camera = cameraLookingAt(0, 0);
 
   const ground = new GroundPicker(camera, flatGround, WORLD_HALF_SIZE).pick(CENTER, VIEWPORT);
