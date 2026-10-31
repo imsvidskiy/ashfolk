@@ -4,6 +4,7 @@ import { generationFingerprint } from "../../generation/generation-fingerprint.t
 import type { GeneratedWorld } from "../../generation/world-generator.ts";
 import { clamp } from "../../shared/math.ts";
 import { isBrookCell } from "../../world/brooks.ts";
+import { CellSet } from "../../world/cell-set.ts";
 import { type CellRegion, RegionChangeTracker, RowChangeTracker } from "../../world/change-tracking.ts";
 import { hasRoomFromCoast, isOnIsland } from "../../world/coast.ts";
 import { type Crossing, CrossingIndex, crossingCells, LOG_ROOT_BEHIND } from "../../world/crossings.ts";
@@ -27,7 +28,6 @@ import {
 } from "../../world/vegetation-store.ts";
 import { NO_WATER, type Spring, type WaterFeatures } from "../../world/water.ts";
 import { WorldGrid } from "../../world/world-grid.ts";
-import { CellSet } from "./cell-set.ts";
 import { ObstacleMap } from "./obstacles.ts";
 import { applySparse, type SparseValues, sparseDifference } from "./sparse-values.ts";
 

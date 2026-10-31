@@ -1,5 +1,6 @@
 import { clamp, lerp } from "../shared/math.ts";
 import type { RandomSource } from "../shared/random.ts";
+import { CellSet } from "../world/cell-set.ts";
 
 const BRUSH_RADIUS = 3;
 const CAPACITY = 4;
@@ -13,7 +14,6 @@ const MAXIMUM_STEPS = 60;
 const MINIMUM_CAPACITY = 0.01;
 const SETTLED_EXCESS = 0.02;
 const SMOOTHING = 0.2;
-const LARGEST_SORTED_SHARE = 0.1;
 
 interface ErosionBrush {
   columns: Int32Array;
@@ -54,17 +54,11 @@ export interface ErosionPlan {
   readonly scales: readonly ErosionScale[];
 }
 
-interface CellList {
-  readonly cells: Int32Array;
-  count: number;
-  readonly isListed: Uint8Array;
-}
-
 interface SlopeRelaxation {
-  readonly active: CellList;
+  readonly active: CellSet;
   readonly cellSize: number;
   readonly change: Float32Array;
-  readonly changed: CellList;
+  readonly changed: CellSet;
   readonly excesses: Float64Array;
   readonly heights: Float32Array;
   readonly neighborhood: Neighborhood;
@@ -381,20 +375,6 @@ export function erodeAcrossScales(
   }
 }
 
-function createCellList(cellCount: number): CellList {
-  return { cells: new Int32Array(cellCount), count: 0, isListed: new Uint8Array(cellCount) };
-}
-
-function listCell(list: CellList, cell: number): void {
-  if (list.isListed[cell] === 1) {
-    return;
-  }
-
-  list.isListed[cell] = 1;
-  list.cells[list.count] = cell;
-  list.count += 1;
-}
-
 function shedExcess(relaxation: SlopeRelaxation, cell: number): boolean {
   const { change, changed, excesses, heights, neighborhood, size } = relaxation;
 
@@ -430,7 +410,7 @@ function shedExcess(relaxation: SlopeRelaxation, cell: number): boolean {
 
   const moved = 0.4 * largest;
 
-  listCell(changed, cell);
+  changed.add(cell);
 
   for (let neighbor = 0; neighbor < 8; neighbor += 1) {
     const excess = excesses[neighbor];
@@ -441,7 +421,7 @@ function shedExcess(relaxation: SlopeRelaxation, cell: number): boolean {
 
       change[target] += share;
       change[cell] -= share;
-      listCell(changed, target);
+      changed.add(target);
     }
   }
 
@@ -451,13 +431,9 @@ function shedExcess(relaxation: SlopeRelaxation, cell: number): boolean {
 function applyRelaxation(relaxation: SlopeRelaxation): void {
   const { active, change, changed, heights, neighborhood, size } = relaxation;
 
-  for (let index = 0; index < changed.count; index += 1) {
-    const cell = changed.cells[index];
-
-    changed.isListed[cell] = 0;
-
+  changed.retain((cell) => {
     if (change[cell] === 0) {
-      continue;
+      return false;
     }
 
     const column = cell % size;
@@ -466,35 +442,16 @@ function applyRelaxation(relaxation: SlopeRelaxation): void {
 
     heights[cell] += change[cell];
     change[cell] = 0;
-    listCell(active, cell);
+    active.add(cell);
 
     for (let neighbor = 0; neighbor < 8; neighbor += 1) {
       if (isInside || isOnMap(column + neighborhood.columns[neighbor], row + neighborhood.rows[neighbor], size)) {
-        listCell(active, cell + neighborhood.offsets[neighbor]);
+        active.add(cell + neighborhood.offsets[neighbor]);
       }
     }
-  }
 
-  changed.count = 0;
-}
-
-function sortListed(list: CellList): void {
-  const { cells, isListed } = list;
-
-  if (list.count < isListed.length * LARGEST_SORTED_SHARE) {
-    cells.subarray(0, list.count).sort();
-
-    return;
-  }
-
-  list.count = 0;
-
-  for (let cell = 0; cell < isListed.length; cell += 1) {
-    if (isListed[cell] === 1) {
-      cells[list.count] = cell;
-      list.count += 1;
-    }
-  }
+    return false;
+  });
 }
 
 function shedActiveCells(relaxation: SlopeRelaxation): boolean {
@@ -502,19 +459,14 @@ function shedActiveCells(relaxation: SlopeRelaxation): boolean {
 
   let hasShed = false;
 
-  sortListed(active);
-
-  for (let index = 0; index < active.count; index += 1) {
-    const cell = active.cells[index];
-
-    active.isListed[cell] = 0;
-
+  active.sort();
+  active.retain((cell) => {
     if (shedExcess(relaxation, cell)) {
       hasShed = true;
     }
-  }
 
-  active.count = 0;
+    return false;
+  });
 
   return hasShed;
 }
@@ -527,10 +479,10 @@ export function relaxSlopes(
   maximumIterations: number
 ): number {
   const relaxation: SlopeRelaxation = {
-    active: createCellList(heights.length),
+    active: new CellSet(heights.length),
     cellSize,
     change: new Float32Array(heights.length),
-    changed: createCellList(heights.length),
+    changed: new CellSet(heights.length),
     excesses: new Float64Array(8),
     heights,
     neighborhood: createNeighborhood(size),
@@ -539,7 +491,7 @@ export function relaxSlopes(
   };
 
   for (let cell = 0; cell < heights.length; cell += 1) {
-    listCell(relaxation.active, cell);
+    relaxation.active.add(cell);
   }
 
   for (let iteration = 0; iteration < maximumIterations; iteration += 1) {

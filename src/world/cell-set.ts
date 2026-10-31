@@ -1,3 +1,5 @@
+const LARGEST_SORTED_SHARE = 0.1;
+
 export class CellSet {
   readonly #cells: Int32Array;
   readonly #isMember: Uint8Array;
@@ -47,6 +49,23 @@ export class CellSet {
     }
 
     this.#size = kept;
+  }
+
+  sort(): void {
+    if (this.#size < this.#isMember.length * LARGEST_SORTED_SHARE) {
+      this.values().sort();
+
+      return;
+    }
+
+    this.#size = 0;
+
+    for (let cell = 0; cell < this.#isMember.length; cell += 1) {
+      if (this.#isMember[cell] === 1) {
+        this.#cells[this.#size] = cell;
+        this.#size += 1;
+      }
+    }
   }
 
   values(): Int32Array {

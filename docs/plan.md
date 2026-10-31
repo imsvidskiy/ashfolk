@@ -34,7 +34,7 @@ The source is 469 files and about 81 000 lines, with 249 test files next to them
 - **Typed-array fields with active sets.** Cell state lives in `Float32Array` fields on `WorldState`
   (`fire`, `fuel`, `heat`, `wetness`, `snow`, `scorch`, `crop`, `trodden` in
   `src/simulation/world/world-state.ts`). `FireSystem` walks only burning and heated cells through `CellSet`
-  (`src/simulation/world/cell-set.ts`). This is the base of the property model.
+  (`src/world/cell-set.ts`). This is the base of the property model.
 - **Content as typed records.** `POWERS`, `BUILDINGS`, `GROUNDS`, `PLANT_SPECIES` and `TECHNOLOGIES` in
   `src/content` are plain data, and `Record<PowerId, …>` maps make TypeScript catch a missing entry.
 - **The worker boundary.** Commands are parsed with zod in `src/simulation/commands.ts`, and frames carry packed

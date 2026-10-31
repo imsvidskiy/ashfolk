@@ -2,8 +2,8 @@ import { groundDefinition } from "../../content/grounds.ts";
 import type { WorldRules } from "../../content/world-rules.ts";
 import { clamp, smoothstep } from "../../shared/math.ts";
 import type { RandomSource } from "../../shared/random.ts";
+import { CellSet } from "../../world/cell-set.ts";
 import { NEIGHBOR_OFFSETS } from "../../world/world-grid.ts";
-import { CellSet } from "../world/cell-set.ts";
 import type { WorldState } from "../world/world-state.ts";
 
 const IGNITION_INTENSITY = 0.14;
