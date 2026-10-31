@@ -122,7 +122,7 @@ export function livingRaiders(people: SocietySystem, raid: Raid): Person[] {
 }
 
 export function lossShare(raid: Raid): number {
-  return (raid.fallenRaiders.length + raid.routedIds.size) / Math.max(1, raid.warriorIds.length);
+  return (raid.fallenRaiders.length + raid.routedIds.size) / raid.warriorIds.length;
 }
 
 export function burnableBuilding(buildings: readonly Building[], tribe: Tribe): Building | null {

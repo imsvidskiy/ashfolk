@@ -166,13 +166,14 @@ export class RivalrySystem {
 
     const victimTribe = people.findTribe(victim.tribeId);
     const slayerTribe = people.findTribe(slayer.tribeId);
-    const raid = this.campaigns.raidBetween(victim.tribeId, slayer.tribeId);
 
     if (victimTribe === null || slayerTribe === null) {
       people.kill(victim, "battle");
 
       return;
     }
+
+    const raid = this.campaigns.raidBetween(victimTribe.id, slayerTribe.id);
 
     people.kill(victim, "battle", { category: "death", text: fallText(victim, victimTribe, slayerTribe, raid) });
     recordFall(victim, raid);
@@ -199,7 +200,6 @@ export class RivalrySystem {
       return;
     }
 
-    relation.envoyId = null;
     this.#makePeace(relation, context);
     this.#chronicle.record({
       category: "peace",
