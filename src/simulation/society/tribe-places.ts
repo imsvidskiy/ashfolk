@@ -1,4 +1,4 @@
-import { isLitCampfire } from "../../content/buildings.ts";
+import { type BuildingKind, isLitCampfire } from "../../content/buildings.ts";
 import { FULL_TURN } from "../../shared/math.ts";
 import type { RandomSource } from "../../shared/random.ts";
 import { aroundPoint, type Waypoint } from "../agents/navigation.ts";
@@ -74,6 +74,18 @@ function collectBuilding(buildings: BuildingSystem, id: number | null, found: Bu
   if (building !== null) {
     found.push(building);
   }
+}
+
+export function completedOfKind(tribe: Tribe, buildings: BuildingSystem, kind: BuildingKind): Building | null {
+  const building = tribeBuildings(tribe, buildings).find((candidate) => {
+    return candidate.kind === kind && isComplete(candidate);
+  });
+
+  if (building === undefined) {
+    return null;
+  }
+
+  return building;
 }
 
 export function sleepingSpot(person: Person, tribe: Tribe, buildings: BuildingSystem, random: RandomSource): Waypoint {

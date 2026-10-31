@@ -1,10 +1,10 @@
 import { RECIPES, type RecipeId, type ResourceAmounts } from "../../content/recipes.ts";
 import { isBetterMaterial, TOOL_MATERIAL_DEFINITIONS, type ToolMaterial } from "../../content/weapons.ts";
 import type { Building } from "./buildings.ts";
-import { completedOfKind } from "./camp-plan.ts";
 import type { SocietyContext } from "./society-context.ts";
 import { amountOf, hasResources } from "./stock.ts";
 import { knows, type Tribe } from "./tribe.ts";
+import { completedOfKind } from "./tribe-places.ts";
 import { headMaterial, METALS_BY_STRENGTH } from "./weapons.ts";
 
 const POTTERY_TARGET = 12;
@@ -85,7 +85,7 @@ function resolveOrder(tribe: Tribe, context: SocietyContext, recipe: RecipeId): 
     return null;
   }
 
-  const station = completedOfKind(tribe, context, definition.station);
+  const station = completedOfKind(tribe, context.buildings, definition.station);
 
   if (station === null && definition.station !== "workshop") {
     return null;

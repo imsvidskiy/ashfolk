@@ -60,18 +60,6 @@ function campPlan(tribe: Tribe, kind: BuildingKind, nearest: number, farthest: n
   };
 }
 
-export function completedOfKind(tribe: Tribe, context: SocietyContext, kind: BuildingKind): Building | null {
-  const building = tribeBuildings(tribe, context.buildings).find((candidate) => {
-    return candidate.kind === kind && isComplete(candidate);
-  });
-
-  if (building === undefined) {
-    return null;
-  }
-
-  return building;
-}
-
 function isPostponed(tribe: Tribe, kind: BuildingKind, day: number): boolean {
   const until = tribe.postponed[kind];
 
