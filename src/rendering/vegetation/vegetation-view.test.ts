@@ -1,8 +1,6 @@
 import {
   DirectionalLight,
-  Frustum,
   InstancedBufferGeometry,
-  Matrix4,
   Mesh,
   MeshStandardNodeMaterial,
   PerspectiveCamera,
@@ -13,6 +11,7 @@ import { PlantState } from "../../world/vegetation-store.ts";
 import { CAMERA_FADE_REACH } from "../camera-fade.ts";
 import { FireGlow } from "../effects/fire-glow.ts";
 import { TerrainTextures } from "../terrain/terrain-textures.ts";
+import { frustumOf } from "../testing/camera-above.ts";
 import { drawnInstances } from "../testing/drawn-meshes.ts";
 import { createVegetatedMirror } from "../testing/vegetated-mirror.ts";
 import { FLOATS_PER_PLANT } from "./vegetation-chunks.ts";
@@ -31,11 +30,7 @@ function updateFrom(view: VegetationView, x: number, y: number, z: number): void
   camera.lookAt(x + 10, y - 2, z);
   camera.updateMatrixWorld();
 
-  const frustum = new Frustum().setFromProjectionMatrix(
-    new Matrix4().multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse)
-  );
-
-  view.update(camera, frustum, new DirectionalLight(), 1, 0);
+  view.update(camera, frustumOf(camera), new DirectionalLight(), 1, 0);
 }
 
 function fadingMeshes(view: VegetationView): Mesh<InstancedBufferGeometry>[] {

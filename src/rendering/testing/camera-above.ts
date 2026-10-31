@@ -1,9 +1,15 @@
 import { Frustum, Matrix4, PerspectiveCamera } from "three/webgpu";
 import type { WorldMirror } from "../../game/world-mirror.ts";
 
-interface CameraView {
+export interface CameraView {
   readonly camera: PerspectiveCamera;
   readonly frustum: Frustum;
+}
+
+export function frustumOf(camera: PerspectiveCamera): Frustum {
+  return new Frustum().setFromProjectionMatrix(
+    new Matrix4().multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse)
+  );
 }
 
 export function cameraAbove(mirror: WorldMirror, x: number, z: number, height: number): CameraView {
@@ -14,10 +20,5 @@ export function cameraAbove(mirror: WorldMirror, x: number, z: number, height: n
   camera.lookAt(x, ground, z);
   camera.updateMatrixWorld();
 
-  return {
-    camera,
-    frustum: new Frustum().setFromProjectionMatrix(
-      new Matrix4().multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse)
-    ),
-  };
+  return { camera, frustum: frustumOf(camera) };
 }
