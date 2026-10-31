@@ -9,13 +9,23 @@ import { footprintCells } from "./footprints.ts";
 export const NO_DEPOSIT = -1;
 
 const CATCHING_FIRE = 0.15;
+const IGNITING_CLOSENESS = 0.2;
 const BURN_DAMAGE_FACTOR = 1.1;
+const DOUSED_BURN_RATE = 3;
+const BURNING_HEAT_PER_SECOND = 0.03;
+const SPARKS_PER_SECOND = 0.3;
+const SPARK_HEAT = 0.12;
 const SOAKED_GROUND = 0.6;
 const HEAVY_RAIN = 0.5;
 const CAMPFIRE_FUEL_PER_DAY = 0.9;
 const CAMPFIRE_RAIN = 0.4;
+const RAIN_DOUSINGS_PER_SECOND = 0.02;
+const DOUSED_FUEL = 0.4;
 const ESCAPE_DROUGHT = 0.55;
 const ESCAPE_WIND = 20;
+const ESCAPES_PER_SECOND = 0.0004;
+const GUSTY_WIND = 30;
+const ESCAPED_FIRE_INTENSITY = 0.3;
 
 type BuildingLossReason = "abandoned" | "burnt" | "destroyed" | "replaced";
 
@@ -94,18 +104,18 @@ export function setAlight(building: Building): void {
   building.burningSeconds = Math.max(building.burningSeconds, BUILDINGS[building.kind].burnTime);
 }
 
-function rainDamage(tick: BuildingTick): number {
+function rainDousing(tick: BuildingTick): number {
   const { precipitation } = tick.weather;
 
   if (precipitation <= CAMPFIRE_RAIN) {
     return 0;
   }
 
-  if (!tick.random.chance(tick.seconds * 0.02 * precipitation)) {
+  if (!tick.random.chance(tick.seconds * RAIN_DOUSINGS_PER_SECOND * precipitation)) {
     return 0;
   }
 
-  return CAMPFIRE_RAIN;
+  return DOUSED_FUEL;
 }
 
 function isEscapeWeather(weather: BuildingWeather): boolean {
@@ -259,7 +269,7 @@ export class BuildingSystem {
       const closeness = 1 - Math.hypot(building.x - x, building.z - z) / radius;
 
       if (closeness > 0) {
-        this.#damage(building, damage * closeness, shouldIgnite && closeness > 0.2);
+        this.#damage(building, damage * closeness, shouldIgnite && closeness > IGNITING_CLOSENESS);
       }
     }
   }
@@ -330,12 +340,12 @@ export class BuildingSystem {
     const isDoused =
       this.#world.fields.wetness[building.cell] > SOAKED_GROUND || tick.weather.precipitation > HEAVY_RAIN;
 
-    building.burningSeconds -= tick.seconds * (isDoused ? 3 : 1);
+    building.burningSeconds -= tick.seconds * (isDoused ? DOUSED_BURN_RATE : 1);
     building.health -= tick.seconds * (definition.health / definition.burnTime) * BURN_DAMAGE_FACTOR;
-    tick.fire.addHeat(building.cell, 0.03 * tick.seconds);
+    tick.fire.addHeat(building.cell, BURNING_HEAT_PER_SECOND * tick.seconds);
 
-    if (tick.random.chance(tick.seconds * 0.3)) {
-      tick.fire.addHeat(this.#randomNeighbor(building.cell, tick.random), 0.12);
+    if (tick.random.chance(tick.seconds * SPARKS_PER_SECOND)) {
+      tick.fire.addHeat(this.#randomNeighbor(building.cell, tick.random), SPARK_HEAT);
     }
 
     if (building.health <= 0) {
@@ -350,7 +360,7 @@ export class BuildingSystem {
   }
 
   #tendCampfire(building: Building, tick: BuildingTick): void {
-    const fuelUsed = tick.days * CAMPFIRE_FUEL_PER_DAY + rainDamage(tick);
+    const fuelUsed = tick.days * CAMPFIRE_FUEL_PER_DAY + rainDousing(tick);
 
     building.fuel = Math.max(0, building.fuel - fuelUsed);
 
@@ -362,13 +372,13 @@ export class BuildingSystem {
   #tryToEscape(building: Building, tick: BuildingTick): void {
     const { weather } = tick;
 
-    const escapeChance = tick.seconds * 0.0004 * weather.drought * (weather.windSpeed / 30);
+    const escapeChance = tick.seconds * ESCAPES_PER_SECOND * weather.drought * (weather.windSpeed / GUSTY_WIND);
 
     if (!tick.random.chance(escapeChance)) {
       return;
     }
 
-    if (tick.fire.ignite(this.#randomNeighbor(building.cell, tick.random), 0.3)) {
+    if (tick.fire.ignite(this.#randomNeighbor(building.cell, tick.random), ESCAPED_FIRE_INTENSITY)) {
       this.#incidents.push({ building, kind: "campfireEscaped" });
     }
   }
