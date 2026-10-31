@@ -16,6 +16,7 @@ import { findGame, HuntJob } from "./hunt-job.ts";
 
 const HIT_ROLL = 0.2;
 const STRIKING_DISTANCE = 20;
+const TRAMPLING_DISTANCE = 5;
 const HELPER_DISTANCE = 30;
 
 function firstAnimal(harness: SocietyHarness, herd: { memberIds: number[] } | null): Animal {
@@ -28,7 +29,7 @@ function firstAnimal(harness: SocietyHarness, herd: { memberIds: number[] } | nu
   return animal;
 }
 
-function mammothInRange(harness: SocietyHarness, tick: PersonTick): Animal {
+function mammothAt(harness: SocietyHarness, tick: PersonTick, distance: number): Animal {
   const { tribe } = tick;
   const { mover } = tick.person;
 
@@ -37,7 +38,7 @@ function mammothInRange(harness: SocietyHarness, tick: PersonTick): Animal {
     harness.fauna.spawnHerd("mammoth", tribe.campX + 40, tribe.campZ, 1, harness.random)
   );
 
-  mover.x = mammoth.mover.x + STRIKING_DISTANCE;
+  mover.x = mammoth.mover.x + distance;
   mover.z = mammoth.mover.z;
 
   return mammoth;
@@ -68,15 +69,10 @@ describe("hunting mammoths", () => {
 
     const tick = firstMemberTick(harness, tribe);
 
-    const mammoth = firstAnimal(
-      harness,
-      harness.fauna.spawnHerd("mammoth", tribe.campX + 40, tribe.campZ, 1, harness.random)
-    );
+    const mammoth = mammothAt(harness, tick, TRAMPLING_DISTANCE);
 
     mammoth.health = 1000;
     tick.person.health = 0.3;
-    tick.person.mover.x = mammoth.mover.x + 5;
-    tick.person.mover.z = mammoth.mover.z;
 
     for (let hunt = 0; hunt < 20; hunt += 1) {
       if (!tick.person.isAlive) {
@@ -99,7 +95,7 @@ describe("hit odds", () => {
     const harness = new SocietyHarness({ day: MORNING });
 
     const tick = firstMemberTick(harness, settle(harness, 2));
-    const mammoth = mammothInRange(harness, tick);
+    const mammoth = mammothAt(harness, tick, STRIKING_DISTANCE);
     const { health } = mammoth;
 
     strikeOnce(harness, tick, mammoth);
@@ -113,7 +109,7 @@ describe("hit odds", () => {
     const tribe = settle(harness, 2);
     const [hunter, helper] = harness.society.membersOf(tribe);
     const tick = tickFor(harness, hunter, tribe);
-    const mammoth = mammothInRange(harness, tick);
+    const mammoth = mammothAt(harness, tick, STRIKING_DISTANCE);
     const { health } = mammoth;
 
     helper.mover.x = mammoth.mover.x - HELPER_DISTANCE;
