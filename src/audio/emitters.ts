@@ -3,6 +3,7 @@ import type { SoundDefinition } from "./sound-catalog.ts";
 import type { SoundEngine, SoundLoop, SoundPoint } from "./sound-engine.ts";
 
 const CELLS_FOR_FULL_VOLUME = 16;
+const BUCKET_ROW_STRIDE = 65_536;
 const FADE_SECONDS = 1.2;
 const LEVEL_SMOOTHING_SECONDS = 0.8;
 
@@ -29,12 +30,12 @@ export interface CellGroups {
 export function groupCells(grid: WorldGrid, cells: Iterable<number>, options: CellGroups): Emitter[] {
   const { bucketSize, focusX, focusZ, limit } = options;
 
-  const buckets = new Map<string, Bucket>();
+  const buckets = new Map<number, Bucket>();
 
   for (const cell of cells) {
     const x = grid.cellCenterX(cell);
     const z = grid.cellCenterZ(cell);
-    const key = `${Math.floor(x / bucketSize)},${Math.floor(z / bucketSize)}`;
+    const key = Math.floor(z / bucketSize) * BUCKET_ROW_STRIDE + Math.floor(x / bucketSize);
     const bucket = buckets.get(key);
 
     if (bucket === undefined) {
@@ -54,7 +55,7 @@ export function groupCells(grid: WorldGrid, cells: Iterable<number>, options: Ce
 
     return {
       closeness: bucket.count / (1 + Math.hypot(x - focusX, z - focusZ) / bucketSize),
-      emitter: { key, volume: Math.min(1, Math.sqrt(bucket.count / CELLS_FOR_FULL_VOLUME)), x, z },
+      emitter: { key: `${key}`, volume: Math.min(1, Math.sqrt(bucket.count / CELLS_FOR_FULL_VOLUME)), x, z },
     };
   });
 

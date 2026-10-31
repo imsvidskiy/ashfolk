@@ -34,6 +34,13 @@ describe("grouping cells into emitters", () => {
     expect(emitters[0]?.x).toBeCloseTo(grid.centerX(48.5));
   });
 
+  it("keeps fires in different rows and columns apart", () => {
+    const fires = [...block(10, 50, 2), ...block(50, 50, 2), ...block(50, 10, 2)];
+    const emitters = groupCells(grid, fires, { bucketSize: 80, focusX: 0, focusZ: 0, limit: 4 });
+
+    expect(emitters).toHaveLength(3);
+  });
+
   it("makes a small fire quieter than a large one", () => {
     const [small] = groupCells(grid, block(50, 50, 1), { bucketSize: 80, focusX: 0, focusZ: 0, limit: 4 });
 
