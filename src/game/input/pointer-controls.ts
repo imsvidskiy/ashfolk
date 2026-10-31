@@ -125,49 +125,49 @@ export class PointerControls {
     canvas.addEventListener(
       "pointerdown",
       (event) => {
-        return this.#down(event);
+        this.#down(event);
       },
       options
     );
     canvas.addEventListener(
       "pointermove",
       (event) => {
-        return this.#move(event);
+        this.#move(event);
       },
       options
     );
     canvas.addEventListener(
       "pointerup",
       (event) => {
-        return this.#up(event, true);
+        this.#up(event, true);
       },
       options
     );
     canvas.addEventListener(
       "pointercancel",
       (event) => {
-        return this.#up(event, false);
+        this.#up(event, false);
       },
       options
     );
     canvas.addEventListener(
       "pointerleave",
       () => {
-        return this.#leave();
+        this.#leave();
       },
       options
     );
     canvas.addEventListener(
       "wheel",
       (event) => {
-        return this.#wheel(event);
+        this.#wheel(event);
       },
       { ...options, passive: false }
     );
     canvas.addEventListener(
       "contextmenu",
       (event) => {
-        return event.preventDefault();
+        event.preventDefault();
       },
       options
     );
@@ -246,7 +246,7 @@ export class PointerControls {
     this.#gesture = waiting;
     waiting.tool.hover(waiting.point, waiting.screen);
     this.#holdTimer = window.setTimeout(() => {
-      return this.#commitTool(this.#onlyPointer());
+      this.#commitTool(this.#onlyPointer());
     }, TOUCH_HOLD_MILLISECONDS);
   }
 
