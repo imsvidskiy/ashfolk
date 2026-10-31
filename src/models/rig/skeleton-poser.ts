@@ -8,47 +8,69 @@ const AXIS_X = new Vector3(1, 0, 0);
 const AXIS_Y = new Vector3(0, 1, 0);
 const AXIS_Z = new Vector3(0, 0, 1);
 const UNIT_SCALE = new Vector3(1, 1, 1);
-const pitch = new Quaternion();
-const roll = new Quaternion();
-const yaw = new Quaternion();
+const turn = new Quaternion();
+
+function turned(rotation: Quaternion, axis: Vector3, angle: number): Quaternion {
+  if (angle === 0) {
+    return rotation;
+  }
+
+  return rotation.multiply(turn.setFromAxisAngle(axis, angle));
+}
 
 export function boneRotation(angles: Float32Array, bone: number, isLimb: boolean, target: Quaternion): Quaternion {
   const offset = bone * ANGLES_PER_BONE;
 
-  pitch.setFromAxisAngle(AXIS_X, angles[offset + RotationAxis.Pitch]);
-  roll.setFromAxisAngle(AXIS_Z, angles[offset + RotationAxis.Roll]);
-  yaw.setFromAxisAngle(AXIS_Y, angles[offset + RotationAxis.Yaw]);
+  const pitch = angles[offset + RotationAxis.Pitch];
+  const roll = angles[offset + RotationAxis.Roll];
+  const yaw = angles[offset + RotationAxis.Yaw];
 
   if (isLimb) {
-    return target.copy(pitch).multiply(roll).multiply(yaw);
+    return turned(turned(target.setFromAxisAngle(AXIS_X, pitch), AXIS_Z, roll), AXIS_Y, yaw);
   }
 
-  return target.copy(roll).multiply(pitch).multiply(yaw);
+  return turned(turned(target.setFromAxisAngle(AXIS_Z, roll), AXIS_X, pitch), AXIS_Y, yaw);
+}
+
+function restOffset(joints: readonly Vector3[], parent: number, index: number): Vector3 {
+  const joint = joints[index];
+
+  if (parent === NO_PARENT) {
+    return joint.clone();
+  }
+
+  return joint.clone().sub(joints[parent]);
 }
 
 export class SkeletonPoser {
+  readonly #fromJoints: readonly Vector3[];
   readonly #isLimb: readonly boolean[];
   readonly #offsets: readonly Vector3[];
+  readonly #parents: readonly number[];
   readonly #point = new Vector3();
-  readonly #restJoints: readonly Vector3[];
   readonly #rotation = new Quaternion();
-  readonly #scaleMatrix = new Matrix4();
   readonly #skeleton: Skeleton;
   readonly #skin: readonly Matrix4[];
-  readonly #toJoint = new Matrix4();
   readonly #translation = new Vector3();
   readonly #world: readonly Matrix4[];
 
   constructor(skeleton: Skeleton) {
-    this.#skeleton = skeleton;
-    this.#restJoints = skeleton.bones.map((bone) => {
+    const restJoints = skeleton.bones.map((bone) => {
       return new Vector3(...bone.joint);
+    });
+
+    this.#skeleton = skeleton;
+    this.#fromJoints = restJoints.map((joint) => {
+      return joint.clone().negate();
     });
     this.#isLimb = skeleton.bones.map((bone) => {
       return bone.order === "limb";
     });
+    this.#parents = skeleton.bones.map((bone) => {
+      return bone.parent;
+    });
     this.#offsets = skeleton.bones.map((bone, index) => {
-      return this.#restOffset(bone.parent, index);
+      return restOffset(restJoints, bone.parent, index);
     });
     this.#world = skeleton.bones.map(() => {
       return new Matrix4();
@@ -59,16 +81,16 @@ export class SkeletonPoser {
   }
 
   pose(pose: Pose, scales: Float32Array): void {
-    for (const [index, bone] of this.#skeleton.bones.entries()) {
-      this.#poseBone(index, bone.parent, pose, scales);
+    for (let index = 0; index < this.#parents.length; index += 1) {
+      this.#poseBone(index, pose, scales);
     }
 
     this.#placeOnGround(pose);
   }
 
   writePalette(target: Float32Array, offset: number): void {
-    for (const [index, skin] of this.#skin.entries()) {
-      const { elements } = skin;
+    for (let index = 0; index < this.#skin.length; index += 1) {
+      const { elements } = this.#skin[index];
 
       const start = offset + index * PALETTE_FLOATS_PER_BONE;
 
@@ -95,18 +117,8 @@ export class SkeletonPoser {
     return target.copy(restPoint).applyMatrix4(this.#skin[bone]);
   }
 
-  #restOffset(parent: number, index: number): Vector3 {
-    const joint = this.#restJoints[index];
-
-    if (parent === NO_PARENT) {
-      return joint.clone();
-    }
-
-    return joint.clone().sub(this.#restJoints[parent]);
-  }
-
-  #poseBone(index: number, parent: number, pose: Pose, scales: Float32Array): void {
-    const joint = this.#restJoints[index];
+  #poseBone(index: number, pose: Pose, scales: Float32Array): void {
+    const parent = this.#parents[index];
 
     boneRotation(pose.angles, index, this.#isLimb[index], this.#rotation);
     this.#translation.copy(this.#offsets[index]);
@@ -123,9 +135,28 @@ export class SkeletonPoser {
       world.premultiply(this.#world[parent]);
     }
 
-    this.#scaleMatrix.makeScale(scales[index * 3], scales[index * 3 + 1], scales[index * 3 + 2]);
-    this.#toJoint.makeTranslation(-joint.x, -joint.y, -joint.z);
-    this.#skin[index].multiplyMatrices(world, this.#scaleMatrix).multiply(this.#toJoint);
+    this.#writeSkin(index, world, scales);
+  }
+
+  #writeSkin(index: number, world: Matrix4, scales: Float32Array): void {
+    const fromJoint = this.#fromJoints[index];
+    const placed = world.elements;
+    const { elements } = this.#skin[index];
+
+    const scaleX = scales[index * 3];
+    const scaleY = scales[index * 3 + 1];
+    const scaleZ = scales[index * 3 + 2];
+
+    for (let row = 0; row < 4; row += 1) {
+      const x = placed[row] * scaleX;
+      const y = placed[row + 4] * scaleY;
+      const z = placed[row + 8] * scaleZ;
+
+      elements[row] = x;
+      elements[row + 4] = y;
+      elements[row + 8] = z;
+      elements[row + 12] = x * fromJoint.x + y * fromJoint.y + z * fromJoint.z + placed[row + 12];
+    }
   }
 
   #placeOnGround(pose: Pose): void {
