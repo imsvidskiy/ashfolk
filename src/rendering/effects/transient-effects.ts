@@ -23,11 +23,14 @@ const SPARKLES = 70;
 const RING_COLOR = 0xff_f0_d8;
 const SPLASH_SECONDS = 0.55;
 const SPLASH_DROPS = 9;
-const SPLASH_COLOR: readonly [number, number, number] = [0.86, 0.93, 0.97];
-const WATER_DUST: readonly [number, number, number] = [0.85, 0.9, 0.95];
-const LAND_DUST: readonly [number, number, number] = [0.3, 0.27, 0.24];
 
-const BLESSING_COLORS: Readonly<Record<BlessingEffect["style"], readonly [number, number, number]>> = {
+export type SpriteColor = readonly [number, number, number];
+
+const SPLASH_COLOR: SpriteColor = [0.86, 0.93, 0.97];
+const WATER_DUST: SpriteColor = [0.85, 0.9, 0.95];
+const LAND_DUST: SpriteColor = [0.3, 0.27, 0.24];
+
+const BLESSING_COLORS: Readonly<Record<BlessingEffect["style"], SpriteColor>> = {
   abundance: [1, 0.78, 0.3],
   healing: [0.45, 1, 0.55],
   inspiration: [0.55, 0.75, 1],
@@ -103,9 +106,9 @@ function branchFrom(trunk: readonly Vector3[], share: number): RibbonPoint[] {
   return toRibbon(jaggedPath(start, start.clone().add(offset), 0.5).slice(0, 24), 0.7);
 }
 
-function addPuffs(sinks: SpriteSinks, center: Vector3, spread: number, age: number, color: readonly number[]): void {
+function addPuffs(sinks: SpriteSinks, center: Vector3, spread: number, age: number, color: SpriteColor): void {
   const fade = (1 - smoothstep(0.2, 1, age / EXPLOSION_SECONDS)) * 0.8;
-  const look = [color[0], color[1], color[2], fade];
+  const look = [...color, fade];
 
   for (let puff = 0; puff < DUST_PUFFS; puff += 1) {
     const angle = hashToUnit(puff, 1) * FULL_TURN;
@@ -334,7 +337,7 @@ export class Splash implements ActiveEffect {
 
     const age = this.#age / SPLASH_SECONDS;
     const fade = (1 - smoothstep(0.35, 1, age)) * 0.85;
-    const look = [SPLASH_COLOR[0], SPLASH_COLOR[1], SPLASH_COLOR[2], fade];
+    const look = [...SPLASH_COLOR, fade];
 
     for (let drop = 0; drop < SPLASH_DROPS; drop += 1) {
       const angle = hashToUnit(drop, 7, x + z) * FULL_TURN;

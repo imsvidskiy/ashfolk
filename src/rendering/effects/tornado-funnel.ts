@@ -2,7 +2,7 @@ import type { Mesh } from "three/webgpu";
 import { FULL_TURN, hashToUnit, lerp, smoothstep } from "../../shared/math.ts";
 import type { TornadoEffect } from "../../simulation/effects.ts";
 import { tornadoDuration, tornadoPositionAt } from "../../simulation/powers/tornadoes.ts";
-import type { ActiveEffect, EffectContext, SpriteSinks } from "./transient-effects.ts";
+import type { ActiveEffect, EffectContext, SpriteColor, SpriteSinks } from "./transient-effects.ts";
 
 const GROWING_SECONDS = 1.5;
 const FADING_SECONDS = 2.5;
@@ -19,10 +19,10 @@ const CAP_SPREAD = 3.4;
 const DUST_PUFFS = 28;
 const DEBRIS = 40;
 const DEBRIS_ORBIT_SECONDS = 2.6;
-const FUNNEL_SHADE: readonly [number, number, number] = [0.5, 0.52, 0.55];
-const CAP_SHADE: readonly [number, number, number] = [0.36, 0.38, 0.42];
-const DUST_SHADE: readonly [number, number, number] = [0.42, 0.36, 0.29];
-const DEBRIS_SHADE: readonly [number, number, number] = [0.2, 0.16, 0.12];
+const FUNNEL_SHADE: SpriteColor = [0.5, 0.52, 0.55];
+const CAP_SHADE: SpriteColor = [0.36, 0.38, 0.42];
+const DUST_SHADE: SpriteColor = [0.42, 0.36, 0.29];
+const DEBRIS_SHADE: SpriteColor = [0.2, 0.16, 0.12];
 
 interface Base {
   ground: number;
@@ -105,7 +105,7 @@ export class TornadoFunnel implements ActiveEffect {
   #drawCap(base: Base, sinks: SpriteSinks): void {
     const { radius } = this.#effect;
 
-    const look = [CAP_SHADE[0], CAP_SHADE[1], CAP_SHADE[2], 0.55 * base.presence];
+    const look = [...CAP_SHADE, 0.55 * base.presence];
 
     for (let puff = 0; puff < CAP_PUFFS; puff += 1) {
       const angle = hashToUnit(puff, 21) * FULL_TURN + this.#age * 0.6;
@@ -126,7 +126,7 @@ export class TornadoFunnel implements ActiveEffect {
   #drawDust(base: Base, sinks: SpriteSinks): void {
     const { radius } = this.#effect;
 
-    const look = [DUST_SHADE[0], DUST_SHADE[1], DUST_SHADE[2], 0.55 * base.presence];
+    const look = [...DUST_SHADE, 0.55 * base.presence];
 
     for (let puff = 0; puff < DUST_PUFFS; puff += 1) {
       const angle = hashToUnit(puff, 31) * FULL_TURN + this.#age * SPIN * 0.8;
@@ -148,7 +148,7 @@ export class TornadoFunnel implements ActiveEffect {
   #drawDebris(base: Base, sinks: SpriteSinks): void {
     const { radius } = this.#effect;
 
-    const look = [DEBRIS_SHADE[0], DEBRIS_SHADE[1], DEBRIS_SHADE[2], 0.9 * base.presence];
+    const look = [...DEBRIS_SHADE, 0.9 * base.presence];
 
     for (let piece = 0; piece < DEBRIS; piece += 1) {
       const lift = (this.#age / DEBRIS_ORBIT_SECONDS + hashToUnit(piece, 41)) % 1;
