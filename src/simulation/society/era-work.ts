@@ -151,7 +151,7 @@ function neediestOre(tick: PersonTick): OreNeed | null {
   for (const kind of MINED_DEPOSIT_KINDS) {
     const need = oreNeed(tick, kind);
 
-    if (need > 0 && (neediest === null || need > neediest.need)) {
+    if (need > (neediest === null ? 0 : neediest.need)) {
       neediest = { kind, need };
     }
   }
