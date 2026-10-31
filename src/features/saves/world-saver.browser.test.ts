@@ -57,9 +57,14 @@ describe("world saver", () => {
   it("tries again while the simulation is busy", async () => {
     const { saver, session } = await createSaver();
 
+    vi.useFakeTimers({ toFake: ["setTimeout"] });
     vi.spyOn(session, "saveWorld").mockResolvedValueOnce(null);
 
-    expect(await saver.saveSoon(1)).toBe("saved");
+    const outcome = saver.saveSoon(1);
+
+    await vi.runAllTimersAsync();
+
+    expect(await outcome).toBe("saved");
     expect(await listSavedWorlds()).toMatchObject([{ id: IDENTITY.id }]);
   });
 

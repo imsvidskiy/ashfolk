@@ -89,6 +89,10 @@ export function readStoredParameters(value: unknown): StoredParameters {
   return parameters;
 }
 
+export function isPowerPicked(state: PowerStore, previous: PowerStore): boolean {
+  return state.selectedPowerId !== null && state.selectedPowerId !== previous.selectedPowerId;
+}
+
 export function parametersOf(parameters: StoredParameters, powerId: PowerId): ParameterValueMap {
   const stored = parameters[powerId];
 

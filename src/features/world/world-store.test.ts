@@ -1,10 +1,9 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { ChronicleEntry } from "../../simulation/chronicle.ts";
 import type { SimulationFrame } from "../../simulation/frame.ts";
+import { createListeners } from "../testing/listener-fixtures.ts";
 import { createChronicleEntry, createFrame, resetWorld } from "../testing/world-fixtures.ts";
 import { connectWorldStore, dismissNotice, useWorldStore, type WorldFeed } from "./world-store.ts";
-
-type FrameListener = (frame: SimulationFrame) => void;
 
 interface FakeFeed extends WorldFeed {
   readonly emit: (frame: SimulationFrame) => void;
@@ -17,25 +16,14 @@ interface FeedOptions {
 }
 
 function createFeed({ chronicle = [], frame = createFrame() }: FeedOptions = {}): FakeFeed {
-  const listeners = new Set<FrameListener>();
+  const frames = createListeners<SimulationFrame>();
   const entries = [...chronicle];
   let latest = frame;
 
   function emit(next: SimulationFrame): void {
     latest = next;
     entries.push(...next.chronicle);
-
-    for (const listener of listeners) {
-      listener(next);
-    }
-  }
-
-  function subscribe(listener: FrameListener): () => void {
-    listeners.add(listener);
-
-    return () => {
-      listeners.delete(listener);
-    };
+    frames.emit(next);
   }
 
   return {
@@ -44,10 +32,8 @@ function createFeed({ chronicle = [], frame = createFrame() }: FeedOptions = {})
     get frame() {
       return latest;
     },
-    listenerCount: () => {
-      return listeners.size;
-    },
-    subscribe,
+    listenerCount: frames.listenerCount,
+    subscribe: frames.subscribe,
   };
 }
 

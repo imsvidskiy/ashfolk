@@ -9,7 +9,7 @@ const TIP_IDS: ReadonlySet<string> = new Set([...INTRO_TIPS, ...MOMENT_TIPS]);
 
 const WINTER = "Winter";
 
-export type GuideTipId = (typeof INTRO_TIPS)[number] | (typeof MOMENT_TIPS)[number];
+type GuideTipId = (typeof INTRO_TIPS)[number] | (typeof MOMENT_TIPS)[number];
 
 export type GuideEvent =
   | { readonly kind: "cameraMoved" }
@@ -127,7 +127,8 @@ export function applyGuideEvent(progress: GuideProgress, event: GuideEvent): Gui
   const done = withDone(progress.done, completedIntroTip(event));
   const hasActed = event.kind === "powerUsed" && progress.shown !== null;
   const shown = hasActed ? null : progress.shown;
-  const advanced = { ...progress, done, shown };
+  const isUnchanged = done === progress.done && shown === progress.shown;
+  const advanced = isUnchanged ? progress : { ...progress, done, shown };
 
   if (shown !== null || !hasFinishedIntro(advanced)) {
     return advanced;

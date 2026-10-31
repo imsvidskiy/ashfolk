@@ -1,7 +1,7 @@
 import type { GameSession } from "../../game/game-session.ts";
 import type { SimulationCommand } from "../../simulation/commands.ts";
 import type { SimulationFrame } from "../../simulation/frame.ts";
-import { usePowerStore } from "../powers/power-store.ts";
+import { isPowerPicked, usePowerStore } from "../powers/power-store.ts";
 import { useGuideStore } from "./guide-store.ts";
 import type { GuideEvent } from "./guide-tips.ts";
 
@@ -64,7 +64,7 @@ export function connectGuide(session: GuideSession): () => void {
   const unsubscribeFrames = session.subscribe(handleFrame);
   const unsubscribeCommands = session.subscribeToCommands(handleCommand);
   const unsubscribePowers = usePowerStore.subscribe((state, previous) => {
-    if (state.selectedPowerId !== null && state.selectedPowerId !== previous.selectedPowerId) {
+    if (isPowerPicked(state, previous)) {
       record({ kind: "powerPicked" });
     }
   });
