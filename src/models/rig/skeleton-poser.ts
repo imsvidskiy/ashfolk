@@ -43,7 +43,7 @@ function restContacts(contacts: readonly ContactPoint[]): RestContact[] {
   });
 }
 
-function restOffset(joints: readonly Vector3[], parent: number, index: number): Vector3 {
+function restOffset(joints: readonly Vector3[], index: number, parent: number): Vector3 {
   const joint = joints[index];
 
   if (parent === NO_PARENT) {
@@ -85,7 +85,7 @@ export class SkeletonPoser {
       return bone.parent;
     });
     this.#offsets = skeleton.bones.map((bone, index) => {
-      return restOffset(restJoints, bone.parent, index);
+      return restOffset(restJoints, index, bone.parent);
     });
     this.#world = skeleton.bones.map(() => {
       return new Matrix4();
