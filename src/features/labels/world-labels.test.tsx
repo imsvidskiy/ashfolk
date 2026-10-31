@@ -3,7 +3,7 @@ import { render } from "vitest-browser-react";
 import type { Landmark } from "../../game/landmarks.ts";
 import { useInterfaceStore } from "../interface/interface-store.ts";
 import { startTestEngine } from "../testing/engine-fixtures.ts";
-import { createRelation, createTribe, showWorld } from "../testing/world-fixtures.ts";
+import { createRaid, createRelation, createTribe, showWorld } from "../testing/world-fixtures.ts";
 import { WorldLabels } from "./world-labels.tsx";
 
 const PEAK: Landmark = { detail: "1460 m", id: "peak", kind: "peak", lift: 30, name: "Graycrown", x: 40, z: -20 };
@@ -72,6 +72,33 @@ describe("world labels", () => {
     await expect
       .element(screen.getByRole("button", { exact: false, name: "Elk Clan" }).getByRole("img", { name: "In a feud" }))
       .not.toBeInTheDocument();
+  });
+
+  it("marks a raid under way over a feud on both sides of it", async () => {
+    const { placeLabel, renderFrame } = await startTestEngine();
+
+    placeLabel.mockReturnValue(ON_SCREEN);
+    showWorld({
+      rivalry: {
+        raids: [createRaid({ attackerId: 2, defenderId: 1 })],
+        relations: [createRelation({ firstId: 1, secondId: 2, stance: "hostile" })],
+      },
+    });
+
+    const screen = await render(<WorldLabels />);
+
+    renderFrame();
+
+    await expect
+      .element(
+        screen.getByRole("button", { exact: false, name: "Bear Clan" }).getByRole("img", { name: "Raid under way" })
+      )
+      .toBeVisible();
+    await expect
+      .element(
+        screen.getByRole("button", { exact: false, name: "Wolf Clan" }).getByRole("img", { name: "Raid under way" })
+      )
+      .toBeVisible();
   });
 
   it("hides the banners the engine cannot place", async () => {
