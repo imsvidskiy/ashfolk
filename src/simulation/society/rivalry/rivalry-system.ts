@@ -117,8 +117,8 @@ export class RivalrySystem {
 
   constructor(dependencies: RivalryDependencies) {
     this.#chronicle = dependencies.chronicle;
-    this.#arrows = new ArrowFlights(dependencies.effects);
     this.random = createRandom(dependencies.seed * 13 + 101);
+    this.#arrows = new ArrowFlights(dependencies.effects, this.random);
     this.campaigns = new RaidCampaigns({
       chronicle: dependencies.chronicle,
       random: this.random,
@@ -158,7 +158,7 @@ export class RivalrySystem {
   }
 
   loose(shooter: Person, weapon: CarriedWeapon, foe: Foe): void {
-    this.#arrows.loose(shooter, weapon, foe, this.random);
+    this.#arrows.loose(shooter, weapon, foe);
   }
 
   slay(victim: Person, slayer: Person, context: SocietyContext): void {

@@ -59,29 +59,32 @@ function land(flight: ArrowFlight, context: SocietyContext): void {
 
 export class ArrowFlights {
   readonly #effects: EffectLog;
+  readonly #random: RandomSource;
   #flights: ArrowFlight[] = [];
 
-  constructor(effects: EffectLog) {
+  constructor(effects: EffectLog, random: RandomSource) {
     this.#effects = effects;
+    this.#random = random;
   }
 
-  loose(shooter: Person, weapon: CarriedWeapon, foe: Foe, random: RandomSource): void {
+  loose(shooter: Person, weapon: CarriedWeapon, foe: Foe): void {
     const target = foeMover(foe);
 
     const distance = distanceTo(shooter.mover, foe);
-    const isHit = random.chance(hitChance(weapon, foe, distance));
+    const isHit = this.#random.chance(hitChance(weapon, foe, distance));
     const durationSeconds = Math.max(SHORTEST_FLIGHT, distance / ARROW_SPEED);
 
     const aimX = target.x + target.velocityX * durationSeconds;
     const aimZ = target.z + target.velocityZ * durationSeconds;
-    const missAngle = Math.atan2(aimX - shooter.mover.x, aimZ - shooter.mover.z) + random.signed() * MISS_ANGLE_SPREAD;
-    const miss = isHit ? 0 : random.between(SHORTEST_MISS, LONGEST_MISS) + foeGirth(foe);
+    const missAngle =
+      Math.atan2(aimX - shooter.mover.x, aimZ - shooter.mover.z) + this.#random.signed() * MISS_ANGLE_SPREAD;
+    const miss = isHit ? 0 : this.#random.between(SHORTEST_MISS, LONGEST_MISS) + foeGirth(foe);
 
     const landX = aimX + Math.sin(missAngle) * miss;
     const landZ = aimZ + Math.cos(missAngle) * miss;
 
     this.#flights.push({
-      damage: rolledDamage(weapon, random),
+      damage: rolledDamage(weapon, this.#random),
       foe,
       isHit,
       landX,
