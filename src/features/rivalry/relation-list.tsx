@@ -19,8 +19,8 @@ interface TribePair<Item> {
 }
 
 function tribePairs<Item>(
-  items: readonly Item[],
   tribes: readonly TribeSummary[],
+  items: readonly Item[],
   idsOf: (item: Item) => readonly [number, number]
 ): TribePair<Item>[] {
   const pairs: TribePair<Item>[] = [];
@@ -31,9 +31,11 @@ function tribePairs<Item>(
     const first = tribeWithId(tribes, firstId);
     const second = tribeWithId(tribes, secondId);
 
-    if (first !== undefined && second !== undefined) {
-      pairs.push({ first, item, second });
+    if (first === undefined || second === undefined) {
+      continue;
     }
+
+    pairs.push({ first, item, second });
   }
 
   return pairs;
@@ -119,13 +121,13 @@ export function RelationList() {
   return (
     <div className="flex flex-col gap-3">
       <RaidSection
-        entries={tribePairs(rivalry.raids, tribes, (raid) => {
+        entries={tribePairs(tribes, rivalry.raids, (raid) => {
           return [raid.attackerId, raid.defenderId];
         })}
       />
 
       <ul aria-label="Relations" className="flex flex-col gap-0.5">
-        {tribePairs(relations, tribes, (relation) => {
+        {tribePairs(tribes, relations, (relation) => {
           return [relation.firstId, relation.secondId];
         }).map((entry) => {
           return <RelationRow entry={entry} key={`${entry.first.id}-${entry.second.id}`} />;
