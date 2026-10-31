@@ -3,56 +3,36 @@ import type { SimulationCommand } from "../../simulation/commands.ts";
 import type { SimulationFrame } from "../../simulation/frame.ts";
 import { usePowerStore } from "../powers/power-store.ts";
 import { addCanvas } from "../testing/canvas-fixtures.ts";
+import { FINISHED_INTRO } from "../testing/guide-fixtures.ts";
+import { createListeners } from "../testing/listener-fixtures.ts";
 import { createCalendar, createChronicleEntry, createFrame } from "../testing/world-fixtures.ts";
 import { connectGuide } from "./connect-guide.ts";
 import { useGuideStore } from "./guide-store.ts";
-import { FRESH_GUIDE, INTRO_TIPS } from "./guide-tips.ts";
+import { FRESH_GUIDE } from "./guide-tips.ts";
 
 const CAST = { parameters: {}, powerId: "rain", x: 0, z: 0 } as const;
 
 function connectSession(seasonName = "Autumn") {
-  const frameListeners = new Set<(frame: SimulationFrame) => void>();
-  const commandListeners = new Set<(command: SimulationCommand) => void>();
+  const frames = createListeners<SimulationFrame>();
+  const commands = createListeners<SimulationCommand>();
 
   const disconnect = connectGuide({
     frame: createFrame({ calendar: createCalendar({ seasonName }) }),
-    subscribe: (listener) => {
-      frameListeners.add(listener);
-
-      return () => {
-        frameListeners.delete(listener);
-      };
-    },
-    subscribeToCommands: (listener) => {
-      commandListeners.add(listener);
-
-      return () => {
-        commandListeners.delete(listener);
-      };
-    },
+    subscribe: frames.subscribe,
+    subscribeToCommands: commands.subscribe,
   });
 
   onTestFinished(disconnect);
 
-  function send(command: SimulationCommand): void {
-    for (const listener of commandListeners) {
-      listener(command);
-    }
-  }
-
   function receive(changes: Partial<SimulationFrame>): void {
-    const frame = createFrame(changes);
-
-    for (const listener of frameListeners) {
-      listener(frame);
-    }
+    frames.emit(createFrame(changes));
   }
 
-  return { disconnect, receive, send };
+  return { disconnect, receive, send: commands.emit };
 }
 
 function finishIntro(): void {
-  useGuideStore.setState({ progress: { ...FRESH_GUIDE, done: [...INTRO_TIPS] } });
+  useGuideStore.setState({ progress: FINISHED_INTRO });
 }
 
 function doneTips(): readonly string[] {
@@ -168,6 +148,6 @@ describe("connecting the guide", () => {
     finishIntro();
     receive({ chronicle: [createChronicleEntry({ category: "fire" })] });
 
-    expect(useGuideStore.getState().progress).toEqual({ ...FRESH_GUIDE, done: [...INTRO_TIPS] });
+    expect(useGuideStore.getState().progress).toEqual(FINISHED_INTRO);
   });
 });

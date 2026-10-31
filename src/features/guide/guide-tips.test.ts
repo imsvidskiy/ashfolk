@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { FINISHED_INTRO } from "../testing/guide-fixtures.ts";
 import {
   applyGuideEvent,
   currentTip,
@@ -6,12 +7,9 @@ import {
   FRESH_GUIDE,
   type GuideEvent,
   type GuideProgress,
-  INTRO_TIPS,
   isGuideTipId,
   suggestedPowerId,
 } from "./guide-tips.ts";
-
-const FINISHED_INTRO: GuideProgress = { ...FRESH_GUIDE, done: [...INTRO_TIPS] };
 
 function applyAll(progress: GuideProgress, events: readonly GuideEvent[]): GuideProgress {
   return events.reduce(applyGuideEvent, progress);

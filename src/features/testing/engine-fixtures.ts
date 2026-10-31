@@ -12,6 +12,7 @@ import type { PowerSelection } from "../../game/tools/power-tool.ts";
 import type { SimulationCommand } from "../../simulation/commands.ts";
 import { Simulation } from "../../simulation/simulation.ts";
 import { createVegetatedWorld } from "../../simulation/testing/test-world.ts";
+import { createListeners } from "./listener-fixtures.ts";
 
 const TEST_CAMERA: CameraState = { distance: 300, pitch: 0.6, targetX: 0, targetZ: 0, yaw: 0.8 };
 
@@ -39,21 +40,13 @@ interface TestEngineOptions {
 }
 
 function createRenders(): Renders {
-  const listeners = new Set<() => void>();
+  const renders = createListeners();
 
   return {
     renderFrame: () => {
-      for (const listener of listeners) {
-        listener();
-      }
+      renders.emit();
     },
-    subscribeToRenders: (listener) => {
-      listeners.add(listener);
-
-      return () => {
-        listeners.delete(listener);
-      };
-    },
+    subscribeToRenders: renders.subscribe,
   };
 }
 
