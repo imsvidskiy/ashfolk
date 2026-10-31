@@ -10,6 +10,7 @@ import type { AgentViewInput } from "./agents/agent-view-input.ts";
 import { AnimalView } from "./agents/animal-view.ts";
 import { PeopleView } from "./agents/people-view.ts";
 import { Atmosphere } from "./atmosphere/atmosphere.ts";
+import { BackgroundPipelines } from "./background-pipelines.ts";
 import { largestTextureSize } from "./create-graphics.ts";
 import { CameraAxes } from "./effects/billboards.ts";
 import { EffectView } from "./effects/effect-view.ts";
@@ -27,6 +28,7 @@ import { HandMotion } from "./hand-motion.ts";
 import { filmedQuality, type RenderFilming } from "./render-filming.ts";
 import { createRenderOutput, type RenderOutput } from "./render-output.ts";
 import type { RenderQuality } from "./render-quality.ts";
+import { type WarmUpClock, warmUpScene } from "./scene-warm-up.ts";
 import { BuildingView } from "./structures/building-view.ts";
 import { CrossingView } from "./structures/crossing-view.ts";
 import { IslandBase } from "./terrain/island-base.ts";
@@ -55,6 +57,7 @@ const RING_SHARE_OF_DISTANCE = 0.02;
 const RING_WIDTH_SHARE_OF_DISTANCE = 0.004;
 const PLANT_RING_SHARE = 0.3;
 const NIGHT_MARKER_BRIGHTNESS = 0.8;
+const LONGEST_WARM_UP_MILLISECONDS = 15_000;
 
 const AGENT_RING_RADIUS = { animal: 2.2, person: 1.4 } as const;
 
@@ -63,6 +66,19 @@ const SELECTION_RADIUS: Readonly<Record<"animal" | "building" | "cell" | "person
   building: 5.5,
   cell: 5,
   person: 1.3,
+};
+
+const ANIMATION_FRAMES: WarmUpClock = {
+  nextFrame: () => {
+    return new Promise((resolve) => {
+      requestAnimationFrame(() => {
+        resolve();
+      });
+    });
+  },
+  now: () => {
+    return performance.now();
+  },
 };
 
 interface RenderView {
@@ -109,6 +125,7 @@ export class WorldRenderer {
   readonly #mirror: WorldMirror;
   readonly #output: RenderOutput;
   readonly #people: PeopleView;
+  readonly #pipelines: BackgroundPipelines;
   readonly #plinth: number;
   readonly #renderer: WebGPURenderer;
   readonly #ringCenter = new Vector3();
@@ -207,6 +224,7 @@ export class WorldRenderer {
     );
 
     this.#output = createRenderOutput(renderer, this.scene, camera, quality);
+    this.#pipelines = new BackgroundPipelines(renderer, this.scene);
   }
 
   drawnHeading(kind: "animal" | "person", id: number): number | null {
@@ -230,6 +248,17 @@ export class WorldRenderer {
     this.#atmosphere.setShadows(this.#quality.shadowMapSize, filming.hasFarShadows);
     this.#vegetation.setReach(filming);
     this.#markers.setHidden(filming.areMarkersHidden);
+  }
+
+  async warmUp(): Promise<void> {
+    await warmUpScene(
+      this.scene,
+      () => {
+        this.#output.render();
+      },
+      ANIMATION_FRAMES
+    );
+    await this.#pipelines.settle(LONGEST_WARM_UP_MILLISECONDS);
   }
 
   render(view: RenderView): void {
@@ -301,6 +330,7 @@ export class WorldRenderer {
   }
 
   dispose(): void {
+    this.#pipelines.dispose();
     this.#fire.dispose();
     this.#effects.dispose();
     this.#weather.dispose();

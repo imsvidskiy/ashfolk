@@ -225,6 +225,7 @@ export class GameEngine implements EngineHandle {
       engine.camera.jumpTo(options.camera);
     }
 
+    await engine.#world.warmUp();
     engine.run();
 
     return engine;

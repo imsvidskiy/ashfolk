@@ -236,7 +236,6 @@ export class VegetationView {
   readonly #mirror: WorldMirror;
   readonly #shadowProxies: readonly PlantBatch[];
   #heldBatch: InstanceBatch | null = null;
-  #isWarmingFading: boolean;
   #levelDistances = LEVEL_DISTANCES;
   #paintedSeason = Number.NaN;
   #shadowLevelCount = SHADOW_LEVEL_COUNT;
@@ -318,7 +317,6 @@ export class VegetationView {
     this.#changedBuckets = this.#batches.map(() => {
       return new Set<number>();
     });
-    this.#isWarmingFading = true;
   }
 
   plantsChanged(indices: readonly number[]): void {
@@ -405,7 +403,6 @@ export class VegetationView {
     this.#markBucketsOf(repacked);
     this.#refillDirtyLevels(this.#shouldRefillAll);
     this.#shouldRefillAll = false;
-    this.#warmFadingBatches();
   }
 
   dispose(): void {
@@ -616,15 +613,5 @@ export class VegetationView {
         this.#chunkFading[index] === fades
       );
     });
-  }
-
-  #warmFadingBatches(): void {
-    const isWarming = this.#isWarmingFading;
-
-    this.#isWarmingFading = false;
-
-    for (const { batch } of this.#fadingBatches) {
-      batch.mesh.visible = isWarming || batch.count > 0;
-    }
   }
 }
