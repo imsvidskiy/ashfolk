@@ -1,4 +1,4 @@
-import { DEPOSITS, type DepositKind, MINED_DEPOSIT_KINDS } from "../../content/deposits.ts";
+import { DEPOSITS, MINED_DEPOSIT_KINDS, type MinedDepositKind } from "../../content/deposits.ts";
 import type { RecipeId, ResourceAmounts } from "../../content/recipes.ts";
 import { isWinter } from "../../content/seasons.ts";
 import { isComplete } from "./buildings.ts";
@@ -42,16 +42,20 @@ export const ERA_WORK_OPTIONS: readonly WorkOption[] = [
         return null;
       }
 
-      return findMineWork(tick, ore);
+      return findMineWork(tick, ore.kind);
     },
     weight: (tick) => {
-      const ore = neediestOre(tick);
-
-      if (ore === null || !isExpeditionSeason(tick.context.environment.season)) {
+      if (!isExpeditionSeason(tick.context.environment.season)) {
         return 0;
       }
 
-      return 2.4 * oreNeed(tick, ore);
+      const ore = neediestOre(tick);
+
+      if (ore === null) {
+        return 0;
+      }
+
+      return 2.4 * ore.need;
     },
   },
   {
@@ -91,7 +95,7 @@ export const ERA_WORK_OPTIONS: readonly WorkOption[] = [
   },
 ];
 
-const ORE_TARGETS: Readonly<Record<DepositKind, number>> = { clay: 0, copper: 14, iron: 14, tin: 9 };
+const ORE_TARGETS: Readonly<Record<MinedDepositKind, number>> = { copper: 14, iron: 14, tin: 9 };
 const POTTERY_CLAY = 6;
 const POTTERY_STOCK = 12;
 const MINERS_SHARE = 8;
@@ -106,6 +110,11 @@ const CRAFT_WEIGHTS: Readonly<Record<RecipeId, number>> = {
   tools: 2.6,
 };
 
+interface OreNeed {
+  kind: MinedDepositKind;
+  need: number;
+}
+
 function clayWanted(tick: PersonTick, construction: ResourceAmounts): number {
   const { tribe } = tick;
 
@@ -114,7 +123,7 @@ function clayWanted(tick: PersonTick, construction: ResourceAmounts): number {
   return amountOf(construction, "clay") + forPottery;
 }
 
-function oreOnTheWay(tick: PersonTick, kind: DepositKind): number {
+function oreOnTheWay(tick: PersonTick, kind: MinedDepositKind): number {
   const { resource } = DEPOSITS[kind];
 
   return tick.context.people.membersOf(tick.tribe).reduce((total, person) => {
@@ -124,7 +133,7 @@ function oreOnTheWay(tick: PersonTick, kind: DepositKind): number {
   }, 0);
 }
 
-function oreNeed(tick: PersonTick, kind: DepositKind): number {
+function oreNeed(tick: PersonTick, kind: MinedDepositKind): number {
   const mine = mineFor(tick.tribe, tick.context, kind);
 
   if (mine === null || !isComplete(mine)) {
@@ -136,16 +145,14 @@ function oreNeed(tick: PersonTick, kind: DepositKind): number {
   return Math.max(0, 1 - stocked / ORE_TARGETS[kind]);
 }
 
-function neediestOre(tick: PersonTick): DepositKind | null {
-  let neediest: DepositKind | null = null;
-  let neediestNeed = 0;
+function neediestOre(tick: PersonTick): OreNeed | null {
+  let neediest: OreNeed | null = null;
 
   for (const kind of MINED_DEPOSIT_KINDS) {
     const need = oreNeed(tick, kind);
 
-    if (need > neediestNeed) {
-      neediest = kind;
-      neediestNeed = need;
+    if (need > 0 && (neediest === null || need > neediest.need)) {
+      neediest = { kind, need };
     }
   }
 
