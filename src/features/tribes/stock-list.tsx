@@ -1,5 +1,6 @@
 import {
   RESOURCE_GROUPS,
+  RESOURCE_KINDS,
   RESOURCES,
   type ResourceGroup,
   type ResourceKind,
@@ -17,21 +18,30 @@ const GROUP_NAMES: Readonly<Record<ResourceGroup, string>> = {
   ore: "Ores",
 };
 
-function isInStock(stock: StockView, kind: ResourceKind): boolean {
-  return Math.round(stock[kind]) > 0;
+interface StockedAmount {
+  readonly amount: number;
+  readonly kind: ResourceKind;
+}
+
+function stockedAmounts(stock: StockView, kinds: readonly ResourceKind[]): StockedAmount[] {
+  return kinds
+    .map((kind) => {
+      return { amount: Math.round(stock[kind]), kind };
+    })
+    .filter(({ amount }) => {
+      return amount > 0;
+    });
 }
 
 function StockGroup({ group, stock }: { readonly group: ResourceGroup; readonly stock: StockView }) {
-  const kinds = resourcesInGroup(group).filter((kind) => {
-    return isInStock(stock, kind);
-  });
+  const amounts = stockedAmounts(stock, resourcesInGroup(group));
 
-  if (kinds.length === 0) {
+  if (amounts.length === 0) {
     return null;
   }
 
-  const total = kinds.reduce((sum, kind) => {
-    return sum + Math.round(stock[kind]);
+  const total = amounts.reduce((sum, { amount }) => {
+    return sum + amount;
   }, 0);
 
   return (
@@ -43,7 +53,7 @@ function StockGroup({ group, stock }: { readonly group: ResourceGroup; readonly 
       </h4>
 
       <ul className="grid grid-cols-2 gap-x-3 gap-y-1">
-        {kinds.map((kind) => {
+        {amounts.map(({ amount, kind }) => {
           const icon = RESOURCE_ICONS[kind];
 
           return (
@@ -52,7 +62,7 @@ function StockGroup({ group, stock }: { readonly group: ResourceGroup; readonly 
 
               <span className="truncate">{RESOURCES[kind].name}</span>
 
-              <span className="text-ink ml-auto font-medium tabular-nums">{Math.round(stock[kind])}</span>
+              <span className="text-ink ml-auto font-medium tabular-nums">{amount}</span>
             </li>
           );
         })}
@@ -62,11 +72,7 @@ function StockGroup({ group, stock }: { readonly group: ResourceGroup; readonly 
 }
 
 export function StockList({ stock }: { readonly stock: StockView }) {
-  const hasAnything = RESOURCE_GROUPS.some((group) => {
-    return resourcesInGroup(group).some((kind) => {
-      return isInStock(stock, kind);
-    });
-  });
+  const hasAnything = stockedAmounts(stock, RESOURCE_KINDS).length > 0;
 
   if (!hasAnything) {
     return <p className="text-ink-muted text-xs">The stores are empty.</p>;
