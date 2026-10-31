@@ -1,5 +1,6 @@
 import { Vector3 } from "three";
 import { describe, expect, it } from "vitest";
+import { ONCE_END } from "../../rendering/agents/agent-motion.ts";
 import { Pose } from "../rig/pose.ts";
 import { SkeletonPoser } from "../rig/skeleton-poser.ts";
 import { isTorso, loosePieces, TOUCHING } from "../testing/mesh-connectivity.ts";
@@ -58,6 +59,14 @@ describe("fight clips", () => {
     const dead = posedHuman("dead", 0);
 
     expect(jointOf(toppling, HumanBone.Pelvis).y).toBeGreaterThan(0.4);
+    expect(jointOf(fallen, HumanBone.Pelvis).y).toBeLessThan(0.3);
+    expect(jointOf(fallen, HumanBone.Head).distanceTo(jointOf(dead, HumanBone.Head))).toBeLessThan(0.15);
+  });
+
+  it("stay lying where a played-once clip comes to rest", () => {
+    const fallen = posedHuman("fall", ONCE_END);
+    const dead = posedHuman("dead", 0);
+
     expect(jointOf(fallen, HumanBone.Pelvis).y).toBeLessThan(0.3);
     expect(jointOf(fallen, HumanBone.Head).distanceTo(jointOf(dead, HumanBone.Head))).toBeLessThan(0.15);
   });
