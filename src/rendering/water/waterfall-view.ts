@@ -57,6 +57,13 @@ interface Lip {
   readonly top: number;
 }
 
+interface CurtainColumn {
+  readonly offset: number;
+  readonly rimX: number;
+  readonly rimZ: number;
+  readonly sideAmount: number;
+}
+
 interface CurtainWriter {
   readonly coordinates: number[];
   readonly drops: number[];
@@ -152,6 +159,15 @@ function addCurtain(writer: CurtainWriter, outline: IslandOutline, lip: Lip, pli
   const sideZ = lip.outwardX;
   const firstVertex = writer.progress.length;
   const width = lip.left + lip.right;
+  const columns: CurtainColumn[] = [];
+
+  for (let step = 0; step <= across; step += 1) {
+    const sideAmount = step / across;
+    const offset = -lip.left + sideAmount * width;
+    const [rimX, rimZ] = outline.atCoast(lip.centerX + sideX * offset, lip.centerZ + sideZ * offset);
+
+    columns.push({ offset, rimX, rimZ, sideAmount });
+  }
 
   for (let along = 0; along <= ALONG_SEGMENTS; along += 1) {
     const amount = FADE_END * (along / ALONG_SEGMENTS) ** ROW_CROWDING;
@@ -159,10 +175,7 @@ function addCurtain(writer: CurtainWriter, outline: IslandOutline, lip: Lip, pli
     const outward = faceOffset(drop, faceDepth);
     const spread = 1 + (BOTTOM_SPREAD - 1) * amount;
 
-    for (let step = 0; step <= across; step += 1) {
-      const sideAmount = step / across;
-      const offset = -lip.left + sideAmount * width;
-      const [rimX, rimZ] = outline.atCoast(lip.centerX + sideX * offset, lip.centerZ + sideZ * offset);
+    for (const { offset, rimX, rimZ, sideAmount } of columns) {
       const spreadX = sideX * offset * (spread - 1);
       const spreadZ = sideZ * offset * (spread - 1);
 
