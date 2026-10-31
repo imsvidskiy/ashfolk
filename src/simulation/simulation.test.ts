@@ -463,6 +463,17 @@ describe("world snapshots", () => {
     expect(snapshotOf(copy)).toStrictEqual(snapshot);
   });
 
+  it("resumes the surface sweep at the row the save stopped at", () => {
+    const original = generateSimulation();
+
+    original.runTicks(1);
+
+    const snapshot = snapshotOf(original);
+
+    expect(snapshot.surfaceRow).toBeGreaterThan(0);
+    expect(snapshotOf(restored(snapshot)).surfaceRow).toBe(snapshot.surfaceRow);
+  });
+
   it("keeps simulating as the saving world does once it drops what a save leaves out", { timeout: 60_000 }, () => {
     const original = raidingSimulation();
 

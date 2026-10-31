@@ -63,11 +63,16 @@ describe("inspection", () => {
 
   it("describes a tribe by the summary sent with the same frame", () => {
     const harness = new SocietyHarness({ day: MORNING });
-    const tribe = settle(harness, 3);
 
-    expect(inspectIn(harness, { id: tribe.id, kind: "tribe" })).toMatchObject({
+    const first = settle(harness, 2);
+    const second = settle(harness, 3);
+
+    expect(inspectIn(harness, { id: first.id, kind: "tribe" })).toMatchObject({
+      summary: { id: first.id, name: first.name, population: 2 },
+    });
+    expect(inspectIn(harness, { id: second.id, kind: "tribe" })).toMatchObject({
       kind: "tribe",
-      summary: { id: tribe.id, name: tribe.name, population: 3 },
+      summary: { id: second.id, name: second.name, population: 3 },
     });
   });
 
