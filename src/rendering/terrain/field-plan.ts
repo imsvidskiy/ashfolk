@@ -1,5 +1,5 @@
 import { clamp, floor, int, ivec2, max, mix, smoothstep, textureLoad, vec2 } from "three/tsl";
-import { ClampToEdgeWrapping, DataTexture, NearestFilter, type Node, RedFormat, UnsignedByteType } from "three/webgpu";
+import { type DataTexture, type Node, RedFormat } from "three/webgpu";
 import { Ground } from "../../content/grounds.ts";
 import type { WorldMirror } from "../../game/world-mirror.ts";
 import { hashToUnit } from "../../shared/math.ts";
@@ -7,6 +7,7 @@ import { GROUND_CHANNELS, GroundChannel } from "../../world/agent-buffers.ts";
 import { type CellRegion, grownRegion, type RowRun } from "../../world/change-tracking.ts";
 import { gradientXAt, gradientZAt } from "../../world/footing.ts";
 import { NEIGHBOR_OFFSETS, type WorldGrid } from "../../world/world-grid.ts";
+import { cellByteTexture } from "../data-textures.ts";
 
 export const FurrowAxis = {
   AlongX: 1,
@@ -98,14 +99,9 @@ export class FieldPlan {
 
     this.#mirror = mirror;
     this.#axes = new Uint8Array(cellCount);
-    this.texture = new DataTexture(this.#axes, cellsPerSide, cellsPerSide, RedFormat, UnsignedByteType);
-    this.texture.minFilter = NearestFilter;
-    this.texture.magFilter = NearestFilter;
-    this.texture.wrapS = ClampToEdgeWrapping;
-    this.texture.wrapT = ClampToEdgeWrapping;
+    this.texture = cellByteTexture(this.#axes, cellsPerSide, RedFormat);
 
     this.groundChanged([{ firstRow: 0, rowCount: cellsPerSide }]);
-    this.texture.needsUpdate = true;
   }
 
   get revision(): number {
