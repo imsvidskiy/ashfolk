@@ -3,14 +3,43 @@ import { segmentsAtLeast } from "../level-of-detail.ts";
 import { MaterialSlot } from "../materials.ts";
 import type { MeshBuilder } from "../mesh/mesh-builder.ts";
 import type { Shape } from "../mesh/shape.ts";
-import { blob, box, cone, cylinder, lathe, loft, sphere } from "../mesh/shapes.ts";
+import { blob, box, cone, cylinder, loft, sphere } from "../mesh/shapes.ts";
 import { segmentLength, segmentTransform, type Triple, transformOf } from "../mesh/transforms.ts";
 import { tube } from "../mesh/tubes.ts";
 import { STONE_NOISE } from "../stones.ts";
 import { type HumanDetail, trimmedRing, trimSegments } from "./human-detail.ts";
-import { addRod, CRADLE, inLeftHand, inRightHand, LEFT_FIST, onChest, RIGHT_FIST } from "./prop-placement.ts";
+import {
+  addBasket,
+  addRod,
+  type Basket,
+  basketBottom,
+  CRADLE,
+  inLeftHand,
+  inRightHand,
+  LEFT_FIST,
+  onChest,
+  RIGHT_FIST,
+} from "./prop-placement.ts";
 
 const SHOULDER_GRIP: Triple = [0.25, 1.46, 0.21];
+
+const GATHERING_BASKET: Basket = {
+  depth: 0.27,
+  profile: [
+    { radius: 0, y: 0 },
+    { radius: 0.07, y: 0.004 },
+    { radius: 0.095, y: 0.05 },
+    { radius: 0.105, y: 0.11 },
+    { radius: 0.098, y: 0.124 },
+    { radius: 0.086, y: 0.118 },
+    { radius: 0.08, y: 0.06 },
+    { radius: 0, y: 0.05 },
+  ],
+  rimHeight: 0.12,
+  rimRadius: 0.095,
+  rimStretch: 1.4,
+  rimThickness: 0.007,
+};
 
 function lump(detail: HumanDetail, offset: Triple, radius: number, roughness: number): Shape {
   return blob({ detail: detail.propSubdivisions, noise: STONE_NOISE, offset, radius, roughness });
@@ -78,41 +107,18 @@ export function addHammerStone(builder: MeshBuilder, detail: HumanDetail): void 
   });
 }
 
-function basketShape(detail: HumanDetail): Shape {
-  return lathe(
-    [
-      { radius: 0, y: 0 },
-      { radius: 0.07, y: 0.004 },
-      { radius: 0.095, y: 0.05 },
-      { radius: 0.105, y: 0.11 },
-      { radius: 0.098, y: 0.124 },
-      { radius: 0.086, y: 0.118 },
-      { radius: 0.08, y: 0.06 },
-      { radius: 0, y: 0.05 },
-    ],
-    detail.limbSegments + 3
-  );
+export function addToolBasket(builder: MeshBuilder, detail: HumanDetail): void {
+  addBasket(builder, detail, GATHERING_BASKET);
 }
 
-function addBasket(builder: MeshBuilder, detail: HumanDetail, hasBerries: boolean): void {
-  const [x, y, z] = LEFT_FIST;
+export function addCarriedBerries(builder: MeshBuilder, detail: HumanDetail): void {
+  const [x, , z] = LEFT_FIST;
 
-  const basketBottom = y - 0.27;
+  const bottom = basketBottom(GATHERING_BASKET);
 
-  builder.add(basketShape(detail), {
-    style: inLeftHand(MaterialSlot.Thatch),
-    transform: transformOf({ position: [x, basketBottom, z] }),
-  });
-  builder.add(trimmedRing(detail, 0.095, 0.007, 14), {
-    style: inLeftHand(MaterialSlot.Wood),
-    transform: transformOf({
-      position: [x, basketBottom + 0.12, z],
-      rotation: [0, 0, Math.PI / 2],
-      scale: [1.4, 1, 1],
-    }),
-  });
+  addBasket(builder, detail, GATHERING_BASKET);
 
-  if (!(hasBerries && detail.hasSmallParts)) {
+  if (!detail.hasSmallParts) {
     return;
   }
 
@@ -125,20 +131,12 @@ function addBasket(builder: MeshBuilder, detail: HumanDetail, hasBerries: boolea
       transform: transformOf({
         position: [
           x + Math.cos(angle) * distance,
-          basketBottom + 0.112 + (index % 2) * 0.012,
+          bottom + 0.112 + (index % 2) * 0.012,
           z + Math.sin(angle) * distance,
         ],
       }),
     });
   }
-}
-
-export function addToolBasket(builder: MeshBuilder, detail: HumanDetail): void {
-  addBasket(builder, detail, false);
-}
-
-export function addCarriedBerries(builder: MeshBuilder, detail: HumanDetail): void {
-  addBasket(builder, detail, true);
 }
 
 export function addCarriedWood(builder: MeshBuilder, detail: HumanDetail): void {
