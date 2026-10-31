@@ -76,17 +76,17 @@ function spacingBetween(spacing: Spacing, cell: number, other: number): number {
   );
 }
 
-function riverCellAt(spacing: Spacing, cell: number, offset: NearbyOffset): number {
+function riverCellAt(spacing: Spacing, column: number, row: number, offset: NearbyOffset): number {
   const { grid, owners } = spacing;
 
-  const column = grid.columnOf(cell) + offset.column;
-  const row = grid.rowOf(cell) + offset.row;
+  const otherColumn = column + offset.column;
+  const otherRow = row + offset.row;
 
-  if (!grid.contains(column, row)) {
+  if (!grid.contains(otherColumn, otherRow)) {
     return NO_CELL;
   }
 
-  const other = grid.index(column, row);
+  const other = grid.index(otherColumn, otherRow);
 
   return owners[other] === NO_CELL ? NO_CELL : other;
 }
@@ -97,12 +97,15 @@ function nearestRiver(
   meters: number,
   isAllowed: (other: number) => boolean
 ): NearbyRiver | null {
+  const column = spacing.grid.columnOf(cell);
+  const row = spacing.grid.rowOf(cell);
+
   for (const offset of spacing.nearbyOffsets) {
     if (offset.distance > meters) {
       return null;
     }
 
-    const other = riverCellAt(spacing, cell, offset);
+    const other = riverCellAt(spacing, column, row, offset);
 
     if (other !== NO_CELL && isAllowed(other)) {
       return { cell: other, distance: offset.distance };
@@ -297,18 +300,20 @@ function captureFor(spacing: Spacing, cells: readonly number[], head: number, in
   const { grid, heights, nearbyOffsets, owners } = spacing;
 
   const cell = cells[index];
+  const column = grid.columnOf(cell);
+  const row = grid.rowOf(cell);
   const direction = flowDirection(grid, cells, index);
 
   for (const offset of nearbyOffsets) {
-    const other = riverCellAt(spacing, cell, offset);
+    const facing = ((offset.column * direction.x + offset.row * direction.z) * grid.cellSize) / offset.distance;
 
-    if (other === NO_CELL) {
+    if (facing < CAPTURE_FACING) {
       continue;
     }
 
-    const facing = ((offset.column * direction.x + offset.row * direction.z) * grid.cellSize) / offset.distance;
+    const other = riverCellAt(spacing, column, row, offset);
 
-    if (facing < CAPTURE_FACING || heights[cell] - heights[other] < CAPTURE_DROP * offset.distance) {
+    if (other === NO_CELL || heights[cell] - heights[other] < CAPTURE_DROP * offset.distance) {
       continue;
     }
 
