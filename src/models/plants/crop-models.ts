@@ -137,13 +137,14 @@ function addLeafOnStalk(context: ClumpContext, from: Triple, leaf: LeafPlacement
 function addWheat(context: ClumpContext): void {
   const stalks = context.level === "high" ? 5 : 3;
   const ear = spindle(0.02, 0.13, context.level === "high" ? 4 : 3);
+  const head = plantStyle(context, MaterialSlot.Grain, CROP_HEAD_PART);
 
   for (let stalk = 0; stalk < stalks; stalk += 1) {
     const top = stalkTop(stalk, context.height, 0.06);
 
     addStalk(context, straightStalk(stalkBase(top), top, 0.008));
     context.builder.add(ear, {
-      style: plantStyle(context, MaterialSlot.Grain, CROP_HEAD_PART),
+      style: head,
       transform: transformOf({ position: [top[0], top[1] - 0.025, top[2]] }),
     });
   }
@@ -153,6 +154,7 @@ function addBarley(context: ClumpContext): void {
   const stalks = context.level === "high" ? 5 : 3;
   const ear = spindle(0.018, 0.13, context.level === "high" ? 4 : 3);
   const awn = cylinder({ height: 0.12, radialSegments: 3, radiusBottom: 0.012, radiusTop: 0 });
+  const head = plantStyle(context, MaterialSlot.Grain, CROP_HEAD_PART);
 
   for (let stalk = 0; stalk < stalks; stalk += 1) {
     const top = stalkTop(stalk, context.height, 0.05);
@@ -168,7 +170,6 @@ function addBarley(context: ClumpContext): void {
 
     const earEnd: Triple = [nod[0] + outward.x * 0.05, nod[1] - 0.12, nod[2] + outward.z * 0.05];
     const awnEnd: Triple = [earEnd[0] + outward.x * 0.03, earEnd[1] - 0.12, earEnd[2] + outward.z * 0.03];
-    const head = plantStyle(context, MaterialSlot.Grain, CROP_HEAD_PART);
 
     context.builder.add(ear, {
       style: head,
@@ -187,13 +188,14 @@ function addBarley(context: ClumpContext): void {
 function addFlax(context: ClumpContext): void {
   const stems = context.level === "high" ? 6 : 3;
   const flower = bud(0.03, 0.012, 5);
+  const bloom = plantStyle(context, MaterialSlot.Flax, CROP_HEAD_PART);
 
   for (let stem = 0; stem < stems; stem += 1) {
     const top = stalkTop(stem, context.height, 0.08);
 
     addStalk(context, straightStalk(stalkBase(top), top, 0.005));
     context.builder.add(flower, {
-      style: plantStyle(context, MaterialSlot.Flax, CROP_HEAD_PART),
+      style: bloom,
       transform: transformOf({ position: top }),
     });
   }
