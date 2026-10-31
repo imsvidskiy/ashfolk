@@ -150,8 +150,20 @@ function erode(
 
   let removed = 0;
 
+  if (isInside) {
+    for (let brushIndex = 0; brushIndex < weights.length; brushIndex += 1) {
+      const index = center + offsets[brushIndex];
+      const take = Math.min(map[index], amount * weights[brushIndex]);
+
+      map[index] -= take;
+      removed += take;
+    }
+
+    return removed;
+  }
+
   for (let brushIndex = 0; brushIndex < weights.length; brushIndex += 1) {
-    if (!(isInside || isOnMap(centerColumn + brush.columns[brushIndex], centerRow + brush.rows[brushIndex], size))) {
+    if (!isOnMap(centerColumn + brush.columns[brushIndex], centerRow + brush.rows[brushIndex], size)) {
       continue;
     }
 
