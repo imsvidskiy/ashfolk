@@ -441,17 +441,10 @@ function toppleTrees(cell: number, services: PowerServices): void {
   const { environment, world } = services;
   const { vegetation } = world;
 
-  const trees = vegetation.plantsInCell(cell).filter((plant) => {
+  for (const tree of vegetation.plantsInCell(cell).filter((plant) => {
     return vegetation.isAlive(plant) && isTreeSpecies(vegetation.species[plant]);
-  });
-
-  if (trees.length === 0) {
-    return;
-  }
-
-  for (const tree of trees) {
+  })) {
     world.fellPlant(tree, environment.day, hashToUnit(vegetation.seed[tree] * TOPPLE_SALT, cell) * FULL_TURN);
+    world.markDisturbed(cell, environment.day);
   }
-
-  world.markDisturbed(cell, environment.day);
 }
