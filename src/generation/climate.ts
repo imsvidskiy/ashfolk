@@ -261,7 +261,7 @@ function shadedFacing(
   gradientZ: number,
   slope: number
 ): number {
-  if (slope < 1e-4 || warmth === 0) {
+  if (slope < 1e-4) {
     return 0;
   }
 
