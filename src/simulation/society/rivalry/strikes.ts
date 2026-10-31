@@ -6,11 +6,11 @@ import { isChild, type Person } from "../person.ts";
 import type { SocietyContext } from "../society-context.ts";
 import { type CarriedWeapon, carriedWeapon } from "../weapons.ts";
 import type { CombatLedger } from "./combat-ledger.ts";
-import { WEAPON_STATS, type WeaponKind, weaponDamage } from "./combat-stats.ts";
+import { WEAPON_STATS, weaponDamage } from "./combat-stats.ts";
 import type { Foe } from "./foes.ts";
 import { wallCover } from "./walls.ts";
 
-const GUARD_CHANCE: Readonly<Record<WeaponKind, number>> = { bow: 0.1, none: 0.2, spear: 0.34 };
+const GUARD_CHANCE: Readonly<Record<CarriedWeapon["kind"], number>> = { bow: 0.1, none: 0.2, spear: 0.34 };
 const FLAT_FOOTED_GUARD = 0.04;
 const FACING_THRESHOLD = 0.25;
 const DAMAGE_SPREAD = 0.25;
