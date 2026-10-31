@@ -8,6 +8,8 @@ const TOP_CLEARANCE = 76;
 const FAR_DISTANCE = 2600;
 const CROWDED_WIDTH = 150;
 const CROWDED_HEIGHT = 40;
+const MATRIX_SIZE = 16;
+const VIEW_SIZE = MATRIX_SIZE + 3;
 
 interface PlacedLabel {
   readonly isPriority: boolean;
@@ -84,26 +86,26 @@ function placeLabels(engine: EngineHandle, layer: HTMLElement): void {
   }
 }
 
-function viewOf(engine: EngineHandle): number[] {
-  return [
-    ...engine.camera.camera.matrixWorld.elements,
-    window.innerWidth,
-    window.innerHeight,
-    engine.session.mirror.landVersion,
-  ];
+function readView(engine: EngineHandle, view: Float64Array): void {
+  view.set(engine.camera.camera.matrixWorld.elements);
+  view[MATRIX_SIZE] = window.innerWidth;
+  view[MATRIX_SIZE + 1] = window.innerHeight;
+  view[MATRIX_SIZE + 2] = engine.session.mirror.landVersion;
 }
 
-function isSameView(first: readonly number[], second: readonly number[]): boolean {
-  return (
-    first.length === second.length &&
-    first.every((value, index) => {
-      return value === second[index];
-    })
-  );
+function isSameView(first: Float64Array, second: Float64Array): boolean {
+  for (let index = 0; index < VIEW_SIZE; index += 1) {
+    if (first[index] !== second[index]) {
+      return false;
+    }
+  }
+
+  return true;
 }
 
 function keepLabelsPlaced(engine: EngineHandle, layer: HTMLElement): () => void {
-  let placedView: readonly number[] = [];
+  const view = new Float64Array(VIEW_SIZE);
+  const placedView = new Float64Array(VIEW_SIZE);
   let haveLabelsChanged = true;
 
   const observer = new MutationObserver(() => {
@@ -111,13 +113,13 @@ function keepLabelsPlaced(engine: EngineHandle, layer: HTMLElement): () => void 
   });
 
   function place(): void {
-    const view = viewOf(engine);
+    readView(engine, view);
 
     if (!haveLabelsChanged && isSameView(view, placedView)) {
       return;
     }
 
-    placedView = view;
+    placedView.set(view);
     haveLabelsChanged = false;
     placeLabels(engine, layer);
   }
