@@ -70,8 +70,8 @@ interface Strike {
 }
 
 interface Blast {
-  burnsDebris: boolean;
   catastrophe: Catastrophe;
+  hasBurningDebris: boolean;
   power: number;
   radius: number;
   x: number;
@@ -158,14 +158,14 @@ export function naturalStrikeSite(focus: Waypoint, services: PowerServices): Way
   return null;
 }
 
-function isStrikeSite(cell: number, acceptsAnyLand: boolean, services: PowerServices): boolean {
+function isStrikeSite(cell: number, shouldAcceptAnyLand: boolean, services: PowerServices): boolean {
   const { world } = services;
 
   if (!isDryLand(world, cell)) {
     return false;
   }
 
-  return acceptsAnyLand || world.terrain.height[cell] > HIGH_GROUND || world.canopyFuel[cell] > TALL_FOREST;
+  return shouldAcceptAnyLand || world.terrain.height[cell] > HIGH_GROUND || world.canopyFuel[cell] > TALL_FOREST;
 }
 
 function reachScale(blast: Blast): number {
@@ -184,12 +184,12 @@ export function explode(blast: Blast, services: PowerServices): void {
   const reach = blast.radius * BLAST_REACH;
 
   const isInWater = isMostlyWater(blast, services);
-  const burnsDebris = blast.burnsDebris && !isInWater;
+  const hasBurningDebris = blast.hasBurningDebris && !isInWater;
 
   carveCrater(world, blast, craterDepth(blast));
-  scatterDebris(blast, burnsDebris, services);
+  scatterDebris(blast, hasBurningDebris, services);
 
-  if (burnsDebris) {
+  if (hasBurningDebris) {
     hurlBurningDebris(blast, services);
   }
 
@@ -203,7 +203,7 @@ export function explode(blast: Blast, services: PowerServices): void {
     },
     services
   );
-  buildings.damageArea(blast.x, blast.z, reach, BLAST_BUILDING_DAMAGE * blast.power, burnsDebris);
+  buildings.damageArea(blast.x, blast.z, reach, BLAST_BUILDING_DAMAGE * blast.power, hasBurningDebris);
   people.damageArea(blast.x, blast.z, reach, BLAST_PEOPLE_DAMAGE * blast.power, "blast");
   fauna.damageArea(blast.x, blast.z, reach, BLAST_ANIMAL_DAMAGE * blast.power, "blast");
   fauna.scare(blast.x, blast.z, blast.radius * BLAST_SCARE_REACH);
@@ -235,7 +235,7 @@ function isMostlyWater(blast: Blast, services: PowerServices): boolean {
   return wet > core.length * WATERY_CORE;
 }
 
-function scatterDebris(blast: Blast, burnsDebris: boolean, services: PowerServices): void {
+function scatterDebris(blast: Blast, hasBurningDebris: boolean, services: PowerServices): void {
   const { random, world } = services;
 
   const scale = reachScale(blast);
@@ -259,7 +259,7 @@ function scatterDebris(blast: Blast, burnsDebris: boolean, services: PowerServic
       flatten(cell, blast, (relativeDistance - CRATER_CORE) / (felling - CRATER_CORE), services);
     }
 
-    if (burnsDebris) {
+    if (hasBurningDebris) {
       igniteDebris(cell, smoothstep(felling, ignition, relativeDistance), services);
     }
   }

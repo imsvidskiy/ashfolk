@@ -132,8 +132,8 @@ export function explosionPower(
 ): PowerOutcome {
   explode(
     {
-      burnsDebris: parameters.burningDebris,
       catastrophe: "explosion",
+      hasBurningDebris: parameters.burningDebris,
       power: percent(parameters.power) / DEFAULT_BLAST_POWER,
       radius: parameters.radius,
       x: target.x,
@@ -169,8 +169,8 @@ export function meteorPower(
   services.schedule(parameters.fallTime, () => {
     explode(
       {
-        burnsDebris: parameters.ignites,
         catastrophe: "meteor",
+        hasBurningDebris: parameters.ignites,
         power: METEOR_POWER * (parameters.craterRadius / METEOR_REFERENCE_CRATER),
         radius: parameters.craterRadius,
         x: target.x,
