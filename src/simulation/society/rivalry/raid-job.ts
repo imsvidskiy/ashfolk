@@ -1,7 +1,7 @@
 import { clamp } from "../../../shared/math.ts";
 import { faceTowards } from "../../agents/movement.ts";
 import type { Waypoint } from "../../agents/navigation.ts";
-import { type Building, setAlight } from "../buildings.ts";
+import { type Building, type BuildingSystem, setAlight } from "../buildings.ts";
 import { headTo, type Job, standStill, walk } from "../jobs/job.ts";
 import { runSpeed, walkSpeed } from "../person.ts";
 import type { PersonTick } from "../society-context.ts";
@@ -49,8 +49,8 @@ export interface RaiderState {
   readonly slot: number;
 }
 
-function plunderSpot(tribe: Tribe, tick: PersonTick): Waypoint {
-  const storehouse = completedBuilding(tick.context.buildings, tribe.buildings.storehouseId);
+function plunderSpot(buildings: BuildingSystem, tribe: Tribe): Waypoint {
+  const storehouse = completedBuilding(buildings, tribe.buildings.storehouseId);
 
   if (storehouse === null) {
     return campPoint(tribe);
@@ -232,7 +232,7 @@ export class RaidJob implements Job {
       return;
     }
 
-    this.#workAt(tick, raid, "plunder", plunderSpot(victims, tick), () => {
+    this.#workAt(tick, raid, "plunder", plunderSpot(tick.context.buildings, victims), () => {
       this.#plunder(raid, victims);
     });
   }

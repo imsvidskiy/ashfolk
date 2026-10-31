@@ -408,7 +408,7 @@ export class RaidCampaigns {
     this.#restingUntil.set(attacker.id, context.environment.day + restDays);
     this.#chronicle.record({
       category: "raid",
-      text: raidSummary(raid, attacker.name, defender.name),
+      text: raidSummary(raid, attacker, defender),
       tribeId: attacker.id,
       x: defender.campX,
       z: defender.campZ,

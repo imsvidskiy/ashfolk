@@ -88,7 +88,7 @@ export function capitalized(text: string): string {
   return text.charAt(0).toUpperCase() + text.slice(1);
 }
 
-export function raidSummary(raid: Raid, attacker: string, defender: string): string {
+export function raidSummary(raid: Raid, attacker: Tribe, defender: Tribe): string {
   const outcomes: string[] = [];
   const plunder = lootPhrase(raid.loot);
 
@@ -107,10 +107,10 @@ export function raidSummary(raid: Raid, attacker: string, defender: string): str
   const losses = raid.fallenRaiders.length > 0 ? `, losing ${namesOrCount(raid.fallenRaiders)} of their own` : "";
 
   if (outcomes.length === 0) {
-    return capitalized(`${theTribe(defender)} drove off a raid by ${theTribe(attacker)}${losses}`);
+    return capitalized(`${theTribe(defender.name)} drove off a raid by ${theTribe(attacker.name)}${losses}`);
   }
 
-  return capitalized(`${theTribe(attacker)} raided ${theTribe(defender)}: ${outcomes.join(", ")}${losses}`);
+  return capitalized(`${theTribe(attacker.name)} raided ${theTribe(defender.name)}: ${outcomes.join(", ")}${losses}`);
 }
 
 export function fallText(victim: Person, victimTribe: Tribe, slayerTribe: Tribe, raid: Raid | null): string {
