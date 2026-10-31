@@ -2,6 +2,8 @@ import { uniformFloat64 } from "pure-rand/distribution/uniformFloat64";
 import { xoroshiro128plus, xoroshiro128plusFromState } from "pure-rand/generator/xoroshiro128plus";
 
 const WARM_UP_DRAWS = 4;
+const SEED_RANGE = 2_147_483_647;
+const LABEL_STRIDE = 7919;
 
 export type RandomState = readonly number[];
 
@@ -18,6 +20,10 @@ export interface RandomSource {
 }
 
 type Generator = ReturnType<typeof xoroshiro128plus>;
+
+function seedOfUnit(unit: number): number {
+  return Math.floor(unit * SEED_RANGE);
+}
 
 class SeededRandom implements RandomSource {
   #generator: Generator;
@@ -65,9 +71,7 @@ class SeededRandom implements RandomSource {
   }
 
   derive(label: number): RandomSource {
-    const seed = Math.floor(this.next() * 2_147_483_647) + label * 7919;
-
-    return createRandom(seed);
+    return createRandom(seedOfUnit(this.next()) + label * LABEL_STRIDE);
   }
 }
 
@@ -82,7 +86,7 @@ export function createRandom(seed: number): RandomSource {
 }
 
 export function randomFromUnitSeed(seed: number, salt: number): RandomSource {
-  return createRandom(Math.floor(seed * 2_147_483_647) + salt);
+  return createRandom(seedOfUnit(seed) + salt);
 }
 
 export function shuffle<Items extends { [index: number]: unknown; length: number }>(
