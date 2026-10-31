@@ -8,7 +8,7 @@ import {
   Mesh,
   type PerspectiveCamera,
 } from "three/webgpu";
-import type { CellRegion } from "../../world/change-tracking.ts";
+import { type CellRegion, grownRegion, regionsOverlap } from "../../world/change-tracking.ts";
 import type { WorldGrid } from "../../world/world-grid.ts";
 import { toInstancedGeometry } from "../instancing.ts";
 import { HIDDEN_LEVEL, levelWithin } from "../view-input.ts";
@@ -59,15 +59,6 @@ interface PatchLevel {
 }
 
 type PatchMeasure = (region: CellRegion) => PatchContent | null;
-
-function overlaps(changed: CellRegion, region: CellRegion): boolean {
-  return (
-    changed.lastColumn >= region.firstColumn - 1 &&
-    changed.firstColumn <= region.lastColumn + 1 &&
-    changed.lastRow >= region.firstRow - 1 &&
-    changed.firstRow <= region.lastRow + 1
-  );
-}
 
 function isPatchVisible(patch: Patch, frustum: Frustum): boolean {
   return patch.pieces.length > 0 && frustum.intersectsBox(patch.bounds);
@@ -128,8 +119,10 @@ export class PatchGrid {
   }
 
   remeasure(region: CellRegion | null): void {
+    const reach = region === null ? null : grownRegion(region, 1, this.#grid.cellsPerSide);
+
     for (const patch of this.#patches) {
-      if (region === null || overlaps(region, patch.region)) {
+      if (reach === null || regionsOverlap(reach, patch.region)) {
         this.#measurePatch(patch);
       }
     }
