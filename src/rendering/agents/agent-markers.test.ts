@@ -1,6 +1,7 @@
-import { Frustum, Matrix4, Mesh, PerspectiveCamera, Vector3 } from "three/webgpu";
+import { Frustum, Mesh, PerspectiveCamera, Vector3 } from "three/webgpu";
 import { describe, expect, it } from "vitest";
 import { CameraAxes } from "../effects/billboards.ts";
+import { frustumOf } from "../testing/camera-frustum.ts";
 import { AgentMarkers, NO_HERD } from "./agent-markers.ts";
 import { ANIMAL_MARKERS, MarkerShape, personMarker } from "./marker-look.ts";
 import { MARKER_STYLE_ATTRIBUTE } from "./marker-material.ts";
@@ -24,13 +25,9 @@ function markersSeenFrom(height: number, ground: SightGround = FLAT_GROUND): Age
   camera.lookAt(0, 0, 0);
   camera.updateMatrixWorld();
 
-  const frustum = new Frustum().setFromProjectionMatrix(
-    new Matrix4().multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse)
-  );
-
   const markers = new AgentMarkers(new CameraAxes(), ground);
 
-  markers.begin(camera, frustum, VIEWPORT_HEIGHT);
+  markers.begin(camera, frustumOf(camera), VIEWPORT_HEIGHT);
 
   return markers;
 }

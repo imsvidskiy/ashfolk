@@ -1,4 +1,4 @@
-import { Frustum, Matrix4, PerspectiveCamera } from "three/webgpu";
+import { PerspectiveCamera } from "three/webgpu";
 import { WorldMirror } from "../../game/world-mirror.ts";
 import { Simulation } from "../../simulation/simulation.ts";
 import { createVegetatedWorld } from "../../simulation/testing/test-world.ts";
@@ -6,6 +6,7 @@ import { AgentMarkers } from "../agents/agent-markers.ts";
 import type { AgentViewInput } from "../agents/agent-view-input.ts";
 import { CameraAxes } from "../effects/billboards.ts";
 import { HandMotion } from "../hand-motion.ts";
+import { frustumOf } from "./camera-frustum.ts";
 
 export function createPopulatedMirror(): WorldMirror {
   const simulation = new Simulation(createVegetatedWorld({ dimensions: { cellSize: 10, cellsPerSide: 96 } }));
@@ -30,9 +31,7 @@ export function agentInputAbove(mirror: WorldMirror, x: number, z: number, heigh
   return {
     camera,
     detail: 1,
-    frustum: new Frustum().setFromProjectionMatrix(
-      new Matrix4().multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse)
-    ),
+    frustum: frustumOf(camera),
     gameSeconds: 0,
     hand: new HandMotion(),
     highlighted: null,

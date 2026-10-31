@@ -1,5 +1,6 @@
-import { Frustum, Matrix4, PerspectiveCamera, Sphere, Vector3 } from "three/webgpu";
+import { PerspectiveCamera, Sphere, Vector3 } from "three/webgpu";
 import { describe, expect, it } from "vitest";
+import { frustumOf } from "./testing/camera-frustum.ts";
 import { assignSphereLevels, HIDDEN_LEVEL, levelWithin } from "./view-input.ts";
 
 const LIMITS = [100, 300, 900];
@@ -14,11 +15,7 @@ function createView() {
 
   camera.updateMatrixWorld();
 
-  const frustum = new Frustum().setFromProjectionMatrix(
-    new Matrix4().multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse)
-  );
-
-  return { camera, frustum };
+  return { camera, frustum: frustumOf(camera) };
 }
 
 function itemAt(z: number, radius: number): Item {
