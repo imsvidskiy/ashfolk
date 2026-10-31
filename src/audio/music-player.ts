@@ -1,3 +1,4 @@
+import { MILLISECONDS_PER_SECOND } from "../shared/math.ts";
 import { MUSIC_TRACKS } from "./sound-catalog.ts";
 import type { MusicOutput, SoundEngine } from "./sound-engine.ts";
 
@@ -87,7 +88,7 @@ export class MusicPlayer {
     setTimeout(() => {
       output.element.pause();
       output.element.removeAttribute("src");
-    }, FADE_OUT_SECONDS * 1000);
+    }, FADE_OUT_SECONDS * MILLISECONDS_PER_SECOND);
   }
 
   #start(output: MusicOutput, now: number, hours: number): void {

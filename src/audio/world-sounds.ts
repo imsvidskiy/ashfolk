@@ -1,5 +1,5 @@
 import type { EngineHandle } from "../game/engine-handle.ts";
-import { clamp } from "../shared/math.ts";
+import { clamp, MILLISECONDS_PER_SECOND } from "../shared/math.ts";
 import type { LavaView, SimulationFrame } from "../simulation/frame.ts";
 import type { VolcanoView } from "../simulation/powers/volcanoes.ts";
 import type { WorldGrid } from "../world/world-grid.ts";
@@ -24,7 +24,6 @@ const FIRE_BUCKET = 80;
 const FIRE_EMITTERS = 4;
 const LAVA_EMITTERS = 3;
 const HOT_LAVA = 40;
-const MILLISECONDS_PER_SECOND = 1000;
 const LISTENER_TOLERANCE = 1e-3;
 
 const PRELOADED = [

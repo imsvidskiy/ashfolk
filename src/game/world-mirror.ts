@@ -1,5 +1,5 @@
 import { GROWTH_FACTOR } from "../shared/growth.ts";
-import { clamp } from "../shared/math.ts";
+import { clamp, MILLISECONDS_PER_SECOND } from "../shared/math.ts";
 import type { InitialWorld, PackedRows, RegionPatch, SimulationFrame, TerrainSnapshot } from "../simulation/frame.ts";
 import { GROUND_CHANNELS, GroundChannel } from "../world/agent-buffers.ts";
 import { isBrookCell } from "../world/brooks.ts";
@@ -20,7 +20,6 @@ import type { MirroredWater } from "../world/water.ts";
 import { WorldGrid } from "../world/world-grid.ts";
 import { findLandmarks, type Landmark } from "./landmarks.ts";
 
-const MILLISECONDS_PER_SECOND = 1000;
 const LONGEST_EXTRAPOLATION_SECONDS = 0.1;
 const CROSSING_LOOKUP_MARGIN = 0.6;
 

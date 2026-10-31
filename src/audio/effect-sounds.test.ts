@@ -27,6 +27,24 @@ describe("effect sounds", () => {
     expect(loops[0]?.stop).toHaveBeenCalledOnce();
   });
 
+  it("hears far natural lightning as thunder once the sound has traveled, waiting a few seconds at most", () => {
+    const { engine, play } = createTestSoundEngine();
+    const effects = new EffectSounds(engine, flatGroundPoint);
+    const place = { x: 686, y: 0, z: 0 };
+
+    effects.hear({ isNatural: true, kind: "lightning", x: place.x, z: place.z }, VIEW);
+    effects.hear({ isNatural: true, kind: "lightning", x: 3000, z: 0 }, VIEW);
+    effects.hear({ isNatural: true, kind: "lightning", x: 100, z: 0 }, VIEW);
+    effects.hear({ isNatural: false, kind: "lightning", x: place.x, z: place.z }, VIEW);
+
+    expect(play.mock.calls).toEqual([
+      [SOUNDS.thunderFar, place, { delaySeconds: 2 }],
+      [SOUNDS.thunderFar, { x: 3000, y: 0, z: 0 }, { delaySeconds: 4 }],
+      [SOUNDS.lightning, { x: 100, y: 0, z: 0 }, {}],
+      [SOUNDS.lightning, place, {}],
+    ]);
+  });
+
   it("holds the tornado roar in place while the game is paused", () => {
     const { engine, loops } = createTestSoundEngine();
     const effects = new EffectSounds(engine, flatGroundPoint);

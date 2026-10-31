@@ -4,7 +4,7 @@ import { createGraphics, type Graphics } from "../rendering/create-graphics.ts";
 import { type QualityLevel, RENDER_QUALITY, type RenderQuality } from "../rendering/render-quality.ts";
 import { WorldRenderer } from "../rendering/world-renderer.ts";
 import { ignore } from "../shared/ignore.ts";
-import { clamp } from "../shared/math.ts";
+import { clamp, MILLISECONDS_PER_SECOND } from "../shared/math.ts";
 import type { SimulationCommand } from "../simulation/commands.ts";
 import type { SimulationFrame } from "../simulation/frame.ts";
 import type { GrabTarget } from "../simulation/hand/grab-target.ts";
@@ -25,7 +25,6 @@ import { type HandCursor, HandTool } from "./tools/hand-tool.ts";
 import { type PowerSelection, PowerTool } from "./tools/power-tool.ts";
 
 const LONGEST_FRAME_SECONDS = 0.1;
-const MILLISECONDS_PER_SECOND = 1000;
 const FIELD_OF_VIEW = 45;
 const NEAR_PLANE = 0.5;
 const FAR_PLANE = 40_000;
@@ -201,10 +200,7 @@ export class GameEngine implements EngineHandle {
   static async start(options: EngineOptions): Promise<GameEngine> {
     const quality = RENDER_QUALITY[options.quality];
 
-    const [{ lost, renderer }, session] = await openTogether(
-      createGraphics(options.canvas, quality),
-      options.session
-    );
+    const [{ lost, renderer }, session] = await openTogether(createGraphics(options.canvas, quality), options.session);
 
     await afterNextPaint();
 
