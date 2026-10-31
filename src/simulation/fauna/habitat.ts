@@ -101,13 +101,11 @@ export function canStand(world: WorldState, kind: AnimalKind, x: number, z: numb
 }
 
 export function herdKindAt(world: WorldState, x: number, z: number, random: RandomSource): AnimalKind | null {
-  const cell = world.grid.cellAt(x, z);
-
-  if (cell < 0 || !world.isWalkableAt(x, z)) {
+  if (!world.isWalkableAt(x, z)) {
     return null;
   }
 
-  return kindForBiome(world.terrain.biome[cell], random);
+  return kindForBiome(world.terrain.biome[world.grid.cellAt(x, z)], random);
 }
 
 export function smallGameAt(world: WorldState, x: number, z: number): AnimalKind | null {
