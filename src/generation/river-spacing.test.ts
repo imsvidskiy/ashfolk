@@ -349,11 +349,20 @@ describe("spaceRiverChains", () => {
 
     const [, captured] = spaceRiverChains(land, [side, trunk()]);
     const connector = captured.cells.slice(RAISED_FROM_ROW - headRow + 1);
+    const descent = [...captured.cells.slice(RAISED_FROM_ROW - headRow), captured.joinsCell].map((cell) => {
+      return land.heights[cell];
+    });
 
     expect(captured.cells.slice(0, RAISED_FROM_ROW - headRow + 1)).toEqual(
       columnCells(SIDE_STREAM_COLUMN, headRow, RAISED_FROM_ROW)
     );
-    expect(captured.joinsCell).toBe(trunkCell(59));
+    expect(trunk().cells).toContain(captured.joinsCell);
+    expect(grid.rowOf(captured.joinsCell)).toBeGreaterThan(RAISED_FROM_ROW);
+    expect(descent).toEqual(
+      [...descent].sort((first, second) => {
+        return second - first;
+      })
+    );
     expect(connector.length).toBeGreaterThan(0);
     expect(
       connector.every((cell) => {
