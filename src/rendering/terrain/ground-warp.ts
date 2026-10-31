@@ -29,7 +29,7 @@ export class GroundWarp {
   readonly #grid: WorldGrid;
   readonly #target: RenderTarget;
 
-  constructor(grid: WorldGrid) {
+  constructor(grid: WorldGrid, renderer: WebGPURenderer) {
     const texels = Math.ceil(grid.worldSize / METERS_PER_TEXEL);
 
     this.#grid = grid;
@@ -40,9 +40,18 @@ export class GroundWarp {
       minFilter: LinearFilter,
       type: HalfFloatType,
     });
+    this.#bake(renderer);
   }
 
-  bake(renderer: WebGPURenderer): void {
+  offsetAt(point: Node<"vec2">): Node<"vec2"> {
+    return texture(this.#target.texture, mapCoordinatesNode(this.#grid, point)).level(float(0)).xy;
+  }
+
+  dispose(): void {
+    this.#target.dispose();
+  }
+
+  #bake(renderer: WebGPURenderer): void {
     const { cellSize, halfSize, worldSize } = this.#grid;
 
     const material = new NodeMaterial();
@@ -55,13 +64,5 @@ export class GroundWarp {
     new QuadMesh(material).render(renderer);
     renderer.setRenderTarget(previousTarget);
     material.dispose();
-  }
-
-  offsetAt(point: Node<"vec2">): Node<"vec2"> {
-    return texture(this.#target.texture, mapCoordinatesNode(this.#grid, point)).level(float(0)).xy;
-  }
-
-  dispose(): void {
-    this.#target.dispose();
   }
 }
