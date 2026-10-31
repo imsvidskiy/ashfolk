@@ -9,9 +9,9 @@ const HEAVY_LOAD_SPEED = 0.85;
 const DROP_SPREAD = 3;
 
 function deliveryPoint(tick: PersonTick): Waypoint {
-  const { random } = tick.context;
+  const { buildings, random } = tick.context;
 
-  const storehouse = completedBuilding(tick.context.buildings, tick.tribe.buildings.storehouseId);
+  const storehouse = completedBuilding(buildings, tick.tribe.buildings.storehouseId);
 
   return nearPoint(storehouse === null ? campPoint(tick.tribe) : storehouse, DROP_SPREAD, random);
 }
