@@ -141,7 +141,7 @@ function barkSlot(point: SurfacePoint, look: TreeLook, depth: number): number {
   return mark < 0.14 ? MaterialSlot.Bark : look.bark;
 }
 
-function crownCenter(structure: TreeStructure): Vector3 {
+export function crownCenter(structure: TreeStructure): Vector3 {
   const centers = structure.foliage.map(foliageCenter);
   const sum = centers.reduce((total, center) => {
     return total.add(center);

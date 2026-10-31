@@ -8,7 +8,7 @@ import type { Shape } from "../mesh/shape.ts";
 import { icosphere, sphere } from "../mesh/shapes.ts";
 import { outermostHit } from "../mesh/surface-probe.ts";
 import { transformOf } from "../mesh/transforms.ts";
-import { FOLIAGE_FLUTTER, type NearLevel, plantSway, type TreeLook } from "./tree-mesher.ts";
+import { crownCenter, FOLIAGE_FLUTTER, type NearLevel, plantSway, type TreeLook } from "./tree-mesher.ts";
 import { GOLDEN_ANGLE, perpendicularBasis, type TreeStructure } from "./tree-structure.ts";
 
 export const BERRY_PART = 1;
@@ -45,17 +45,6 @@ function clusterDirection(cluster: number, clusters: number, twist: number): Vec
   return new Vector3(Math.cos(azimuth) * horizontal, height, Math.sin(azimuth) * horizontal);
 }
 
-function crownMiddle(structure: TreeStructure): Vector3 {
-  const blobs = structure.foliage.filter((foliage) => {
-    return foliage.kind === "blob";
-  });
-  const sum = blobs.reduce((total, blob) => {
-    return total.add(new Vector3(...blob.center));
-  }, new Vector3());
-
-  return sum.multiplyScalar(1 / Math.max(1, blobs.length));
-}
-
 export function berryClusters(
   tree: MeshData,
   structure: TreeStructure,
@@ -65,7 +54,7 @@ export function berryClusters(
 ): MeshData {
   const random = createRandom(seed);
   const builder = new MeshBuilder({ flutter: FOLIAGE_FLUTTER, slot: MaterialSlot.Berry });
-  const middle = crownMiddle(structure);
+  const middle = crownCenter(structure);
   const clusters = CLUSTER_COUNTS[level];
   const shape = berryShape(level);
   const twist = random.next() * FULL_TURN;
