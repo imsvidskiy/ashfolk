@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { describeParameters } from "./parameters.ts";
 import {
   defaultPowerParameters,
+  isPowerId,
   POWER_GROUPS,
   POWER_ORDER,
   POWERS,
@@ -13,6 +14,12 @@ import {
 describe("powers", () => {
   it("orders every power exactly once", () => {
     expect([...POWER_ORDER].sort()).toEqual(Object.keys(POWERS).sort());
+  });
+
+  it("knows powers by their own ids, not by names every object inherits", () => {
+    expect(isPowerId("fire")).toBe(true);
+    expect(isPowerId("toString")).toBe(false);
+    expect(isPowerId("__proto__")).toBe(false);
   });
 
   it("gives every parameter a label and a sane range", () => {
