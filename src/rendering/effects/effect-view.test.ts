@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
+import { ignore } from "../../shared/ignore.ts";
 import type { ArrowEffect, EmberEffect, ExplosionEffect, LightningEffect } from "../../simulation/effects.ts";
 import { TerrainTextures } from "../terrain/terrain-textures.ts";
 import { createVegetatedMirror } from "../testing/vegetated-mirror.ts";
@@ -26,7 +27,7 @@ function createEffects() {
     heightAt: () => {
       return 0;
     },
-    shake: vi.fn(),
+    shake: ignore,
   });
 
   return { createRing, view };
