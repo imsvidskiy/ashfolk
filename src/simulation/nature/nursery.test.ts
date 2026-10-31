@@ -80,4 +80,23 @@ describe("nursery", () => {
     expect(world.vegetation.height[newcomer]).toBe(5);
     expect(nursery.snapshot().seedlings).toEqual([]);
   });
+
+  it("leaves alone a plant of another species that took the place of a lost seedling on its day", () => {
+    const world = createTestWorld();
+    const nursery = new Nursery(world);
+
+    nursery.plant(oakBornOn(world, 0), GROWING_DAYS);
+
+    const seedling = plantInCenter(world);
+
+    world.removePlant(seedling);
+
+    const newcomer = world.plant({ ...oakBornOn(world, 0), height: 5, species: PlantSpecies.Pine });
+
+    growFor(nursery, GROWING_DAYS);
+
+    expect(newcomer).toBe(seedling);
+    expect(world.vegetation.height[newcomer]).toBe(5);
+    expect(nursery.snapshot().seedlings).toEqual([]);
+  });
 });
