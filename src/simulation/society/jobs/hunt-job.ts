@@ -116,17 +116,17 @@ function provokeAnimal(tick: PersonTick, animal: Animal): void {
 function hitChance(tick: PersonTick, animal: Animal, weapon: Weapon): number {
   const definition = ANIMALS[animal.kind];
 
-  const bonus = weaponHitBonus(weapon);
+  const chance = definition.hitChance + weaponHitBonus(weapon);
 
   if (definition.huntingPartySize === null || definition.huntingPartySize <= 1) {
-    return definition.hitChance + bonus;
+    return chance;
   }
 
   const helpers = tick.context.people.countNear(animal.mover.x, animal.mover.z, HELPER_RANGE, (person) => {
     return person.tribeId === tick.tribe.id && person.job?.kind === "hunt";
   });
 
-  return definition.hitChance + bonus + HELPER_HIT_BONUS * helpers;
+  return chance + HELPER_HIT_BONUS * helpers;
 }
 
 function sufferCounterattack(tick: PersonTick, animal: Animal, distance: number): void {
@@ -156,7 +156,7 @@ function sufferCounterattack(tick: PersonTick, animal: Animal, distance: number)
 }
 
 function bringDown(tick: PersonTick, animal: Animal): Job {
-  const { food } = ANIMALS[animal.kind];
+  const { food, isSmallGame } = ANIMALS[animal.kind];
 
   const carried = Math.min(MAXIMUM_CARRIED_MEAT, food);
 
@@ -165,7 +165,7 @@ function bringDown(tick: PersonTick, animal: Animal): Job {
   tick.tribe.stock.meat += food - carried;
   learn(tick.tribe, 3, tick.context.rules);
 
-  if (!ANIMALS[animal.kind].isSmallGame) {
+  if (!isSmallGame) {
     tick.context.chronicle.record({
       category: "hunt",
       text: `${tick.tribe.name} hunters brought down ${animalWithArticle(animal.kind)}`,
