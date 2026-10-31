@@ -11,7 +11,7 @@ export const MAXIMUM_FAITH = 100;
 
 const NEVER = Number.NEGATIVE_INFINITY;
 
-export type ScarceResource = "berries" | "clay" | "fish" | "fruit" | "game" | "stone" | "wood";
+export type ScarceResource = "berries" | "clay" | "fish" | "game" | "stone" | "wood";
 
 export interface Field {
   cell: number;
@@ -135,7 +135,7 @@ export function createTribe(founding: TribeFounding): Tribe {
     id: founding.id,
     isMigrating: false,
     knowledge: 0,
-    lastScarcity: { berries: NEVER, clay: NEVER, fish: NEVER, fruit: NEVER, game: NEVER, stone: NEVER, wood: NEVER },
+    lastScarcity: { berries: NEVER, clay: NEVER, fish: NEVER, game: NEVER, stone: NEVER, wood: NEVER },
     memberCount: 0,
     migrationStartDay: founding.day,
     name: founding.identity.name,
