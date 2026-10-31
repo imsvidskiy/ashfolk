@@ -8,8 +8,6 @@ const TOP_CLEARANCE = 76;
 const FAR_DISTANCE = 2600;
 const CROWDED_WIDTH = 150;
 const CROWDED_HEIGHT = 40;
-const MATRIX_SIZE = 16;
-const VIEW_SIZE = MATRIX_SIZE + 3;
 
 interface PlacedLabel {
   readonly isPriority: boolean;
@@ -86,26 +84,11 @@ function placeLabels(engine: EngineHandle, layer: HTMLElement): void {
   }
 }
 
-function readView(engine: EngineHandle, view: Float64Array): void {
-  view.set(engine.camera.camera.matrixWorld.elements);
-  view[MATRIX_SIZE] = window.innerWidth;
-  view[MATRIX_SIZE + 1] = window.innerHeight;
-  view[MATRIX_SIZE + 2] = engine.session.mirror.landVersion;
-}
-
-function isSameView(first: Float64Array, second: Float64Array): boolean {
-  for (let index = 0; index < VIEW_SIZE; index += 1) {
-    if (first[index] !== second[index]) {
-      return false;
-    }
-  }
-
-  return true;
-}
-
 function keepLabelsPlaced(engine: EngineHandle, layer: HTMLElement): () => void {
-  const view = new Float64Array(VIEW_SIZE);
-  const placedView = new Float64Array(VIEW_SIZE);
+  const placedMatrix = engine.camera.camera.matrixWorld.clone();
+  let placedWidth = 0;
+  let placedHeight = 0;
+  let placedLandVersion = 0;
   let haveLabelsChanged = true;
 
   const observer = new MutationObserver(() => {
@@ -113,13 +96,24 @@ function keepLabelsPlaced(engine: EngineHandle, layer: HTMLElement): () => void 
   });
 
   function place(): void {
-    readView(engine, view);
+    const { matrixWorld } = engine.camera.camera;
+    const { innerHeight, innerWidth } = window;
+    const { landVersion } = engine.session.mirror;
 
-    if (!haveLabelsChanged && isSameView(view, placedView)) {
+    const isSameView =
+      matrixWorld.equals(placedMatrix) &&
+      innerWidth === placedWidth &&
+      innerHeight === placedHeight &&
+      landVersion === placedLandVersion;
+
+    if (!haveLabelsChanged && isSameView) {
       return;
     }
 
-    placedView.set(view);
+    placedMatrix.copy(matrixWorld);
+    placedWidth = innerWidth;
+    placedHeight = innerHeight;
+    placedLandVersion = landVersion;
     haveLabelsChanged = false;
     placeLabels(engine, layer);
   }
