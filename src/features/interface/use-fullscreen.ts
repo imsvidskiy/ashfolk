@@ -21,9 +21,7 @@ function switchFullscreen(): Promise<void> {
 }
 
 export function useFullscreen() {
-  const isFullscreen = useSyncExternalStore(subscribe, isFullscreenNow, () => {
-    return false;
-  });
+  const isFullscreen = useSyncExternalStore(subscribe, isFullscreenNow);
 
   function toggleFullscreen(): void {
     switchFullscreen().catch((error: unknown) => {
@@ -31,5 +29,10 @@ export function useFullscreen() {
     });
   }
 
-  return { canGoFullscreen: document.fullscreenEnabled, isFullscreen, toggleFullscreen };
+  return {
+    canGoFullscreen: document.fullscreenEnabled,
+    isFullscreen,
+    label: isFullscreen ? "Leave full screen" : "Full screen",
+    toggleFullscreen,
+  };
 }

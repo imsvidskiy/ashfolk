@@ -24,13 +24,12 @@ function useMenuActions() {
 }
 
 function FullscreenButton() {
-  const { canGoFullscreen, isFullscreen, toggleFullscreen } = useFullscreen();
+  const { canGoFullscreen, isFullscreen, label, toggleFullscreen } = useFullscreen();
 
   if (!canGoFullscreen) {
     return null;
   }
 
-  const label = isFullscreen ? "Leave full screen" : "Full screen";
   const Icon = isFullscreen ? Minimize2 : Maximize2;
 
   return (

@@ -56,7 +56,7 @@ function MenuEntry({ children, icon, onClick }: MenuEntryProps) {
 }
 
 function FullscreenEntry() {
-  const { canGoFullscreen, isFullscreen, toggleFullscreen } = useFullscreen();
+  const { canGoFullscreen, isFullscreen, label, toggleFullscreen } = useFullscreen();
 
   if (!canGoFullscreen) {
     return null;
@@ -66,7 +66,7 @@ function FullscreenEntry() {
 
   return (
     <MenuEntry icon={<Icon aria-hidden="true" size={17} />} onClick={toggleFullscreen}>
-      {isFullscreen ? "Leave full screen" : "Full screen"}
+      {label}
     </MenuEntry>
   );
 }
