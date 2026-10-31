@@ -1,8 +1,8 @@
 import { Vector3 } from "three";
 import { describe, expect, it, it as test } from "vitest";
 import { BUILDINGS } from "../../content/buildings.ts";
-import { MaterialSlot } from "../materials.ts";
-import { triangleCount } from "../mesh/mesh-data.ts";
+import { MaterialSlot, type MaterialSlotIndex } from "../materials.ts";
+import { type MeshData, triangleCount } from "../mesh/mesh-data.ts";
 import { outermostHit } from "../mesh/surface-probe.ts";
 import { highestOpenEdge, meshProblems } from "../testing/mesh-checks.ts";
 import { loosePieces, TOUCHING } from "../testing/mesh-connectivity.ts";
@@ -12,18 +12,31 @@ import { GLOW_PART } from "./structure-parts.ts";
 
 const FLOAT_SLACK = 1e-4;
 const LEVELS = ["high", "low"] as const;
+const GLOWING_BUILDINGS: readonly SingleModelKind[] = ["campfire", "forge", "kiln", "smelter"];
 
-const WORKING_BUILDINGS: readonly SingleModelKind[] = [
-  "forge",
-  "granary",
-  "kiln",
-  "longhouse",
-  "smelter",
-  "stoneHouse",
-  "workshop",
+const TRIBE_BUILDINGS: readonly SingleModelKind[] = SINGLE_MODEL_KINDS.filter((kind) => {
+  return kind !== "campfire";
+});
+
+const FAR_TRIBE_BUILDINGS: readonly SingleModelKind[] = TRIBE_BUILDINGS.filter((kind) => {
+  return kind !== "tent";
+});
+
+const FRONT_DOORS: readonly (readonly [SingleModelKind, number, MaterialSlotIndex])[] = [
+  ["tent", 0.5, MaterialSlot.Ash],
+  ["longhouse", 1.2, MaterialSlot.Ash],
+  ["stoneHouse", 1, MaterialSlot.Accent],
 ];
 
-const GLOWING_BUILDINGS: readonly SingleModelKind[] = ["forge", "kiln", "smelter"];
+function frontSlot(mesh: MeshData, height: number): number {
+  const hit = outermostHit(mesh, new Vector3(0, height, 0), new Vector3(0, 0, 1));
+
+  if (hit === null) {
+    throw new Error("A ray from the middle of the building should leave through its front");
+  }
+
+  return mesh.channels.slot[mesh.indices[hit.triangle * 3]];
+}
 
 describe.each(SINGLE_MODEL_KINDS)("%s model", (kind) => {
   const high = buildBuildingModel(kind, "high");
@@ -52,46 +65,23 @@ describe.each(SINGLE_MODEL_KINDS)("%s model", (kind) => {
     expect(orderProblems(high)).toEqual([]);
     expect(high.bounds.minimum[1]).toBeGreaterThan(-0.1);
   });
+
+  test("fits inside its footprint at both levels of detail", () => {
+    expect(widestReach(high)).toBeLessThanOrEqual(BUILDINGS[kind].footprint);
+    expect(widestReach(low)).toBeLessThanOrEqual(BUILDINGS[kind].footprint);
+  });
 });
 
 describe("building details", () => {
-  it("paints every dwelling and the totem in the tribe color", () => {
-    for (const kind of ["hut", "storehouse", "tent", "totem"] as const) {
-      expect(buildBuildingModel(kind, "high").channels.slot).toContain(MaterialSlot.Accent);
-    }
+  it.each(TRIBE_BUILDINGS)("paints the %s in the tribe color", (kind) => {
+    expect(buildBuildingModel(kind, "high").channels.slot).toContain(MaterialSlot.Accent);
   });
 
-  it("keeps the embers of a campfire in their own part", () => {
-    expect(buildBuildingModel("campfire", "high").channels.part).toContain(GLOW_PART);
+  it.each(FAR_TRIBE_BUILDINGS)("keeps the tribe color on the far %s", (kind) => {
+    expect(buildBuildingModel(kind, "low").channels.slot).toContain(MaterialSlot.Accent);
   });
 
-  it.each(LEVELS)("shows the %s tent door in front of the cover", (level) => {
-    const tent = buildBuildingModel("tent", level);
-
-    const hit = outermostHit(tent, new Vector3(0, 0.5, 0), new Vector3(0, 0, 1));
-
-    if (hit === null) {
-      throw new Error("A ray from the middle of the tent should leave through its front");
-    }
-
-    expect(tent.channels.slot[tent.indices[hit.triangle * 3]]).toBe(MaterialSlot.Ash);
-  });
-});
-
-describe("era buildings", () => {
-  it.each(SINGLE_MODEL_KINDS)("fits the %s inside its footprint", (kind) => {
-    for (const level of LEVELS) {
-      expect(widestReach(buildBuildingModel(kind, level))).toBeLessThanOrEqual(BUILDINGS[kind].footprint);
-    }
-  });
-
-  it.each(WORKING_BUILDINGS)("paints the %s in the tribe color", (kind) => {
-    for (const level of LEVELS) {
-      expect(buildBuildingModel(kind, level).channels.slot).toContain(MaterialSlot.Accent);
-    }
-  });
-
-  it.each(GLOWING_BUILDINGS)("lights the fire of the %s", (kind) => {
+  it.each(GLOWING_BUILDINGS)("lights the fire of the %s in its own part", (kind) => {
     for (const level of LEVELS) {
       const mesh = buildBuildingModel(kind, level);
 
@@ -100,28 +90,10 @@ describe("era buildings", () => {
     }
   });
 
-  it.each(LEVELS)("opens the %s longhouse door toward the front", (level) => {
-    const longhouse = buildBuildingModel("longhouse", level);
-
-    const hit = outermostHit(longhouse, new Vector3(0, 1.2, 0), new Vector3(0, 0, 1));
-
-    if (hit === null) {
-      throw new Error("A ray from the middle of the longhouse should leave through its front");
+  it.each(FRONT_DOORS)("shows the %s door at the front", (kind, height, slot) => {
+    for (const level of LEVELS) {
+      expect(frontSlot(buildBuildingModel(kind, level), height)).toBe(slot);
     }
-
-    expect(longhouse.channels.slot[longhouse.indices[hit.triangle * 3]]).toBe(MaterialSlot.Ash);
-  });
-
-  it.each(LEVELS)("paints the %s stone house door in the tribe color", (level) => {
-    const house = buildBuildingModel("stoneHouse", level);
-
-    const hit = outermostHit(house, new Vector3(0, 1, 0), new Vector3(0, 0, 1));
-
-    if (hit === null) {
-      throw new Error("A ray from the middle of the house should leave through its front");
-    }
-
-    expect(house.channels.slot[house.indices[hit.triangle * 3]]).toBe(MaterialSlot.Accent);
   });
 
   it("builds houses tall enough for grown people to walk in", () => {

@@ -1,4 +1,4 @@
-import { hashToUnit, lerp, saturate } from "../../shared/math.ts";
+import { hashToUnit, lerp, saturate, smoothstep } from "../../shared/math.ts";
 import { createVolumeNoise } from "../../shared/noise.ts";
 import { createRandom, type RandomSource } from "../../shared/random.ts";
 import { MaterialSlot } from "../materials.ts";
@@ -51,6 +51,14 @@ export function detail(context: StructureContext, high: number, low: number): nu
 export function rising(from: number, to: number, bottom: number, top: number): (point: SurfacePoint) => number {
   return (point) => {
     return lerp(from, to, saturate((point.position.y - bottom) / (top - bottom)));
+  };
+}
+
+export function upwardShade(darkest: number, bottom: number, top: number): (point: SurfacePoint) => number {
+  const gain = 1 - darkest;
+
+  return (point) => {
+    return darkest + gain * smoothstep(bottom, top, point.position.y);
   };
 }
 
@@ -263,7 +271,7 @@ export function prism(outline: Outline, depth: number): Shape {
     return y;
   });
   const lowest = Math.min(...heights);
-  const span = Math.max(Math.max(...heights) - lowest, 1e-5);
+  const span = Math.max(...heights) - lowest;
   const halfDepth = depth / 2;
 
   function vertex(x: number, y: number, z: number, normal: Triple): number {

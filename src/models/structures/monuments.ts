@@ -691,25 +691,31 @@ function addCairn(context: MonumentContext, form: PieceForm<typeof PlantSpecies.
   }
 }
 
+function formOf<Piece extends MonumentPiece>(species: Piece, variant: number): PieceForm<Piece> {
+  const forms: readonly PieceForm<Piece>[] = PIECE_FORMS[species];
+
+  return forms[variant % forms.length];
+}
+
 function addPiece(context: MonumentContext, species: MonumentPiece, variant: number): void {
   switch (species) {
     case PlantSpecies.Arch:
-      addArch(context, PIECE_FORMS[species][variant % PIECE_FORMS[species].length]);
+      addArch(context, formOf(species, variant));
       break;
     case PlantSpecies.Cairn:
-      addCairn(context, PIECE_FORMS[species][variant % PIECE_FORMS[species].length]);
+      addCairn(context, formOf(species, variant));
       break;
     case PlantSpecies.Dolmen:
-      addDolmen(context, PIECE_FORMS[species][variant % PIECE_FORMS[species].length]);
+      addDolmen(context, formOf(species, variant));
       break;
     case PlantSpecies.Idol:
-      addIdol(context, PIECE_FORMS[species][variant % PIECE_FORMS[species].length]);
+      addIdol(context, formOf(species, variant));
       break;
     case PlantSpecies.Menhir:
-      addMenhir(context, PIECE_FORMS[species][variant % PIECE_FORMS[species].length]);
+      addMenhir(context, formOf(species, variant));
       break;
     case PlantSpecies.Pillar:
-      addPillar(context, PIECE_FORMS[species][variant % PIECE_FORMS[species].length]);
+      addPillar(context, formOf(species, variant));
       break;
     default:
       throw new RangeError(`No monument piece ${String(species)}`);

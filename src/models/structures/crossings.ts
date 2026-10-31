@@ -21,6 +21,7 @@ export const FALLEN_LOG_ROOT_RADIUS = 0.4;
 
 const WOOD_NOISE = createVolumeNoise(createRandom(7310));
 const SUBDIVISIONS: Readonly<Record<CrossingDetailLevel, number>> = { high: 2, low: 0, medium: 1 };
+const STONE_RADIUS = 0.6;
 
 const STONE_SHAPES: readonly (readonly [number, number])[] = [
   [1.12, 0.86],
@@ -72,7 +73,7 @@ function steppingStone(variant: number, level: CrossingDetailLevel): MeshData {
         { distance: 0.58, normal: [0, 1, 0] },
         { distance: 0.62, normal: [0, -1, 0] },
       ],
-      radius: 0.6,
+      radius: STONE_RADIUS,
       roughness: 0.05,
     },
     SUBDIVISIONS[level]
@@ -80,7 +81,7 @@ function steppingStone(variant: number, level: CrossingDetailLevel): MeshData {
 
   const { maximum, minimum } = boundsOf(shape.positions);
   const height = maximum[1] - minimum[1];
-  const width = STONE_WIDTH / 1.2;
+  const width = STONE_WIDTH / (STONE_RADIUS * 2);
 
   const builder = new MeshBuilder();
 
@@ -271,6 +272,7 @@ export function buildFallenLogs(level: CrossingDetailLevel): MeshData[] {
 
 export function fallenLogVariant(length: number, seed: number): number {
   const lengthIndex = Math.abs(length - FALLEN_LOG_LENGTHS[0]) <= Math.abs(length - FALLEN_LOG_LENGTHS[1]) ? 0 : 1;
+  const shapes = FALLEN_LOG_VARIANTS / FALLEN_LOG_LENGTHS.length;
 
-  return lengthIndex + FALLEN_LOG_LENGTHS.length * (Math.floor(seed * 8) % 2);
+  return lengthIndex + FALLEN_LOG_LENGTHS.length * (Math.floor(seed * 8) % shapes);
 }
