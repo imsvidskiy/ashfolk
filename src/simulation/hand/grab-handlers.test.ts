@@ -133,7 +133,6 @@ function createSimulation(): Simulation {
     canSettleRoughGround: true,
     context: simulation.services,
     people: 3,
-    technologies: [],
     x: -120,
     z: 60,
   });

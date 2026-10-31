@@ -614,7 +614,6 @@ export class Simulation {
       canSettleRoughGround,
       context: this.services,
       people: STARTING_TRIBE_SIZE,
-      technologies: [],
       x,
       z,
     });

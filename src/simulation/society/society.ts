@@ -1,5 +1,4 @@
 import { personName, tribeIdentity } from "../../content/names.ts";
-import type { TechnologyId } from "../../content/technologies.ts";
 import type { RandomSource } from "../../shared/random.ts";
 import { NO_PLANT, type VegetationStore } from "../../world/vegetation-store.ts";
 import { type Hop, isLeaping } from "../agents/hops.ts";
@@ -19,7 +18,6 @@ import { walk } from "./jobs/job.ts";
 import { updateNeeds } from "./needs.ts";
 import { createPerson, type DeathCause, type Person, walkSpeed } from "./person.ts";
 import { abandonPlots } from "./plots.ts";
-import { syncEra } from "./progress.ts";
 import type { DeathAccount, PersonTick, SocietyContext } from "./society-context.ts";
 import { createTribe, type Tribe } from "./tribe.ts";
 import { updateTribe } from "./tribe-life.ts";
@@ -66,7 +64,6 @@ interface TribeArrival {
   canSettleRoughGround: boolean;
   context: SocietyContext;
   people: number;
-  technologies: readonly TechnologyId[];
   x: number;
   z: number;
 }
@@ -280,12 +277,6 @@ export class SocietySystem {
     }
 
     const tribe = this.createTribe(site.x, site.z);
-
-    for (const technology of arrival.technologies) {
-      tribe.technologies.add(technology);
-    }
-
-    syncEra(tribe);
 
     for (let member = 0; member < arrival.people; member += 1) {
       this.addPerson(tribe, this.#newcomer(tribe, site, member, arrival));

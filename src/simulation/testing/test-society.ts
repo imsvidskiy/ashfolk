@@ -273,7 +273,6 @@ export class SocietyHarness {
       canSettleRoughGround: false,
       context: this.context,
       people,
-      technologies: [],
       x: 0,
       z: 0,
     });
