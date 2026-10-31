@@ -64,6 +64,18 @@ function closeTo(values: readonly number[]): unknown[] {
   });
 }
 
+function spanOf(positions: Float32Array, axis: number): number {
+  let minimum = Number.POSITIVE_INFINITY;
+  let maximum = Number.NEGATIVE_INFINITY;
+
+  for (let offset = axis; offset < positions.length; offset += 3) {
+    minimum = Math.min(minimum, positions[offset]);
+    maximum = Math.max(maximum, positions[offset]);
+  }
+
+  return maximum - minimum;
+}
+
 function isFading(mesh: Mesh): boolean {
   return mesh.material instanceof MeshStandardNodeMaterial && mesh.material.maskNode !== null;
 }
@@ -145,6 +157,23 @@ describe("building view", () => {
     expect(plinthLook).toEqual(closeTo([0.6, worn.style, 1]));
     expect(depth).toBeGreaterThan(0.5);
     expect(depth).toBeLessThanOrEqual(3.6);
+  });
+
+  it("lays the plinth of a long building along the long side of its model", () => {
+    const { mirror, view } = createView([{ ...HUT, kind: "longhouse" }]);
+
+    const { positions } = buildBuildingModel("longhouse", "high");
+    const modelWidth = spanOf(positions, 0);
+    const modelLength = spanOf(positions, 2);
+
+    hutFrom(view, mirror, 2000);
+
+    const [, , width, length] = firstInstance(drawnMeshes(view.group, "plinthBox"), "plinthBox");
+
+    expect(modelWidth).toBeGreaterThan(modelLength);
+    expect(width).toBeGreaterThan(length);
+    expect(width).toBeLessThan(modelWidth);
+    expect(length).toBeLessThan(modelLength);
   });
 
   it("lights finished workplaces and burning campfires and leaves the rest dark", () => {
