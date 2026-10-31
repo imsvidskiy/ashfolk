@@ -73,8 +73,12 @@ function isPatchVisible(patch: Patch, frustum: Frustum): boolean {
   return patch.pieces.length > 0 && frustum.intersectsBox(patch.bounds);
 }
 
-function patchLevelFor(distance: number, detail: number): number {
-  const level = levelWithin(distance, PATCH_LEVEL_DISTANCES, detail);
+function levelFor(patch: Patch, camera: PerspectiveCamera, detail: number, sharedLevel: number): number {
+  if (sharedLevel !== NO_LEVEL) {
+    return sharedLevel;
+  }
+
+  const level = levelWithin(patch.bounds.distanceToPoint(camera.position), PATCH_LEVEL_DISTANCES, detail);
 
   if (level === HIDDEN_LEVEL) {
     return PATCH_STEPS.length - 1;
@@ -91,9 +95,7 @@ export class PatchGrid {
   readonly #levels: readonly (readonly PatchLevel[])[];
   readonly #measure: PatchMeasure;
   readonly #patches: Patch[] = [];
-  readonly #previousLevels: Int8Array;
-  #piecesVersion = 0;
-  #placedPiecesVersion = -1;
+  #hasNewPieces = false;
 
   constructor(grid: WorldGrid, measure: PatchMeasure, options: PatchGridOptions) {
     const patchesPerSide = Math.ceil(grid.cellsPerSide / PATCH_CELLS);
@@ -113,7 +115,6 @@ export class PatchGrid {
       });
     });
     this.#chosenLevels = new Int8Array(patchCount).fill(NO_LEVEL);
-    this.#previousLevels = new Int8Array(patchCount).fill(NO_LEVEL);
 
     for (let row = 0; row < patchesPerSide; row += 1) {
       for (let column = 0; column < patchesPerSide; column += 1) {
@@ -135,33 +136,29 @@ export class PatchGrid {
   }
 
   update(camera: PerspectiveCamera, frustum: Frustum, detail: number, sharedLevels?: Readonly<Int8Array>): void {
-    this.#previousLevels.set(this.#chosenLevels);
-    this.#chosenLevels.fill(NO_LEVEL);
+    let hasNewOrigins = this.#hasNewPieces;
 
     for (const counts of this.#counts) {
       counts.fill(0);
     }
 
     for (const [index, patch] of this.#patches.entries()) {
-      if (!isPatchVisible(patch, frustum)) {
-        continue;
+      const shared = sharedLevels === undefined ? NO_LEVEL : sharedLevels[index];
+      const level = isPatchVisible(patch, frustum) ? levelFor(patch, camera, detail, shared) : NO_LEVEL;
+
+      if (level !== this.#chosenLevels[index]) {
+        this.#chosenLevels[index] = level;
+        hasNewOrigins = true;
       }
 
-      const shared = sharedLevels === undefined ? NO_LEVEL : sharedLevels[index];
-      const level = shared === NO_LEVEL ? patchLevelFor(patch.bounds.distanceToPoint(camera.position), detail) : shared;
-
-      this.#chosenLevels[index] = level;
+      if (level === NO_LEVEL) {
+        continue;
+      }
 
       for (const piece of patch.pieces) {
         this.#place(piece, level);
       }
     }
-
-    const hasNewOrigins =
-      this.#piecesVersion !== this.#placedPiecesVersion ||
-      this.#chosenLevels.some((level, index) => {
-        return level !== this.#previousLevels[index];
-      });
 
     for (const [material, levels] of this.#levels.entries()) {
       for (const [index, level] of levels.entries()) {
@@ -178,7 +175,7 @@ export class PatchGrid {
       }
     }
 
-    this.#placedPiecesVersion = this.#piecesVersion;
+    this.#hasNewPieces = false;
   }
 
   dispose(): void {
@@ -237,7 +234,7 @@ export class PatchGrid {
   #measurePatch(patch: Patch): void {
     const content = this.#measure(patch.region);
 
-    this.#piecesVersion += 1;
+    this.#hasNewPieces = true;
 
     if (content === null) {
       patch.pieces = [];
