@@ -9,7 +9,7 @@ import type { Stock } from "../stock.ts";
 import type { Tribe } from "../tribe.ts";
 import { campPoint, completedBuilding } from "../tribe-places.ts";
 import type { CarriedWeapon } from "../weapons.ts";
-import { Engagement } from "./engagement.ts";
+import { Engagement, runningPose } from "./engagement.ts";
 import { type Foe, personFoe } from "./foes.ts";
 import { plunderSurplus, totalGoods, unpack } from "./provisions.ts";
 import { buildingName, burnableBuilding, eatRation, MARCH_SPEED, type Raid } from "./raids.ts";
@@ -281,7 +281,7 @@ export class RaidJob implements Job {
       return true;
     }
 
-    person.pose = this.#weapon.kind === "spear" ? "charge" : "run";
+    person.pose = runningPose(this.#weapon);
 
     return false;
   }

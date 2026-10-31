@@ -39,6 +39,10 @@ function faceFoe(tick: PersonTick, foe: Foe): void {
   faceTowards(tick.person.mover, target.x, target.z);
 }
 
+export function runningPose(weapon: CarriedWeapon): PersonPose {
+  return weapon.kind === "spear" ? "charge" : "run";
+}
+
 export class Engagement {
   readonly #weapon: CarriedWeapon;
   #cooldownSeconds: number;
@@ -172,7 +176,7 @@ export class Engagement {
     }
 
     walk(tick, runSpeed(person));
-    person.pose = this.#weapon.kind === "spear" ? "charge" : "run";
+    person.pose = runningPose(this.#weapon);
   }
 
   #backOff(tick: PersonTick, foe: Foe): void {
