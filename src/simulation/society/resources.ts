@@ -11,6 +11,7 @@ const QUARRY_SLOPE = 0.9;
 const CLIFF_SLOPE = 1.1;
 const FISHING_DEPTH = 0.6;
 const SHORE_ATTEMPTS = 40;
+const CLOSEST_SHORE = 20;
 
 interface PlantSearch {
   accepts: (plant: number) => boolean;
@@ -143,13 +144,11 @@ export function nearestShore(
   origin: Waypoint,
   radius: number,
   random: RandomSource,
-  accepts: (spot: ShoreSpot) => boolean = () => {
-    return true;
-  }
+  accepts: (spot: ShoreSpot) => boolean
 ): ShoreSpot | null {
   for (let attempt = 0; attempt < SHORE_ATTEMPTS; attempt += 1) {
     const angle = random.next() * FULL_TURN;
-    const distance = 20 + random.next() * radius;
+    const distance = CLOSEST_SHORE + random.next() * radius;
 
     const spot = shoreSpotAt(world, origin.x + Math.cos(angle) * distance, origin.z + Math.sin(angle) * distance);
 

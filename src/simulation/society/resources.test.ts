@@ -13,6 +13,10 @@ interface Search {
   z: number;
 }
 
+function isAnyShore(): boolean {
+  return true;
+}
+
 function scanAllPlants(world: WorldState, search: Search): number | null {
   const { fields, grid, vegetation } = world;
 
@@ -87,7 +91,7 @@ describe("fishing", () => {
     });
 
     for (let attempt = 0; attempt < 100; attempt += 1) {
-      const spot = nearestShore(harness.world, { x: 0, z: 0 }, 200, harness.random);
+      const spot = nearestShore(harness.world, { x: 0, z: 0 }, 200, harness.random, isAnyShore);
 
       if (spot === null) {
         throw new Error("Expected a fishing spot");
@@ -118,7 +122,7 @@ describe("staying dry", () => {
     floodCells(harness.world, pond, 2);
 
     const spots = Array.from({ length: 200 }, () => {
-      return nearestShore(harness.world, { x: -25, z: -25 }, 15, harness.random);
+      return nearestShore(harness.world, { x: -25, z: -25 }, 15, harness.random, isAnyShore);
     });
 
     expect(
