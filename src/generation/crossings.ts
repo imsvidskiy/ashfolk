@@ -202,6 +202,7 @@ function interpolationAt(course: RiverCourse, along: number): { amount: number; 
 
 function pointAlong(course: RiverCourse, along: number): Point {
   const { amount, index } = interpolationAt(course, along);
+
   const start = course.river.points[index];
   const end = course.river.points[index + 1];
 

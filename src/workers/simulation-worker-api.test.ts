@@ -9,11 +9,11 @@ import { Simulation } from "../simulation/simulation.ts";
 import { createVegetatedWorld } from "../simulation/testing/test-world.ts";
 import { createSimulationWorkerApi, type SimulationWorkerApi } from "./simulation-worker-api.ts";
 
+const TEST_DIMENSIONS = { cellSize: 10, cellsPerSide: 64 };
+
 interface WorldSender {
   createWorld: (request: WorldRequest) => InitialWorld;
 }
-
-const TEST_DIMENSIONS = { cellSize: 10, cellsPerSide: 64 };
 
 function createTestSimulation(): Simulation {
   return new Simulation(createVegetatedWorld({ dimensions: TEST_DIMENSIONS }));

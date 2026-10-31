@@ -3,6 +3,8 @@ import type { WorldGrid } from "../world/world-grid.ts";
 import { type DrainageBasins, isNearLake, NO_CELL } from "./drainage.ts";
 import { chainCells, type RiverChain, riverWidthFor } from "./river-chains.ts";
 
+export const SOURCE_REACH = 100;
+
 const SMALLEST_SPACING = 40;
 const SPACING_WIDTHS = 2.5;
 const LARGEST_SPACING = 65;
@@ -18,7 +20,6 @@ const CAPTURE_BUMP = 8;
 const FLOW_LOOKAROUND = 3;
 const PARALLEL_REACH = 180;
 const PARALLEL_RUN = 400;
-export const SOURCE_REACH = 100;
 
 export interface RiverLand {
   readonly basins: DrainageBasins;
@@ -478,6 +479,7 @@ export function spaceRiverChains(land: RiverLand, chains: readonly RiverChain[])
 
     if (source === null) {
       claim(spacing, spaced, kept, spaced.length);
+
       continue;
     }
 

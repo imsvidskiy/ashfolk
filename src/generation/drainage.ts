@@ -149,6 +149,7 @@ function fillDepressions(heights: Float32Array, grid: WorldGrid, coastDistance: 
   const receivers = new Int32Array(grid.cellCount).fill(NO_CELL);
   const order = new Int32Array(grid.cellCount);
   const heap = new MinHeap(size * 16);
+
   let processed = 0;
 
   function seedCell(cell: number): void {

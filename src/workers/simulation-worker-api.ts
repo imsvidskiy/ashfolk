@@ -169,6 +169,7 @@ export function createSimulationWorkerApi(
       }
 
       const { request, simulation } = running;
+
       const snapshot = simulation.snapshot();
 
       if (snapshot === null) {
