@@ -19,7 +19,7 @@ import {
   vec3,
 } from "three/tsl";
 import { BufferGeometry, Float32BufferAttribute, MeshStandardNodeMaterial } from "three/webgpu";
-import type { WorldMirror } from "../../game/world-mirror.ts";
+import type { WorldGrid } from "../../world/world-grid.ts";
 import { rotateAroundUp, unitNoise3 } from "../node-helpers.ts";
 import { coarseGroundOffsetNode } from "../terrain/height-sampling.ts";
 import type { TerrainTextures } from "../terrain/terrain-textures.ts";
@@ -82,13 +82,13 @@ export function createFoamMaterial(): MeshStandardNodeMaterial {
   return material;
 }
 
-export function createBarMaterial(textures: TerrainTextures, mirror: WorldMirror): MeshStandardNodeMaterial {
+export function createBarMaterial(textures: TerrainTextures, grid: WorldGrid): MeshStandardNodeMaterial {
   const material = new MeshStandardNodeMaterial();
   const grounding = attribute("grounding", "float");
   const waterLevel = attribute("barWater", "float");
 
   material.positionNode = positionLocal.add(
-    vec3(0, coarseGroundOffsetNode(textures, mirror.grid, positionLocal.xz).mul(grounding), 0)
+    vec3(0, coarseGroundOffsetNode(textures, grid, positionLocal.xz).mul(grounding), 0)
   );
 
   const depth = max(waterLevel.sub(positionWorld.y), 0);

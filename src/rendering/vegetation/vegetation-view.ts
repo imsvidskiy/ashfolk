@@ -528,19 +528,16 @@ export class VegetationView {
 
   #markBucketsOf(chunkIndices: readonly number[]): void {
     for (const index of chunkIndices) {
+      const chunk = this.chunks.chunks[index];
       const level = this.#chunkLevels[index];
 
-      if (level === HIDDEN_LEVEL) {
-        continue;
+      if (level !== HIDDEN_LEVEL) {
+        for (const bucket of chunk.changedBuckets) {
+          this.#changedBuckets[level].add(bucket);
+        }
       }
 
-      for (const bucket of this.chunks.chunks[index].changedBuckets) {
-        this.#changedBuckets[level].add(bucket);
-      }
-    }
-
-    for (const index of chunkIndices) {
-      this.chunks.chunks[index].changedBuckets = [];
+      chunk.changedBuckets = [];
     }
   }
 

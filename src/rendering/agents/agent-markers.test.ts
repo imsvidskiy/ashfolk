@@ -1,6 +1,14 @@
-import { Frustum, Matrix4, Mesh, PerspectiveCamera, Vector3 } from "three/webgpu";
+import {
+  type BufferAttribute,
+  Frustum,
+  type InterleavedBufferAttribute,
+  Mesh,
+  PerspectiveCamera,
+  Vector3,
+} from "three/webgpu";
 import { describe, expect, it } from "vitest";
 import { CameraAxes } from "../effects/billboards.ts";
+import { type CameraView, frustumOf } from "../testing/camera-above.ts";
 import { AgentMarkers, NO_HERD } from "./agent-markers.ts";
 import { ANIMAL_MARKERS, MarkerShape, personMarker } from "./marker-look.ts";
 import { MARKER_STYLE_ATTRIBUTE } from "./marker-material.ts";
@@ -9,6 +17,7 @@ import type { SightGround } from "./terrain-sight.ts";
 const VIEWPORT_HEIGHT = 900;
 const HANDOVER = 420;
 const HERD = 7;
+const CROWD = 150;
 const BEAR_CLAN = personMarker(0xc8_55_3d);
 const FLAT_GROUND: SightGround = {
   grid: { halfSize: 5000 },
@@ -17,17 +26,18 @@ const FLAT_GROUND: SightGround = {
   },
 };
 
-function markersSeenFrom(height: number, ground: SightGround = FLAT_GROUND): AgentMarkers {
+function viewFrom(height: number): CameraView {
   const camera = new PerspectiveCamera(45, 1.6, 0.5, 40_000);
 
   camera.position.set(0, height, height * 0.6);
   camera.lookAt(0, 0, 0);
   camera.updateMatrixWorld();
 
-  const frustum = new Frustum().setFromProjectionMatrix(
-    new Matrix4().multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse)
-  );
+  return { camera, frustum: frustumOf(camera) };
+}
 
+function markersSeenFrom(height: number, ground: SightGround = FLAT_GROUND): AgentMarkers {
+  const { camera, frustum } = viewFrom(height);
   const markers = new AgentMarkers(new CameraAxes(), ground);
 
   markers.begin(camera, frustum, VIEWPORT_HEIGHT);
@@ -43,20 +53,32 @@ function addDeerHerd(markers: AgentMarkers, spread: number, selectedIndex = -1):
   }
 }
 
-function drawnStyles(markers: AgentMarkers): { readonly isSelected: boolean; readonly shape: number }[] {
+function drawnAttribute(markers: AgentMarkers, attribute: string): BufferAttribute | InterleavedBufferAttribute {
   const [mesh] = markers.group.children;
 
   if (!(mesh instanceof Mesh)) {
     throw new TypeError("Expected the markers to be drawn by meshes");
   }
 
-  const styles = mesh.geometry.getAttribute(MARKER_STYLE_ATTRIBUTE);
+  return mesh.geometry.getAttribute(attribute);
+}
+
+function drawnStyles(markers: AgentMarkers): { readonly isSelected: boolean; readonly shape: number }[] {
+  const styles = drawnAttribute(markers, MARKER_STYLE_ATTRIBUTE);
 
   return Array.from({ length: markers.count }, (_, index) => {
     return {
       isSelected: styles.getZ(index) > 0.5,
       shape: styles.getX(index),
     };
+  });
+}
+
+function drawnSpots(markers: AgentMarkers): { readonly x: number; readonly z: number }[] {
+  const placements = drawnAttribute(markers, "billboardPlacement");
+
+  return Array.from({ length: markers.count }, (_, index) => {
+    return { x: placements.getX(index), z: placements.getZ(index) };
   });
 }
 
@@ -156,5 +178,30 @@ describe("agent markers", () => {
       { isSelected: false, shape: MarkerShape.Circle },
       { isSelected: true, shape: MarkerShape.Diamond },
     ]);
+  });
+
+  it("keeps every marker of a crowd in order, frame after frame", () => {
+    const { camera, frustum } = viewFrom(2000);
+    const markers = new AgentMarkers(new CameraAxes(), FLAT_GROUND);
+    const crowd = Array.from({ length: CROWD }, (_, index) => {
+      return new Vector3((index % 20) * 15 - 150, 1, Math.floor(index / 20) * 15 - 75);
+    });
+
+    for (let frame = 0; frame < 2; frame += 1) {
+      markers.begin(camera, frustum, VIEWPORT_HEIGHT);
+
+      for (const anchor of crowd) {
+        markers.add(anchor, BEAR_CLAN, HANDOVER, false);
+      }
+
+      markers.commit();
+    }
+
+    expect(markers.count).toBe(CROWD);
+    expect(drawnSpots(markers)).toEqual(
+      crowd.map(({ x, z }) => {
+        return { x, z };
+      })
+    );
   });
 });

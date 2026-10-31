@@ -1,17 +1,18 @@
 import {
   DirectionalLight,
-  Frustum,
   InstancedBufferGeometry,
-  Matrix4,
   Mesh,
   MeshStandardNodeMaterial,
   PerspectiveCamera,
 } from "three/webgpu";
 import { describe, expect, it } from "vitest";
 import type { WorldMirror } from "../../game/world-mirror.ts";
+import { PlantState } from "../../world/vegetation-store.ts";
 import { CAMERA_FADE_REACH } from "../camera-fade.ts";
 import { FireGlow } from "../effects/fire-glow.ts";
 import { TerrainTextures } from "../terrain/terrain-textures.ts";
+import { frustumOf } from "../testing/camera-above.ts";
+import { drawnInstances } from "../testing/drawn-meshes.ts";
 import { createVegetatedMirror } from "../testing/vegetated-mirror.ts";
 import { FLOATS_PER_PLANT } from "./vegetation-chunks.ts";
 import { VegetationView } from "./vegetation-view.ts";
@@ -29,11 +30,7 @@ function updateFrom(view: VegetationView, x: number, y: number, z: number): void
   camera.lookAt(x + 10, y - 2, z);
   camera.updateMatrixWorld();
 
-  const frustum = new Frustum().setFromProjectionMatrix(
-    new Matrix4().multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse)
-  );
-
-  view.update(camera, frustum, new DirectionalLight(), 1, 0);
+  view.update(camera, frustumOf(camera), new DirectionalLight(), 1, 0);
 }
 
 function fadingMeshes(view: VegetationView): Mesh<InstancedBufferGeometry>[] {
@@ -104,5 +101,24 @@ describe("vegetation view", () => {
     updateFrom(view, x, 5000, z);
 
     expect(fadingCount(view)).toBe(0);
+  });
+
+  it("stops drawing a plant removed from a chunk on screen", () => {
+    const { mirror, view } = createView();
+
+    const { vegetation } = mirror;
+    const [x] = vegetation.x;
+    const [z] = vegetation.z;
+    const y = mirror.heightAt(x, z) + 1;
+
+    updateFrom(view, x, y, z);
+
+    const before = drawnInstances(view.group, "plantPlacement");
+
+    vegetation.state[0] = PlantState.Removed;
+    view.plantsChanged([0]);
+    updateFrom(view, x, y, z);
+
+    expect(drawnInstances(view.group, "plantPlacement")).toBe(before - 1);
   });
 });
