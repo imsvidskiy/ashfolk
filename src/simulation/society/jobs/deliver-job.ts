@@ -1,5 +1,5 @@
 import type { Waypoint } from "../../agents/navigation.ts";
-import { dropCarrying, isCarryingAnything, walkSpeed } from "../person.ts";
+import { dropCarrying, walkSpeed } from "../person.ts";
 import type { PersonTick } from "../society-context.ts";
 import { completedBuilding, nearCamp } from "../tribe-places.ts";
 import { headTo, type Job, walk } from "./job.ts";
@@ -39,7 +39,7 @@ export class DeliverJob implements Job {
   update(tick: PersonTick): Job | null {
     const { carrying } = tick.person;
 
-    const isHeavy = isCarryingAnything(tick.person) && carrying.item !== "berries" && carrying.amount > HEAVY_LOAD;
+    const isHeavy = carrying.item !== "berries" && carrying.amount > HEAVY_LOAD;
 
     if (!walk(tick, walkSpeed(tick.person) * (isHeavy ? HEAVY_LOAD_SPEED : 1))) {
       return this;
