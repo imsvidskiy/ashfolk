@@ -101,8 +101,6 @@ export class GodCamera {
   groundFootprint(reach: number): GroundPoint[] {
     const { camera } = this;
 
-    camera.updateMatrixWorld();
-
     return SCREEN_CORNERS.map(([column, row]) => {
       const direction = this.#ray.set(column, row, 0.5).unproject(camera).sub(camera.position).normalize();
 
@@ -277,5 +275,6 @@ export class GodCamera {
 
     this.camera.position.copy(position);
     this.camera.lookAt(this.#target);
+    this.camera.updateMatrixWorld();
   }
 }

@@ -27,6 +27,10 @@ function settle(camera: GodCamera): void {
   }
 }
 
+function flatGround(): number {
+  return 0;
+}
+
 function isAlwaysTrue(): boolean {
   return true;
 }
@@ -61,26 +65,14 @@ function createRig(
   document.body.append(canvas);
 
   const perspective = new PerspectiveCamera(45, CANVAS_WIDTH / CANVAS_HEIGHT, 1, 40_000);
-  const camera = new GodCamera(
-    perspective,
-    () => {
-      return 0;
-    },
-    WORLD_HALF_SIZE
-  );
+  const camera = new GodCamera(perspective, flatGround, WORLD_HALF_SIZE);
 
   camera.jumpTo({ distance: 600, targetX: 0, targetZ: 0 });
   settle(camera);
 
   const tool = createTool(canBegin, isActive);
   const tools = leading === null ? [tool] : [leading, tool];
-  const picker = new GroundPicker(
-    perspective,
-    () => {
-      return 0;
-    },
-    WORLD_HALF_SIZE
-  );
+  const picker = new GroundPicker(perspective, flatGround, WORLD_HALF_SIZE);
   const rig = { camera, canvas, controls: new PointerControls(canvas, camera, picker, tools, tool.tap), tool };
 
   rigs.push(rig);
@@ -472,5 +464,27 @@ describe("pointer controls", () => {
     mouse(rig, "pointerleave", 120, 200);
 
     expect(rig.tool.hover).toHaveBeenLastCalledWith(null, null);
+  });
+
+  it("hovers the ground under the still pointer in the view the camera turned to", () => {
+    const rig = createRig();
+    const picker = new GroundPicker(rig.camera.camera, flatGround, WORLD_HALF_SIZE);
+
+    mouse(rig, "pointermove", 120, 200);
+    rig.camera.orbit(0.6, 0);
+    rig.camera.update(0.05);
+    rig.controls.update();
+
+    const hovered = rig.tool.hover.mock.lastCall?.[0];
+
+    rig.camera.camera.updateMatrixWorld();
+
+    const drawn = picker.pick({ x: 120, y: 200 }, { height: CANVAS_HEIGHT, width: CANVAS_WIDTH });
+
+    if (hovered === undefined || hovered === null || drawn === null) {
+      throw new Error("The pointer should be over the ground");
+    }
+
+    expect(hovered.distanceTo(drawn)).toBeLessThan(0.01);
   });
 });
