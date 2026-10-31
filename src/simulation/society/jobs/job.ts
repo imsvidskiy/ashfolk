@@ -4,6 +4,7 @@ import type { VegetationStore } from "../../../world/vegetation-store.ts";
 import { faceTowards, moveAlong, setDestination, stopMoving } from "../../agents/movement.ts";
 import type { Waypoint } from "../../agents/navigation.ts";
 import { dryStandSpot, nearestDrySpot } from "../../agents/walkable-ground.ts";
+import type { WorldState } from "../../world/world-state.ts";
 import { isCarryingAnything, type Person, walkSpeed } from "../person.ts";
 import type { PersonTick, SocietyContext } from "../society-context.ts";
 import type { Tribe } from "../tribe.ts";
@@ -126,6 +127,20 @@ function approachDirection(person: Person, target: WorkTarget): Waypoint {
   return { x: awayX / distance, z: awayZ / distance };
 }
 
+function workSpot(world: WorldState, person: Person, target: WorkTarget): Waypoint {
+  const standOff = target.radius + target.reach;
+  const standing = dryStandSpot(world, target, standOff, person.mover);
+
+  if (standing !== null) {
+    return standing;
+  }
+
+  const direction = approachDirection(person, target);
+  const approach = { x: target.x + direction.x * standOff, z: target.z + direction.z * standOff };
+
+  return nearestDrySpot(world, approach, DRY_DESTINATION_RADIUS);
+}
+
 export function isFreePlant(tick: PersonTick, plant: number): boolean {
   return tick.context.world.vegetation.isAlive(plant) && !tick.tribe.claimedPlants.has(plant);
 }
@@ -142,31 +157,17 @@ export function canWorkAtPlant(tick: PersonTick, plant: number, reach: number): 
 }
 
 export function headToWork(person: Person, target: WorkTarget, context: SocietyContext): void {
-  const standOff = target.radius + target.reach;
-  const standing = dryStandSpot(context.world, target, standOff, person.mover);
+  headToWorkSpot(person, workSpot(context.world, person, target), context);
+}
 
-  if (standing !== null) {
-    setDestination(person.mover, standing, context.navigation, { arrivalDistance: WORK_ARRIVAL_DISTANCE });
-
-    return;
-  }
-
-  const direction = approachDirection(person, target);
-  const spot = { x: target.x + direction.x * standOff, z: target.z + direction.z * standOff };
-
-  setDestination(person.mover, nearestDrySpot(context.world, spot, DRY_DESTINATION_RADIUS), context.navigation, {
-    arrivalDistance: WORK_ARRIVAL_DISTANCE,
-  });
+export function headToWorkSpot(person: Person, spot: Waypoint, context: SocietyContext): void {
+  setDestination(person.mover, spot, context.navigation, { arrivalDistance: WORK_ARRIVAL_DISTANCE });
 }
 
 export function headTo(person: Person, destination: Waypoint, context: SocietyContext): void {
   const dryDestination = nearestDrySpot(context.world, destination, DRY_DESTINATION_RADIUS);
 
   setDestination(person.mover, dryDestination, context.navigation);
-}
-
-export function headToBank(person: Person, bank: Waypoint, context: SocietyContext): void {
-  setDestination(person.mover, bank, context.navigation, { arrivalDistance: WORK_ARRIVAL_DISTANCE });
 }
 
 export function walk(tick: PersonTick, speed: number): boolean {

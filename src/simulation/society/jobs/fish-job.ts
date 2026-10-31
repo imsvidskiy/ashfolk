@@ -4,7 +4,7 @@ import type { PersonTick } from "../society-context.ts";
 import { learn, markScarce } from "../tribe.ts";
 import { campPoint } from "../tribe-places.ts";
 import { DeliverJob } from "./deliver-job.ts";
-import { Errand, headToBank, type Job } from "./job.ts";
+import { Errand, headToWorkSpot, type Job } from "./job.ts";
 
 const FISHING_SECONDS = 11;
 const CATCH_CHANCE = 0.7;
@@ -35,7 +35,7 @@ class FishJob implements Job {
 
   constructor(tick: PersonTick, spot: ShoreSpot) {
     this.#errand = new Errand(FISHING_SECONDS, "fish", { x: spot.waterX, z: spot.waterZ });
-    headToBank(tick.person, spot, tick.context);
+    headToWorkSpot(tick.person, spot, tick.context);
   }
 
   update(tick: PersonTick): Job | null {
