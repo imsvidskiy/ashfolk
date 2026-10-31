@@ -25,19 +25,11 @@ export class CombatLedger {
   }
 
   stagger(id: number, assailantId: number): void {
-    const record = this.#recordOf(id);
-
-    record.staggerSeconds = STAGGER_SECONDS;
-    record.assailantId = assailantId;
-    record.memorySeconds = MEMORY_SECONDS;
+    this.#remember(id, assailantId).staggerSeconds = STAGGER_SECONDS;
   }
 
   guard(id: number, assailantId: number): void {
-    const record = this.#recordOf(id);
-
-    record.guardSeconds = GUARD_SECONDS;
-    record.assailantId = assailantId;
-    record.memorySeconds = MEMORY_SECONDS;
+    this.#remember(id, assailantId).guardSeconds = GUARD_SECONDS;
   }
 
   isStaggered(id: number): boolean {
@@ -74,22 +66,20 @@ export class CombatLedger {
     }
   }
 
-  #recordOf(id: number): FighterRecord {
+  #remember(id: number, assailantId: number): FighterRecord {
     const existing = this.#records.get(id);
 
-    if (existing !== undefined) {
-      return existing;
+    if (existing === undefined) {
+      const record: FighterRecord = { assailantId, guardSeconds: 0, memorySeconds: MEMORY_SECONDS, staggerSeconds: 0 };
+
+      this.#records.set(id, record);
+
+      return record;
     }
 
-    const record: FighterRecord = {
-      assailantId: id,
-      guardSeconds: 0,
-      memorySeconds: MEMORY_SECONDS,
-      staggerSeconds: 0,
-    };
+    existing.assailantId = assailantId;
+    existing.memorySeconds = MEMORY_SECONDS;
 
-    this.#records.set(id, record);
-
-    return record;
+    return existing;
   }
 }
