@@ -123,7 +123,7 @@ function newcomerAge(isGrownUp: boolean, random: RandomSource): number {
 function keepHopping(tick: PersonTick, hop: Hop): void {
   const { context, person, seconds } = tick;
 
-  person.pose = isLeaping(person.mover) ? "leap" : "run";
+  person.pose = isLeaping(hop) ? "leap" : "run";
   person.speed = hop.speed;
   moveAlong(person.mover, seconds, person.speed, context.world, context.navigation);
 }

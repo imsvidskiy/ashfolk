@@ -46,13 +46,7 @@ export function isHopping(mover: Mover): boolean {
   return mover.hop !== null;
 }
 
-export function isLeaping(mover: Mover): boolean {
-  const { hop } = mover;
-
-  if (hop === null) {
-    return false;
-  }
-
+export function isLeaping(hop: Hop): boolean {
   return Math.min(Math.abs(hop.travelled - hop.enterAt), Math.abs(hop.travelled - hop.leaveAt)) < LEAP_REACH;
 }
 
