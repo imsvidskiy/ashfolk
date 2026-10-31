@@ -6,6 +6,7 @@ import { type QualityLevel, RENDER_QUALITY } from "../rendering/render-quality.t
 import { WorldRenderer } from "../rendering/world-renderer.ts";
 import { clamp } from "../shared/math.ts";
 import type { ChronicleEntry } from "../simulation/chronicle.ts";
+import type { SimulationCommand } from "../simulation/commands.ts";
 import type { SimulationFrame } from "../simulation/frame.ts";
 import type { GrabTarget } from "../simulation/hand/grab-target.ts";
 import type { SavedWorldState } from "../simulation/saved-world.ts";
@@ -112,14 +113,20 @@ export class GameEngine implements EngineHandle {
     this.#renderer = parts.renderer;
     this.session = parts.session;
 
-    const { mirror } = parts.session;
-
-    const quality = RENDER_QUALITY[parts.quality];
-    const perspective = new PerspectiveCamera(FIELD_OF_VIEW, 1, NEAR_PLANE, FAR_PLANE);
+    const { session } = parts;
+    const { mirror } = session;
 
     function heightAt(x: number, z: number): number {
       return mirror.heightAt(x, z);
     }
+
+    function send(command: SimulationCommand): void {
+      session.send(command);
+    }
+
+    const quality = RENDER_QUALITY[parts.quality];
+    const perspective = new PerspectiveCamera(FIELD_OF_VIEW, 1, NEAR_PLANE, FAR_PLANE);
+    const groundPicker = new GroundPicker(perspective, heightAt, mirror.grid.halfSize);
 
     this.#resolution = new ResolutionGovernor(quality.maximumPixelRatio);
     this.camera = new GodCamera(perspective, heightAt, mirror.grid.halfSize);
@@ -152,27 +159,15 @@ export class GameEngine implements EngineHandle {
       },
       mirror.grid.halfSize
     );
-
-    const groundPicker = new GroundPicker(perspective, heightAt, mirror.grid.halfSize);
-
-    this.powers = new PowerTool(
-      (command) => {
-        this.session.send(command);
+    this.powers = new PowerTool(send, {
+      hide: () => {
+        this.#world.cursor.hide();
       },
-      {
-        hide: () => {
-          this.#world.cursor.hide();
-        },
-        show: (point, radius, isPressed) => {
-          this.#showCursor(point, radius, isPressed);
-        },
-      }
-    );
-
-    this.hand = new HandTool((command) => {
-      this.session.send(command);
-    }, this.#pickGrabbable.bind(this));
-
+      show: (point, radius, isPressed) => {
+        this.#showCursor(point, radius, isPressed);
+      },
+    });
+    this.hand = new HandTool(send, this.#pickGrabbable.bind(this));
     this.#pointer = new PointerControls(
       parts.canvas,
       this.camera,
