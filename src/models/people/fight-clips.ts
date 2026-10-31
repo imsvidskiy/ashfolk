@@ -22,6 +22,7 @@ export const FIGHT_CLIPS: Readonly<Record<FightPose, HumanClip>> = {
 const WEAPON_SIDE: Side = -1;
 const GUARD_SIDE: Side = 1;
 const ELDER_STRIDE = 0.8;
+const HELD_PHASE = 0.99;
 
 const THRUST_REACH: readonly Keyframe[] = [
   [0, 0],
@@ -50,7 +51,7 @@ const FLINCH_JOLT: readonly Keyframe[] = [
   [0, 0],
   [0.18, 1],
   [0.45, 0.7],
-  [0.99, 0],
+  [HELD_PHASE, 0],
 ];
 
 const FALL_DROP: readonly Keyframe[] = [
@@ -58,7 +59,7 @@ const FALL_DROP: readonly Keyframe[] = [
   [0.2, 0.12],
   [0.55, 0.85],
   [0.66, 1],
-  [0.99, 1],
+  [HELD_PHASE, 1],
 ];
 
 const FALL_STAGGER: readonly Keyframe[] = [
@@ -66,7 +67,7 @@ const FALL_STAGGER: readonly Keyframe[] = [
   [0.16, 1],
   [0.4, 0.6],
   [0.66, 0],
-  [0.99, 0],
+  [HELD_PHASE, 0],
 ];
 
 interface ArmAngles {
@@ -262,7 +263,7 @@ function block(pose: Pose, phase: number): void {
 }
 
 function flinch(pose: Pose, phase: number): void {
-  const jolt = keyframes(Math.min(phase, 0.99), FLINCH_JOLT);
+  const jolt = keyframes(Math.min(phase, HELD_PHASE), FLINCH_JOLT);
 
   fightingLegs(pose, 0.3 + 0.5 * jolt, 0);
   moveBody(pose, { forward: -degrees(10) * jolt, toLeft: degrees(5) * jolt, turnLeft: degrees(14) * jolt });
@@ -279,7 +280,7 @@ function flinch(pose: Pose, phase: number): void {
 }
 
 function fall(pose: Pose, phase: number): void {
-  const progress = Math.min(phase, 0.99);
+  const progress = Math.min(phase, HELD_PHASE);
   const drop = keyframes(progress, FALL_DROP);
   const stagger = keyframes(progress, FALL_STAGGER);
   const bounce = arc(progress, 0.62, 0.12) * 0.12;
