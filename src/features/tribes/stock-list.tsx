@@ -31,7 +31,7 @@ function StockGroup({ group, stock }: { readonly group: ResourceGroup; readonly 
   }
 
   const total = kinds.reduce((sum, kind) => {
-    return sum + stock[kind];
+    return sum + Math.round(stock[kind]);
   }, 0);
 
   return (
@@ -39,7 +39,7 @@ function StockGroup({ group, stock }: { readonly group: ResourceGroup; readonly 
       <h4 className="text-2xs text-ink-muted flex items-baseline justify-between tracking-wide uppercase">
         <span>{GROUP_NAMES[group]}</span>
 
-        <span className="tabular-nums">{Math.round(total)}</span>
+        <span className="tabular-nums">{total}</span>
       </h4>
 
       <ul className="grid grid-cols-2 gap-x-3 gap-y-1">
