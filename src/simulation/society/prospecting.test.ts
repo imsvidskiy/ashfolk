@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { DepositKind } from "../../content/deposits.ts";
 import type { Deposit } from "../../world/deposits.ts";
-import { MORNING, SocietyHarness, settle, THROUGH_MINING, teach } from "../testing/test-society.ts";
+import { MORNING, moveToSeason, SocietyHarness, settle, THROUGH_MINING, teach } from "../testing/test-society.ts";
 import { prospectingMove } from "./prospecting.ts";
 import type { Tribe } from "./tribe.ts";
 
@@ -9,6 +9,8 @@ const FAR_VEIN_X = 1800;
 const VEIN_WITH_CLAY_X = -1900;
 const CLAY_BANK_X = -2000;
 const NEAR_VEIN_X = 400;
+const SETTLED_DAYS = 10;
+const AUTUMN = 2;
 
 function farDeposit(id: number, kind: DepositKind, x: number): Deposit {
   return { cells: [], id, kind, x, z: 0 };
@@ -19,7 +21,7 @@ function readyTribe(deposits: readonly Deposit[]): { harness: SocietyHarness; tr
 
   const tribe = teach(settle(harness, 4), THROUGH_MINING, 2);
 
-  tribe.migrationStartDay = harness.context.environment.day - 10;
+  tribe.migrationStartDay = harness.context.environment.day - SETTLED_DAYS;
   tribe.stock.grain = 100;
 
   return { harness, tribe };
@@ -40,7 +42,7 @@ describe("prospecting", () => {
     });
   });
 
-  it("stays when a vein is within reach, the tribe has just moved, or it lacks food for the road", () => {
+  it("stays when a vein is within reach, the tribe has just moved, it lacks food or the year is late", () => {
     const near = readyTribe([farDeposit(0, "copper", NEAR_VEIN_X)]);
 
     expect(prospectingMove(near.tribe, near.harness.context)).toBeNull();
@@ -57,5 +59,14 @@ describe("prospecting", () => {
     hungry.tribe.stock.berries = 0;
 
     expect(prospectingMove(hungry.tribe, hungry.harness.context)).toBeNull();
+
+    const late = readyTribe([farDeposit(0, "copper", FAR_VEIN_X)]);
+
+    expect(prospectingMove(late.tribe, late.harness.context)).toMatchObject({ origin: { x: FAR_VEIN_X, z: 0 } });
+
+    moveToSeason(late.harness, AUTUMN);
+    late.tribe.migrationStartDay = late.harness.context.environment.day - SETTLED_DAYS;
+
+    expect(prospectingMove(late.tribe, late.harness.context)).toBeNull();
   });
 });
