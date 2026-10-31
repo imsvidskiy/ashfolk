@@ -76,7 +76,7 @@ export function useIsLandChangePending(session: GameSession | null): boolean {
 }
 
 export function saveBeforeLeaving(leave: () => void): void {
-  const { saver } = useSavesStore.getState();
+  const { saveNow, saver } = useSavesStore.getState();
 
   if (saver === null) {
     leave();
@@ -84,7 +84,7 @@ export function saveBeforeLeaving(leave: () => void): void {
     return;
   }
 
-  useSavesStore.getState().saveNow().finally(leave);
+  saveNow().finally(leave);
 }
 
 function reportOutcome(outcome: SaveOutcome): void {
