@@ -1,3 +1,4 @@
+import type { ComponentType } from "react";
 import { readSavedWorld } from "../features/saves/save-database.ts";
 import { useSavesStore } from "../features/saves/saves-store.ts";
 import type { EngineHandle } from "../game/engine-handle.ts";
@@ -29,6 +30,8 @@ type EngineStatusListener = (status: EngineStatus) => void;
 
 export const WAKING_STATUS: EngineStatus = { island: null, kind: "loading", stage: "waking" };
 
+let hud: ComponentType | null = null;
+
 function loadGameEngine() {
   return import("../game/game-engine.ts");
 }
@@ -37,8 +40,16 @@ function loadSessionOpener() {
   return import("../game/open-session.ts");
 }
 
-export function loadHud() {
-  return import("./hud.tsx");
+export async function loadHud(): Promise<ComponentType> {
+  const loaded = await import("./hud.tsx");
+
+  hud = loaded.Hud;
+
+  return loaded.Hud;
+}
+
+export function loadedHud(): ComponentType | null {
+  return hud;
 }
 
 export function preloadGame(): Promise<unknown> {

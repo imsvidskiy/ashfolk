@@ -37,6 +37,9 @@ describe("ready hud", () => {
 
     await loadHud();
     await nextFrame();
+
+    expect(screen.container.childElementCount).toBe(0);
+
     await startTestEngine();
     await nextFrame();
 
