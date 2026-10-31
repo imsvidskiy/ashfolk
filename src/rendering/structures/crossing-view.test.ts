@@ -68,6 +68,7 @@ describe("crossing view", () => {
     const far = drawnFrom(ford, 1000);
 
     expect(near.foam).toBeGreaterThan(0);
+    expect(near.foam).toBeLessThanOrEqual(far.pieces);
     expect(far.foam).toBe(0);
     expect(far.pieces).toBeGreaterThan(0);
     expect(near.pieces).toBeGreaterThan(far.pieces);
