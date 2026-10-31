@@ -1,4 +1,4 @@
-import { hashToUnit, saturate } from "../../shared/math.ts";
+import { hashToUnit } from "../../shared/math.ts";
 import { createRandom } from "../../shared/random.ts";
 import { MaterialSlot } from "../materials.ts";
 import { MeshBuilder } from "../mesh/mesh-builder.ts";
@@ -92,9 +92,7 @@ function addStake(context: StructureContext, base: Triple, height: number, radiu
     {
       style: {
         buildOrder: rising(0.05, 0.82, -ENCLOSURE_FOOTING_DEPTH, 3.5),
-        shade: (point) => {
-          return 0.82 + 0.18 * saturate(point.position.y / 3);
-        },
+        shade: rising(0.82, 1, 0, 3),
         slot: MaterialSlot.Wood,
       },
       transform: transformOf({ position: [x, 0, z] }),

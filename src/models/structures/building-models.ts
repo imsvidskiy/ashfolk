@@ -1,6 +1,6 @@
 import { Vector3 } from "three";
 import { BUILDING_KINDS, type BuildingKind } from "../../content/buildings.ts";
-import { clamp, FULL_TURN, fractionalPart, lerp, saturate, smoothstep } from "../../shared/math.ts";
+import { clamp, FULL_TURN, fractionalPart, lerp, saturate } from "../../shared/math.ts";
 import { createVolumeNoise } from "../../shared/noise.ts";
 import { createRandom } from "../../shared/random.ts";
 import { MaterialSlot, type MaterialSlotIndex } from "../materials.ts";
@@ -33,6 +33,7 @@ import {
   type StructureLevel,
   scaledMesh,
   thatchSections,
+  upwardShade,
 } from "./structure-parts.ts";
 
 export const SINGLE_MODEL_KINDS: readonly SingleModelKind[] = BUILDING_KINDS.filter(hasSingleModel);
@@ -270,9 +271,7 @@ function addTent(context: StructureContext): void {
   builder.add(lathe(profile, sides), {
     style: {
       buildOrder: rising(0.4, 1, 0, TENT_HEIGHT),
-      shade: (point) => {
-        return 0.75 + 0.25 * smoothstep(0, 1.5, point.position.y);
-      },
+      shade: upwardShade(0.75, 0, 1.5),
       slot: tentSlot,
     },
     transform: transformOf({ rotation: [0, -firstPole, 0] }),
@@ -366,12 +365,8 @@ function addHutWall(context: StructureContext): void {
     ),
     {
       style: {
-        buildOrder: (point) => {
-          return 0.05 + 0.45 * saturate(point.position.y / 1.75);
-        },
-        shade: (point) => {
-          return 0.7 + 0.3 * smoothstep(0, 1.6, point.position.y);
-        },
+        buildOrder: rising(0.05, 0.5, 0, 1.75),
+        shade: upwardShade(0.7, 0, 1.6),
         slot: (point) => {
           return point.position.y < 0.52 ? MaterialSlot.Stone : MaterialSlot.Daub;
         },
@@ -395,9 +390,7 @@ function addHutThatch(context: StructureContext): void {
     context.builder.add(loft(thatch, segments), {
       style: {
         buildOrder: 0.55 + tier * 0.15,
-        shade: (point) => {
-          return 0.72 + 0.28 * smoothstep(bottom, 3.7, point.position.y);
-        },
+        shade: upwardShade(0.72, bottom, 3.7),
         slot: MaterialSlot.Thatch,
       },
     });
@@ -447,12 +440,8 @@ function addStorehouseBody(context: StructureContext): void {
   });
   builder.add(box(2.2, 1.1, 1.8), {
     style: {
-      buildOrder: (point) => {
-        return 0.4 + 0.3 * saturate((point.position.y - 1.1) / 1.1);
-      },
-      shade: (point) => {
-        return 0.75 + 0.25 * smoothstep(1.1, 2.2, point.position.y);
-      },
+      buildOrder: rising(0.4, 0.7, 1.1, 2.2),
+      shade: upwardShade(0.75, 1.1, 2.2),
       slot: MaterialSlot.Daub,
     },
     transform: transformOf({ position: [0, 1.7, 0] }),
