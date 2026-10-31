@@ -21,7 +21,6 @@ export const TREE_HEIGHTS = {
   [PlantSpecies.Alder]: 14,
   [PlantSpecies.Birch]: 19,
   [PlantSpecies.Bush]: 2.2,
-  [PlantSpecies.Cactus]: 4,
   [PlantSpecies.DeadTree]: 9,
   [PlantSpecies.DesertShrub]: 1.2,
   [PlantSpecies.Maple]: 16,

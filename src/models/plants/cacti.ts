@@ -11,6 +11,7 @@ import { type TubePoint, tube } from "../mesh/tubes.ts";
 import type { PlantDetailLevel } from "./tree-mesher.ts";
 
 export const CACTUS_FORMS = ["saguaro", "organPipe", "barrel", "pricklyPear"] as const;
+export const CACTUS_HEIGHT = 4;
 
 const RIB_DEPTH = 0.09;
 const STEM_SEAM = 0.6;
