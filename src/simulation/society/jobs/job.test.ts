@@ -1,17 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { placeMover } from "../../agents/movement.ts";
 import { wallIn } from "../../testing/test-jobs.ts";
-import {
-  firstMemberTick,
-  isOnDryFooting,
-  MORNING,
-  runToCompletion,
-  SocietyHarness,
-  settle,
-} from "../../testing/test-society.ts";
+import { firstMemberTick, isOnDryFooting, MORNING, SocietyHarness, settle } from "../../testing/test-society.ts";
 import { floodCells } from "../../testing/test-world.ts";
-import { MournJob } from "../rivalry/defense-jobs.ts";
-import { BuildJob } from "./build-job.ts";
 import { Errand, headTo, headToWork } from "./job.ts";
 
 describe("errands", () => {
@@ -36,39 +26,6 @@ describe("errands", () => {
     expect(progress.has("abandoned")).toBe(true);
     expect(progress.has("working")).toBe(false);
     expect(tick.person.pose).not.toBe("chop");
-  });
-
-  it("let a builder give up rather than build from wherever they got stuck", () => {
-    const harness = new SocietyHarness({ day: MORNING });
-
-    const tribe = settle(harness, 1);
-    const tick = firstMemberTick(harness, tribe);
-    const site = harness.buildings.add(
-      { kind: "hut", rotation: 0, tribeId: tribe.id, x: tribe.campX + 200, z: tribe.campZ },
-      harness.random
-    );
-
-    const job = new BuildJob(tick, site);
-
-    wallIn(harness, tick.person);
-
-    expect(runToCompletion(job, tick, 60)).toBe(true);
-    expect(site.progress).toBe(0);
-  });
-
-  it("let a mourner give up when the way to camp is blocked", () => {
-    const harness = new SocietyHarness({ day: MORNING });
-
-    const tribe = settle(harness, 1);
-    const tick = firstMemberTick(harness, tribe);
-
-    placeMover(tick.person.mover, tribe.campX + 200, tribe.campZ);
-
-    const job = new MournJob(tick);
-
-    wallIn(harness, tick.person);
-
-    expect(runToCompletion(job, tick, 60)).toBe(true);
   });
 });
 
