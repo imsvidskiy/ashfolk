@@ -1,10 +1,22 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { ANIMALS } from "../../../content/animals.ts";
 import type { Animal } from "../../fauna/fauna.ts";
 import { STONE_SPEAR } from "../../testing/test-jobs.ts";
-import { firstMemberTick, MORNING, runToCompletion, SocietyHarness, settle } from "../../testing/test-society.ts";
+import {
+  firstMemberTick,
+  MORNING,
+  runToCompletion,
+  SocietyHarness,
+  settle,
+  tickFor,
+} from "../../testing/test-society.ts";
 import { carriedAmount } from "../person.ts";
+import type { PersonTick } from "../society-context.ts";
 import { findGame, HuntJob } from "./hunt-job.ts";
+
+const HIT_ROLL = 0.16;
+const STRIKING_DISTANCE = 20;
+const HELPER_DISTANCE = 30;
 
 function firstAnimal(harness: SocietyHarness, herd: { memberIds: number[] } | null): Animal {
   const animal = herd === null ? null : harness.fauna.findAnimal(herd.memberIds[0]);
@@ -14,6 +26,36 @@ function firstAnimal(harness: SocietyHarness, herd: { memberIds: number[] } | nu
   }
 
   return animal;
+}
+
+function mammothInRange(harness: SocietyHarness, tick: PersonTick): Animal {
+  const { tribe } = tick;
+  const { mover } = tick.person;
+
+  const mammoth = firstAnimal(
+    harness,
+    harness.fauna.spawnHerd("mammoth", tribe.campX + 40, tribe.campZ, 1, harness.random)
+  );
+
+  mover.x = mammoth.mover.x + STRIKING_DISTANCE;
+  mover.z = mammoth.mover.z;
+
+  return mammoth;
+}
+
+function strikeOnce(harness: SocietyHarness, tick: PersonTick, animal: Animal): void {
+  const roll = vi.spyOn(harness.random, "chance").mockImplementation((probability) => {
+    return HIT_ROLL < probability;
+  });
+  const hunt = new HuntJob(tick, animal, STONE_SPEAR);
+
+  for (let elapsed = 0; elapsed < 5 && roll.mock.calls.length === 0; elapsed += tick.seconds) {
+    hunt.update(tick);
+  }
+
+  if (roll.mock.calls.length === 0) {
+    throw new Error("Expected the hunter to strike");
+  }
 }
 
 describe("hunting mammoths", () => {
@@ -47,6 +89,38 @@ describe("hunting mammoths", () => {
     expect(harness.chronicle.takeEntries()).toContainEqual(
       expect.objectContaining({ text: expect.stringContaining("trampled by a mammoth") })
     );
+  });
+});
+
+describe("hit odds", () => {
+  it("lets a lone hunter with a stone spear miss a mammoth on a middling roll", () => {
+    const harness = new SocietyHarness({ day: MORNING });
+
+    const tick = firstMemberTick(harness, settle(harness, 2));
+    const mammoth = mammothInRange(harness, tick);
+    const { health } = mammoth;
+
+    strikeOnce(harness, tick, mammoth);
+
+    expect(mammoth.health).toBe(health);
+  });
+
+  it("lets the same roll wound a mammoth when a second hunter is close by", () => {
+    const harness = new SocietyHarness({ day: MORNING });
+
+    const tribe = settle(harness, 2);
+    const [hunter, helper] = harness.society.membersOf(tribe);
+    const tick = tickFor(harness, hunter, tribe);
+    const mammoth = mammothInRange(harness, tick);
+    const { health } = mammoth;
+
+    helper.mover.x = mammoth.mover.x - HELPER_DISTANCE;
+    helper.mover.z = mammoth.mover.z;
+    helper.job = new HuntJob(tickFor(harness, helper, tribe), mammoth, STONE_SPEAR);
+
+    strikeOnce(harness, tick, mammoth);
+
+    expect(mammoth.health).toBe(health - 1);
   });
 });
 
