@@ -233,6 +233,7 @@ describe("world state", () => {
 
   it("keeps the fingerprint of the generated land after the land changes", () => {
     const world = createTestWorld();
+
     const fingerprint = world.generationFingerprint;
 
     world.setHeight(0, 900);
