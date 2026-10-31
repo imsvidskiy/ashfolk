@@ -69,9 +69,6 @@ async function openTogether(
     graphics.then(({ renderer }) => {
       renderer.dispose();
     }, ignore);
-    session.then((opened) => {
-      opened.close();
-    }, ignore);
 
     throw error;
   }

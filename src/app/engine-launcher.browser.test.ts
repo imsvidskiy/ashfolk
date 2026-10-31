@@ -94,4 +94,23 @@ describe("engine launcher", () => {
       expect(startEngine).toHaveBeenCalledOnce();
     });
   });
+
+  it("closes the opened world when the engine cannot start", async () => {
+    const session = await createTestSession();
+    const close = vi.spyOn(session, "close");
+
+    vi.spyOn(console, "error").mockImplementation(ignore);
+    openSession.mockResolvedValue(session);
+    startEngine.mockRejectedValue(new Error("The engine could not load"));
+
+    const launcher = new EngineLauncher(document.body, LAUNCH, createWorldId(), ignore);
+
+    onTestFinished(() => {
+      launcher.cancel();
+    });
+
+    await vi.waitFor(() => {
+      expect(close).toHaveBeenCalledOnce();
+    });
+  });
 });

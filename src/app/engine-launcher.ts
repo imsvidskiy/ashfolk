@@ -114,6 +114,7 @@ export class EngineLauncher {
   readonly #opening = new AbortController();
   #engine: GameEngine | null = null;
   #island: IslandSketch | null = null;
+  #session: Promise<GameSession> | null = null;
   #state: "canceled" | "running" | "starting" = "starting";
 
   constructor(container: HTMLElement, launch: LaunchOptions, worldId: string, onStatus: EngineStatusListener) {
@@ -163,6 +164,7 @@ export class EngineLauncher {
       this.#opening.signal
     );
 
+    this.#session = session;
     session.then(() => {
       this.#reportStage("lighting");
     }, ignore);
@@ -226,6 +228,9 @@ export class EngineLauncher {
 
   #fail(error: unknown): void {
     this.#opening.abort();
+    this.#session?.then((opened) => {
+      opened.close();
+    }, ignore);
     console.error("Ashfolk could not start", error);
 
     if (this.#state === "canceled") {
