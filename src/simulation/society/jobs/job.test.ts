@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { placeMover } from "../../agents/movement.ts";
+import { wallIn } from "../../testing/test-jobs.ts";
 import {
   firstMemberTick,
   isOnDryFooting,
@@ -9,22 +10,9 @@ import {
   settle,
 } from "../../testing/test-society.ts";
 import { floodCells } from "../../testing/test-world.ts";
-import { MONUMENT_GROUND } from "../../world/world-state.ts";
-import type { Person } from "../person.ts";
 import { MournJob } from "../rivalry/defense-jobs.ts";
 import { BuildJob } from "./build-job.ts";
 import { Errand, headTo, headToWork } from "./job.ts";
-
-function wallIn(harness: SocietyHarness, person: Person): void {
-  const { mover } = person;
-  const { world } = harness;
-
-  for (const cell of world.grid.cellsInRadius(mover.x, mover.z, 30)) {
-    if (Math.hypot(world.grid.cellCenterX(cell) - mover.x, world.grid.cellCenterZ(cell) - mover.z) > 15) {
-      world.occupancy[cell] = MONUMENT_GROUND;
-    }
-  }
-}
 
 describe("errands", () => {
   it("give up rather than work wherever the walker got stuck on the way", () => {
