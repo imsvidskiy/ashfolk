@@ -171,9 +171,11 @@ export class MinimapPainter {
 
     const context = this.#terrain.getContext("2d");
 
-    if (context !== null) {
-      context.putImageData(paintMinimapTerrain(mirror, this.#size), 0, 0);
+    if (context === null) {
+      return;
     }
+
+    context.putImageData(paintMinimapTerrain(mirror, this.#size), 0, 0);
   }
 
   #toMap(x: number, z: number): [number, number] {
