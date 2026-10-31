@@ -167,7 +167,9 @@ export class GameEngine implements EngineHandle {
         this.#showCursor(point, radius, isPressed);
       },
     });
-    this.hand = new HandTool(send, this.#pickGrabbable.bind(this));
+    this.hand = new HandTool(send, (point, screen) => {
+      return this.#pickGrabbable(point, screen);
+    });
     this.#pointer = new PointerControls(
       parts.canvas,
       this.camera,
