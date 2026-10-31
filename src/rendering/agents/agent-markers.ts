@@ -301,13 +301,11 @@ export class AgentMarkers {
   }
 
   #upload(): void {
-    const count = this.#count;
+    this.#geometry.instanceCount = this.#count;
+    this.group.visible = this.#count > 0 && !this.#isHidden;
 
-    this.#geometry.instanceCount = count;
-    this.group.visible = count > 0 && !this.#isHidden;
-
-    if (count > 0) {
-      this.#instances.markUpdated(count);
+    if (this.#count > 0) {
+      this.#instances.markUpdated(this.#count);
     }
   }
 
