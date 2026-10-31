@@ -119,18 +119,19 @@ function packSurfaceRow(world: WorldState, row: number, target: Uint8Array, offs
     const fireByte = toByte(fire[cell]);
 
     if (
-      target[position + SurfaceChannel.Snow] !== snowByte ||
-      target[position + SurfaceChannel.Wetness] !== wetnessByte ||
-      target[position + SurfaceChannel.Scorch] !== scorchByte ||
-      target[position + SurfaceChannel.Fire] !== fireByte
+      target[position + SurfaceChannel.Snow] === snowByte &&
+      target[position + SurfaceChannel.Wetness] === wetnessByte &&
+      target[position + SurfaceChannel.Scorch] === scorchByte &&
+      target[position + SurfaceChannel.Fire] === fireByte
     ) {
-      isChanged = true;
+      continue;
     }
 
     target[position + SurfaceChannel.Snow] = snowByte;
     target[position + SurfaceChannel.Wetness] = wetnessByte;
     target[position + SurfaceChannel.Scorch] = scorchByte;
     target[position + SurfaceChannel.Fire] = fireByte;
+    isChanged = true;
   }
 
   return isChanged;
