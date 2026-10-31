@@ -1,3 +1,7 @@
+const FULL = 1;
+const SOFT = 0.5;
+const QUIET = 0.25;
+
 export type SoundBus = "ambience" | "effects" | "interface" | "music";
 
 export interface SoundDefinition {
@@ -17,7 +21,7 @@ export const SOUNDS = {
     ],
     priority: 2,
     referenceDistance: 60,
-    volume: 0.55,
+    volume: FULL,
   },
   animalHare: {
     bus: "effects",
@@ -27,7 +31,7 @@ export const SOUNDS = {
     ],
     priority: 2,
     referenceDistance: 40,
-    volume: 0.5,
+    volume: FULL,
   },
   animalIbex: {
     bus: "effects",
@@ -37,7 +41,7 @@ export const SOUNDS = {
     ],
     priority: 2,
     referenceDistance: 60,
-    volume: 0.55,
+    volume: FULL,
   },
   animalMammoth: {
     bus: "effects",
@@ -47,7 +51,7 @@ export const SOUNDS = {
     ],
     priority: 2,
     referenceDistance: 90,
-    volume: 0.65,
+    volume: FULL,
   },
   animalWolves: {
     bus: "effects",
@@ -57,7 +61,7 @@ export const SOUNDS = {
     ],
     priority: 2,
     referenceDistance: 120,
-    volume: 0.55,
+    volume: FULL,
   },
   arrow: {
     bus: "effects",
@@ -67,7 +71,7 @@ export const SOUNDS = {
     ],
     priority: 1,
     referenceDistance: 25,
-    volume: 0.4,
+    volume: QUIET,
   },
   blessingAbundance: {
     bus: "effects",
@@ -77,7 +81,7 @@ export const SOUNDS = {
     ],
     priority: 3,
     referenceDistance: 120,
-    volume: 0.8,
+    volume: FULL,
   },
   blessingHealing: {
     bus: "effects",
@@ -87,7 +91,7 @@ export const SOUNDS = {
     ],
     priority: 3,
     referenceDistance: 120,
-    volume: 0.8,
+    volume: FULL,
   },
   blessingInspiration: {
     bus: "effects",
@@ -97,7 +101,7 @@ export const SOUNDS = {
     ],
     priority: 3,
     referenceDistance: 120,
-    volume: 0.8,
+    volume: FULL,
   },
   buildingDone: {
     bus: "effects",
@@ -107,7 +111,7 @@ export const SOUNDS = {
     ],
     priority: 2,
     referenceDistance: 60,
-    volume: 0.55,
+    volume: FULL,
   },
   earthquake: {
     bus: "effects",
@@ -117,43 +121,13 @@ export const SOUNDS = {
     ],
     priority: 4,
     referenceDistance: 300,
-    volume: 0.9,
+    volume: FULL,
   },
-  eventBirth: {
-    bus: "interface",
-    files: [new URL("./sounds/event-birth-1.webm", import.meta.url).href],
-    priority: 1,
-    referenceDistance: 0,
-    volume: 0.4,
-  },
-  eventDeath: {
-    bus: "interface",
-    files: [new URL("./sounds/event-death-1.webm", import.meta.url).href],
-    priority: 1,
-    referenceDistance: 0,
-    volume: 0.4,
-  },
-  eventDiscovery: {
-    bus: "interface",
-    files: [new URL("./sounds/event-discovery-1.webm", import.meta.url).href],
-    priority: 1,
-    referenceDistance: 0,
-    volume: 0.5,
-  },
-  eventEra: {
-    bus: "interface",
-    files: [new URL("./sounds/event-era-1.webm", import.meta.url).href],
-    priority: 1,
-    referenceDistance: 0,
-    volume: 0.6,
-  },
-  eventRaid: {
-    bus: "interface",
-    files: [new URL("./sounds/event-raid-1.webm", import.meta.url).href],
-    priority: 1,
-    referenceDistance: 0,
-    volume: 0.5,
-  },
+  eventBirth: interfaceSound(FULL, [new URL("./sounds/event-birth-1.webm", import.meta.url).href]),
+  eventDeath: interfaceSound(FULL, [new URL("./sounds/event-death-1.webm", import.meta.url).href]),
+  eventDiscovery: interfaceSound(FULL, [new URL("./sounds/event-discovery-1.webm", import.meta.url).href]),
+  eventEra: interfaceSound(FULL, [new URL("./sounds/event-era-1.webm", import.meta.url).href]),
+  eventRaid: interfaceSound(FULL, [new URL("./sounds/event-raid-1.webm", import.meta.url).href]),
   explosion: {
     bus: "effects",
     files: [
@@ -162,7 +136,7 @@ export const SOUNDS = {
     ],
     priority: 4,
     referenceDistance: 250,
-    volume: 0.9,
+    volume: FULL,
   },
   explosionWater: {
     bus: "effects",
@@ -172,7 +146,7 @@ export const SOUNDS = {
     ],
     priority: 4,
     referenceDistance: 250,
-    volume: 0.9,
+    volume: FULL,
   },
   fight: {
     bus: "effects",
@@ -183,14 +157,14 @@ export const SOUNDS = {
     ],
     priority: 1,
     referenceDistance: 25,
-    volume: 0.4,
+    volume: QUIET,
   },
   fire: {
     bus: "effects",
     files: [new URL("./sounds/fire-1.webm", import.meta.url).href],
     priority: 0,
     referenceDistance: 80,
-    volume: 0.6,
+    volume: FULL,
   },
   fireIgnite: {
     bus: "effects",
@@ -200,7 +174,7 @@ export const SOUNDS = {
     ],
     priority: 2,
     referenceDistance: 80,
-    volume: 0.6,
+    volume: FULL,
   },
   forestGrow: {
     bus: "effects",
@@ -210,7 +184,7 @@ export const SOUNDS = {
     ],
     priority: 2,
     referenceDistance: 120,
-    volume: 0.6,
+    volume: FULL,
   },
   handDrop: {
     bus: "effects",
@@ -220,7 +194,7 @@ export const SOUNDS = {
     ],
     priority: 3,
     referenceDistance: 0,
-    volume: 0.55,
+    volume: SOFT,
   },
   handGrab: {
     bus: "effects",
@@ -230,35 +204,35 @@ export const SOUNDS = {
     ],
     priority: 3,
     referenceDistance: 0,
-    volume: 0.55,
+    volume: SOFT,
   },
   landLower: {
     bus: "effects",
     files: [new URL("./sounds/land-lower-1.webm", import.meta.url).href],
     priority: 0,
     referenceDistance: 150,
-    volume: 0.55,
+    volume: FULL,
   },
   landRaise: {
     bus: "effects",
     files: [new URL("./sounds/land-raise-1.webm", import.meta.url).href],
     priority: 0,
     referenceDistance: 150,
-    volume: 0.55,
+    volume: FULL,
   },
   landSmooth: {
     bus: "effects",
     files: [new URL("./sounds/land-smooth-1.webm", import.meta.url).href],
     priority: 0,
     referenceDistance: 150,
-    volume: 0.5,
+    volume: FULL,
   },
   lava: {
     bus: "effects",
     files: [new URL("./sounds/lava-1.webm", import.meta.url).href],
     priority: 0,
     referenceDistance: 80,
-    volume: 0.6,
+    volume: FULL,
   },
   lightning: {
     bus: "effects",
@@ -268,14 +242,14 @@ export const SOUNDS = {
     ],
     priority: 4,
     referenceDistance: 250,
-    volume: 0.85,
+    volume: FULL,
   },
   meteorFall: {
     bus: "effects",
     files: [new URL("./sounds/meteor-fall-1.webm", import.meta.url).href],
     priority: 4,
     referenceDistance: 300,
-    volume: 0.8,
+    volume: FULL,
   },
   meteorImpact: {
     bus: "effects",
@@ -285,28 +259,28 @@ export const SOUNDS = {
     ],
     priority: 4,
     referenceDistance: 300,
-    volume: 0.95,
+    volume: FULL,
   },
   paintGround: {
     bus: "effects",
     files: [new URL("./sounds/paint-ground-1.webm", import.meta.url).href],
     priority: 0,
     referenceDistance: 150,
-    volume: 0.45,
+    volume: FULL,
   },
   rainStart: {
     bus: "effects",
     files: [new URL("./sounds/rain-start-1.webm", import.meta.url).href],
     priority: 2,
     referenceDistance: 150,
-    volume: 0.6,
+    volume: FULL,
   },
   snowStart: {
     bus: "effects",
     files: [new URL("./sounds/snow-start-1.webm", import.meta.url).href],
     priority: 2,
     referenceDistance: 150,
-    volume: 0.6,
+    volume: FULL,
   },
   spawn: {
     bus: "effects",
@@ -316,7 +290,7 @@ export const SOUNDS = {
     ],
     priority: 3,
     referenceDistance: 120,
-    volume: 0.7,
+    volume: FULL,
   },
   splash: {
     bus: "effects",
@@ -326,7 +300,7 @@ export const SOUNDS = {
     ],
     priority: 2,
     referenceDistance: 40,
-    volume: 0.55,
+    volume: SOFT,
   },
   thunderFar: {
     bus: "effects",
@@ -337,14 +311,14 @@ export const SOUNDS = {
     ],
     priority: 3,
     referenceDistance: 1000,
-    volume: 0.6,
+    volume: FULL,
   },
   tornado: {
     bus: "effects",
     files: [new URL("./sounds/tornado-1.webm", import.meta.url).href],
     priority: 0,
     referenceDistance: 200,
-    volume: 0.85,
+    volume: FULL,
   },
   tribeArrive: {
     bus: "effects",
@@ -354,85 +328,43 @@ export const SOUNDS = {
     ],
     priority: 3,
     referenceDistance: 150,
-    volume: 0.7,
+    volume: FULL,
   },
-  uiClick: {
-    bus: "interface",
-    files: [
-      new URL("./sounds/ui-click-1.webm", import.meta.url).href,
-      new URL("./sounds/ui-click-2.webm", import.meta.url).href,
-      new URL("./sounds/ui-click-3.webm", import.meta.url).href,
-    ],
-    priority: 1,
-    referenceDistance: 0,
-    volume: 0.45,
-  },
-  uiClose: {
-    bus: "interface",
-    files: [
-      new URL("./sounds/ui-close-1.webm", import.meta.url).href,
-      new URL("./sounds/ui-close-2.webm", import.meta.url).href,
-    ],
-    priority: 1,
-    referenceDistance: 0,
-    volume: 0.45,
-  },
-  uiNotice: {
-    bus: "interface",
-    files: [
-      new URL("./sounds/ui-notice-1.webm", import.meta.url).href,
-      new URL("./sounds/ui-notice-2.webm", import.meta.url).href,
-    ],
-    priority: 1,
-    referenceDistance: 0,
-    volume: 0.4,
-  },
-  uiOpen: {
-    bus: "interface",
-    files: [
-      new URL("./sounds/ui-open-1.webm", import.meta.url).href,
-      new URL("./sounds/ui-open-2.webm", import.meta.url).href,
-    ],
-    priority: 1,
-    referenceDistance: 0,
-    volume: 0.5,
-  },
-  uiPower: {
-    bus: "interface",
-    files: [
-      new URL("./sounds/ui-power-1.webm", import.meta.url).href,
-      new URL("./sounds/ui-power-2.webm", import.meta.url).href,
-    ],
-    priority: 1,
-    referenceDistance: 0,
-    volume: 0.5,
-  },
-  uiRefuse: {
-    bus: "interface",
-    files: [
-      new URL("./sounds/ui-refuse-1.webm", import.meta.url).href,
-      new URL("./sounds/ui-refuse-2.webm", import.meta.url).href,
-    ],
-    priority: 1,
-    referenceDistance: 0,
-    volume: 0.55,
-  },
-  uiTab: {
-    bus: "interface",
-    files: [
-      new URL("./sounds/ui-tab-1.webm", import.meta.url).href,
-      new URL("./sounds/ui-tab-2.webm", import.meta.url).href,
-    ],
-    priority: 1,
-    referenceDistance: 0,
-    volume: 0.45,
-  },
+  uiClick: interfaceSound(SOFT, [
+    new URL("./sounds/ui-click-1.webm", import.meta.url).href,
+    new URL("./sounds/ui-click-2.webm", import.meta.url).href,
+    new URL("./sounds/ui-click-3.webm", import.meta.url).href,
+  ]),
+  uiClose: interfaceSound(SOFT, [
+    new URL("./sounds/ui-close-1.webm", import.meta.url).href,
+    new URL("./sounds/ui-close-2.webm", import.meta.url).href,
+  ]),
+  uiNotice: interfaceSound(FULL, [
+    new URL("./sounds/ui-notice-1.webm", import.meta.url).href,
+    new URL("./sounds/ui-notice-2.webm", import.meta.url).href,
+  ]),
+  uiOpen: interfaceSound(SOFT, [
+    new URL("./sounds/ui-open-1.webm", import.meta.url).href,
+    new URL("./sounds/ui-open-2.webm", import.meta.url).href,
+  ]),
+  uiPower: interfaceSound(SOFT, [
+    new URL("./sounds/ui-power-1.webm", import.meta.url).href,
+    new URL("./sounds/ui-power-2.webm", import.meta.url).href,
+  ]),
+  uiRefuse: interfaceSound(SOFT, [
+    new URL("./sounds/ui-refuse-1.webm", import.meta.url).href,
+    new URL("./sounds/ui-refuse-2.webm", import.meta.url).href,
+  ]),
+  uiTab: interfaceSound(SOFT, [
+    new URL("./sounds/ui-tab-1.webm", import.meta.url).href,
+    new URL("./sounds/ui-tab-2.webm", import.meta.url).href,
+  ]),
   volcanoRise: {
     bus: "effects",
     files: [new URL("./sounds/volcano-rise-1.webm", import.meta.url).href],
     priority: 4,
     referenceDistance: 300,
-    volume: 0.9,
+    volume: FULL,
   },
   workBuild: {
     bus: "effects",
@@ -443,7 +375,7 @@ export const SOUNDS = {
     ],
     priority: 0,
     referenceDistance: 20,
-    volume: 0.35,
+    volume: QUIET,
   },
   workChop: {
     bus: "effects",
@@ -454,7 +386,7 @@ export const SOUNDS = {
     ],
     priority: 0,
     referenceDistance: 20,
-    volume: 0.35,
+    volume: QUIET,
   },
   workDig: {
     bus: "effects",
@@ -464,7 +396,7 @@ export const SOUNDS = {
     ],
     priority: 0,
     referenceDistance: 20,
-    volume: 0.3,
+    volume: QUIET,
   },
   workMine: {
     bus: "effects",
@@ -475,116 +407,26 @@ export const SOUNDS = {
     ],
     priority: 0,
     referenceDistance: 20,
-    volume: 0.35,
+    volume: QUIET,
   },
 } as const satisfies Record<string, SoundDefinition>;
 
 export const AMBIENCE_LAYERS = {
-  birdsDawn: {
-    bus: "ambience",
-    files: [new URL("./sounds/birds-dawn-1.webm", import.meta.url).href],
-    priority: 0,
-    referenceDistance: 0,
-    volume: 1,
-  },
-  birdsForest: {
-    bus: "ambience",
-    files: [new URL("./sounds/birds-forest-1.webm", import.meta.url).href],
-    priority: 0,
-    referenceDistance: 0,
-    volume: 1,
-  },
-  birdsMeadow: {
-    bus: "ambience",
-    files: [new URL("./sounds/birds-meadow-1.webm", import.meta.url).href],
-    priority: 0,
-    referenceDistance: 0,
-    volume: 1,
-  },
-  birdsTaiga: {
-    bus: "ambience",
-    files: [new URL("./sounds/birds-taiga-1.webm", import.meta.url).href],
-    priority: 0,
-    referenceDistance: 0,
-    volume: 1,
-  },
-  cicadas: {
-    bus: "ambience",
-    files: [new URL("./sounds/cicadas-1.webm", import.meta.url).href],
-    priority: 0,
-    referenceDistance: 0,
-    volume: 1,
-  },
-  crickets: {
-    bus: "ambience",
-    files: [new URL("./sounds/crickets-1.webm", import.meta.url).href],
-    priority: 0,
-    referenceDistance: 0,
-    volume: 1,
-  },
-  frogs: {
-    bus: "ambience",
-    files: [new URL("./sounds/frogs-1.webm", import.meta.url).href],
-    priority: 0,
-    referenceDistance: 0,
-    volume: 1,
-  },
-  rainHeavy: {
-    bus: "ambience",
-    files: [new URL("./sounds/rain-heavy-1.webm", import.meta.url).href],
-    priority: 0,
-    referenceDistance: 0,
-    volume: 1,
-  },
-  rainLight: {
-    bus: "ambience",
-    files: [new URL("./sounds/rain-light-1.webm", import.meta.url).href],
-    priority: 0,
-    referenceDistance: 0,
-    volume: 1,
-  },
-  stream: {
-    bus: "ambience",
-    files: [new URL("./sounds/stream-1.webm", import.meta.url).href],
-    priority: 0,
-    referenceDistance: 0,
-    volume: 1,
-  },
-  waves: {
-    bus: "ambience",
-    files: [new URL("./sounds/waves-1.webm", import.meta.url).href],
-    priority: 0,
-    referenceDistance: 0,
-    volume: 1,
-  },
-  windHigh: {
-    bus: "ambience",
-    files: [new URL("./sounds/wind-high-1.webm", import.meta.url).href],
-    priority: 0,
-    referenceDistance: 0,
-    volume: 1,
-  },
-  windLight: {
-    bus: "ambience",
-    files: [new URL("./sounds/wind-light-1.webm", import.meta.url).href],
-    priority: 0,
-    referenceDistance: 0,
-    volume: 1,
-  },
-  windSnowy: {
-    bus: "ambience",
-    files: [new URL("./sounds/wind-snowy-1.webm", import.meta.url).href],
-    priority: 0,
-    referenceDistance: 0,
-    volume: 1,
-  },
-  windStrong: {
-    bus: "ambience",
-    files: [new URL("./sounds/wind-strong-1.webm", import.meta.url).href],
-    priority: 0,
-    referenceDistance: 0,
-    volume: 1,
-  },
+  birdsDawn: ambienceLayer(new URL("./sounds/birds-dawn-1.webm", import.meta.url).href),
+  birdsForest: ambienceLayer(new URL("./sounds/birds-forest-1.webm", import.meta.url).href),
+  birdsMeadow: ambienceLayer(new URL("./sounds/birds-meadow-1.webm", import.meta.url).href),
+  birdsTaiga: ambienceLayer(new URL("./sounds/birds-taiga-1.webm", import.meta.url).href),
+  cicadas: ambienceLayer(new URL("./sounds/cicadas-1.webm", import.meta.url).href),
+  crickets: ambienceLayer(new URL("./sounds/crickets-1.webm", import.meta.url).href),
+  frogs: ambienceLayer(new URL("./sounds/frogs-1.webm", import.meta.url).href),
+  rainHeavy: ambienceLayer(new URL("./sounds/rain-heavy-1.webm", import.meta.url).href),
+  rainLight: ambienceLayer(new URL("./sounds/rain-light-1.webm", import.meta.url).href),
+  stream: ambienceLayer(new URL("./sounds/stream-1.webm", import.meta.url).href),
+  waves: ambienceLayer(new URL("./sounds/waves-1.webm", import.meta.url).href),
+  windHigh: ambienceLayer(new URL("./sounds/wind-high-1.webm", import.meta.url).href),
+  windLight: ambienceLayer(new URL("./sounds/wind-light-1.webm", import.meta.url).href),
+  windSnowy: ambienceLayer(new URL("./sounds/wind-snowy-1.webm", import.meta.url).href),
+  windStrong: ambienceLayer(new URL("./sounds/wind-strong-1.webm", import.meta.url).href),
 } as const satisfies Record<string, SoundDefinition>;
 
 export const MUSIC_TRACKS = {
@@ -609,3 +451,11 @@ export const MUSIC_TRACKS = {
     new URL("./sounds/music-cozy-night-2.webm", import.meta.url).href,
   ],
 } as const satisfies Record<string, readonly string[]>;
+
+function interfaceSound(volume: number, files: readonly string[]): SoundDefinition {
+  return { bus: "interface", files, priority: 1, referenceDistance: 0, volume };
+}
+
+function ambienceLayer(file: string): SoundDefinition {
+  return { bus: "ambience", files: [file], priority: 0, referenceDistance: 0, volume: FULL };
+}
