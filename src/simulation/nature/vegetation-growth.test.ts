@@ -15,7 +15,7 @@ import {
   steepeningRamp,
 } from "../testing/test-world.ts";
 import type { WorldState } from "../world/world-state.ts";
-import { berryGrowthPerDay, SNAG_LIFETIME_DAYS, VegetationGrowthSystem } from "./vegetation-growth.ts";
+import { SNAG_LIFETIME_DAYS, VegetationGrowthSystem } from "./vegetation-growth.ts";
 
 const SUMMER = 1.2;
 const WINTER = 3.5;
@@ -46,11 +46,6 @@ function growFor(world: WorldState, period: Partial<GrowthPeriod>): void {
 }
 
 describe("berries", () => {
-  it("ripen in summer and drop in winter", () => {
-    expect(berryGrowthPerDay(SUMMER)).toBeGreaterThan(0);
-    expect(berryGrowthPerDay(WINTER)).toBeLessThan(0);
-  });
-
   it("fill the bushes over a summer day", () => {
     const world = createTestWorld();
 

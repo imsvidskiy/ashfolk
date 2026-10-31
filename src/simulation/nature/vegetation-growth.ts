@@ -30,7 +30,7 @@ export interface VegetationGrowthSnapshot {
   visitBudget: number;
 }
 
-export function berryGrowthPerDay(season: number): number {
+function berryGrowthPerDay(season: number): number {
   if (season < 0.2) {
     return 0;
   }
