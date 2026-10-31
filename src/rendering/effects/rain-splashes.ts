@@ -51,12 +51,14 @@ const FARTHEST_VIEW = 620;
 const FAINTEST_SPLASH = 0.002;
 const SNOW_START = 0.06;
 const SNOW_END = 0.2;
+const SPLASH_OPACITY = 0.8;
 
 const RIPPLE_RADIUS = 0.5;
 const SMALLEST_RIPPLE = 0.006;
 const LARGEST_RIPPLE = 0.016;
 const RIPPLE_GAP = 0.38;
 const RIPPLE_SHOW = 0.75;
+const RIPPLE_COLOR = new Color(0.86, 0.9, 0.95);
 
 const CROWN_SIZE = 0.32;
 const SMALLEST_CROWN = 0.0045;
@@ -65,6 +67,7 @@ const CROWN_LIFE = 0.3;
 const CROWN_DROPLETS = 5;
 const CROWN_FAN = 0.42;
 const CROWN_SHOW = 0.9;
+const CROWN_COLOR = new Color(0.92, 0.95, 1);
 
 const SALT_SPLASH = 0x2d_35_8d_cb;
 const CYCLE_SALTS = { across: 0xd1_b5_4a_33, along: 0x48_b2_f1_c7, cycle: 0x63_d8_3c_21, phase: 0x7a_5e_3b_19 };
@@ -219,9 +222,9 @@ export class RainSplashes {
     this.#focus.value.set(view.focusX, view.focusZ);
     this.#reach.value = span / 2;
     this.#viewportSpan.value = 2 * Math.tan((view.camera.fov * Math.PI) / 360);
-    this.#rippleColor.value.setRGB(0.86, 0.9, 0.95).multiplyScalar(brightness);
-    this.#crownColor.value.setRGB(0.92, 0.95, 1).multiplyScalar(brightness);
-    this.#opacity.value = 0.8 * nearness;
+    this.#rippleColor.value.copy(RIPPLE_COLOR).multiplyScalar(brightness);
+    this.#crownColor.value.copy(CROWN_COLOR).multiplyScalar(brightness);
+    this.#opacity.value = SPLASH_OPACITY * nearness;
   }
 
   dispose(): void {
