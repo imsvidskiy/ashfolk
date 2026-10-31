@@ -5,8 +5,10 @@ glob_matcher: doublestar
 pre-commit:
   jobs:
     - name: ultracite
-      glob: "**/*.{ts,tsx,json,jsonc,css,html}"
       run: bun x --no-install ultracite fix {staged_files}
+      glob: "**/*.{ts,tsx,json,jsonc,css,html}"
+      exclude:
+        - "docs/**"
       stage_fixed: true
 
 pre-push:
