@@ -123,33 +123,42 @@ function clayWanted(tick: PersonTick, construction: ResourceAmounts): number {
   return amountOf(construction, "clay") + forPottery;
 }
 
-function oreOnTheWay(tick: PersonTick, kind: MinedDepositKind): number {
-  const { resource } = DEPOSITS[kind];
-
-  return tick.context.people.membersOf(tick.tribe).reduce((total, person) => {
-    const minerShare = person.job instanceof MineJob && person.job.ore === kind ? MINERS_SHARE : 0;
-
-    return total + carriedAmount(person, resource) + minerShare;
-  }, 0);
-}
-
-function oreNeed(tick: PersonTick, kind: MinedDepositKind): number {
+function hasCompleteMine(tick: PersonTick, kind: MinedDepositKind): boolean {
   const mine = mineFor(tick.tribe, tick.context, kind);
 
-  if (mine === null || !isComplete(mine)) {
-    return 0;
+  return mine !== null && isComplete(mine);
+}
+
+function oreOnTheWay(tick: PersonTick): Record<MinedDepositKind, number> {
+  const onTheWay: Record<MinedDepositKind, number> = { copper: 0, iron: 0, tin: 0 };
+
+  for (const person of tick.context.people.membersOf(tick.tribe)) {
+    for (const kind of MINED_DEPOSIT_KINDS) {
+      const minerShare = person.job instanceof MineJob && person.job.ore === kind ? MINERS_SHARE : 0;
+
+      onTheWay[kind] = onTheWay[kind] + carriedAmount(person, DEPOSITS[kind].resource) + minerShare;
+    }
   }
 
-  const stocked = tick.tribe.stock[DEPOSITS[kind].resource] + oreOnTheWay(tick, kind);
-
-  return Math.max(0, 1 - stocked / ORE_TARGETS[kind]);
+  return onTheWay;
 }
 
 function neediestOre(tick: PersonTick): OreNeed | null {
+  const mined = MINED_DEPOSIT_KINDS.filter((kind) => {
+    return hasCompleteMine(tick, kind);
+  });
+
+  if (mined.length === 0) {
+    return null;
+  }
+
+  const onTheWay = oreOnTheWay(tick);
+
   let neediest: OreNeed | null = null;
 
-  for (const kind of MINED_DEPOSIT_KINDS) {
-    const need = oreNeed(tick, kind);
+  for (const kind of mined) {
+    const stocked = tick.tribe.stock[DEPOSITS[kind].resource] + onTheWay[kind];
+    const need = Math.max(0, 1 - stocked / ORE_TARGETS[kind]);
 
     if (need > (neediest === null ? 0 : neediest.need)) {
       neediest = { kind, need };
