@@ -60,15 +60,15 @@ const CLUMP_BUILDERS: Readonly<Record<CropKind, ClumpBuilder>> = {
   wheat: addWheat,
 };
 
-function plantStyle(context: Pick<ClumpContext, "height">, slot: MaterialSlotIndex, part: number): VertexStyle {
+function plantStyle(height: number, slot: MaterialSlotIndex, part: number): VertexStyle {
   return {
     part,
     shade: (point) => {
-      return 0.72 + 0.28 * saturate(point.position.y / context.height);
+      return 0.72 + 0.28 * saturate(point.position.y / height);
     },
     slot,
     sway: (point) => {
-      return plantSway(point.position.y, context.height);
+      return plantSway(point.position.y, height);
     },
   };
 }
@@ -136,7 +136,7 @@ function addLeafOnStalk(context: ClumpContext, from: Triple, leaf: LeafPlacement
 function addWheat(context: ClumpContext): void {
   const stalks = context.level === "high" ? 5 : 3;
   const ear = spindle(0.02, 0.13, context.level === "high" ? 4 : 3);
-  const head = plantStyle(context, MaterialSlot.Grain, CROP_HEAD_PART);
+  const head = plantStyle(context.height, MaterialSlot.Grain, CROP_HEAD_PART);
 
   for (let stalk = 0; stalk < stalks; stalk += 1) {
     const top = stalkTop(stalk, context.height, 0.06);
@@ -153,7 +153,7 @@ function addBarley(context: ClumpContext): void {
   const stalks = context.level === "high" ? 5 : 3;
   const ear = spindle(0.018, 0.13, context.level === "high" ? 4 : 3);
   const awn = cylinder({ height: 0.12, radialSegments: 3, radiusBottom: 0.012, radiusTop: 0 });
-  const head = plantStyle(context, MaterialSlot.Grain, CROP_HEAD_PART);
+  const head = plantStyle(context.height, MaterialSlot.Grain, CROP_HEAD_PART);
 
   for (let stalk = 0; stalk < stalks; stalk += 1) {
     const top = stalkTop(stalk, context.height, 0.05);
@@ -187,7 +187,7 @@ function addBarley(context: ClumpContext): void {
 function addFlax(context: ClumpContext): void {
   const stems = context.level === "high" ? 6 : 3;
   const flower = bud(0.03, 0.012, 5);
-  const bloom = plantStyle(context, MaterialSlot.Flax, CROP_HEAD_PART);
+  const bloom = plantStyle(context.height, MaterialSlot.Flax, CROP_HEAD_PART);
 
   for (let stem = 0; stem < stems; stem += 1) {
     const top = stalkTop(stem, context.height, 0.08);
@@ -249,7 +249,7 @@ function addCarrots(context: ClumpContext): void {
       ],
       context.level === "high" ? 5 : 4
     ),
-    { style: plantStyle(context, MaterialSlot.Carrot, CROP_HEAD_PART) }
+    { style: plantStyle(context.height, MaterialSlot.Carrot, CROP_HEAD_PART) }
   );
 }
 
@@ -273,7 +273,7 @@ function addTurnips(context: ClumpContext): void {
   }
 
   context.builder.add(bud(0.065, 0.06, context.level === "high" ? 6 : 4), {
-    style: plantStyle(context, MaterialSlot.Turnip, CROP_HEAD_PART),
+    style: plantStyle(context.height, MaterialSlot.Turnip, CROP_HEAD_PART),
     transform: transformOf({ position: [0, 0.02, 0] }),
   });
 }
@@ -281,7 +281,7 @@ function addTurnips(context: ClumpContext): void {
 function addBeans(context: ClumpContext): void {
   const isHigh = context.level === "high";
   const stem: Triple = [0, context.height * 0.92, 0];
-  const pods = plantStyle(context, MaterialSlot.Lichen, CROP_HEAD_PART);
+  const pods = plantStyle(context.height, MaterialSlot.Lichen, CROP_HEAD_PART);
 
   addStalk(context, straightStalk([0, 0, 0], stem, 0.012));
 
@@ -318,7 +318,7 @@ export function buildCropModel(kind: CropKind, level: CropDetailLevel): MeshData
   const builder = new MeshBuilder();
   const height = CROP_HEIGHTS[kind];
 
-  CLUMP_BUILDERS[kind]({ builder, height, leaf: plantStyle({ height }, MaterialSlot.Leaf, 0), level });
+  CLUMP_BUILDERS[kind]({ builder, height, leaf: plantStyle(height, MaterialSlot.Leaf, 0), level });
 
   return builder.build();
 }
