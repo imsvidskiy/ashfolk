@@ -28,6 +28,7 @@ const SPLASH_DROPS = 9;
 const SPLASH_COLOR: Color = [0.86, 0.93, 0.97];
 const WATER_DUST: Color = [0.85, 0.9, 0.95];
 const LAND_DUST: Color = [0.3, 0.27, 0.24];
+const EARTHQUAKE_DUST: Color = [0.55, 0.47, 0.38];
 
 const BLESSING_COLORS: Readonly<Record<BlessingEffect["style"], Color>> = {
   abundance: [1, 0.78, 0.3],
@@ -267,7 +268,7 @@ export class Earthquake implements ActiveEffect {
     this.#context.shake(strength * 2.5, this.#effect.x, this.#effect.z);
 
     const fade = smoothstep(0, 0.4, this.#age) * (1 - smoothstep(1.5, EARTHQUAKE_SECONDS, this.#age)) * 0.45;
-    const look = [0.55, 0.47, 0.38, fade];
+    const look = [...EARTHQUAKE_DUST, fade];
 
     for (let puff = 0; puff < DUST_PUFFS; puff += 1) {
       const angle = hashToUnit(puff, 7) * FULL_TURN;
