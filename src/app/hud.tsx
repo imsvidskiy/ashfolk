@@ -45,7 +45,7 @@ function WideHud() {
         </div>
 
         <div className="flex min-w-0 flex-col gap-3">
-          <GuideCard />
+          <GuideCard className="w-0 min-w-full" />
 
           <PowerDock className="max-w-full min-w-0" />
         </div>
