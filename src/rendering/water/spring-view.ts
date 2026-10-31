@@ -132,7 +132,7 @@ function addCave(builder: MeshBuilder, mirror: WorldMirror, spring: Spring, mode
   builder.addMesh(cave, { transform: placement });
 }
 
-export function areSpringsShapedBy(region: CellRegion | null, mirror: WorldMirror): boolean {
+export function areSpringsShapedBy(mirror: WorldMirror, region: CellRegion | null): boolean {
   if (region === null) {
     return false;
   }

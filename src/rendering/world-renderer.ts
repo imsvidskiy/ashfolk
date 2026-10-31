@@ -156,7 +156,7 @@ export class WorldRenderer {
     this.#terrain = new TerrainView(mirror, this.#textures, this.#plinth, this.#fireGlow, renderer);
     this.#islandBase = new IslandBase(mirror, this.#textures, this.#plinth);
     this.#water = new WaterView(mirror, this.#textures);
-    this.#waterfalls.rebuild(mirror.water.waterfalls, this.#textures, this.#plinth);
+    this.#waterfalls.rebuild(this.#textures, mirror.water.waterfalls, this.#plinth);
     this.#springs.rebuild(mirror);
     this.#lilies = new LilyPads(mirror, this.#textures);
     this.#vegetation = new VegetationView(mirror, this.#textures, this.#fireGlow);
@@ -386,11 +386,11 @@ export class WorldRenderer {
       this.#water.waterChanged(changes.waterLevelRegion);
     }
 
-    if (changes.hasWaterChanged || this.#waterfalls.isShapedBy(changes.heightRegion, this.#mirror.grid)) {
-      this.#waterfalls.rebuild(this.#mirror.water.waterfalls, this.#textures, this.#plinth);
+    if (changes.hasWaterChanged || this.#waterfalls.isShapedBy(this.#mirror.grid, changes.heightRegion)) {
+      this.#waterfalls.rebuild(this.#textures, this.#mirror.water.waterfalls, this.#plinth);
     }
 
-    if (changes.hasWaterChanged || areSpringsShapedBy(changes.heightRegion, this.#mirror)) {
+    if (changes.hasWaterChanged || areSpringsShapedBy(this.#mirror, changes.heightRegion)) {
       this.#springs.rebuild(this.#mirror);
     }
 
