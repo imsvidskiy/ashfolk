@@ -7,7 +7,7 @@ import { type Building, isComplete, NO_DEPOSIT } from "./buildings.ts";
 import { completedShelters, housingCapacity } from "./housing.ts";
 import type { SocietyContext } from "./society-context.ts";
 import { knows, type Tribe } from "./tribe.ts";
-import { campPoint } from "./tribe-places.ts";
+import { campPoint, tribeBuildings } from "./tribe-places.ts";
 
 const DWELLING_LADDER: readonly BuildingKind[] = ["tent", "hut", "longhouse", "stoneHouse"];
 const MAXIMUM_SHELTERS = 12;
@@ -31,7 +31,7 @@ export interface BuildingPlan {
   replacesId: number | null;
 }
 
-type Planner = (tribe: Tribe, context: SocietyContext) => BuildingPlan | null;
+type Planner = (tribe: Tribe, context: SocietyContext, owned: readonly Building[]) => BuildingPlan | null;
 
 const PLANNERS: readonly Planner[] = [
   singleBuilding("campfire", 0, 4),
@@ -60,28 +60,8 @@ function campPlan(tribe: Tribe, kind: BuildingKind, nearest: number, farthest: n
   };
 }
 
-export function tribeBuildings(tribe: Tribe, context: Pick<SocietyContext, "buildings">): Building[] {
-  const { buildings } = tribe;
-
-  const ids = [
-    buildings.campfireId,
-    buildings.storehouseId,
-    buildings.totemId,
-    ...buildings.shelterIds,
-    ...buildings.structureIds,
-  ];
-
-  return ids
-    .map((id) => {
-      return context.buildings.find(id);
-    })
-    .filter((building) => {
-      return building !== null;
-    });
-}
-
 export function buildingsOfKind(tribe: Tribe, context: SocietyContext, kind: BuildingKind): Building[] {
-  return tribeBuildings(tribe, context).filter((building) => {
+  return tribeBuildings(tribe, context.buildings).filter((building) => {
     return building.kind === kind;
   });
 }
@@ -150,8 +130,12 @@ function singleBuilding(
     return true;
   }
 ): Planner {
-  return (tribe, context) => {
-    if (!isUnlocked(tribe, kind, context) || buildingsOfKind(tribe, context, kind).length > 0) {
+  return (tribe, context, owned) => {
+    const isBuilt = owned.some((building) => {
+      return building.kind === kind;
+    });
+
+    if (!isUnlocked(tribe, kind, context) || isBuilt) {
       return null;
     }
 
@@ -180,8 +164,16 @@ export function nearestDeposit(world: WorldState, kind: DepositKind, origin: Way
 }
 
 export function mineFor(tribe: Tribe, context: SocietyContext, kind: DepositKind): Building | null {
-  const mine = buildingsOfKind(tribe, context, "mine").find((building) => {
-    const deposit = context.world.depositById(building.depositId);
+  return mineAmong(tribeBuildings(tribe, context.buildings), context.world, kind);
+}
+
+function mineAmong(owned: readonly Building[], world: WorldState, kind: DepositKind): Building | null {
+  const mine = owned.find((building) => {
+    if (building.kind !== "mine") {
+      return false;
+    }
+
+    const deposit = world.depositById(building.depositId);
 
     return deposit !== null && deposit.kind === kind;
   });
@@ -193,13 +185,13 @@ export function mineFor(tribe: Tribe, context: SocietyContext, kind: DepositKind
   return mine;
 }
 
-function minePlan(tribe: Tribe, context: SocietyContext): BuildingPlan | null {
+function minePlan(tribe: Tribe, context: SocietyContext, owned: readonly Building[]): BuildingPlan | null {
   if (isPostponed(tribe, "mine", context.environment.day)) {
     return null;
   }
 
   for (const kind of MINED_DEPOSIT_KINDS) {
-    if (!knows(tribe, DEPOSITS[kind].technology) || mineFor(tribe, context, kind) !== null) {
+    if (!knows(tribe, DEPOSITS[kind].technology) || mineAmong(owned, context.world, kind) !== null) {
       continue;
     }
 
@@ -251,8 +243,8 @@ function bestEnclosure(tribe: Tribe): BuildingKind | null {
   return null;
 }
 
-function enclosureOf(tribe: Tribe, context: SocietyContext): Building | null {
-  const enclosure = tribeBuildings(tribe, context).find((building) => {
+function enclosureAmong(owned: readonly Building[]): Building | null {
+  const enclosure = owned.find((building) => {
     return isEnclosure(building.kind);
   });
 
@@ -263,10 +255,10 @@ function enclosureOf(tribe: Tribe, context: SocietyContext): Building | null {
   return enclosure;
 }
 
-function campReach(tribe: Tribe, context: SocietyContext): number {
+function campReach(tribe: Tribe, owned: readonly Building[]): number {
   let reach = 0;
 
-  for (const building of tribeBuildings(tribe, context)) {
+  for (const building of owned) {
     if (building.kind === "mine" || isEnclosure(building.kind)) {
       continue;
     }
@@ -279,20 +271,20 @@ function campReach(tribe: Tribe, context: SocietyContext): number {
   return reach;
 }
 
-function enclosurePlan(tribe: Tribe, context: SocietyContext): BuildingPlan | null {
+function enclosurePlan(tribe: Tribe, context: SocietyContext, owned: readonly Building[]): BuildingPlan | null {
   const best = bestEnclosure(tribe);
 
   if (best === null || isPostponed(tribe, best, context.environment.day)) {
     return null;
   }
 
-  const existing = enclosureOf(tribe, context);
+  const existing = enclosureAmong(owned);
 
   if (existing !== null && (existing.kind === best || !isComplete(existing))) {
     return null;
   }
 
-  const campBuildings = tribeBuildings(tribe, context).filter((building) => {
+  const campBuildings = owned.filter((building) => {
     return building.kind !== "mine" && isComplete(building);
   });
 
@@ -300,7 +292,7 @@ function enclosurePlan(tribe: Tribe, context: SocietyContext): BuildingPlan | nu
     return null;
   }
 
-  const extent = Math.max(SMALLEST_ENCLOSURE, campReach(tribe, context) + ENCLOSURE_MARGIN);
+  const extent = Math.max(SMALLEST_ENCLOSURE, campReach(tribe, owned) + ENCLOSURE_MARGIN);
 
   return {
     ...campPlan(tribe, best, 0, 0),
@@ -313,9 +305,7 @@ function hasFields(tribe: Tribe): boolean {
   return tribe.fields.length >= FIELDS_FOR_GRANARY;
 }
 
-function keptInside(plan: BuildingPlan, tribe: Tribe, context: SocietyContext): BuildingPlan {
-  const enclosure = enclosureOf(tribe, context);
-
+function keptInside(plan: BuildingPlan, enclosure: Building | null): BuildingPlan {
   if (enclosure === null || plan.kind === "mine" || isEnclosure(plan.kind)) {
     return plan;
   }
@@ -326,13 +316,16 @@ function keptInside(plan: BuildingPlan, tribe: Tribe, context: SocietyContext): 
 }
 
 export function buildingPlans(tribe: Tribe, context: SocietyContext): BuildingPlan[] {
+  const owned = tribeBuildings(tribe, context.buildings);
+  const enclosure = enclosureAmong(owned);
+
   const plans: BuildingPlan[] = [];
 
   for (const planner of PLANNERS) {
-    const plan = planner(tribe, context);
+    const plan = planner(tribe, context, owned);
 
     if (plan !== null) {
-      plans.push(keptInside(plan, tribe, context));
+      plans.push(keptInside(plan, enclosure));
     }
   }
 

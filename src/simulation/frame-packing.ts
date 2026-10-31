@@ -33,12 +33,12 @@ import type {
 import type { Environment } from "./nature/environment.ts";
 import type { WeatherSystem } from "./nature/weather.ts";
 import { type Building, type BuildingSystem, isComplete } from "./society/buildings.ts";
-import { tribeBuildings } from "./society/camp-plan.ts";
 import type { JobKind } from "./society/jobs/job.ts";
 import { carriedItem, isChild, type Person } from "./society/person.ts";
 import { plantedCount } from "./society/plots.ts";
 import { nextEraName, technologyNames, tribeGoal } from "./society/progress.ts";
 import type { Tribe } from "./society/tribe.ts";
+import { tribeBuildings } from "./society/tribe-places.ts";
 import { SNOW_CAPACITY, type WorldState } from "./world/world-state.ts";
 
 const NO_ROW = -1;
@@ -287,7 +287,7 @@ export function describeBuilding(building: Building, world: WorldState): Buildin
 }
 
 function buildingCounts(tribe: Tribe, sources: TribeSources): BuildingCount[] {
-  const buildings = tribeBuildings(tribe, { buildings: sources.buildings });
+  const buildings = tribeBuildings(tribe, sources.buildings);
 
   return BUILDING_KINDS.map((kind) => {
     return {

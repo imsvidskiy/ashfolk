@@ -44,6 +44,34 @@ export function completedBuilding(buildings: BuildingSystem, id: number | null):
   return building;
 }
 
+export function tribeBuildings(tribe: Tribe, buildings: BuildingSystem): Building[] {
+  const { campfireId, shelterIds, storehouseId, structureIds, totemId } = tribe.buildings;
+
+  const found: Building[] = [];
+
+  collectBuilding(buildings, campfireId, found);
+  collectBuilding(buildings, storehouseId, found);
+  collectBuilding(buildings, totemId, found);
+
+  for (const shelterId of shelterIds) {
+    collectBuilding(buildings, shelterId, found);
+  }
+
+  for (const structureId of structureIds) {
+    collectBuilding(buildings, structureId, found);
+  }
+
+  return found;
+}
+
+function collectBuilding(buildings: BuildingSystem, id: number | null, found: Building[]): void {
+  const building = buildings.find(id);
+
+  if (building !== null) {
+    found.push(building);
+  }
+}
+
 export function sleepingSpot(person: Person, tribe: Tribe, buildings: BuildingSystem, random: RandomSource): Waypoint {
   const home = completedBuilding(buildings, person.homeId);
 
