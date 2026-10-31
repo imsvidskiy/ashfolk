@@ -1,19 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { page } from "vitest/browser";
 import { render } from "vitest-browser-react";
-import { startTestEngine } from "../features/testing/engine-fixtures.ts";
+import { nextFrame, startTestEngine } from "../features/testing/engine-fixtures.ts";
 import { showWorld } from "../features/testing/world-fixtures.ts";
 import { loadHud } from "./engine-launcher.ts";
 import { useEngineStore } from "./engine-store.ts";
 import { ReadyHud } from "./ready-hud.tsx";
-
-function nextFrame(): Promise<void> {
-  return new Promise((resolve) => {
-    requestAnimationFrame(() => {
-      resolve();
-    });
-  });
-}
 
 describe("ready hud", () => {
   it("waits for the engine", async () => {

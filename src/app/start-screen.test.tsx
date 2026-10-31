@@ -1,21 +1,11 @@
 import { describe, expect, it, onTestFinished } from "vitest";
 import { render } from "vitest-browser-react";
 import { useSavesStore } from "../features/saves/saves-store.ts";
-import { WorldSaver } from "../features/saves/world-saver.ts";
-import { createTestSession } from "../features/testing/engine-fixtures.ts";
-import { blockSavedWorlds, deleteAllSavedWorlds } from "../features/testing/save-fixtures.ts";
-import { ignore } from "../shared/ignore.ts";
+import { blockSavedWorlds, deleteAllSavedWorlds, saveWorld } from "../features/testing/save-fixtures.ts";
 import { useLaunchStore } from "./launch-store.ts";
 import { StartScreen } from "./start-screen.tsx";
 
 const initialLaunch = useLaunchStore.getState();
-
-async function saveOldFord(): Promise<void> {
-  const session = await createTestSession();
-
-  onTestFinished(deleteAllSavedWorlds);
-  await new WorldSaver(session, { id: "old-ford", name: "Old Ford" }, { onSaved: ignore, onSaving: ignore }).save();
-}
 
 describe("start screen", () => {
   it("offers a named round world from a random seed", async () => {
@@ -66,7 +56,8 @@ describe("start screen", () => {
   });
 
   it("offers the saved world without showing the new-world form first", async () => {
-    await saveOldFord();
+    onTestFinished(deleteAllSavedWorlds);
+    await saveWorld("old-ford", "Old Ford");
 
     const screen = await render(<StartScreen />);
 
@@ -75,7 +66,8 @@ describe("start screen", () => {
   });
 
   it("offers the saved worlds it already knows at once when the player comes back", async () => {
-    await saveOldFord();
+    onTestFinished(deleteAllSavedWorlds);
+    await saveWorld("old-ford", "Old Ford");
     await useSavesStore.getState().refresh();
 
     const screen = await render(<StartScreen />);

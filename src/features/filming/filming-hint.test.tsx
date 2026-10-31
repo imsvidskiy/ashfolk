@@ -3,7 +3,7 @@ import { userEvent } from "vitest/browser";
 import { render } from "vitest-browser-react";
 import { useInterfaceStore } from "../interface/interface-store.ts";
 import { usePowerStore } from "../powers/power-store.ts";
-import { startTestEngine } from "../testing/engine-fixtures.ts";
+import { nextFrame, startTestEngine } from "../testing/engine-fixtures.ts";
 import { FilmingHint } from "./filming-hint.tsx";
 
 const HINT_MILLISECONDS = 2500;
@@ -20,14 +20,6 @@ function press(type: string, pointerType: string, pointerId: number, x: number):
       pointerType,
     })
   );
-}
-
-function nextFrame(): Promise<void> {
-  return new Promise((resolve) => {
-    requestAnimationFrame(() => {
-      resolve();
-    });
-  });
 }
 
 describe("filming hint", () => {

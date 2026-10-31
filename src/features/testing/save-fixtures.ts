@@ -2,6 +2,8 @@ import { vi } from "vitest";
 import { ignore } from "../../shared/ignore.ts";
 import { SAVE_VERSION, type SavedWorldState } from "../../simulation/saved-world.ts";
 import { deleteSavedWorld, listSavedWorlds, type SavedWorldRecord } from "../saves/save-database.ts";
+import { WorldSaver } from "../saves/world-saver.ts";
+import { createTestSession } from "./engine-fixtures.ts";
 
 const DATABASE_NAME = "ashfolk";
 
@@ -50,6 +52,12 @@ export async function deleteAllSavedWorlds(): Promise<void> {
       return deleteSavedWorld(world.id);
     })
   );
+}
+
+export async function saveWorld(id: string, name: string): Promise<void> {
+  const session = await createTestSession();
+
+  await new WorldSaver(session, { id, name }, { onSaved: ignore, onSaving: ignore }).save();
 }
 
 export async function blockSavedWorlds(): Promise<void> {
