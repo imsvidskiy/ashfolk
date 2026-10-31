@@ -20,7 +20,7 @@ function isRenderPipelines(value: unknown): value is RenderPipelines {
   });
 }
 
-function isSoftwareAdapter(info: GPUAdapterInfo | undefined): boolean {
+export function isSoftwareAdapter(info: GPUAdapterInfo | undefined): boolean {
   return info !== undefined && (info.isFallbackAdapter === true || info.architecture === "swiftshader");
 }
 
