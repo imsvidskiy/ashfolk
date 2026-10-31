@@ -557,9 +557,11 @@ function mergeClosest(blobs: MergedBlob[]): MergedBlob[] {
 
 function mergedBlobs(blobs: readonly FoliageBlob[], target: number): FoliageBlob[] {
   let merged: MergedBlob[] = blobs.map((foliage) => {
+    const { drape = 0 } = foliage;
+
     return {
       center: new Vector3(...foliage.center),
-      drape: foliage.drape === undefined ? 0 : foliage.drape,
+      drape,
       radius: foliage.radius,
       squash: foliage.squash,
       tint: foliage.tint,
