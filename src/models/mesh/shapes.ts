@@ -76,7 +76,7 @@ const BOX_FACES: readonly BoxFace[] = [
   { normal: new Vector3(0, 0, -1), tangentU: new Vector3(0, 1, 0), tangentV: new Vector3(1, 0, 0) },
 ];
 
-interface ProfilePoint {
+export interface ProfilePoint {
   readonly radius: number;
   readonly y: number;
 }

@@ -1,6 +1,6 @@
 import { MaterialSlot, type MaterialSlotIndex } from "../materials.ts";
 import type { MeshBuilder, VertexStyle } from "../mesh/mesh-builder.ts";
-import { cylinder, lathe } from "../mesh/shapes.ts";
+import { cylinder, lathe, type ProfilePoint } from "../mesh/shapes.ts";
 import { segmentLength, segmentTransform, type Triple, transformOf } from "../mesh/transforms.ts";
 import { rigidStyle } from "../rig/skin-weights.ts";
 import { type HumanDetail, trimmedRing, trimSegments } from "./human-detail.ts";
@@ -14,7 +14,7 @@ const BASKET_RIM_SEGMENTS = 14;
 
 export interface Basket {
   readonly depth: number;
-  readonly profile: Parameters<typeof lathe>[0];
+  readonly profile: readonly ProfilePoint[];
   readonly rimHeight: number;
   readonly rimRadius: number;
   readonly rimStretch: number;
