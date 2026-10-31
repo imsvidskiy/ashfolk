@@ -1,4 +1,4 @@
-import { FULL_TURN } from "../../shared/math.ts";
+import { FULL_TURN, lerp } from "../../shared/math.ts";
 import { MaterialSlot, type MaterialSlotIndex } from "../materials.ts";
 import type { SurfacePoint } from "../mesh/mesh-builder.ts";
 import { card, cylinder, lathe, loft } from "../mesh/shapes.ts";
@@ -328,12 +328,12 @@ function addWorkbench(context: StructureContext): void {
   addBlock(context, [1.8, 0.09, 0.6], [middleX, top, middleZ], { buildOrder: 0.5, slot: MaterialSlot.Wood });
 
   for (const [x, z] of [
-    [-0.8, -0.3],
-    [0.8, -0.3],
-    [-0.8, -0.8],
-    [0.8, -0.8],
+    [-0.8, 0.25],
+    [0.8, 0.25],
+    [-0.8, -0.25],
+    [0.8, -0.25],
   ] as const) {
-    addLog(context, [middleX + x, 0, middleZ + z + 0.55], [middleX + x, top, middleZ + z + 0.55], 0.04, {
+    addLog(context, [middleX + x, 0, middleZ + z], [middleX + x, top, middleZ + z], 0.04, {
       buildOrder: 0.45,
       slot: MaterialSlot.Wood,
     });
@@ -359,7 +359,7 @@ function addWorkbench(context: StructureContext): void {
   const bow = Array.from({ length: bowPoints }, (_, index) => {
     const amount = index / (bowPoints - 1);
 
-    const x = bowTips[0][0] + (bowTips[1][0] - bowTips[0][0]) * amount;
+    const x = lerp(bowTips[0][0], bowTips[1][0], amount);
     const bend = Math.sin(amount * Math.PI) * 0.22;
 
     return { radius: 0.022, x, y: surface + 0.018, z: bowTips[0][2] + bend };
