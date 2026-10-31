@@ -42,25 +42,25 @@ export function fogShapeFor(conditions: FogConditions): FogShape {
 }
 
 export class HeightFog {
-  readonly density = uniform(CLEAR_DENSITY);
-  readonly falloff = uniform(1 / CLEAR_LAYER_DEPTH);
   readonly factor: Node<"float">;
-  readonly veil = uniform(0);
+  readonly #density = uniform(CLEAR_DENSITY);
+  readonly #falloff = uniform(1 / CLEAR_LAYER_DEPTH);
+  readonly #veil = uniform(0);
 
   constructor() {
     const ray = positionWorld.sub(cameraPosition);
-    const thickness = this.density.mul(exp(cameraPosition.y.sub(BASE_ALTITUDE).mul(this.falloff).negate()));
+    const thickness = this.#density.mul(exp(cameraPosition.y.sub(BASE_ALTITUDE).mul(this.#falloff).negate()));
 
-    const climb = ray.y.mul(this.falloff);
+    const climb = ray.y.mul(this.#falloff);
     const spread = select(abs(climb).greaterThan(LEVEL_RAY), float(1).sub(exp(climb.negate())).div(climb), float(1));
     const layered = thickness.mul(spread);
 
-    this.factor = float(1).sub(exp(max(layered.add(this.veil).mul(length(ray)), 0).negate()));
+    this.factor = float(1).sub(exp(max(layered.add(this.#veil).mul(length(ray)), 0).negate()));
   }
 
   apply(shape: FogShape): void {
-    this.density.value = shape.density;
-    this.falloff.value = shape.falloff;
-    this.veil.value = shape.veil;
+    this.#density.value = shape.density;
+    this.#falloff.value = shape.falloff;
+    this.#veil.value = shape.veil;
   }
 }
