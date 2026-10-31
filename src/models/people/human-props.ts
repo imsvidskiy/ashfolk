@@ -12,7 +12,6 @@ import {
   addBasket,
   addRod,
   type Basket,
-  basketBottom,
   CRADLE,
   inLeftHand,
   inRightHand,
@@ -114,9 +113,7 @@ export function addToolBasket(builder: MeshBuilder, detail: HumanDetail): void {
 export function addCarriedBerries(builder: MeshBuilder, detail: HumanDetail): void {
   const [x, , z] = LEFT_FIST;
 
-  const bottom = basketBottom(GATHERING_BASKET);
-
-  addBasket(builder, detail, GATHERING_BASKET);
+  const bottom = addBasket(builder, detail, GATHERING_BASKET);
 
   if (!detail.hasSmallParts) {
     return;

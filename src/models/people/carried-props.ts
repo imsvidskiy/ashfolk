@@ -6,7 +6,7 @@ import type { MeshBuilder } from "../mesh/mesh-builder.ts";
 import { blob, sphere } from "../mesh/shapes.ts";
 import { type Triple, transformOf } from "../mesh/transforms.ts";
 import { type HumanDetail, trimSegments } from "./human-detail.ts";
-import { addBasket, type Basket, basketBottom, CRADLE, inLeftHand, LEFT_FIST, onChest } from "./prop-placement.ts";
+import { addBasket, type Basket, CRADLE, inLeftHand, LEFT_FIST, onChest } from "./prop-placement.ts";
 
 const LOAD_NOISE = createVolumeNoise(createRandom(5151));
 
@@ -85,10 +85,8 @@ export function addCarriedClay(builder: MeshBuilder, detail: HumanDetail): void 
 export function addCarriedFruit(builder: MeshBuilder, detail: HumanDetail): void {
   const [x, , z] = LEFT_FIST;
 
-  const bottom = basketBottom(FRUIT_BASKET);
   const apples = detail.hasSmallParts ? 7 : 4;
-
-  addBasket(builder, detail, FRUIT_BASKET);
+  const bottom = addBasket(builder, detail, FRUIT_BASKET);
 
   for (let apple = 0; apple < apples; apple += 1) {
     const angle = (apple / apples) * FULL_TURN;

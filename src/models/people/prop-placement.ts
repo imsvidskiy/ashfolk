@@ -57,14 +57,10 @@ export function addRod(builder: MeshBuilder, detail: HumanDetail, rod: Rod, styl
   );
 }
 
-export function basketBottom(basket: Basket): number {
-  return LEFT_FIST[1] - basket.depth;
-}
+export function addBasket(builder: MeshBuilder, detail: HumanDetail, basket: Basket): number {
+  const [x, y, z] = LEFT_FIST;
 
-export function addBasket(builder: MeshBuilder, detail: HumanDetail, basket: Basket): void {
-  const [x, , z] = LEFT_FIST;
-
-  const bottom = basketBottom(basket);
+  const bottom = y - basket.depth;
 
   builder.add(lathe(basket.profile, detail.limbSegments + 3), {
     style: inLeftHand(MaterialSlot.Thatch),
@@ -78,4 +74,6 @@ export function addBasket(builder: MeshBuilder, detail: HumanDetail, basket: Bas
       scale: [basket.rimStretch, 1, 1],
     }),
   });
+
+  return bottom;
 }
