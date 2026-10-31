@@ -21,9 +21,20 @@ describe("the combat ledger", () => {
     expect(ledger.isGuarding(2)).toBe(false);
     expect(ledger.assailantOf(1)).toBe(7);
 
-    ledger.update(12);
+    ledger.update(60);
 
     expect(ledger.assailantOf(1)).toBeNull();
     expect(ledger.snapshot().size).toBe(0);
+  });
+
+  it("remembers a fighter's assailant afresh with each new blow", () => {
+    const ledger = new CombatLedger();
+
+    ledger.stagger(1, 7);
+    ledger.update(10);
+    ledger.stagger(1, 8);
+    ledger.update(5);
+
+    expect(ledger.assailantOf(1)).toBe(8);
   });
 });

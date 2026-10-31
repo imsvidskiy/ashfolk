@@ -2,7 +2,8 @@ import { describe, expect, it } from "vitest";
 import { enclosure, foundNeighboringTribes, foundTribe, SPRING_HARNESS } from "../../testing/test-rivalry.ts";
 import { SocietyHarness } from "../../testing/test-society.ts";
 import type { Job, JobKind } from "../jobs/job.ts";
-import { burnableBuilding, chooseWarriors } from "./raids.ts";
+import { burnableBuilding, chooseAim, chooseWarriors } from "./raids.ts";
+import { RelationBook } from "./relations.ts";
 
 function steadyJob(kind: JobKind): Job {
   const job: Job = {
@@ -26,6 +27,24 @@ describe("a raid", () => {
 
     expect(burnableBuilding([wall], victims)).toBeNull();
     expect(burnableBuilding([wall, palisade], victims)).toBe(palisade);
+  });
+
+  it("seeks revenge after a killing, burns when bitter and plunders otherwise", () => {
+    const relation = new RelationBook().meet(1, 2, false);
+
+    relation.lastGrudge = "blood";
+    relation.standing = -80;
+
+    expect(chooseAim(relation, true)).toBe("revenge");
+
+    relation.lastGrudge = "plunder";
+
+    expect(chooseAim(relation, true)).toBe("burn");
+    expect(chooseAim(relation, false)).toBe("plunder");
+
+    relation.standing = -40;
+
+    expect(chooseAim(relation, true)).toBe("plunder");
   });
 
   it("sends the fittest half of the fighters, three to six of them", () => {

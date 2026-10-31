@@ -16,6 +16,24 @@ import { sideOf } from "./relations.ts";
 const RAID_SENT_STORY = /^raid: The .+ sent \d warriors against the .+/u;
 const RAID_OUTCOME_STORY = /^raid: The .+ (?:raided|drove off a raid by) the .+/u;
 const PLUNDER_STORY = /^raid: The .+ raided the .+: carried off/u;
+const FEUD_DAYS = 60;
+
+function raidsAfterFeud(standing: number, weariness: number): number {
+  const harness = new SocietyHarness(SPRING_HARNESS);
+
+  const [first, second] = foundNeighboringTribes(harness, 420);
+
+  const relation = harness.rivalry.relations.meet(first.id, second.id, false);
+
+  armTribe(first, 300);
+  setFood(second, 80);
+  relation.standing = standing;
+  relation.stance = "hostile";
+  sideOf(relation, first.id).weariness = weariness;
+  harness.rivalry.campaigns.consider(relation, FEUD_DAYS, harness.context);
+
+  return harness.rivalry.campaigns.raids.length;
+}
 
 describe("a raid", () => {
   it("musters, marches, fights at the enemy camp and comes home to tell of it", () => {
@@ -122,6 +140,12 @@ describe("a raid", () => {
 
     expect(raid?.loot.copper).toBeGreaterThan(0);
     expect(raiders.stock.copper).toBe(raid?.loot.copper);
+  });
+
+  it("sets out against a bitter enemy unless the feud has worn the tribe out", () => {
+    expect(raidsAfterFeud(-100, 0)).toBe(1);
+    expect(raidsAfterFeud(-55, 0)).toBe(0);
+    expect(raidsAfterFeud(-100, 70)).toBe(0);
   });
 
   it("stays home in winter", () => {
