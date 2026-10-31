@@ -9,6 +9,7 @@ import type { WorldState } from "../world/world-state.ts";
 const IGNITION_INTENSITY = 0.14;
 const EXTINGUISHED_INTENSITY = 0.02;
 const BURNT_OUT_FUEL = 0.01;
+const LEAST_STARTING_FUEL = 0.01;
 const HEAT_FLOOR = 0.002;
 const HEAT_RETENTION = 0.99;
 const CROWN_BURN_FRACTION = 0.55;
@@ -211,18 +212,15 @@ export class FireSystem {
   }
 
   #nextIntensity(cell: number, intensity: number): number {
-    const { canopyFuel, fields, initialCanopyFuel, terrain } = this.#world;
+    const { canopyFuel, fields, terrain } = this.#world;
 
     const ground = groundDefinition(terrain.ground[cell]);
-    const groundFuel = fields.fuel[cell];
-    const canopy = canopyFuel[cell];
 
-    const availableFuel = Math.min(1, groundFuel * 0.75 + canopy * 0.3);
+    const availableFuel = Math.min(1, fields.fuel[cell] * 0.75 + canopyFuel[cell] * 0.3);
     const dampness =
       Math.max(0, 1 - fields.wetness[cell] * SOAKING_DAMPNESS) * (1 - Math.min(1, fields.snow[cell] * 4));
-    const fuelFraction = (groundFuel + canopy) / Math.max(0.01, ground.fuel + initialCanopyFuel[cell]);
 
-    const flamingPhase = 0.18 + 0.82 * smoothstep(0, 1, (fuelFraction - 0.12) / 0.5);
+    const flamingPhase = 0.18 + 0.82 * smoothstep(0, 1, (this.#fuelShareLeft(cell) - 0.12) / 0.5);
     const target = Math.min(1, (0.25 + availableFuel) * (0.6 + 0.4 * ground.flammability)) * dampness;
 
     return intensity + (target * flamingPhase - intensity) * 0.3;
@@ -251,14 +249,17 @@ export class FireSystem {
   }
 
   #raiseScorch(cell: number): void {
+    const { scorch } = this.#world.fields;
+
+    scorch[cell] = Math.max(scorch[cell], 1 - this.#fuelShareLeft(cell));
+  }
+
+  #fuelShareLeft(cell: number): number {
     const { canopyFuel, fields, initialCanopyFuel, terrain } = this.#world;
 
-    const ground = groundDefinition(terrain.ground[cell]);
-    const fuelLeft = fields.fuel[cell] + canopyFuel[cell];
+    const startingFuel = groundDefinition(terrain.ground[cell]).fuel + initialCanopyFuel[cell];
 
-    const totalFuel = Math.max(0.01, ground.fuel + initialCanopyFuel[cell]);
-
-    fields.scorch[cell] = Math.max(fields.scorch[cell], 1 - fuelLeft / totalFuel);
+    return (fields.fuel[cell] + canopyFuel[cell]) / Math.max(LEAST_STARTING_FUEL, startingFuel);
   }
 
   #burnOut(cell: number, fuelLeft: number, day: number): void {
