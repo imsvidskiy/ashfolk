@@ -1,6 +1,7 @@
 import { BUILDINGS, type BuildingRole, isFlammable } from "../../../content/buildings.ts";
 import type { Waypoint } from "../../agents/navigation.ts";
 import { type Building, isComplete } from "../buildings.ts";
+import type { JobKind } from "../jobs/job.ts";
 import { isChild, isElder, NEED_SECONDS, type Person } from "../person.ts";
 import type { SocietySystem } from "../society.ts";
 import type { Stock } from "../stock.ts";
@@ -21,6 +22,7 @@ const PARTY_SHARE = 0.5;
 const SMALLEST_PARTY = 3;
 const LARGEST_PARTY = 6;
 const BURNING_STANDING = -50;
+const STEADY_JOBS: ReadonlySet<JobKind> = new Set(["defend", "envoy", "fight", "flee", "hide", "raid"]);
 
 export type RaidPhase = "assault" | "march" | "muster" | "retreat";
 
@@ -43,6 +45,10 @@ export interface Raid {
   readonly struckIds: Set<number>;
   readonly target: Waypoint;
   readonly warriorIds: readonly number[];
+}
+
+export function isBusy(person: Person): boolean {
+  return person.job !== null && STEADY_JOBS.has(person.job.kind);
 }
 
 export function canFight(person: Person): boolean {

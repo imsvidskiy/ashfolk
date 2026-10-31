@@ -6,9 +6,8 @@ import { takeFood, totalFood } from "../stock.ts";
 import type { Tribe } from "../tribe.ts";
 import { campDistance, nearCamp } from "../tribe-places.ts";
 import { FOOD_RESERVE, packFood } from "./provisions.ts";
-import { eatRation, rationsFor } from "./raids.ts";
+import { eatRation, isBusy, rationsFor } from "./raids.ts";
 import { type Relation, stanceFor } from "./relations.ts";
-import { isBusy } from "./responses.ts";
 
 const PEACE_WEARINESS = 30;
 const WEARINESS_PER_PRESSURE = 40;

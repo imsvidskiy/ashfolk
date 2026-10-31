@@ -14,7 +14,7 @@ import { MournJob } from "./defense-jobs.ts";
 import { FOOD_RESERVE, totalGoods } from "./provisions.ts";
 import { type RaiderState, RaidJob } from "./raid-job.ts";
 import { advancePhase, enterPhase, RALLY_DISTANCE } from "./raid-phases.ts";
-import { burnableBuilding, chooseAim, chooseWarriors, livingRaiders, type Raid, rationsFor } from "./raids.ts";
+import { burnableBuilding, chooseAim, chooseWarriors, isBusy, livingRaiders, type Raid, rationsFor } from "./raids.ts";
 import {
   aggrieve,
   areKin,
@@ -25,7 +25,6 @@ import {
   type RelationSide,
   sideOf,
 } from "./relations.ts";
-import { isBusy } from "./responses.ts";
 import { mourningText, raidLaunchText, raidSummary } from "./stories.ts";
 
 const BURNING_GRIEVANCE = 12;
