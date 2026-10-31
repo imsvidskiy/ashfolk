@@ -1,5 +1,6 @@
 import type { Scene, WebGPURenderer } from "three/webgpu";
 import { ignore } from "../shared/ignore.ts";
+import { webGPUDevice } from "./create-graphics.ts";
 
 const PIPELINE_METHODS = ["getForRender", "isReady", "updateForRender"] as const;
 
@@ -19,18 +20,21 @@ function isRenderPipelines(value: unknown): value is RenderPipelines {
   });
 }
 
-// Workaround: three.js r186 creates a render pipeline synchronously in the frame that first draws an object, and the
-// GPU holds that frame while the driver compiles it, for seconds on a cold shader cache. Objects of the scene without a
-// pipeline get one from createRenderPipelineAsync instead, and three skips drawing them until it is ready. Objects that
-// already draw, and one-off renders such as texture bakes, keep the synchronous path.
+export function isSoftwareAdapter(info: GPUAdapterInfo | undefined): boolean {
+  return info !== undefined && (info.isFallbackAdapter || info.architecture === "swiftshader");
+}
+
+// Workaround: three.js r186 compiles a pipeline synchronously in the frame that first draws an object, which holds the
+// GPU for seconds on a cold shader cache. SwiftShader loses the device on background compiles, so it keeps that path.
 export class BackgroundPipelines {
   readonly #pending = new Set<Promise<void>>();
   readonly #restore: () => void;
 
   constructor(renderer: WebGPURenderer, scene: Scene) {
     const pipelines: unknown = Reflect.get(renderer, "_pipelines");
+    const device = webGPUDevice(renderer);
 
-    if (!isRenderPipelines(pipelines)) {
+    if (device === null || isSoftwareAdapter(device.adapterInfo) || !isRenderPipelines(pipelines)) {
       this.#restore = ignore;
 
       return;
@@ -56,10 +60,6 @@ export class BackgroundPipelines {
     this.#restore = () => {
       Reflect.deleteProperty(pipelines, "updateForRender");
     };
-  }
-
-  get pendingCount(): number {
-    return this.#pending.size;
   }
 
   async settle(limitMilliseconds: number): Promise<void> {
