@@ -4,7 +4,7 @@ import { Ground } from "../../content/grounds.ts";
 import type { WorldMirror } from "../../game/world-mirror.ts";
 import { hashToUnit } from "../../shared/math.ts";
 import { GROUND_CHANNELS, GroundChannel } from "../../world/agent-buffers.ts";
-import type { CellRegion, RowRun } from "../../world/change-tracking.ts";
+import { type CellRegion, grownRegion, type RowRun } from "../../world/change-tracking.ts";
 import { gradientXAt, gradientZAt } from "../../world/footing.ts";
 import { NEIGHBOR_OFFSETS, type WorldGrid } from "../../world/world-grid.ts";
 
@@ -135,15 +135,17 @@ export class FieldPlan {
   heightsChanged(region: CellRegion): void {
     const { grid } = this.#mirror;
 
+    const slopeRegion = grownRegion(region, 1, grid.cellsPerSide);
+
     for (const cell of this.#farms) {
       const column = grid.columnOf(cell);
       const row = grid.rowOf(cell);
 
       if (
-        column >= region.firstColumn &&
-        column <= region.lastColumn &&
-        row >= region.firstRow &&
-        row <= region.lastRow
+        column >= slopeRegion.firstColumn &&
+        column <= slopeRegion.lastColumn &&
+        row >= slopeRegion.firstRow &&
+        row <= slopeRegion.lastRow
       ) {
         this.#plan();
 
