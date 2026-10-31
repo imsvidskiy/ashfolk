@@ -1,22 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { WorldMirror } from "../../game/world-mirror.ts";
-import { ignore } from "../../shared/ignore.ts";
 import { FULL_TURN, wrapAngle } from "../../shared/math.ts";
-import { Simulation } from "../../simulation/simulation.ts";
+import { createRoundMirror } from "../testing/round-mirror.ts";
 import { createVegetatedMirror } from "../testing/vegetated-mirror.ts";
 import { type GroundArea, IslandOutline, type OutlineSide } from "./island-outline.ts";
 
 const AREA_SIZE = 160;
 const SAMPLE_STEP = 2;
 const COAST_SAMPLES = 24;
-const round = new WorldMirror(
-  Simulation.generate(
-    5,
-    { dimensions: { cellSize: 20, cellsPerSide: 96 }, erosionStrength: 0.4, shape: "round" },
-    ignore
-  ).initialWorld(),
-  0
-);
+const round = createRoundMirror();
 
 function sampledSides(outline: IslandOutline, area: GroundArea): Set<boolean> {
   const sides = new Set<boolean>();

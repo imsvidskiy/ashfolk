@@ -1,23 +1,16 @@
 import { describe, expect, it } from "vitest";
 import { WorldMirror } from "../../game/world-mirror.ts";
-import { ignore } from "../../shared/ignore.ts";
 import { Simulation } from "../../simulation/simulation.ts";
 import { createVegetatedWorld } from "../../simulation/testing/test-world.ts";
 import { sampleHeight } from "../../world/terrain-sampling.ts";
+import { createRoundMirror } from "../testing/round-mirror.ts";
 import { buildIslandBaseGeometry, islandPlinthHeight } from "./island-base-geometry.ts";
 import { type CoastPoint, IslandOutline } from "./island-outline.ts";
 
 const CELLS_PER_SIDE = 32;
 const COAST_TOLERANCE = 1.5;
 const NUDGE = 0.01;
-const round = new WorldMirror(
-  Simulation.generate(
-    5,
-    { dimensions: { cellSize: 20, cellsPerSide: 96 }, erosionStrength: 0.4, shape: "round" },
-    ignore
-  ).initialWorld(),
-  0
-);
+const round = createRoundMirror();
 
 function rimPoints(mirror: WorldMirror): (readonly [number, number])[] {
   const outline = new IslandOutline(mirror);
