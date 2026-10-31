@@ -57,9 +57,16 @@ export interface GrabScene extends AgentScene {
   readonly vegetation: Pick<VegetationBuffers, "count" | "height" | "species" | "state" | "x" | "z">;
 }
 
-export type AgentFooting = (kind: "animal" | "person", x: number, z: number) => number;
+type AgentKind = "animal" | "person";
 
-export type DrawnHeading = (kind: "animal" | "person", id: number) => number | null;
+export type AgentFooting = (kind: AgentKind, x: number, z: number) => number;
+
+export type DrawnHeading = (kind: AgentKind, id: number) => number | null;
+
+interface AgentTarget {
+  readonly id: number;
+  readonly kind: AgentKind;
+}
 
 interface PointerPick {
   readonly ground: Vector3 | null;
@@ -76,7 +83,7 @@ interface ScreenHit {
 interface AgentLayout {
   readonly body: (data: Float32Array, offset: number) => AgentBody;
   readonly fields: MotionFields & { readonly Heading: number; readonly Id: number };
-  readonly kind: "animal" | "person";
+  readonly kind: AgentKind;
   readonly stride: number;
 }
 
@@ -235,18 +242,14 @@ export class EntityPicker {
     return nearest;
   }
 
-  #agents(
-    scene: AgentScene,
-    layout: AgentLayout,
-    pointer: PointerPick
-  ): Candidate<{ id: number; kind: AgentLayout["kind"] }>[] {
+  #agents(scene: AgentScene, layout: AgentLayout, pointer: PointerPick): Candidate<AgentTarget>[] {
     const { frame, secondsSinceTick } = scene;
     const { body, fields, kind, stride } = layout;
 
     const data = kind === "person" ? frame.people : frame.animals;
     const count = kind === "person" ? frame.personCount : frame.animalCount;
 
-    const candidates: Candidate<{ id: number; kind: AgentLayout["kind"] }>[] = [];
+    const candidates: Candidate<AgentTarget>[] = [];
 
     for (let agent = 0; agent < count; agent += 1) {
       const offset = agent * stride;
