@@ -7,7 +7,6 @@ import { isInsidePiece, loosePieces, type MeshPiece, meshPieces } from "../testi
 import { windBentMesh } from "../testing/moved-mesh.ts";
 import { widestReach } from "../testing/structure-checks.ts";
 import { BERRY_PART, BERRY_RADIUS } from "./berries.ts";
-import { CACTUS_FORMS, cactusForm } from "./cacti.ts";
 import {
   buildPlantVariants,
   canonicalHeight,
@@ -364,11 +363,6 @@ describe("tree details", () => {
   it("grows a different kind of cactus from each variant", () => {
     const [saguaro, organPipe, barrel, pricklyPear] = buildPlantVariants(PlantSpecies.Cactus, "high");
 
-    expect(
-      CACTUS_FORMS.map((_form, variant) => {
-        return cactusForm(variant);
-      })
-    ).toEqual(CACTUS_FORMS);
     expect(saguaro.bounds.maximum[1]).toBeGreaterThan(3);
     expect(
       meshPieces(organPipe).filter((piece) => {

@@ -841,7 +841,7 @@ function addGrassTuft(growth: Growth): void {
 function desertShrub(seed: number, variant: number): TreeStructure {
   const growth = createGrowth(seed);
 
-  DESERT_SHRUB_FORMS[variant % DESERT_SHRUB_FORMS.length](growth);
+  DESERT_SHRUB_FORMS[variant](growth);
 
   return finish(growth, TREE_HEIGHTS[PlantSpecies.DesertShrub]);
 }

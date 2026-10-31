@@ -348,10 +348,6 @@ function addPricklyPear(builder: MeshBuilder, random: RandomSource, detail: Cact
   }
 }
 
-export function cactusForm(variant: number): CactusForm {
-  return CACTUS_FORMS[variant % CACTUS_FORMS.length];
-}
-
 export function meshCactus(seed: number, level: PlantDetailLevel, form: CactusForm): MeshData {
   const builder = new MeshBuilder({ slot: MaterialSlot.Cactus });
 
