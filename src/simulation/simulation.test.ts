@@ -95,8 +95,8 @@ function advanceFor(simulation: Simulation, seconds: number): void {
 }
 
 function settleLand(simulation: Simulation): void {
-  for (let elapsed = 0; elapsed < SETTLING_SECONDS && simulation.isBusy; elapsed += 0.25) {
-    simulation.advance(0.25);
+  for (let elapsed = 0; elapsed < SETTLING_SECONDS && simulation.isBusy; elapsed += SETTLING_STEP) {
+    simulation.advance(SETTLING_STEP);
   }
 }
 
