@@ -97,12 +97,13 @@ export function encodeLeveled(cue: Cue, measurement: Measurement, encoder: Encod
 
     const leveled = encoder.measure();
     const correction = gainFor(cue, leveled);
+    const miss = Math.abs(correction);
 
-    if (Math.abs(correction) < SETTLED_DECIBELS) {
+    if (miss < SETTLED_DECIBELS) {
       return leveled;
     }
 
-    passes.push({ gain, leveled, miss: Math.abs(correction) });
+    passes.push({ gain, leveled, miss });
     gain += correction;
   }
 
