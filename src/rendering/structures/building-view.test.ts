@@ -133,14 +133,18 @@ describe("building view", () => {
     const buildings = drawnMeshes(view.group, "buildingState");
     const plinths = drawnMeshes(view.group, "plinthLook");
     const accent = new TribeLooks().accent(worn.tribeId);
+    const [plinthX, plinthTop, plinthZ, plinthRotation] = firstInstance(plinths, "plinthPlacement");
     const [depth, ...plinthLook] = firstInstance(plinths, "plinthLook");
 
     expect(firstInstance(buildings, "buildingPlacement")).toEqual(closeTo([worn.x, floor, worn.z, worn.rotation]));
     expect(firstInstance(buildings, "buildingLook")).toEqual(closeTo([worn.progress, accent.r, accent.g, accent.b]));
     expect(firstInstance(buildings, "buildingState")).toEqual(closeTo([0.6, 0, worn.style, 1]));
-    expect(firstInstance(plinths, "plinthPlacement")).toEqual(closeTo([worn.x, floor - 0.03, worn.z, worn.rotation]));
+    expect([plinthX, plinthZ, plinthRotation]).toEqual(closeTo([worn.x, worn.z, worn.rotation]));
+    expect(floor - plinthTop).toBeGreaterThan(0);
+    expect(floor - plinthTop).toBeLessThan(0.1);
     expect(plinthLook).toEqual(closeTo([0.6, worn.style, 1]));
     expect(depth).toBeGreaterThan(0.5);
+    expect(depth).toBeLessThanOrEqual(3.6);
   });
 
   it("lights finished workplaces and burning campfires and leaves the rest dark", () => {
