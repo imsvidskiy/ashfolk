@@ -415,9 +415,7 @@ export function isLivingTreeSpecies(index: number): boolean {
 }
 
 export function isTreeSpecies(index: number): boolean {
-  const { form } = plantSpeciesDefinition(index);
-
-  return form === "broadleaf" || form === "conifer" || form === "deadwood";
+  return isLivingTreeSpecies(index) || plantSpeciesDefinition(index).form === "deadwood";
 }
 
 export function isShrubSpecies(index: number): boolean {
