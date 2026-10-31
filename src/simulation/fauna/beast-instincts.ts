@@ -188,6 +188,12 @@ export function isHurt(animal: Animal): boolean {
   return animal.health < ANIMALS[animal.kind].health * HURT_SHARE;
 }
 
+function hasHurtMember(members: readonly Animal[]): boolean {
+  return members.some((member) => {
+    return isHurt(member);
+  });
+}
+
 function prowl(pack: Pack, mood: PackMood, members: readonly Animal[], tick: FaunaTick): void {
   const [leader] = members;
 
@@ -458,11 +464,7 @@ export class BeastInstincts {
       return;
     }
 
-    const isBroken =
-      members.length < hunt.startingSize ||
-      members.some((member) => {
-        return isHurt(member);
-      });
+    const isBroken = members.length < hunt.startingSize || hasHurtMember(members);
     const isGuarded = prey.isSheltered || prey.companions >= GROUP_COMPANIONS;
 
     if (isGuarded || isBroken || hunt.seconds > LONGEST_HUNT_SECONDS) {
@@ -578,12 +580,7 @@ export class BeastInstincts {
   #considerHunt(mood: PackMood, members: readonly Animal[], tick: FaunaTick): void {
     const [leader] = members;
 
-    if (
-      leader === undefined ||
-      members.some((member) => {
-        return isHurt(member);
-      })
-    ) {
+    if (leader === undefined || hasHurtMember(members)) {
       return;
     }
 
