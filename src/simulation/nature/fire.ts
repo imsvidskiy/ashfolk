@@ -16,8 +16,13 @@ const CROWN_BURN_FRACTION = 0.55;
 const DIAGONAL_WIND_DAMPING = 0.72;
 const FULL_WIND_SPEED = 45;
 const MAXIMUM_WIND_STRENGTH = 1.4;
+const DOWNWIND_CELLS = 2;
+const DOWNWIND_WEIGHT = 0.35;
+const LEAST_DOWNWIND_WEIGHT = 0.05;
 const BURNABLE_GROUND_FUEL = 0.02;
 const BURNABLE_CANOPY_FUEL = 0.05;
+const EMBER_CANOPY_FUEL = 0.8;
+const EMBER_INTENSITY = 0.55;
 const SNOW_BLOCKING_IGNITION = 0.3;
 const SOAKING_DAMPNESS = 1.1;
 const GROUND_FIRE_EMISSION = 0.75;
@@ -99,9 +104,9 @@ export class FireSystem {
       this.#windFactors[index] = (push * diagonalDamping) / (1 + 0.3 * strength);
     }
 
-    this.#downwindColumn = Math.round(windX * 2);
-    this.#downwindRow = Math.round(windZ * 2);
-    this.#downwindWeight = 0.35 * strength * influence;
+    this.#downwindColumn = Math.round(windX * DOWNWIND_CELLS);
+    this.#downwindRow = Math.round(windZ * DOWNWIND_CELLS);
+    this.#downwindWeight = DOWNWIND_WEIGHT * strength * influence;
     this.#windStrength = strength;
   }
 
@@ -316,7 +321,7 @@ export class FireSystem {
   #heatDownwind(column: number, row: number, emittedHeat: number): void {
     const { grid } = this.#world;
 
-    if (this.#downwindWeight <= 0.05 || !grid.contains(column, row)) {
+    if (this.#downwindWeight <= LEAST_DOWNWIND_WEIGHT || !grid.contains(column, row)) {
       return;
     }
 
@@ -324,7 +329,7 @@ export class FireSystem {
   }
 
   #throwEmbers(cell: number, intensity: number, tick: FireTick): void {
-    if (this.#world.canopyFuel[cell] <= 0.8 || intensity <= 0.55) {
+    if (this.#world.canopyFuel[cell] <= EMBER_CANOPY_FUEL || intensity <= EMBER_INTENSITY) {
       return;
     }
 
