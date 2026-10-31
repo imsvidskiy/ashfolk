@@ -13,6 +13,7 @@ import {
   type LogBridge,
   logDeckAt,
   logRadiusAt,
+  type Point,
   pointOnCrossing,
 } from "../world/crossings.ts";
 import { isWalkableGround, slopeAt } from "../world/footing.ts";
@@ -90,11 +91,6 @@ interface CrossingSurvey {
   readonly lakeIds: Int32Array;
   readonly terrain: CrossingTerrain;
   readonly water: WaterFeatures;
-}
-
-interface Point {
-  readonly x: number;
-  readonly z: number;
 }
 
 interface BankLimits {

@@ -46,7 +46,7 @@ interface CrossingPoint {
   readonly along: number;
 }
 
-interface Point {
+export interface Point {
   readonly x: number;
   readonly z: number;
 }
