@@ -1,6 +1,6 @@
 import { Vector3 } from "three/webgpu";
 import { describe, expect, it, vi } from "vitest";
-import { defaultPowerParameters, type PowerId } from "../../content/powers.ts";
+import { defaultPowerParameters, type ParameterValueMap, type PowerId } from "../../content/powers.ts";
 import type { SimulationCommand } from "../../simulation/commands.ts";
 import { PowerTool } from "./power-tool.ts";
 
@@ -23,9 +23,13 @@ function createPowerTool(powerId: PowerId | null = null) {
   return { cursor, send, tool };
 }
 
-function hoveredRadius(powerId: PowerId): number | undefined {
-  const { cursor, tool } = createPowerTool(powerId);
+function hoveredRadius(
+  powerId: PowerId,
+  parameters: ParameterValueMap = defaultPowerParameters(powerId)
+): number | undefined {
+  const { cursor, tool } = createPowerTool();
 
+  tool.select({ parameters, powerId });
   tool.hover(PRESSED);
 
   return cursor.show.mock.lastCall?.[1];
@@ -60,25 +64,33 @@ describe("power tool", () => {
 
   it("uses a point power once on the press and then only moves the cursor", () => {
     const { cursor, send, tool } = createPowerTool("explosion");
+    const parameters = defaultPowerParameters("explosion");
+    const { radius } = parameters;
 
     tool.begin(PRESSED);
     tool.move(DRAGGED);
     tool.end();
 
-    expect(send.mock.calls.flat()).toEqual([
-      { parameters: defaultPowerParameters("explosion"), powerId: "explosion", type: "usePower", x: 10, z: 20 },
-    ]);
+    expect(send.mock.calls.flat()).toEqual([{ parameters, powerId: "explosion", type: "usePower", x: 10, z: 20 }]);
     expect(cursor.show.mock.calls).toEqual([
-      [PRESSED, 45, true],
-      [DRAGGED, 45, false],
+      [PRESSED, radius, true],
+      [DRAGGED, radius, false],
     ]);
   });
 
   it("sizes the cursor by the radius, the crater or the scatter, and marks powers without one", () => {
-    expect(hoveredRadius("fire")).toBe(25);
-    expect(hoveredRadius("meteor")).toBe(140);
-    expect(hoveredRadius("lightning")).toBe(30);
+    const { radius } = defaultPowerParameters("fire");
+    const { craterRadius } = defaultPowerParameters("meteor");
+    const { scatter } = defaultPowerParameters("lightning");
+
+    expect(hoveredRadius("fire")).toBe(radius);
+    expect(hoveredRadius("meteor")).toBe(craterRadius);
+    expect(hoveredRadius("lightning")).toBe(scatter);
     expect(hoveredRadius("deer")).toBe(12);
+  });
+
+  it("keeps the cursor at the marker size when the scatter is smaller", () => {
+    expect(hoveredRadius("lightning", { ...defaultPowerParameters("lightning"), scatter: 5 })).toBe(12);
   });
 
   it("ends the stroke and hides the cursor when the power is put away", () => {
@@ -90,6 +102,15 @@ describe("power tool", () => {
     expect(send).toHaveBeenLastCalledWith({ type: "endStroke" });
     expect(cursor.hide).toHaveBeenCalledOnce();
     expect(tool.isActive()).toBe(false);
+  });
+
+  it("ends the stroke when the gesture is canceled", () => {
+    const { send, tool } = createPowerTool("fire");
+
+    tool.begin(PRESSED);
+    tool.cancel();
+
+    expect(send).toHaveBeenLastCalledWith({ type: "endStroke" });
   });
 
   it("hides the cursor once the pointer leaves the ground", () => {
