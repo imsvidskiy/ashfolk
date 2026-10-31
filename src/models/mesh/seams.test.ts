@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { verticesWhere } from "../testing/mesh-checks.ts";
 import { MeshBuilder } from "./mesh-builder.ts";
 import { type MeshData, vertexCount } from "./mesh-data.ts";
 import { sphere } from "./shapes.ts";
@@ -33,10 +34,8 @@ function normalAngle(first: MeshData, second: MeshData, vertex: number): number 
   return Math.acos(Math.min(1, dot));
 }
 
-function verticesWhere(mesh: MeshData, test: (x: number, y: number, z: number, part: number) => boolean): number[] {
-  return Array.from({ length: vertexCount(mesh) }, (_, vertex) => {
-    return vertex;
-  }).filter((vertex) => {
+function pointsWhere(mesh: MeshData, test: (x: number, y: number, z: number, part: number) => boolean): number[] {
+  return verticesWhere(mesh, (vertex) => {
     return test(
       mesh.positions[vertex * 3],
       mesh.positions[vertex * 3 + 1],
@@ -59,10 +58,10 @@ describe("seam normals", () => {
   const blended = limbOnBody(0.3, 0.3);
 
   it("turns both surfaces toward each other where a limb leaves a body", () => {
-    const limbAtSeam = verticesWhere(plain, (_x, y, _z, part) => {
+    const limbAtSeam = pointsWhere(plain, (_x, y, _z, part) => {
       return part === 1 && Math.abs(y - 1.05) < 1e-4;
     });
-    const bodyAtSeam = verticesWhere(plain, (x, y, z, part) => {
+    const bodyAtSeam = pointsWhere(plain, (x, y, z, part) => {
       return part === 0 && y > 0.9 && Math.hypot(x, z) > 0.3;
     });
 
@@ -73,7 +72,7 @@ describe("seam normals", () => {
   });
 
   it("leaves normals away from the seam alone", () => {
-    const far = verticesWhere(plain, (_x, y) => {
+    const far = pointsWhere(plain, (_x, y) => {
       return y < 0.2 || y > 1.6;
     });
 
@@ -99,10 +98,10 @@ describe("seam normals", () => {
     const limb = builder.build();
     const alone = limbOnBody(null, null);
 
-    const limbOnly = verticesWhere(alone, (_x, _y, _z, part) => {
+    const limbOnly = pointsWhere(alone, (_x, _y, _z, part) => {
       return part === 1;
     });
-    const atSeam = verticesWhere(limb, (_x, y) => {
+    const atSeam = pointsWhere(limb, (_x, y) => {
       return Math.abs(y - 1.05) < 1e-4;
     });
 
