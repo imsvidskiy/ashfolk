@@ -85,9 +85,7 @@ export class ObstacleMap {
         continue;
       }
 
-      const distance = around.radius + radius;
-
-      if (distanceSquared(vegetation.x[plant], vegetation.z[plant], around.x, around.z) < distance * distance) {
+      if (isWithin(around, vegetation.x[plant], vegetation.z[plant], radius)) {
         obstacles.push({ radius, x: vegetation.x[plant], z: vegetation.z[plant] });
       }
     }
