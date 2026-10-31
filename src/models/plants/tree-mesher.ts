@@ -745,8 +745,8 @@ function stemRoot(structure: TreeStructure): TubePoint | null {
     return top;
   }
 
-  const bases = structure.branches.flatMap((branch) => {
-    return branch.points.slice(0, 1);
+  const bases = structure.branches.map((branch) => {
+    return branch.points[0];
   });
 
   if (bases.length === 0) {
