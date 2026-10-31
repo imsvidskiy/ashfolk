@@ -36,7 +36,7 @@ const STEM_WIDENING = 1.18;
 const LEAF_NOISE = createVolumeNoise(createRandom(7171));
 const GROUNDED_ENVELOPE = 0.8;
 
-export type BerryBushSpecies = keyof typeof BERRY_BUSH_HEIGHTS;
+type BerryBushSpecies = keyof typeof BERRY_BUSH_HEIGHTS;
 
 const BERRY_LOOKS: Readonly<Record<BerryBushSpecies, FruitLook>> = {
   [CultivatedSpecies.Blueberry]: {
@@ -94,34 +94,15 @@ interface BushStructure {
   readonly stems: readonly (readonly TubePoint[])[];
 }
 
-interface BushGrowth extends Growth {
-  readonly leaves: BushLeaf[];
-  readonly stems: TubePoint[][];
-}
-
 const BUSH_GENERATORS: Readonly<Record<BerryBushSpecies, (seed: number) => BushStructure>> = {
   [CultivatedSpecies.Blueberry]: blueberry,
   [CultivatedSpecies.Currant]: currant,
   [CultivatedSpecies.Raspberry]: raspberry,
 };
 
-function growStem(growth: Growth, azimuth: number, options: StemOptions): TubePoint[] {
-  const { random } = growth;
-
-  const direction = tiltedDirection(azimuth, options.tilt);
-
-  return growBranch({
-    bend: 0.04,
-    direction,
-    gravity: options.gravity,
-    length: options.length,
-    noise: growth.noise,
-    radiusEnd: options.radiusEnd,
-    radiusStart: options.radiusStart,
-    segments: 4,
-    start: new Vector3(jitter(random, options.spread), 0, jitter(random, options.spread)),
-    wobble: options.wobble,
-  });
+interface BushGrowth extends Growth {
+  readonly leaves: BushLeaf[];
+  readonly stems: TubePoint[][];
 }
 
 function createBushGrowth(seed: number): BushGrowth {
@@ -133,7 +114,20 @@ function addLeaf(growth: BushGrowth, center: Vector3, radius: number, squash: nu
 }
 
 function addBushStem(growth: BushGrowth, azimuth: number, options: StemOptions): TubePoint[] {
-  const points = growStem(growth, azimuth, options);
+  const { random } = growth;
+
+  const points = growBranch({
+    bend: 0.04,
+    direction: tiltedDirection(azimuth, options.tilt),
+    gravity: options.gravity,
+    length: options.length,
+    noise: growth.noise,
+    radiusEnd: options.radiusEnd,
+    radiusStart: options.radiusStart,
+    segments: 4,
+    start: new Vector3(jitter(random, options.spread), 0, jitter(random, options.spread)),
+    wobble: options.wobble,
+  });
 
   growth.stems.push(points);
 

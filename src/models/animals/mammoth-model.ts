@@ -26,6 +26,10 @@ const MammothBone = {
   TrunkTip: FIRST_EXTRA_BONE + 2,
 } as const;
 
+const TRUNK_BASE: Triple = [0, 2.45, 1.85];
+const TRUNK_MIDDLE: Triple = [0, 1.78, 2.02];
+const TRUNK_TIP: Triple = [0, 1.12, 2.04];
+
 export const MAMMOTH_FRAME: QuadrupedFrame = {
   bodyContacts: [
     { bone: QuadrupedBone.Chest, position: [0, 1.25, 0.35] },
@@ -39,9 +43,9 @@ export const MAMMOTH_FRAME: QuadrupedFrame = {
   ],
   chest: [0, 2.35, 0.45],
   extraBones: [
-    { joint: [0, 2.45, 1.85], name: "trunkBase", parent: QuadrupedBone.Head },
-    { joint: [0, 1.78, 2.02], name: "trunkMiddle", parent: MammothBone.TrunkBase },
-    { joint: [0, 1.12, 2.04], name: "trunkTip", parent: MammothBone.TrunkMiddle },
+    { joint: TRUNK_BASE, name: "trunkBase", parent: QuadrupedBone.Head },
+    { joint: TRUNK_MIDDLE, name: "trunkMiddle", parent: MammothBone.TrunkBase },
+    { joint: TRUNK_TIP, name: "trunkTip", parent: MammothBone.TrunkMiddle },
   ],
   frontHoof: [0.45, 0, 0.66],
   frontLeg: [
@@ -124,9 +128,9 @@ const TRUNK_STYLE = chainStyle(
   createChain(
     [QuadrupedBone.Head, MammothBone.TrunkBase, MammothBone.TrunkMiddle, MammothBone.TrunkTip],
     [
-      { axis: [0, -0.6, 0.3], blend: 0.1, position: [0, 2.45, 1.85] },
-      { axis: [0, -1, 0.1], blend: 0.12, position: [0, 1.78, 2.02] },
-      { axis: [0, -1, 0.05], blend: 0.1, position: [0, 1.12, 2.04] },
+      { axis: [0, -0.6, 0.3], blend: 0.1, position: TRUNK_BASE },
+      { axis: [0, -1, 0.1], blend: 0.12, position: TRUNK_MIDDLE },
+      { axis: [0, -1, 0.05], blend: 0.1, position: TRUNK_TIP },
     ]
   )
 );
