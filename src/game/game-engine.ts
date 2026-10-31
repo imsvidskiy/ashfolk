@@ -2,7 +2,7 @@ import { Matrix4, PerspectiveCamera, type Vector3, type WebGPURenderer } from "t
 import type { GenerationProgress, WorldRequest } from "../generation/generation-options.ts";
 import { ANIMAL_WADING_DEPTH, PERSON_WADING_DEPTH, standingHeight } from "../rendering/agents/agent-view-input.ts";
 import { createGraphics } from "../rendering/create-graphics.ts";
-import { type QualityLevel, RENDER_QUALITY } from "../rendering/render-quality.ts";
+import { type QualityLevel, RENDER_QUALITY, type RenderQuality } from "../rendering/render-quality.ts";
 import { WorldRenderer } from "../rendering/world-renderer.ts";
 import { clamp } from "../shared/math.ts";
 import type { ChronicleEntry } from "../simulation/chronicle.ts";
@@ -55,7 +55,7 @@ interface EngineOptions {
 interface EngineParts {
   readonly canvas: HTMLCanvasElement;
   readonly graphicsLost: Promise<void>;
-  readonly quality: QualityLevel;
+  readonly quality: RenderQuality;
   readonly renderer: WebGPURenderer;
   readonly session: GameSession;
 }
@@ -113,8 +113,9 @@ export class GameEngine implements EngineHandle {
     this.#renderer = parts.renderer;
     this.session = parts.session;
 
-    const { session } = parts;
+    const { quality, session } = parts;
     const { mirror } = session;
+    const { halfSize } = mirror.grid;
 
     function heightAt(x: number, z: number): number {
       return mirror.heightAt(x, z);
@@ -124,12 +125,11 @@ export class GameEngine implements EngineHandle {
       session.send(command);
     }
 
-    const quality = RENDER_QUALITY[parts.quality];
     const perspective = new PerspectiveCamera(FIELD_OF_VIEW, 1, NEAR_PLANE, FAR_PLANE);
-    const groundPicker = new GroundPicker(perspective, heightAt, mirror.grid.halfSize);
+    const groundPicker = new GroundPicker(perspective, heightAt, halfSize);
 
     this.#resolution = new ResolutionGovernor(quality.maximumPixelRatio);
-    this.camera = new GodCamera(perspective, heightAt, mirror.grid.halfSize);
+    this.camera = new GodCamera(perspective, heightAt, halfSize);
     this.#world = new WorldRenderer({
       camera: perspective,
       mirror,
@@ -157,7 +157,7 @@ export class GameEngine implements EngineHandle {
           return mirror.surfaceAt(x, z);
         },
       },
-      mirror.grid.halfSize
+      halfSize
     );
     this.powers = new PowerTool(send, {
       hide: () => {
@@ -202,7 +202,9 @@ export class GameEngine implements EngineHandle {
   }
 
   static async start(options: EngineOptions): Promise<GameEngine> {
-    const { lost, renderer } = await createGraphics(options.canvas, RENDER_QUALITY[options.quality]);
+    const quality = RENDER_QUALITY[options.quality];
+
+    const { lost, renderer } = await createGraphics(options.canvas, quality);
 
     const session = await openSessionOrRelease(
       renderer,
@@ -214,7 +216,7 @@ export class GameEngine implements EngineHandle {
     const engine = new GameEngine({
       canvas: options.canvas,
       graphicsLost: lost,
-      quality: options.quality,
+      quality,
       renderer,
       session,
     });
