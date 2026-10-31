@@ -37,6 +37,12 @@ describe("needs", () => {
     expect(person.health).toBe(0.5);
 
     person.hunger = 0.2;
+    person.warmth = 0.2;
+    updateNeeds(tick, SHORT_SPELL_DAYS);
+
+    expect(person.health).toBe(0.5);
+
+    person.warmth = 1;
     updateNeeds(tick, SHORT_SPELL_DAYS);
 
     expect(person.health).toBeGreaterThan(0.5);
