@@ -79,7 +79,7 @@ function marchPace(tick: PersonTick, raid: Raid): number {
   for (const id of raid.warriorIds) {
     const comrade = tick.context.people.findPerson(id);
 
-    if (comrade?.isAlive === true && comrade.job instanceof RaidJob) {
+    if (comrade?.isAlive === true && comrade.job instanceof RaidJob && !raid.routedIds.has(id)) {
       total += Math.hypot(comrade.mover.x - raid.target.x, comrade.mover.z - raid.target.z);
       count += 1;
     }
