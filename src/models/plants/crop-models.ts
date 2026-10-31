@@ -45,6 +45,7 @@ interface LeafPlacement {
 interface ClumpContext {
   readonly builder: MeshBuilder;
   readonly height: number;
+  readonly leaf: VertexStyle;
   readonly level: CropDetailLevel;
 }
 
@@ -59,7 +60,7 @@ const CLUMP_BUILDERS: Readonly<Record<CropKind, ClumpBuilder>> = {
   wheat: addWheat,
 };
 
-function plantStyle(context: ClumpContext, slot: MaterialSlotIndex, part: number): VertexStyle {
+function plantStyle(context: Pick<ClumpContext, "height">, slot: MaterialSlotIndex, part: number): VertexStyle {
   return {
     part,
     shade: (point) => {
@@ -89,9 +90,7 @@ function stalkBase(top: Triple): Triple {
 }
 
 function addStalk(context: ClumpContext, points: readonly TubePoint[]): void {
-  context.builder.add(tube(points, { radialSegments: STALK_SIDES }), {
-    style: plantStyle(context, MaterialSlot.Leaf, 0),
-  });
+  context.builder.add(tube(points, { radialSegments: STALK_SIDES }), { style: context.leaf });
 }
 
 function straightStalk(base: Triple, top: Triple, radius: number): TubePoint[] {
@@ -129,7 +128,7 @@ function addLeafOnStalk(context: ClumpContext, from: Triple, leaf: LeafPlacement
 
   addStalk(context, straightStalk(from, leaf.position, 0.004));
   builder.add(bud(leaf.radius, leaf.thickness, level === "high" ? 5 : 4), {
-    style: plantStyle(context, MaterialSlot.Leaf, 0),
+    style: context.leaf,
     transform: transformOf({ position: leaf.position, rotation: [0, -leaf.angle, leaf.tilt], scale: leaf.stretch }),
   });
 }
@@ -219,7 +218,6 @@ function frondPoints(index: number, count: number, height: number): TubePoint[] 
 
 function addCarrots(context: ClumpContext): void {
   const fronds = context.level === "high" ? 6 : 3;
-  const leaf = plantStyle(context, MaterialSlot.Leaf, 0);
   const leaflet = bud(0.045, 0.012, 4);
 
   for (let frond = 0; frond < fronds; frond += 1) {
@@ -235,7 +233,7 @@ function addCarrots(context: ClumpContext): void {
 
     for (const point of points.slice(1)) {
       context.builder.add(leaflet, {
-        style: leaf,
+        style: context.leaf,
         transform: transformOf({ position: [point.x, point.y, point.z], rotation: [0, -angle, 0.4] }),
       });
     }
@@ -318,8 +316,9 @@ function addBeans(context: ClumpContext): void {
 
 export function buildCropModel(kind: CropKind, level: CropDetailLevel): MeshData {
   const builder = new MeshBuilder();
+  const height = CROP_HEIGHTS[kind];
 
-  CLUMP_BUILDERS[kind]({ builder, height: CROP_HEIGHTS[kind], level });
+  CLUMP_BUILDERS[kind]({ builder, height, leaf: plantStyle({ height }, MaterialSlot.Leaf, 0), level });
 
   return builder.build();
 }
