@@ -102,9 +102,8 @@ describe("seam normals", () => {
     builder.addSeamReference(sphere(1, 24, 16));
 
     const limb = builder.build();
-    const alone = limbOnBody(null, null);
 
-    const limbOnly = pointsWhere(alone, (_x, _y, _z, part) => {
+    const limbOnly = pointsWhere(plain, (_x, _y, _z, part) => {
       return part === 1;
     });
     const atSeam = pointsWhere(limb, (_x, y) => {

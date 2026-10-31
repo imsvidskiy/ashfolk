@@ -116,8 +116,11 @@ describe("fallen logs", () => {
       const length = FALLEN_LOG_LENGTHS[variant % FALLEN_LOG_LENGTHS.length];
 
       for (const along of [length * 0.2, length * 0.5, length * 0.95]) {
-        expect(lowestNear(log, along, 0.6), `variant ${variant} at ${along.toFixed(1)}`).toBeLessThan(0.06);
-        expect(lowestNear(log, along, 0.6), `variant ${variant} at ${along.toFixed(1)}`).toBeGreaterThan(-0.12);
+        const lowest = lowestNear(log, along, 0.6);
+        const where = `variant ${variant} at ${along.toFixed(1)}`;
+
+        expect(lowest, where).toBeLessThan(0.06);
+        expect(lowest, where).toBeGreaterThan(-0.12);
       }
 
       expect(log.bounds.maximum[0]).toBeGreaterThan(length);

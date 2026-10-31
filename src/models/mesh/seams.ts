@@ -283,12 +283,15 @@ function nearestOnSurface(
       normalZ += normals[vertex + 2] * weight;
     }
 
-    if (exceeds(x - pointX, y - pointY, z - pointZ, 0, best)) {
+    const fromPointX = x - pointX;
+    const fromPointY = y - pointY;
+    const fromPointZ = z - pointZ;
+
+    if (exceeds(fromPointX, fromPointY, fromPointZ, 0, best)) {
       continue;
     }
 
-    const distance = Math.hypot(x - pointX, y - pointY, z - pointZ);
-
+    const distance = Math.hypot(fromPointX, fromPointY, fromPointZ);
     const length = Math.hypot(normalX, normalY, normalZ);
 
     if (length === 0) {
@@ -301,7 +304,7 @@ function nearestOnSurface(
       normalX: normalX / length,
       normalY: normalY / length,
       normalZ: normalZ / length,
-      side: ((x - pointX) * normalX + (y - pointY) * normalY + (z - pointZ) * normalZ) / length,
+      side: (fromPointX * normalX + fromPointY * normalY + fromPointZ * normalZ) / length,
       triangle: surface.firstTriangle + triangle,
     };
   }

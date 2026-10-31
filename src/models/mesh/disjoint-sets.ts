@@ -30,8 +30,6 @@ export class DisjointSets {
     const firstRoot = this.find(first);
     const secondRoot = this.find(second);
 
-    if (firstRoot !== secondRoot) {
-      this.#parents[secondRoot] = firstRoot;
-    }
+    this.#parents[secondRoot] = firstRoot;
   }
 }
