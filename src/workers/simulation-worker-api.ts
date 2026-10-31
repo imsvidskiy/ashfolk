@@ -147,8 +147,8 @@ export function createSimulationWorkerApi(
 
       return transfer(frame, uniqueArrayBuffers(frameBuffers(frame)));
     },
-    createWorld: (worldRequest, onProgress) => {
-      const world = startWorld(createSimulation(worldRequest, withSmallSketches(onProgress)), worldRequest);
+    createWorld: (request, onProgress) => {
+      const world = startWorld(createSimulation(request, withSmallSketches(onProgress)), request);
 
       return transfer(world, initialWorldTransferables(world));
     },
