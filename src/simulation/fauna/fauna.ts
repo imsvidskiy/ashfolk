@@ -431,8 +431,9 @@ export class FaunaSystem {
   }
 
   #addAnimal(herd: Herd, x: number, z: number, random: RandomSource): Animal {
-    const start = this.#spawnPoint(herd, x, z);
     const { bodyRadius, health, lifespanDays } = ANIMALS[herd.kind];
+
+    const start = this.#spawnPoint(herd, x, z);
 
     const animal: Animal = {
       appearanceSeed: random.next(),
@@ -767,8 +768,9 @@ export class FaunaSystem {
   }
 
   #tryCalving(herd: Herd, chance: number, random: RandomSource): void {
-    const mother = this.#firstMember(herd);
     const { breeding, maximumHerdSize } = ANIMALS[herd.kind];
+
+    const mother = this.#firstMember(herd);
 
     if (mother === null || herd.memberIds.length >= maximumHerdSize) {
       return;
