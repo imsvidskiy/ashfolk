@@ -1,12 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { ANIMAL_KINDS, type AnimalKind } from "../../content/animals.ts";
 import type { BoneDefinition } from "../rig/skeleton.ts";
-import { ANIMAL_SPECIES } from "./animal-models.ts";
 import { DEER_FRAME } from "./deer-model.ts";
 import { HARE_FRAME } from "./hare-model.ts";
 import { IBEX_FRAME } from "./ibex-model.ts";
 import { MAMMOTH_FRAME } from "./mammoth-model.ts";
-import { FIRST_EXTRA_BONE, QuadrupedBone, type QuadrupedFrame } from "./quadruped-skeleton.ts";
+import { createQuadrupedSkeleton, FIRST_EXTRA_BONE, QuadrupedBone, type QuadrupedFrame } from "./quadruped-skeleton.ts";
 import { WOLF_FRAME } from "./wolf-model.ts";
 
 const FRAMES: Readonly<Record<AnimalKind, QuadrupedFrame>> = {
@@ -33,13 +32,13 @@ function namesOf(bones: readonly BoneDefinition[]): string[] {
 
 describe("quadruped skeleton", () => {
   it.each(ANIMAL_KINDS)("numbers every shared bone of a %s where its skeleton puts it", (kind) => {
-    const { bones } = ANIMAL_SPECIES[kind].skeleton;
+    const { bones } = createQuadrupedSkeleton(FRAMES[kind]);
 
     expect(namesOf(bones.slice(0, FIRST_EXTRA_BONE))).toEqual(BONE_NAMES);
   });
 
   it.each(ANIMAL_KINDS)("starts the extra bones of a %s right after the shared ones", (kind) => {
-    const { bones } = ANIMAL_SPECIES[kind].skeleton;
+    const { bones } = createQuadrupedSkeleton(FRAMES[kind]);
 
     expect(namesOf(bones.slice(FIRST_EXTRA_BONE))).toEqual(namesOf(FRAMES[kind].extraBones));
   });
