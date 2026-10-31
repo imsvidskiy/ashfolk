@@ -8,7 +8,7 @@ export type WorldSource =
   | { readonly kind: "new"; readonly request: WorldRequest }
   | { readonly journal: readonly ChronicleEntry[]; readonly kind: "saved"; readonly state: SavedWorldState };
 
-function canceled(signal: AbortSignal): Promise<never> {
+function cancellation(signal: AbortSignal): Promise<never> {
   return new Promise((_resolve, reject) => {
     signal.addEventListener(
       "abort",
@@ -42,7 +42,7 @@ export async function openSession(
   const connection = new WorkerSimulationConnection();
 
   try {
-    return await Promise.race([openWorld(connection, world, onProgress), canceled(signal)]);
+    return await Promise.race([openWorld(connection, world, onProgress), cancellation(signal)]);
   } catch (error) {
     connection.dispose();
 
