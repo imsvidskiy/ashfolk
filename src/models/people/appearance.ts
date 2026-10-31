@@ -366,10 +366,12 @@ export function statureAt(age: number): number {
 }
 
 export function personAppearance(input: AppearanceInput): PersonAppearance {
-  const random = randomFromUnitSeed(input.seed, 1);
-  const ageGroup = ageGroupOf(input.age);
-  const elderGray = smoothstep(ELDER_AGE, ELDER_AGE + 15, input.age);
-  const skinDarkness = skinTonePosition(random, input.tribe.id);
+  const { age, era = 0, isFemale, seed, tribe } = input;
+
+  const random = randomFromUnitSeed(seed, 1);
+  const ageGroup = ageGroupOf(age);
+  const elderGray = smoothstep(ELDER_AGE, ELDER_AGE + 15, age);
+  const skinDarkness = skinTonePosition(random, tribe.id);
   const isCapeRolled = random.chance(0.3);
   const isCloakRolled = random.chance(0.45);
   const skin = colorFromPalette(SKIN_TONES, skinDarkness);
@@ -381,18 +383,18 @@ export function personAppearance(input: AppearanceInput): PersonAppearance {
 
   const appearance: PersonAppearance = {
     ageGroup,
-    beard: beardStyle(random.derive(2), ageGroup, input.isFemale),
-    body: bodyShape(random.derive(3), ageGroup, input.age, input.isFemale),
-    colors: { accent: input.tribe.accent, hair, skin, ...clothingColors(random, input.tribe) },
-    hair: hairStyle(random.derive(4), ageGroup, input.isFemale),
+    beard: beardStyle(random.derive(2), ageGroup, isFemale),
+    body: bodyShape(random.derive(3), ageGroup, age, isFemale),
+    colors: { accent: tribe.accent, hair, skin, ...clothingColors(random, tribe) },
+    hair: hairStyle(random.derive(4), ageGroup, isFemale),
     hasBoots: random.chance(0.5),
     hasCape: ageGroup !== "child" && isCapeRolled,
     hasCloak: ageGroup === "elder" && isCloakRolled,
     hasHelmet: false,
-    isFemale: input.isFemale,
+    isFemale,
     motion: motionStyle(random, ageGroup),
-    outfit: outfit(random, ageGroup, input.isFemale),
+    outfit: outfit(random, ageGroup, isFemale),
   };
 
-  return withEraDetails(appearance, input.era === undefined ? 0 : input.era, input.seed);
+  return withEraDetails(appearance, era, seed);
 }
