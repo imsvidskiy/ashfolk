@@ -9,9 +9,11 @@ import {
 } from "three/webgpu";
 import { describe, expect, it } from "vitest";
 import type { WorldMirror } from "../../game/world-mirror.ts";
+import { PlantState } from "../../world/vegetation-store.ts";
 import { CAMERA_FADE_REACH } from "../camera-fade.ts";
 import { FireGlow } from "../effects/fire-glow.ts";
 import { TerrainTextures } from "../terrain/terrain-textures.ts";
+import { drawnInstances } from "../testing/drawn-meshes.ts";
 import { createVegetatedMirror } from "../testing/vegetated-mirror.ts";
 import { FLOATS_PER_PLANT } from "./vegetation-chunks.ts";
 import { VegetationView } from "./vegetation-view.ts";
@@ -104,6 +106,25 @@ describe("vegetation view", () => {
     updateFrom(view, x, 5000, z);
 
     expect(fadingCount(view)).toBe(0);
+  });
+
+  it("stops drawing a plant removed from a chunk on screen", () => {
+    const { mirror, view } = createView();
+
+    const { vegetation } = mirror;
+    const [x] = vegetation.x;
+    const [z] = vegetation.z;
+    const y = mirror.heightAt(x, z) + 1;
+
+    updateFrom(view, x, y, z);
+
+    const before = drawnInstances(view.group, "plantPlacement");
+
+    vegetation.state[0] = PlantState.Removed;
+    view.plantsChanged([0]);
+    updateFrom(view, x, y, z);
+
+    expect(drawnInstances(view.group, "plantPlacement")).toBe(before - 1);
   });
 
   it("shows every fading batch on the first frame, so its pipeline compiles before the camera comes close", () => {
