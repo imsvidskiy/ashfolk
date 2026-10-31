@@ -1,13 +1,10 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { render } from "vitest-browser-react";
 import { useLaunchStore } from "../../app/launch-store.ts";
-import { ignore } from "../../shared/ignore.ts";
-import { createTestSession } from "../testing/engine-fixtures.ts";
-import { blockSavedWorlds, deleteAllSavedWorlds } from "../testing/save-fixtures.ts";
+import { blockSavedWorlds, deleteAllSavedWorlds, saveWorld } from "../testing/save-fixtures.ts";
 import { listSavedWorlds, type SavedWorldListing } from "./save-database.ts";
 import { SavedWorldList } from "./saved-world-list.tsx";
 import { useSavesStore } from "./saves-store.ts";
-import { WorldSaver } from "./world-saver.ts";
 
 const SUMMARY = {
   day: 3,
@@ -32,13 +29,6 @@ function listing(changes: Partial<SavedWorldListing>): SavedWorldListing {
     summary: SUMMARY,
     ...changes,
   };
-}
-
-async function saveWorld(id: string, name: string): Promise<void> {
-  const session = await createTestSession();
-
-  await new WorldSaver(session, { id, name }, { onSaved: ignore, onSaving: ignore }).save();
-  await useSavesStore.getState().refresh();
 }
 
 afterEach(async () => {
@@ -82,6 +72,7 @@ describe("saved world list", () => {
 
   it("asks before deleting a world and keeps it on second thought", async () => {
     await saveWorld("old-ford", "Old Ford");
+    await useSavesStore.getState().refresh();
 
     const screen = await render(<SavedWorldList />);
 
@@ -98,6 +89,7 @@ describe("saved world list", () => {
   it("deletes a world once the deletion is confirmed", async () => {
     await saveWorld("old-ford", "Old Ford");
     await saveWorld("ashvale", "Ashvale");
+    await useSavesStore.getState().refresh();
 
     const screen = await render(<SavedWorldList />);
 

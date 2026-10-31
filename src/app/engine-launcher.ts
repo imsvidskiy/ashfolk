@@ -1,29 +1,59 @@
+import type { ComponentType } from "react";
 import { readSavedWorld } from "../features/saves/save-database.ts";
 import { useSavesStore } from "../features/saves/saves-store.ts";
 import type { EngineHandle } from "../game/engine-handle.ts";
 import { readFilming } from "../game/filming.ts";
-import type { GameEngine, WorldSource } from "../game/game-engine.ts";
+import type { GameEngine } from "../game/game-engine.ts";
 import type { GameSession } from "../game/game-session.ts";
-import { DEFAULT_GENERATION_OPTIONS, type GenerationProgress } from "../generation/generation-options.ts";
+import type { WorldSource } from "../game/open-session.ts";
+import {
+  DEFAULT_GENERATION_OPTIONS,
+  type GenerationProgress,
+  type GenerationStage,
+  type IslandSketch,
+} from "../generation/generation-options.ts";
 import { toError } from "../shared/errors.ts";
+import { ignore } from "../shared/ignore.ts";
 import { islandDimensions } from "../world/island-size.ts";
 import type { LaunchOptions } from "./launch-options.ts";
+
+export type LoadingStage = GenerationStage | "lighting" | "waking";
 
 export type EngineStatus =
   | { readonly engine: EngineHandle; readonly kind: "ready" }
   | { readonly kind: "failed"; readonly message: string }
   | { readonly kind: "graphicsLost"; readonly saved: Promise<unknown> }
-  | { readonly kind: "loading"; readonly progress: GenerationProgress | null }
+  | { readonly island: IslandSketch | null; readonly kind: "loading"; readonly stage: LoadingStage }
   | { readonly kind: "stopped"; readonly message: string };
+
+export const WAKING_STATUS: EngineStatus = { island: null, kind: "loading", stage: "waking" };
 
 type EngineStatusListener = (status: EngineStatus) => void;
 
-export function loadGameEngine() {
+let hud: ComponentType | null = null;
+
+function loadGameEngine() {
   return import("../game/game-engine.ts");
 }
 
-export function loadHud() {
-  return import("./hud.tsx");
+function loadSessionOpener() {
+  return import("../game/open-session.ts");
+}
+
+export async function loadHud(): Promise<ComponentType> {
+  const loaded = await import("./hud.tsx");
+
+  hud = loaded.Hud;
+
+  return loaded.Hud;
+}
+
+export function loadedHud(): ComponentType | null {
+  return hud;
+}
+
+export function preloadGame(): Promise<unknown> {
+  return Promise.all([loadGameEngine(), loadSessionOpener(), loadHud()]);
 }
 
 export function reportStop(session: GameSession, onStatus: EngineStatusListener): void {
@@ -92,13 +122,16 @@ function applyLaunchTime(engine: GameEngine, launch: LaunchOptions): void {
 export class EngineLauncher {
   readonly #canvas: HTMLCanvasElement;
   readonly #onStatus: EngineStatusListener;
+  readonly #opening = new AbortController();
   #engine: GameEngine | null = null;
+  #island: IslandSketch | null = null;
+  #session: Promise<GameSession> | null = null;
   #state: "canceled" | "running" | "starting" = "starting";
 
   constructor(container: HTMLElement, launch: LaunchOptions, worldId: string, onStatus: EngineStatusListener) {
     this.#canvas = createCanvas(container);
     this.#onStatus = onStatus;
-    this.#onStatus({ kind: "loading", progress: null });
+    this.#onStatus(WAKING_STATUS);
     queueMicrotask(() => {
       this.#startUnlessCanceled(launch, worldId);
     });
@@ -106,6 +139,7 @@ export class EngineLauncher {
 
   cancel(): void {
     this.#state = "canceled";
+    this.#opening.abort();
 
     if (this.#engine !== null) {
       this.#engine.dispose();
@@ -126,16 +160,35 @@ export class EngineLauncher {
   }
 
   async #start(launch: LaunchOptions, worldId: string): Promise<void> {
-    const [engineModule, world] = await Promise.all([loadGameEngine(), worldSourceFor(launch, worldId), loadHud()]);
+    const [{ openSession }, world] = await Promise.all([loadSessionOpener(), worldSourceFor(launch, worldId)]);
+
+    let markGrowing = ignore;
+    const growing = new Promise<void>((resolve) => {
+      markGrowing = resolve;
+    });
+    const session = openSession(
+      world,
+      (progress) => {
+        markGrowing();
+        this.#reportProgress(progress);
+      },
+      this.#opening.signal
+    );
+
+    this.#session = session;
+    session.then(() => {
+      this.#reportStage("lighting");
+    }, ignore);
+
+    await Promise.race([growing, session]);
+
+    const [engineModule] = await Promise.all([loadGameEngine(), loadHud()]);
 
     const engine = await engineModule.GameEngine.start({
       camera: launch.camera,
       canvas: this.#canvas,
-      onProgress: (progress) => {
-        this.#reportProgress(progress);
-      },
       quality: launch.quality,
-      world,
+      session,
     });
 
     if (this.#state === "canceled") {
@@ -144,6 +197,10 @@ export class EngineLauncher {
       return;
     }
 
+    this.#run(engine, launch);
+  }
+
+  #run(engine: GameEngine, launch: LaunchOptions): void {
     this.#state = "running";
     this.#engine = engine;
     applyLaunchTime(engine, launch);
@@ -167,15 +224,24 @@ export class EngineLauncher {
     );
   }
 
-  #reportProgress(progress: GenerationProgress): void {
+  #reportProgress({ island, stage }: GenerationProgress): void {
+    this.#island = island;
+    this.#reportStage(stage);
+  }
+
+  #reportStage(stage: LoadingStage): void {
     if (this.#state !== "starting") {
       return;
     }
 
-    this.#onStatus({ kind: "loading", progress });
+    this.#onStatus({ island: this.#island, kind: "loading", stage });
   }
 
   #fail(error: unknown): void {
+    this.#opening.abort();
+    this.#session?.then((opened) => {
+      opened.close();
+    }, ignore);
     console.error("Ashfolk could not start", error);
 
     if (this.#state === "canceled") {

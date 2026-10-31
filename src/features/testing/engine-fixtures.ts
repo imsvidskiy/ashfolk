@@ -43,6 +43,14 @@ export async function createTestSession(): Promise<GameSession> {
   return session;
 }
 
+export function nextFrame(): Promise<void> {
+  return new Promise((resolve) => {
+    requestAnimationFrame(() => {
+      resolve();
+    });
+  });
+}
+
 export async function startTestEngine(options: TestEngineOptions = {}): Promise<TestEngine> {
   const { cameraDistance = TEST_CAMERA.distance } = options;
   let { landmarks = [] } = options;
