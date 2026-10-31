@@ -60,26 +60,30 @@ export function chillPerDay(tick: PersonTick): number {
   return coldness * CHILL_RATE * clothing(tick.tribe);
 }
 
+function fireside(campfire: Building): WarmPlace {
+  return { building: campfire, reach: FIRESIDE_RADIUS, seat: FIRESIDE_SEAT };
+}
+
+function isHearth(building: Building): boolean {
+  return isComplete(building) && HEARTH_ROLES.has(BUILDINGS[building.kind].role);
+}
+
+function hearth(building: Building): WarmPlace {
+  const { footprint } = BUILDINGS[building.kind];
+
+  return { building, reach: footprint + SHELTER_REACH, seat: footprint + HEARTH_SEAT };
+}
+
 function warmPlaces(tick: PersonTick): WarmPlace[] {
   const campfire = litCampfireOf(tick.tribe, tick.context.buildings);
 
-  const hearths = tribeBuildings(tick.tribe, tick.context)
-    .filter((building) => {
-      return isComplete(building) && HEARTH_ROLES.has(BUILDINGS[building.kind].role);
-    })
-    .map((building) => {
-      return {
-        building,
-        reach: BUILDINGS[building.kind].footprint + SHELTER_REACH,
-        seat: BUILDINGS[building.kind].footprint + HEARTH_SEAT,
-      };
-    });
+  const hearths = tribeBuildings(tick.tribe, tick.context).filter(isHearth).map(hearth);
 
   if (campfire === null) {
     return hearths;
   }
 
-  return [{ building: campfire, reach: FIRESIDE_RADIUS, seat: FIRESIDE_SEAT }, ...hearths];
+  return [fireside(campfire), ...hearths];
 }
 
 function distanceTo(tick: PersonTick, place: WarmPlace): number {
@@ -105,9 +109,13 @@ export function nearestWarmPlace(tick: PersonTick): WarmPlace | null {
 }
 
 function isSleepingAtHome(tick: PersonTick, isAsleep: boolean): boolean {
+  if (!isAsleep) {
+    return false;
+  }
+
   const home = completedBuilding(tick.context.buildings, tick.person.homeId);
 
-  if (!isAsleep || home === null) {
+  if (home === null) {
     return false;
   }
 
@@ -119,8 +127,14 @@ export function isSheltered(tick: PersonTick, isAsleep: boolean): boolean {
     return true;
   }
 
-  return warmPlaces(tick).some((place) => {
-    return isWithinReach(tick, place);
+  const campfire = litCampfireOf(tick.tribe, tick.context.buildings);
+
+  if (campfire !== null && isWithinReach(tick, fireside(campfire))) {
+    return true;
+  }
+
+  return tribeBuildings(tick.tribe, tick.context).some((building) => {
+    return isHearth(building) && isWithinReach(tick, hearth(building));
   });
 }
 
