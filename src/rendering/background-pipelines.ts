@@ -34,7 +34,7 @@ export class BackgroundPipelines {
     const pipelines: unknown = Reflect.get(renderer, "_pipelines");
     const device = webGPUDevice(renderer);
 
-    if (device === null || isSoftwareAdapter(Reflect.get(device, "adapterInfo")) || !isRenderPipelines(pipelines)) {
+    if (device === null || isSoftwareAdapter(device.adapterInfo) || !isRenderPipelines(pipelines)) {
       this.#restore = ignore;
 
       return;
