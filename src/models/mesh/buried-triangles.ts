@@ -1,3 +1,4 @@
+import { DisjointSets } from "./disjoint-sets.ts";
 import { boundsOf, channelRecord, type MeshData, type VertexChannel, vertexCount } from "./mesh-data.ts";
 import type { Triple } from "./transforms.ts";
 
@@ -269,34 +270,19 @@ export function isClosed(mesh: MeshData): boolean {
   return indices.length > 0;
 }
 
-function rootOf(parents: Int32Array, vertex: number): number {
-  let root = vertex;
-
-  while (parents[root] !== root) {
-    parents[root] = parents[parents[root]];
-    root = parents[root];
-  }
-
-  return root;
-}
-
 export function shellsOf(mesh: MeshData): MeshData[] {
   const { indices } = mesh;
 
-  const parents = Int32Array.from({ length: vertexCount(mesh) }, (_, vertex) => {
-    return vertex;
-  });
+  const sets = new DisjointSets(vertexCount(mesh));
   const shells = new Map<number, Set<number>>();
 
   for (let offset = 0; offset < indices.length; offset += CORNERS) {
-    const root = rootOf(parents, indices[offset]);
-
-    parents[rootOf(parents, indices[offset + 1])] = root;
-    parents[rootOf(parents, indices[offset + 2])] = root;
+    sets.join(indices[offset], indices[offset + 1]);
+    sets.join(indices[offset], indices[offset + 2]);
   }
 
   for (let triangle = 0; triangle < indices.length / CORNERS; triangle += 1) {
-    const root = rootOf(parents, indices[triangle * CORNERS]);
+    const root = sets.find(indices[triangle * CORNERS]);
     const shell = shells.get(root);
 
     if (shell === undefined) {
