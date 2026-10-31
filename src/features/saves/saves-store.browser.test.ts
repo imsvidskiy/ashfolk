@@ -111,12 +111,14 @@ describe("autosave", () => {
 });
 
 describe("saving before leaving", () => {
-  it("leaves at once while no world is open", () => {
+  it("leaves while no world is open", async () => {
     const leave = vi.fn<() => void>();
 
     saveBeforeLeaving(leave);
 
-    expect(leave).toHaveBeenCalledOnce();
+    await vi.waitFor(() => {
+      expect(leave).toHaveBeenCalledOnce();
+    });
   });
 
   it("saves the open world before it leaves", async () => {
