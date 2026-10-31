@@ -259,7 +259,7 @@ function reliefSample(noise: ReliefNoise, layout: IslandLayout, island: IslandSh
     return { coastDistance, desert, height: landform };
   }
 
-  return { coastDistance, desert, height: coastalHeight(noise, layout, point, landform, boundary) };
+  return { coastDistance, desert, height: coastalHeight(noise, layout, point, landform, coastDistance) };
 }
 
 export function createRelief(seed: number, layout: IslandLayout, island: IslandShape, halfSize: number): Relief {
