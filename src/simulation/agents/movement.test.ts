@@ -456,6 +456,31 @@ describe("crossings", () => {
     expect(wasInWater).toBe(false);
   });
 
+  it("walks a log to its end even when the next waypoint is already in sight", () => {
+    const log: LogBridge = { ...LOG, endX: 25, endZ: 30, startX: -25, startZ: 30 };
+    const world = createTestWorld({ crossings: [log] });
+
+    floodStrip(world, 20, 1.5);
+
+    const navigation = new NavigationGrid(world);
+    const mover = createMover(22, 30, Math.PI / 2);
+
+    let distanceAtTurn = Number.POSITIVE_INFINITY;
+
+    mover.path = [
+      { x: 25, z: 30 },
+      { x: 40, z: 10 },
+    ];
+
+    for (let elapsed = 0; elapsed < 5 && mover.pathIndex === 0; elapsed += STEP_SECONDS) {
+      distanceAtTurn = Math.hypot(mover.x - 25, mover.z - 30);
+      moveAlong(mover, STEP_SECONDS, 3, world, navigation);
+    }
+
+    expect(mover.pathIndex).toBe(1);
+    expect(distanceAtTurn).toBeLessThan(0.4);
+  });
+
   it("hops over a brook at its hop speed without stopping or standing in the water", () => {
     const world = createTestWorld();
 

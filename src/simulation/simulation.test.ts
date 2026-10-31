@@ -95,8 +95,8 @@ function advanceFor(simulation: Simulation, seconds: number): void {
 }
 
 function settleLand(simulation: Simulation): void {
-  for (let elapsed = 0; elapsed < SETTLING_SECONDS && simulation.isBusy; elapsed += 0.25) {
-    simulation.advance(0.25);
+  for (let elapsed = 0; elapsed < SETTLING_SECONDS && simulation.isBusy; elapsed += SETTLING_STEP) {
+    simulation.advance(SETTLING_STEP);
   }
 }
 
@@ -461,6 +461,17 @@ describe("world snapshots", () => {
     expect(original.fire.burningCount).toBeGreaterThan(0);
     expect(original.world.heightVersion).toBeGreaterThan(0);
     expect(snapshotOf(copy)).toStrictEqual(snapshot);
+  });
+
+  it("resumes the surface sweep at the row the save stopped at", () => {
+    const original = generateSimulation();
+
+    original.runTicks(1);
+
+    const snapshot = snapshotOf(original);
+
+    expect(snapshot.surfaceRow).toBeGreaterThan(0);
+    expect(snapshotOf(restored(snapshot)).surfaceRow).toBe(snapshot.surfaceRow);
   });
 
   it("keeps simulating as the saving world does once it drops what a save leaves out", { timeout: 60_000 }, () => {

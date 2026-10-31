@@ -3,6 +3,7 @@ import { ANIMALS } from "../../../content/animals.ts";
 import type { Animal } from "../../fauna/fauna.ts";
 import { STONE_SPEAR } from "../../testing/test-jobs.ts";
 import {
+  firstAnimal,
   firstMemberTick,
   MORNING,
   runToCompletion,
@@ -18,16 +19,6 @@ const HIT_ROLL = 0.2;
 const STRIKING_DISTANCE = 20;
 const TRAMPLING_DISTANCE = 5;
 const HELPER_DISTANCE = 30;
-
-function firstAnimal(harness: SocietyHarness, herd: { memberIds: number[] } | null): Animal {
-  const animal = herd === null ? null : harness.fauna.findAnimal(herd.memberIds[0]);
-
-  if (animal === null) {
-    throw new Error("Expected an animal");
-  }
-
-  return animal;
-}
 
 function mammothAt(harness: SocietyHarness, tick: PersonTick, distance: number): Animal {
   const { tribe } = tick;

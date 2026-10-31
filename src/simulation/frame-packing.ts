@@ -34,7 +34,7 @@ import type { Environment } from "./nature/environment.ts";
 import type { WeatherSystem } from "./nature/weather.ts";
 import { type Building, type BuildingSystem, isComplete } from "./society/buildings.ts";
 import type { JobKind } from "./society/jobs/job.ts";
-import { carriedItem, isChild, type Person } from "./society/person.ts";
+import { carriedItem, isChild, type Person, type Weapon } from "./society/person.ts";
 import { plantedCount } from "./society/plots.ts";
 import { nextEraName, technologyNames, tribeGoal } from "./society/progress.ts";
 import type { Tribe } from "./society/tribe.ts";
@@ -119,18 +119,19 @@ function packSurfaceRow(world: WorldState, row: number, target: Uint8Array, offs
     const fireByte = toByte(fire[cell]);
 
     if (
-      target[position + SurfaceChannel.Snow] !== snowByte ||
-      target[position + SurfaceChannel.Wetness] !== wetnessByte ||
-      target[position + SurfaceChannel.Scorch] !== scorchByte ||
-      target[position + SurfaceChannel.Fire] !== fireByte
+      target[position + SurfaceChannel.Snow] === snowByte &&
+      target[position + SurfaceChannel.Wetness] === wetnessByte &&
+      target[position + SurfaceChannel.Scorch] === scorchByte &&
+      target[position + SurfaceChannel.Fire] === fireByte
     ) {
-      isChanged = true;
+      continue;
     }
 
     target[position + SurfaceChannel.Snow] = snowByte;
     target[position + SurfaceChannel.Wetness] = wetnessByte;
     target[position + SurfaceChannel.Scorch] = scorchByte;
     target[position + SurfaceChannel.Fire] = fireByte;
+    isChanged = true;
   }
 
   return isChanged;
@@ -180,19 +181,19 @@ export function packRegion(world: WorldState, values: Float32Array, region: Cell
   return { region, values: packed };
 }
 
-function shownWeapon(person: Person): number {
+function shownWeapon(person: Person): Weapon | null {
   const { job, weapon } = person;
 
-  if (weapon === null || job === null || !ARMED_JOBS.has(job.kind)) {
-    return NO_WEAPON_CODE;
+  if (job === null || !ARMED_JOBS.has(job.kind)) {
+    return null;
   }
 
-  return weaponCode(weapon.kind);
+  return weapon;
 }
 
-function gearOf(person: Person, tribe: Tribe | null): number {
-  if (shownWeapon(person) !== NO_WEAPON_CODE && person.weapon !== null) {
-    return gearCode(person.weapon.material);
+function gearOf(weapon: Weapon | null, tribe: Tribe | null): number {
+  if (weapon !== null) {
+    return gearCode(weapon.material);
   }
 
   if (tribe === null) {
@@ -210,6 +211,7 @@ export function packPeople(people: readonly Person[], findTribe: (id: number) =>
 
     const offset = index * PERSON_STRIDE;
     const tribe = findTribe(person.tribeId);
+    const weapon = shownWeapon(person);
 
     buffer[offset + PersonField.Id] = person.id;
     buffer[offset + PersonField.X] = mover.x;
@@ -224,8 +226,8 @@ export function packPeople(people: readonly Person[], findTribe: (id: number) =>
     buffer[offset + PersonField.IsFemale] = person.isFemale ? 1 : 0;
     buffer[offset + PersonField.AppearanceSeed] = person.appearanceSeed;
     buffer[offset + PersonField.Carried] = carriedItemCode(carriedItem(person));
-    buffer[offset + PersonField.Weapon] = shownWeapon(person);
-    buffer[offset + PersonField.Gear] = gearOf(person, tribe);
+    buffer[offset + PersonField.Weapon] = weapon === null ? NO_WEAPON_CODE : weaponCode(weapon.kind);
+    buffer[offset + PersonField.Gear] = gearOf(weapon, tribe);
     buffer[offset + PersonField.Era] = tribe === null ? 0 : tribe.eraIndex;
     buffer[offset + PersonField.IsRaiding] = person.job?.kind === "raid" ? 1 : 0;
   }

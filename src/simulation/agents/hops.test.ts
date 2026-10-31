@@ -3,8 +3,8 @@ import { BROOK_STRENGTH } from "../../world/brooks.ts";
 import { headTo } from "../society/jobs/job.ts";
 import { firstMemberTick, MORNING, SocietyHarness, settle } from "../testing/test-society.ts";
 import { riverStrip } from "../testing/test-world.ts";
-import { isHopping } from "./hops.ts";
-import { moveAlong } from "./movement.ts";
+import { continueHop, type Hop, isHopping } from "./hops.ts";
+import { createMover, moveAlong } from "./movement.ts";
 
 describe("hopping over a brook", () => {
   it("keeps going once it has leapt, whatever else comes up", () => {
@@ -51,5 +51,30 @@ describe("hopping over a brook", () => {
       })
     ).toBe(true);
     expect(poses.has("leap")).toBe(true);
+  });
+
+  it("turns to face the way it leaps", () => {
+    const mover = createMover(0, 0, 0);
+    const hop: Hop = {
+      directionX: 1,
+      directionZ: 0,
+      enterAt: 2,
+      fromX: 0,
+      fromZ: 0,
+      leaveAt: 4,
+      length: 6,
+      level: 100,
+      speed: 3.75,
+      travelled: 0,
+    };
+
+    mover.hop = hop;
+
+    for (let step = 0; step < 100 && isHopping(mover); step += 1) {
+      continueHop(mover, hop, 0.1);
+    }
+
+    expect(isHopping(mover)).toBe(false);
+    expect(mover.heading).toBeCloseTo(Math.atan2(hop.directionX, hop.directionZ));
   });
 });

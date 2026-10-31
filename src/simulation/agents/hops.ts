@@ -1,13 +1,13 @@
-import { lerp, wrapAngle } from "../../shared/math.ts";
+import { lerp } from "../../shared/math.ts";
 import { HOP_REACH } from "../../world/brooks.ts";
 import type { WorldState } from "../world/world-state.ts";
 import type { Mover } from "./movement.ts";
+import { turnTowards } from "./turning.ts";
 
 const SAMPLE_SPACING = 0.25;
 const LANDING_MARGIN = 0.4;
 const SLACK = 4;
 const LEAP_REACH = 1.4;
-const TURN_RATE = 8;
 const NOT_WET = -1;
 
 export interface Hop {
@@ -165,13 +165,12 @@ export function continueHop(mover: Mover, hop: Hop, seconds: number): void {
   hop.travelled = Math.min(hop.length, before + hop.speed * seconds);
 
   const amount = hop.travelled / hop.length;
-  const heading = Math.atan2(hop.directionX, hop.directionZ);
 
   mover.x = lerp(hop.fromX, hop.fromX + hop.directionX * hop.length, amount);
   mover.z = lerp(hop.fromZ, hop.fromZ + hop.directionZ * hop.length, amount);
   mover.velocityX = hop.directionX * hop.speed;
   mover.velocityZ = hop.directionZ * hop.speed;
-  mover.heading += wrapAngle(heading - mover.heading) * Math.min(1, seconds * TURN_RATE);
+  turnTowards(mover, Math.atan2(hop.directionX, hop.directionZ), seconds);
 
   for (const touch of [hop.enterAt, hop.leaveAt]) {
     if (before < touch && hop.travelled >= touch) {
