@@ -10,6 +10,9 @@ import { HumanBone, otherSide } from "./human-skeleton.ts";
 import { bounceBody, cycleLegs, RUNNING, WALKING } from "./leg-cycles.ts";
 import { plantFeet } from "./planted-feet.ts";
 
+const ELDER_STRIDE = 0.78;
+const CARRYING_STRIDE = 0.9;
+const CARRYING_ARM_SWING = 0.6;
 const LEAP_STRIDE = 1.45;
 const LEAP_LIFT = 0.24;
 const KNEELING_SIDE: Side = -1;
@@ -137,7 +140,7 @@ export const HUMAN_CLIPS: Readonly<Record<PersonPose, HumanClip>> = {
 
 function strideScale(context: HumanClipContext, stride: number): number {
   if (context.ageGroup === "elder") {
-    return stride * 0.78;
+    return stride * ELDER_STRIDE;
   }
 
   return stride;
@@ -175,7 +178,7 @@ function walkingArm(pose: Pose, phase: number, side: Side, amplitude: number): v
 }
 
 function carryingArms(pose: Pose, phase: number, context: HumanClipContext): void {
-  const swing = context.motion.armSwing * 0.6;
+  const swing = context.motion.armSwing * CARRYING_ARM_SWING;
 
   switch (context.carried) {
     case "wood":
@@ -228,7 +231,7 @@ function walk(pose: Pose, phase: number, context: HumanClipContext): void {
 }
 
 function carry(pose: Pose, phase: number, context: HumanClipContext): void {
-  cycleLegs(pose, phase, strideScale(context, context.motion.stride) * 0.9, WALKING);
+  cycleLegs(pose, phase, strideScale(context, context.motion.stride) * CARRYING_STRIDE, WALKING);
   walkingTrunk(pose, phase);
   carryingArms(pose, phase, context);
   stoop(pose, context);

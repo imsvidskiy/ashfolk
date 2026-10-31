@@ -21,6 +21,7 @@ export const FIGHT_CLIPS: Readonly<Record<FightPose, HumanClip>> = {
 
 const WEAPON_SIDE: Side = -1;
 const GUARD_SIDE: Side = 1;
+const ELDER_STRIDE = 0.8;
 
 const THRUST_REACH: readonly Keyframe[] = [
   [0, 0],
@@ -174,7 +175,7 @@ function poseUpperBody(pose: Pose, stance: Stance): void {
 }
 
 function strideOf(context: HumanClipContext): number {
-  const ageFactor = context.ageGroup === "elder" ? 0.8 : 1;
+  const ageFactor = context.ageGroup === "elder" ? ELDER_STRIDE : 1;
 
   return context.motion.stride * ageFactor;
 }
