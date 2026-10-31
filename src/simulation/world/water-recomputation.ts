@@ -228,7 +228,7 @@ export class WaterRecomputation {
     for (const lake of lakes) {
       const cells = cellsOfLakes[lake.id];
 
-      if (cells !== undefined && isNewWater(cells, lake.level, previousLevels)) {
+      if (isNewWater(cells, lake.level, previousLevels)) {
         rising.push(this.#risingLake(cells, lake.level, previousLevels));
       }
     }
