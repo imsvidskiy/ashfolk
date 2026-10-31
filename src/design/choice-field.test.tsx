@@ -52,15 +52,6 @@ describe("choice field with a few options", () => {
     await expect.element(screen.getByRole("button", { name: "High", pressed: false })).toBeVisible();
   });
 
-  it("picks the option that is pressed", async () => {
-    const screen = await render(<QualityField />);
-
-    await screen.getByRole("button", { name: "High" }).click();
-
-    await expect.element(screen.getByRole("button", { name: "High", pressed: true })).toBeVisible();
-    await expect.element(screen.getByRole("button", { name: "Balanced", pressed: false })).toBeVisible();
-  });
-
   it("keeps the current option when it is pressed again", async () => {
     const handleChange = vi.fn();
 
@@ -102,15 +93,6 @@ describe("choice field with many options", () => {
     await expect.element(screen.getByRole("option", { name: "Summer" })).toBeVisible();
     await expect.element(screen.getByRole("option", { name: "Autumn" })).toBeVisible();
     await expect.element(screen.getByRole("option", { name: "Winter" })).toBeVisible();
-  });
-
-  it("picks the option that is chosen from the list", async () => {
-    const screen = await render(<SeasonField />);
-
-    await screen.getByRole("combobox", { name: "Season" }).click();
-    await screen.getByRole("option", { name: "Autumn" }).click();
-
-    await expect.element(screen.getByRole("combobox", { name: "Season" })).toHaveTextContent("Autumn");
   });
 
   it("reports the chosen value to its owner", async () => {

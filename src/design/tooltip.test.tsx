@@ -22,15 +22,7 @@ describe("tooltip", () => {
     expect(screen.getByText("Map of the island").elements()).toHaveLength(0);
   });
 
-  it("shows its text while the pointer rests on its trigger", async () => {
-    const screen = await render(<MapButton />);
-
-    await screen.getByRole("button", { name: "Map" }).hover();
-
-    await expect.element(screen.getByText("Map of the island"), { timeout: 3000 }).toBeVisible();
-  });
-
-  it("hides its text again when the pointer leaves", async () => {
+  it("shows its text while the pointer rests on its trigger and hides it when the pointer leaves", async () => {
     const screen = await render(<MapButton />);
 
     const trigger = screen.getByRole("button", { name: "Map" });
