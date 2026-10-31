@@ -19,7 +19,6 @@ describe("mining", () => {
     const tick = firstMemberTick(harness, tribe);
 
     teach(tribe, THROUGH_MINING, 2);
-
     addStructure(harness, tribe, { depositId: 0, kind: "mine", x: 150, z: 40 });
 
     const job = findMineWork(tick, "copper");

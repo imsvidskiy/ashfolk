@@ -40,7 +40,7 @@ const MIGRANT_PACE = 2;
 const MARSH_AVERSION = 6;
 const ROCKY_BIOMES: ReadonlySet<number> = new Set([Biome.Alpine, Biome.Glacier]);
 
-export interface SiteSearch {
+interface SiteSearch {
   canSettleRoughGround: boolean;
   excluded: Tribe | null;
   isNearOrigin: boolean;

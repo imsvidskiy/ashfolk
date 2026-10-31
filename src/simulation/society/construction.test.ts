@@ -72,7 +72,7 @@ describe("construction planning", () => {
   it("opens a mine at a copper deposit once the tribe knows mining", () => {
     const harness = createMiningHarness();
 
-    const tribe = settle(harness, 6);
+    const tribe = settle(harness, TRIBE_SIZE);
 
     teach(tribe, THROUGH_MINING, 2);
     tribe.stock.wood = 200;

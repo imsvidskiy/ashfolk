@@ -50,7 +50,6 @@ describe("mining work", () => {
     const copperMine = addStructure(harness, tribe, { depositId: 0, kind: "mine", x: 150, z: 40 });
 
     addStructure(harness, tribe, { depositId: 1, kind: "mine", x: -150, z: 40 });
-
     moveToSeason(harness, 1);
 
     const tick = firstMemberTick(harness, tribe);
