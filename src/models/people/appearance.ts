@@ -84,6 +84,53 @@ interface WeightedChoice<Value> {
   readonly weight: number;
 }
 
+const FEMALE_HAIR_STYLES: readonly WeightedChoice<HairStyle>[] = [
+  { value: "long", weight: 0.32 },
+  { value: "braids", weight: 0.26 },
+  { value: "bun", weight: 0.16 },
+  { value: "ponytail", weight: 0.14 },
+  { value: "wild", weight: 0.12 },
+];
+
+const CHILD_HAIR_STYLES: readonly WeightedChoice<HairStyle>[] = [
+  { value: "short", weight: 0.45 },
+  { value: "wild", weight: 0.35 },
+  { value: "ponytail", weight: 0.2 },
+];
+
+const MALE_HAIR_STYLES: readonly WeightedChoice<HairStyle>[] = [
+  { value: "short", weight: 0.32 },
+  { value: "long", weight: 0.14 },
+  { value: "ponytail", weight: 0.14 },
+  { value: "wild", weight: 0.18 },
+  { value: "bun", weight: 0.06 },
+  { value: "fringe", weight: 0.06 },
+  { value: "bald", weight: 0.02 },
+];
+
+const BEARD_STYLES: readonly WeightedChoice<BeardStyle>[] = [
+  { value: "none", weight: 0.36 },
+  { value: "short", weight: 0.4 },
+  { value: "full", weight: 0.24 },
+];
+
+const CHILD_OUTFITS: readonly WeightedChoice<Outfit>[] = [
+  { value: "tunic", weight: 0.6 },
+  { value: "loincloth", weight: 0.4 },
+];
+
+const FEMALE_OUTFITS: readonly WeightedChoice<Outfit>[] = [
+  { value: "dress", weight: 0.45 },
+  { value: "tunic", weight: 0.35 },
+  { value: "wrap", weight: 0.2 },
+];
+
+const MALE_OUTFITS: readonly WeightedChoice<Outfit>[] = [
+  { value: "tunic", weight: 0.45 },
+  { value: "loincloth", weight: 0.3 },
+  { value: "wrap", weight: 0.25 },
+];
+
 interface EraRolls {
   readonly boots: number;
   readonly cape: number;
@@ -193,32 +240,14 @@ function hairColor(random: RandomSource, ageGroup: AgeGroup, skinDarkness: numbe
 
 function hairStyle(random: RandomSource, ageGroup: AgeGroup, isFemale: boolean): HairStyle {
   if (isFemale) {
-    return choose<HairStyle>(random, [
-      { value: "long", weight: 0.32 },
-      { value: "braids", weight: 0.26 },
-      { value: "bun", weight: 0.16 },
-      { value: "ponytail", weight: 0.14 },
-      { value: "wild", weight: 0.12 },
-    ]);
+    return choose(random, FEMALE_HAIR_STYLES);
   }
 
   if (ageGroup === "child") {
-    return choose<HairStyle>(random, [
-      { value: "short", weight: 0.45 },
-      { value: "wild", weight: 0.35 },
-      { value: "ponytail", weight: 0.2 },
-    ]);
+    return choose(random, CHILD_HAIR_STYLES);
   }
 
-  const style = choose<HairStyle>(random, [
-    { value: "short", weight: 0.32 },
-    { value: "long", weight: 0.14 },
-    { value: "ponytail", weight: 0.14 },
-    { value: "wild", weight: 0.18 },
-    { value: "bun", weight: 0.06 },
-    { value: "fringe", weight: 0.06 },
-    { value: "bald", weight: 0.02 },
-  ]);
+  const style = choose(random, MALE_HAIR_STYLES);
   const isBalding = random.chance(0.3);
 
   if (ageGroup === "elder" && isBalding) {
@@ -233,11 +262,7 @@ function beardStyle(random: RandomSource, ageGroup: AgeGroup, isFemale: boolean)
     return "none";
   }
 
-  const beard = choose<BeardStyle>(random, [
-    { value: "none", weight: 0.36 },
-    { value: "short", weight: 0.4 },
-    { value: "full", weight: 0.24 },
-  ]);
+  const beard = choose(random, BEARD_STYLES);
   const isBeardFull = random.chance(0.4);
 
   if (ageGroup === "elder" && beard === "short" && isBeardFull) {
@@ -249,25 +274,14 @@ function beardStyle(random: RandomSource, ageGroup: AgeGroup, isFemale: boolean)
 
 function outfit(random: RandomSource, ageGroup: AgeGroup, isFemale: boolean): Outfit {
   if (ageGroup === "child") {
-    return choose<Outfit>(random, [
-      { value: "tunic", weight: 0.6 },
-      { value: "loincloth", weight: 0.4 },
-    ]);
+    return choose(random, CHILD_OUTFITS);
   }
 
   if (isFemale) {
-    return choose<Outfit>(random, [
-      { value: "dress", weight: 0.45 },
-      { value: "tunic", weight: 0.35 },
-      { value: "wrap", weight: 0.2 },
-    ]);
+    return choose(random, FEMALE_OUTFITS);
   }
 
-  return choose<Outfit>(random, [
-    { value: "tunic", weight: 0.45 },
-    { value: "loincloth", weight: 0.3 },
-    { value: "wrap", weight: 0.25 },
-  ]);
+  return choose(random, MALE_OUTFITS);
 }
 
 function stoop(random: RandomSource, ageGroup: AgeGroup): number {
