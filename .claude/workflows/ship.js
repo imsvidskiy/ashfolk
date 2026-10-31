@@ -320,7 +320,7 @@ if (confirmed.length > 0) {
 phase('Style')
 
 const style = await agent(
-  `Review the branch in the worktree at ${path} (cd there and work only there) against ${base}. Commit your fixes on its current branch as style(...) or refactor(...); don't create a branch, don't push and don't open a pull request. Run bun run check, bun run typecheck and bun run test before you commit.`,
+  `Review the branch in the worktree at ${path} (cd there and work only there) against ${base}. Commit your fixes on its current branch as style(...) or refactor(...); don't create a branch, don't push and don't open a pull request. Run bun run check, bun run typecheck, bun run knip and bun run test before you commit.`,
   { agentType: 'code-style', label: 'code-style', phase: 'Style', schema: STYLE_SCHEMA }
 )
 
