@@ -3,7 +3,7 @@ import type { HearingView } from "./hearing-view.ts";
 import { SOUNDS, type SoundDefinition } from "./sound-catalog.ts";
 import type { SoundEngine, SoundPoint } from "./sound-engine.ts";
 
-const JINGLE_GAP_SECONDS = 4;
+export const JINGLE_GAP_SECONDS = 4;
 const NEARBY_REACH = 150;
 const NEARBY_VIEW_SHARE = 1.5;
 

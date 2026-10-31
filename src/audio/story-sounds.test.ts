@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { ChronicleCategory, ChronicleEntry } from "../simulation/chronicle.ts";
 import { SOUNDS } from "./sound-catalog.ts";
-import { loudestStory, StorySounds } from "./story-sounds.ts";
+import { JINGLE_GAP_SECONDS, loudestStory, StorySounds } from "./story-sounds.ts";
 import { createTestSoundEngine, flatGroundPoint } from "./testing/test-sound-engine.ts";
 
 const VIEW = { focusX: 0, focusZ: 0, viewDistance: 100 };
@@ -30,9 +30,9 @@ describe("story sounds", () => {
     const story = new StorySounds(engine, flatGroundPoint);
 
     story.hear([entry("era")], VIEW, 0);
-    story.hear([entry("raid")], VIEW, 2);
-    story.hear([entry("building", 10, 20)], VIEW, 3);
-    story.hear([entry("raid")], VIEW, 4);
+    story.hear([entry("raid")], VIEW, JINGLE_GAP_SECONDS / 2);
+    story.hear([entry("building", 10, 20)], VIEW, JINGLE_GAP_SECONDS * 0.75);
+    story.hear([entry("raid")], VIEW, JINGLE_GAP_SECONDS);
 
     expect(play.mock.calls).toEqual([
       [SOUNDS.eventEra, null],
