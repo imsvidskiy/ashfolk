@@ -7,14 +7,18 @@ interface HudModule {
   readonly Hud: ComponentType;
 }
 
-function useHudModule(): HudModule | null {
+function useHudModule(shouldLoad: boolean): HudModule | null {
   const [hudModule, setHudModule] = useState<HudModule | null>(null);
 
   useEffect(() => {
+    if (!shouldLoad) {
+      return;
+    }
+
     loadHud().then((loaded) => {
       setHudModule(loaded);
     }, ignore);
-  }, []);
+  }, [shouldLoad]);
 
   return hudModule;
 }
@@ -23,7 +27,10 @@ export function ReadyHud() {
   const isReady = useEngineStore((state) => {
     return state.status.kind === "ready";
   });
-  const hudModule = useHudModule();
+  const isIslandGrowing = useEngineStore((state) => {
+    return state.status.kind !== "loading" || state.status.progress !== null;
+  });
+  const hudModule = useHudModule(isIslandGrowing);
 
   if (!isReady || hudModule === null) {
     return null;

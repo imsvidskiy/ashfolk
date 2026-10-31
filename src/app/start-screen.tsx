@@ -8,7 +8,7 @@ import { ProjectLinks } from "../features/project/project-links.tsx";
 import { SavedWorldList, SavesUnavailableNote } from "../features/saves/saved-world-list.tsx";
 import { useSavesStore } from "../features/saves/saves-store.ts";
 import { ignore } from "../shared/ignore.ts";
-import { loadGameEngine, loadHud } from "./engine-launcher.ts";
+import { preloadGame } from "./engine-launcher.ts";
 import { useLaunchStore } from "./launch-store.ts";
 import { StartBackdrop } from "./start-backdrop.tsx";
 
@@ -162,7 +162,7 @@ export function StartScreen() {
 
   useEffect(() => {
     refresh().catch(ignore);
-    Promise.all([loadGameEngine(), loadHud()]).catch((error: unknown) => {
+    preloadGame().catch((error: unknown) => {
       console.warn("The game could not be loaded ahead", error);
     });
   }, [refresh]);

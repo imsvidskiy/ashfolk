@@ -4,6 +4,7 @@ import { render } from "vitest-browser-react";
 import { startTestEngine } from "../features/testing/engine-fixtures.ts";
 import { showWorld } from "../features/testing/world-fixtures.ts";
 import { loadHud } from "./engine-launcher.ts";
+import { useEngineStore } from "./engine-store.ts";
 import { ReadyHud } from "./ready-hud.tsx";
 
 function nextFrame(): Promise<void> {
@@ -30,6 +31,7 @@ describe("ready hud", () => {
     await page.viewport(1440, 900);
 
     showWorld();
+    useEngineStore.setState({ status: { kind: "loading", progress: { island: null, stage: "relief" } } });
 
     const screen = await render(<ReadyHud />);
 

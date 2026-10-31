@@ -2,10 +2,12 @@ import { readSavedWorld } from "../features/saves/save-database.ts";
 import { useSavesStore } from "../features/saves/saves-store.ts";
 import type { EngineHandle } from "../game/engine-handle.ts";
 import { readFilming } from "../game/filming.ts";
-import type { GameEngine, WorldSource } from "../game/game-engine.ts";
+import type { GameEngine } from "../game/game-engine.ts";
 import type { GameSession } from "../game/game-session.ts";
+import type { WorldSource } from "../game/open-session.ts";
 import { DEFAULT_GENERATION_OPTIONS, type GenerationProgress } from "../generation/generation-options.ts";
 import { toError } from "../shared/errors.ts";
+import { ignore } from "../shared/ignore.ts";
 import { islandDimensions } from "../world/island-size.ts";
 import type { LaunchOptions } from "./launch-options.ts";
 
@@ -18,12 +20,20 @@ export type EngineStatus =
 
 type EngineStatusListener = (status: EngineStatus) => void;
 
-export function loadGameEngine() {
+function loadGameEngine() {
   return import("../game/game-engine.ts");
+}
+
+function loadSessionOpener() {
+  return import("../game/open-session.ts");
 }
 
 export function loadHud() {
   return import("./hud.tsx");
+}
+
+export function preloadGame(): Promise<unknown> {
+  return Promise.all([loadGameEngine(), loadSessionOpener(), loadHud()]);
 }
 
 export function reportStop(session: GameSession, onStatus: EngineStatusListener): void {
@@ -92,6 +102,7 @@ function applyLaunchTime(engine: GameEngine, launch: LaunchOptions): void {
 export class EngineLauncher {
   readonly #canvas: HTMLCanvasElement;
   readonly #onStatus: EngineStatusListener;
+  readonly #opening = new AbortController();
   #engine: GameEngine | null = null;
   #state: "canceled" | "running" | "starting" = "starting";
 
@@ -106,6 +117,7 @@ export class EngineLauncher {
 
   cancel(): void {
     this.#state = "canceled";
+    this.#opening.abort();
 
     if (this.#engine !== null) {
       this.#engine.dispose();
@@ -126,16 +138,25 @@ export class EngineLauncher {
   }
 
   async #start(launch: LaunchOptions, worldId: string): Promise<void> {
-    const [engineModule, world] = await Promise.all([loadGameEngine(), worldSourceFor(launch, worldId), loadHud()]);
+    const [{ openSession }, world] = await Promise.all([loadSessionOpener(), worldSourceFor(launch, worldId)]);
+
+    const session = openSession(
+      world,
+      (progress) => {
+        this.#reportProgress(progress);
+      },
+      this.#opening.signal
+    );
+
+    session.catch(ignore);
+
+    const [engineModule] = await Promise.all([loadGameEngine(), loadHud()]);
 
     const engine = await engineModule.GameEngine.start({
       camera: launch.camera,
       canvas: this.#canvas,
-      onProgress: (progress) => {
-        this.#reportProgress(progress);
-      },
       quality: launch.quality,
-      world,
+      session,
     });
 
     if (this.#state === "canceled") {
@@ -144,6 +165,10 @@ export class EngineLauncher {
       return;
     }
 
+    this.#run(engine, launch);
+  }
+
+  #run(engine: GameEngine, launch: LaunchOptions): void {
     this.#state = "running";
     this.#engine = engine;
     applyLaunchTime(engine, launch);
@@ -176,6 +201,7 @@ export class EngineLauncher {
   }
 
   #fail(error: unknown): void {
+    this.#opening.abort();
     console.error("Ashfolk could not start", error);
 
     if (this.#state === "canceled") {
