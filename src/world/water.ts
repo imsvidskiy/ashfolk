@@ -28,6 +28,7 @@ const POND_EXTENT_SAMPLES = 256;
 const POND_EXTENT_SLACK = 1.02;
 const POND_FEATURE_SALT = 59.3;
 const REMEMBERED_POND_SHAPES = 1024;
+const SHALLOWEST_WATER = 0.05;
 const NARROWEST_RIVER = 3.5;
 const WIDEST_RIVER = 26;
 const RIVER_WIDTH_PER_STRENGTH = 3.4;
@@ -263,7 +264,7 @@ export function pondEdgeReach(spring: Spring, x: number, z: number): number {
 }
 
 export function hasWater(waterSurface: number, ground: number): boolean {
-  return waterSurface !== NO_WATER && waterSurface > ground + 0.05;
+  return waterSurface !== NO_WATER && waterSurface > ground + SHALLOWEST_WATER;
 }
 
 export function riverWidthOfStrength(strength: number): number {
