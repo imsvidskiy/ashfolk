@@ -1,9 +1,10 @@
 import { groundDefinition } from "../../content/grounds.ts";
-import { distanceToSegment, wrapAngle } from "../../shared/math.ts";
+import { distanceToSegment } from "../../shared/math.ts";
 import type { Obstacle } from "../world/obstacles.ts";
 import type { WorldState } from "../world/world-state.ts";
 import { continueHop, type Hop, isInOpenWater, planHop, type Splash } from "./hops.ts";
 import type { NavigationGrid, Waypoint } from "./navigation.ts";
+import { turnTowards } from "./turning.ts";
 
 const FINAL_ARRIVAL_DISTANCE = 1.2;
 const WAYPOINT_ARRIVAL_DISTANCE = 6;
@@ -15,7 +16,6 @@ const WATER_SAMPLE_SPACING = 0.25;
 const BOUNDARY_MARGIN = 0.001;
 const CLIMBABLE_SLOPE = 1.2;
 const GIVE_UP_SECONDS = 2.5;
-const TURN_RATE = 8;
 const UPHILL_DRAG = 1.6;
 const DEFLECTION_FRUSTRATION = 0.3;
 const REPLAN_PROGRESS = 2;
@@ -346,7 +346,7 @@ function advance(mover: Mover, heading: number, distance: number, seconds: numbe
   mover.velocityZ = (directionZ * distance) / seconds;
   mover.x += directionX * distance;
   mover.z += directionZ * distance;
-  mover.heading += wrapAngle(heading - mover.heading) * Math.min(1, seconds * TURN_RATE);
+  turnTowards(mover, heading, seconds);
 }
 
 function stepTowards(mover: Mover, desiredHeading: number, attempt: StepAttempt, world: WorldState): boolean {
