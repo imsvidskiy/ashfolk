@@ -14,7 +14,7 @@ import { Calendar } from "../nature/calendar.ts";
 import { describeEnvironment } from "../nature/environment.ts";
 import { FireSystem } from "../nature/fire.ts";
 import { WeatherSystem } from "../nature/weather.ts";
-import { type Building, BuildingSystem } from "../society/buildings.ts";
+import { type Building, type BuildingPlacement, BuildingSystem } from "../society/buildings.ts";
 import type { Job } from "../society/jobs/job.ts";
 import type { Person } from "../society/person.ts";
 import { RivalrySystem } from "../society/rivalry/rivalry-system.ts";
@@ -52,6 +52,8 @@ interface SocietyHarnessOptions {
   rules: WorldRules;
   world: Partial<TestWorldOptions>;
 }
+
+type StructurePlacement = Omit<BuildingPlacement, "rotation" | "tribeId">;
 
 export function settle(harness: SocietyHarness, people: number): Tribe {
   const tribe = harness.spawnTribe(people);
@@ -107,11 +109,13 @@ export function addShelter(harness: SocietyHarness, tribe: Tribe, kind: Building
   return shelter;
 }
 
-export function completeStructure(tribe: Tribe, building: Building): Building {
-  building.progress = 1;
-  tribe.buildings.structureIds.push(building.id);
+export function addStructure(harness: SocietyHarness, tribe: Tribe, placement: StructurePlacement): Building {
+  const structure = harness.buildings.add({ ...placement, rotation: 0, tribeId: tribe.id }, harness.random);
 
-  return building;
+  structure.progress = 1;
+  tribe.buildings.structureIds.push(structure.id);
+
+  return structure;
 }
 
 export function createMiningHarness(): SocietyHarness {

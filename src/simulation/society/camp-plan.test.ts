@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { BUILDINGS } from "../../content/buildings.ts";
-import { addShelter, completeStructure, SocietyHarness, settle, teach } from "../testing/test-society.ts";
+import { addShelter, addStructure, SocietyHarness, settle, teach } from "../testing/test-society.ts";
 import { buildingPlans } from "./camp-plan.ts";
 
 const TRIBE_SIZE = 6;
@@ -35,13 +35,7 @@ describe("building plans", () => {
 
     const tribe = teach(settle(harness, TRIBE_SIZE), ["pottery"]);
 
-    completeStructure(
-      tribe,
-      harness.buildings.add(
-        { extent: WALL_EXTENT, kind: "palisade", rotation: 0, tribeId: tribe.id, x: tribe.campX, z: tribe.campZ },
-        harness.random
-      )
-    );
+    addStructure(harness, tribe, { extent: WALL_EXTENT, kind: "palisade", x: tribe.campX, z: tribe.campZ });
 
     const kiln = buildingPlans(tribe, harness.context).find((plan) => {
       return plan.kind === "kiln";

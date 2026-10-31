@@ -62,7 +62,7 @@ interface BuildingIncident {
   kind: BuildingIncidentKind;
 }
 
-interface BuildingPlacement {
+export interface BuildingPlacement {
   depositId?: number;
   extent?: number;
   kind: BuildingKind;

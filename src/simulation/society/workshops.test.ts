@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { completeStructure, SocietyHarness, settle, teach } from "../testing/test-society.ts";
-import type { Building } from "./buildings.ts";
+import { addStructure, SocietyHarness, settle, teach } from "../testing/test-society.ts";
 import type { Tribe } from "./tribe.ts";
 import { chooseCraft } from "./workshops.ts";
 
@@ -14,15 +13,6 @@ function settleCrafters(harness: SocietyHarness): Tribe {
   return tribe;
 }
 
-function buildKiln(harness: SocietyHarness, tribe: Tribe): Building {
-  const kiln = harness.buildings.add(
-    { kind: "kiln", rotation: 0, tribeId: tribe.id, x: tribe.campX + 20, z: tribe.campZ },
-    harness.random
-  );
-
-  return completeStructure(tribe, kiln);
-}
-
 describe("crafts", () => {
   it("are made at camp when they need only a workshop, and at their station otherwise", () => {
     const harness = new SocietyHarness();
@@ -33,7 +23,7 @@ describe("crafts", () => {
       expect.objectContaining({ recipe: "spears", station: null })
     );
 
-    const kiln = buildKiln(harness, tribe);
+    const kiln = addStructure(harness, tribe, { kind: "kiln", x: tribe.campX + 20, z: tribe.campZ });
 
     expect(chooseCraft(tribe, harness.context, {})).toEqual(
       expect.objectContaining({ recipe: "pottery", station: kiln })
@@ -45,7 +35,7 @@ describe("crafts", () => {
 
     const tribe = settleCrafters(harness);
 
-    buildKiln(harness, tribe);
+    addStructure(harness, tribe, { kind: "kiln", x: tribe.campX + 20, z: tribe.campZ });
     tribe.stock.pottery = 12;
 
     expect(chooseCraft(tribe, harness.context, {})?.recipe).toBe("spears");

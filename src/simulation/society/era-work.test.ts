@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { NO_PLANT } from "../../world/vegetation-store.ts";
 import { WorldGrid } from "../../world/world-grid.ts";
 import {
-  completeStructure,
+  addStructure,
   createMiningHarness,
   firstMemberTick,
   MORNING,
@@ -47,21 +47,9 @@ describe("mining work", () => {
 
     const tribe = teach(settle(harness, 4), [...THROUGH_MINING, "copper"], 2);
 
-    const copperMine = completeStructure(
-      tribe,
-      harness.buildings.add(
-        { depositId: 0, kind: "mine", rotation: 0, tribeId: tribe.id, x: 150, z: 40 },
-        harness.random
-      )
-    );
+    const copperMine = addStructure(harness, tribe, { depositId: 0, kind: "mine", x: 150, z: 40 });
 
-    completeStructure(
-      tribe,
-      harness.buildings.add(
-        { depositId: 1, kind: "mine", rotation: 0, tribeId: tribe.id, x: -150, z: 40 },
-        harness.random
-      )
-    );
+    addStructure(harness, tribe, { depositId: 1, kind: "mine", x: -150, z: 40 });
 
     moveToSeason(harness, 1);
 
@@ -83,13 +71,7 @@ describe("mining work", () => {
 
     const tribe = teach(settle(harness, 4), THROUGH_MINING, 2);
 
-    completeStructure(
-      tribe,
-      harness.buildings.add(
-        { depositId: 0, kind: "mine", rotation: 0, tribeId: tribe.id, x: 150, z: 40 },
-        harness.random
-      )
-    );
+    addStructure(harness, tribe, { depositId: 0, kind: "mine", x: 150, z: 40 });
     moveToSeason(harness, 1);
 
     const [, carrier] = harness.society.membersOf(tribe);

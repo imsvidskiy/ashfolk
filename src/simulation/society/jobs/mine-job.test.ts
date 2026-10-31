@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
-  completeStructure,
+  addStructure,
   createMiningHarness,
   firstMemberTick,
   runToCompletion,
@@ -20,13 +20,7 @@ describe("mining", () => {
 
     teach(tribe, THROUGH_MINING, 2);
 
-    completeStructure(
-      tribe,
-      harness.buildings.add(
-        { depositId: 0, kind: "mine", rotation: 0, tribeId: tribe.id, x: 150, z: 40 },
-        harness.random
-      )
-    );
+    addStructure(harness, tribe, { depositId: 0, kind: "mine", x: 150, z: 40 });
 
     const job = findMineWork(tick, "copper");
 
