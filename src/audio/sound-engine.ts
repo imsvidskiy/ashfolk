@@ -132,6 +132,23 @@ function isPlaced(sound: SoundDefinition, point: SoundPoint | null): point is So
   return point !== null && sound.referenceDistance > 0;
 }
 
+function route(graph: Graph, sound: SoundDefinition, point: SoundPoint | null, gain: GainNode): PannerNode | null {
+  const bus = graph.buses[sound.bus];
+
+  if (!isPlaced(sound, point)) {
+    gain.connect(bus);
+
+    return null;
+  }
+
+  const panner = createPanner(graph.context, sound, point);
+
+  gain.connect(panner);
+  panner.connect(bus);
+
+  return panner;
+}
+
 function hasPositionParameters(listener: AudioListener): boolean {
   return "positionX" in listener;
 }
@@ -288,17 +305,13 @@ export class SoundEngine {
 
     const { context } = graph;
     const gain = context.createGain();
-    const panner = isPlaced(sound, point) ? createPanner(context, sound, point) : null;
     let source: AudioBufferSourceNode | null = null;
     let isStopped = false;
 
     gain.gain.value = 0;
     gain.gain.setTargetAtTime(fade.volume * sound.volume, context.currentTime, fade.seconds / 3);
-    gain.connect(panner === null ? graph.buses[sound.bus] : panner);
 
-    if (panner !== null) {
-      panner.connect(graph.buses[sound.bus]);
-    }
+    const panner = route(graph, sound, point, gain);
 
     this.#buffer(pickFile(sound)).then((buffer) => {
       if (buffer === null || isStopped) {
@@ -362,17 +375,12 @@ export class SoundEngine {
     const { context } = graph;
     const source = context.createBufferSource();
     const gain = context.createGain();
-    const panner = isPlaced(sound, point) ? createPanner(context, sound, point) : null;
 
     source.buffer = buffer;
     source.playbackRate.value = sound.bus === "effects" ? 1 + (Math.random() * 2 - 1) * EFFECT_PITCH_SPREAD : 1;
     gain.gain.value = sound.volume * volume;
     source.connect(gain);
-    gain.connect(panner === null ? graph.buses[sound.bus] : panner);
-
-    if (panner !== null) {
-      panner.connect(graph.buses[sound.bus]);
-    }
+    route(graph, sound, point, gain);
 
     const voice: Voice = { gain, loudness, priority: sound.priority, source };
 
