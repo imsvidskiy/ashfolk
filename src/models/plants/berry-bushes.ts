@@ -105,25 +105,6 @@ const BUSH_GENERATORS: Readonly<Record<BerryBushSpecies, (seed: number) => BushS
   [CultivatedSpecies.Raspberry]: raspberry,
 };
 
-function growStem(growth: Growth, azimuth: number, options: StemOptions): TubePoint[] {
-  const { random } = growth;
-
-  const direction = tiltedDirection(azimuth, options.tilt);
-
-  return growBranch({
-    bend: 0.04,
-    direction,
-    gravity: options.gravity,
-    length: options.length,
-    noise: growth.noise,
-    radiusEnd: options.radiusEnd,
-    radiusStart: options.radiusStart,
-    segments: 4,
-    start: new Vector3(jitter(random, options.spread), 0, jitter(random, options.spread)),
-    wobble: options.wobble,
-  });
-}
-
 function createBushGrowth(seed: number): BushGrowth {
   return { ...createGrowth(seed), leaves: [], stems: [] };
 }
@@ -133,7 +114,20 @@ function addLeaf(growth: BushGrowth, center: Vector3, radius: number, squash: nu
 }
 
 function addBushStem(growth: BushGrowth, azimuth: number, options: StemOptions): TubePoint[] {
-  const points = growStem(growth, azimuth, options);
+  const { random } = growth;
+
+  const points = growBranch({
+    bend: 0.04,
+    direction: tiltedDirection(azimuth, options.tilt),
+    gravity: options.gravity,
+    length: options.length,
+    noise: growth.noise,
+    radiusEnd: options.radiusEnd,
+    radiusStart: options.radiusStart,
+    segments: 4,
+    start: new Vector3(jitter(random, options.spread), 0, jitter(random, options.spread)),
+    wobble: options.wobble,
+  });
 
   growth.stems.push(points);
 
