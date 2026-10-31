@@ -1,7 +1,10 @@
 import { SIDES } from "../mesh/transforms.ts";
-import { cosineWave, degrees, pulse } from "../rig/curves.ts";
+import { cosineWave, degrees, pulse, wave } from "../rig/curves.ts";
 import type { Pose } from "../rig/pose.ts";
 import { bendAnkle, bendKnee, swingLeg } from "./human-joints.ts";
+
+const BOUNCE_HEIGHT = 0.05;
+const BOUNCE_LAG = 0.05;
 
 interface StepTiming {
   readonly heelToes: number;
@@ -72,4 +75,8 @@ export function cycleLegs(pose: Pose, phase: number, stride: number, cycle: LegC
     );
     bendAnkle(pose, side, toesUp);
   }
+}
+
+export function bounceBody(pose: Pose, phase: number): void {
+  pose.height = BOUNCE_HEIGHT * Math.max(0, wave(phase * 2, -BOUNCE_LAG));
 }

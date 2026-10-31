@@ -7,7 +7,7 @@ import type { MotionStyle } from "./appearance.ts";
 import { FIGHT_CLIPS } from "./fight-clips.ts";
 import { bendAnkle, bendElbow, bendKnee, bendTrunk, bendWrist, moveBody, swingArm, swingLeg } from "./human-joints.ts";
 import { HumanBone, otherSide } from "./human-skeleton.ts";
-import { cycleLegs, RUNNING, WALKING } from "./leg-cycles.ts";
+import { bounceBody, cycleLegs, RUNNING, WALKING } from "./leg-cycles.ts";
 import { plantFeet } from "./planted-feet.ts";
 
 const LEAP_STRIDE = 1.45;
@@ -248,7 +248,7 @@ function running(pose: Pose, phase: number, context: HumanClipContext, stride: n
   bendTrunk(pose, HumanBone.Spine, { forward: degrees(5), turnLeft: degrees(6) * cosineWave(phase) });
   bendTrunk(pose, HumanBone.Chest, { forward: degrees(4), turnLeft: degrees(5) * cosineWave(phase) });
   bendTrunk(pose, HumanBone.Head, { forward: -degrees(6) });
-  pose.height = 0.05 * Math.max(0, wave(phase * 2, -0.05));
+  bounceBody(pose, phase);
 }
 
 function run(pose: Pose, phase: number, context: HumanClipContext): void {

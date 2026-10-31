@@ -6,7 +6,7 @@ import { once, type Pose, STRIDE_TIMING, seconds } from "../rig/pose.ts";
 import type { HumanClip, HumanClipContext } from "./human-clips.ts";
 import { bendAnkle, bendElbow, bendKnee, bendTrunk, bendWrist, moveBody, swingArm, swingLeg } from "./human-joints.ts";
 import { HumanBone } from "./human-skeleton.ts";
-import { CHARGING, cycleLegs, MARCHING } from "./leg-cycles.ts";
+import { bounceBody, CHARGING, cycleLegs, MARCHING } from "./leg-cycles.ts";
 import { plantFeet } from "./planted-feet.ts";
 
 export const FIGHT_CLIPS: Readonly<Record<FightPose, HumanClip>> = {
@@ -208,7 +208,7 @@ function charge(pose: Pose, phase: number, context: HumanClipContext): void {
   poseUpperBody(pose, SPEAR_LEVELED);
   moveBody(pose, { turnLeft: -degrees(5) * swing });
   bendTrunk(pose, HumanBone.Spine, { forward: degrees(4), turnLeft: degrees(4) * swing });
-  pose.height = 0.05 * Math.max(0, wave(phase * 2, -0.05));
+  bounceBody(pose, phase);
 }
 
 function spearStance(reach: number): Stance {
