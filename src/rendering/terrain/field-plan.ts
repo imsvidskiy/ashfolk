@@ -14,11 +14,11 @@ export const FurrowAxis = {
   None: 0,
 } as const;
 
-type FurrowAxisCode = (typeof FurrowAxis)[keyof typeof FurrowAxis];
-
 const BYTE = 255;
 const CONTOUR_SLOPE = 0.04;
 const TIE_SALT = 23.9;
+
+type FurrowAxisCode = (typeof FurrowAxis)[keyof typeof FurrowAxis];
 
 interface FieldShape {
   readonly cells: readonly number[];
