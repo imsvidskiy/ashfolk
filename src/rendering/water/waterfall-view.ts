@@ -220,7 +220,7 @@ function createCurtainMaterial(): MeshBasicNodeMaterial {
 }
 
 export class WaterfallView {
-  readonly mesh: Mesh;
+  readonly mesh: Mesh<BufferGeometry, MeshBasicNodeMaterial>;
   #lips: readonly Lip[] = [];
 
   constructor() {
@@ -268,5 +268,6 @@ export class WaterfallView {
 
   dispose(): void {
     this.mesh.geometry.dispose();
+    this.mesh.material.dispose();
   }
 }

@@ -168,7 +168,7 @@ class ModelCache {
 }
 
 export class SpringView {
-  readonly mesh: Mesh;
+  readonly mesh: Mesh<BufferGeometry, MeshStandardNodeMaterial>;
   readonly #models = new ModelCache();
 
   constructor() {
@@ -205,5 +205,6 @@ export class SpringView {
 
   dispose(): void {
     this.mesh.geometry.dispose();
+    this.mesh.material.dispose();
   }
 }
