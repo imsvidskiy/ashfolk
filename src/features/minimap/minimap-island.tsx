@@ -3,7 +3,7 @@ import { useEngine } from "../../app/use-engine.ts";
 import { Island } from "../../design/island.tsx";
 import type { EngineHandle } from "../../game/engine-handle.ts";
 import { useInterfaceStore } from "../interface/interface-store.ts";
-import { MAP_PIXELS, MinimapPainter } from "./minimap-painter.ts";
+import { MinimapPainter } from "./minimap-painter.ts";
 
 function useMinimapPainter(canvasReference: RefObject<HTMLCanvasElement | null>, engine: EngineHandle): void {
   useEffect(() => {
@@ -12,11 +12,6 @@ function useMinimapPainter(canvasReference: RefObject<HTMLCanvasElement | null>,
     if (canvas === null) {
       return;
     }
-
-    const pixels = Math.round(MAP_PIXELS * Math.min(2, window.devicePixelRatio));
-
-    canvas.width = pixels;
-    canvas.height = pixels;
 
     const painter = new MinimapPainter(canvas, engine);
 
