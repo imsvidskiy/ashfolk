@@ -1,9 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
-import { WorldMirror } from "../../game/world-mirror.ts";
 import type { ArrowEffect, EmberEffect, ExplosionEffect, LightningEffect } from "../../simulation/effects.ts";
-import { Simulation } from "../../simulation/simulation.ts";
-import { createVegetatedWorld } from "../../simulation/testing/test-world.ts";
 import { TerrainTextures } from "../terrain/terrain-textures.ts";
+import { createVegetatedMirror } from "../testing/vegetated-mirror.ts";
 import { CameraAxes } from "./billboards.ts";
 import { EffectView } from "./effect-view.ts";
 import { GroundRing } from "./ground-ring.ts";
@@ -14,9 +12,7 @@ const ARROW: ArrowEffect = { durationSeconds: 1, fromX: 0, fromZ: 0, isHit: true
 const EMBER: EmberEffect = { durationSeconds: 3, fromX: 0, fromZ: 0, kind: "ember", toX: 40, toZ: 0 };
 
 function createEffects() {
-  const simulation = new Simulation(createVegetatedWorld({ dimensions: { cellSize: 10, cellsPerSide: 64 } }));
-
-  const mirror = new WorldMirror(simulation.initialWorld(), 0);
+  const mirror = createVegetatedMirror();
 
   const textures = new TerrainTextures(mirror);
 

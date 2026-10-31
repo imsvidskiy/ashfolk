@@ -1,11 +1,10 @@
 import { PerspectiveCamera } from "three/webgpu";
 import { describe, expect, it } from "vitest";
 import { isTreeSpecies } from "../../content/plants.ts";
-import { WorldMirror } from "../../game/world-mirror.ts";
-import { Simulation } from "../../simulation/simulation.ts";
-import { createVegetatedWorld } from "../../simulation/testing/test-world.ts";
+import type { WorldMirror } from "../../game/world-mirror.ts";
 import { SURFACE_CHANNELS, SurfaceChannel } from "../../world/agent-buffers.ts";
 import { PlantState } from "../../world/vegetation-store.ts";
+import { createVegetatedMirror } from "../testing/vegetated-mirror.ts";
 import { VegetationChunks } from "../vegetation/vegetation-chunks.ts";
 import { CameraAxes } from "./billboards.ts";
 import { FireView } from "./fire-view.ts";
@@ -21,10 +20,8 @@ interface Scene {
 }
 
 function createScene(): Scene {
-  const simulation = new Simulation(createVegetatedWorld({ dimensions: { cellSize: 10, cellsPerSide: 64 } }));
   const camera = new PerspectiveCamera(45, 1.5, 1, 40_000);
-
-  const mirror = new WorldMirror(simulation.initialWorld(), 0);
+  const mirror = createVegetatedMirror();
 
   const fire = new FireView({ axes: new CameraAxes(), chunks: new VegetationChunks(mirror) });
 
