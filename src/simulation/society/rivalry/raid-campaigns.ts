@@ -91,14 +91,6 @@ function untilDay(dates: ReadonlyMap<number, number>, tribeId: number): number {
   return day;
 }
 
-function copyDates(target: Map<number, number>, source: ReadonlyMap<number, number>): void {
-  target.clear();
-
-  for (const [tribeId, day] of source) {
-    target.set(tribeId, day);
-  }
-}
-
 function forgetDates(dates: Map<number, number>, living: ReadonlySet<number>): void {
   for (const tribeId of dates.keys()) {
     if (!living.has(tribeId)) {
@@ -127,12 +119,12 @@ function rejoinRaids(people: SocietySystem, raiders: readonly RaiderState[]): vo
 
 export class RaidCampaigns {
   readonly #chronicle: Chronicle;
-  readonly #mourningUntil = new Map<number, number>();
   readonly #random: RandomSource;
   readonly #relations: RelationBook;
-  readonly #restingUntil = new Map<number, number>();
+  #mourningUntil = new Map<number, number>();
   #nextRaidId = 1;
   #raids: Raid[] = [];
+  #restingUntil = new Map<number, number>();
 
   constructor(dependencies: CampaignDependencies) {
     this.#chronicle = dependencies.chronicle;
@@ -157,10 +149,10 @@ export class RaidCampaigns {
   }
 
   restore(snapshot: RaidCampaignsSnapshot, people: SocietySystem): void {
-    copyDates(this.#mourningUntil, snapshot.mourningUntil);
+    this.#mourningUntil = new Map(snapshot.mourningUntil);
     this.#nextRaidId = snapshot.nextRaidId;
     this.#raids = snapshot.raids;
-    copyDates(this.#restingUntil, snapshot.restingUntil);
+    this.#restingUntil = new Map(snapshot.restingUntil);
     rejoinRaids(people, snapshot.raiders === undefined ? [] : snapshot.raiders);
   }
 

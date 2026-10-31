@@ -377,16 +377,7 @@ export class RivalrySystem {
       })
     );
 
-    for (const relation of this.relations.all) {
-      if (!living.has(relation.first.tribeId)) {
-        this.relations.forgetTribe(relation.first.tribeId);
-      }
-
-      if (!living.has(relation.second.tribeId)) {
-        this.relations.forgetTribe(relation.second.tribeId);
-      }
-    }
-
+    this.relations.forgetVanished(living);
     this.campaigns.forgetVanished(living);
   }
 }

@@ -97,7 +97,7 @@ describe("relations", () => {
     book.meet(1, 2, false);
     book.meet(1, 3, false);
     book.meet(2, 3, false);
-    book.forgetTribe(1);
+    book.forgetVanished(new Set([2, 3]));
 
     expect(book.all).toHaveLength(1);
     expect(book.find(1, 2)).toBeNull();
