@@ -30,6 +30,14 @@ import { CALM_FEAR, startleAnimal } from "./fear.ts";
 import { canStand, escapeRoute, findNewHome, findPasture, herdKindAt, smallGameAt } from "./habitat.ts";
 
 const HERD_SPREAD = 30;
+const HERD_START_SCATTER = 15;
+const HERD_RETARGET_SECONDS: readonly [number, number] = [25, 65];
+const GRAZE_SECONDS: readonly [number, number] = [4, 12];
+const LINGER_SECONDS: readonly [number, number] = [3, 9];
+const FIRST_GRAZE_SECONDS = 5;
+const GAIT_PHASE_SPREAD = 10;
+const MAMMOTH_GAIT_RATE = 0.55;
+const CALF_OFFSET = 2;
 const SCATTER_ATTEMPTS_PER_HERD = 60;
 const SCATTER_REACH = 0.9;
 const BURNING_GROUND = 0.25;
@@ -37,6 +45,7 @@ const FIRE_DAMAGE_PER_SECOND = 0.5;
 const FEAR_DECAY_PER_SECOND = 0.12;
 const FLEE_REPLAN_SECONDS = 2.5;
 const FIRE_AWARENESS = 60;
+const FIRE_STARTLE_DISTANCE = 5;
 const WANDER_DISTANCE_TO_FOLLOW = 35;
 const CORPSE_SECONDS = 30;
 const FALL_SECONDS = 1.3;
@@ -46,6 +55,7 @@ const MENACE_SEARCH_PADDING = 1;
 const ALERT_SECONDS: readonly [number, number] = [0.6, 1.2];
 const SKITTISH_ALERT_SECONDS: readonly [number, number] = [0.3, 0.6];
 const SKITTISH_REPLAN_SECONDS = 1.2;
+const HUNTER_FEAR = 0.8;
 const PREDATOR_FEAR = 0.9;
 const LIVED_SHARE: readonly [number, number] = [0.05, 0.85];
 const MOST_SMALL_GAME_GROUPS_PER_SQUARE_KILOMETER = 1.3;
@@ -124,7 +134,7 @@ function litterSize(range: readonly [number, number], random: RandomSource): num
 
 function phaseRate(kind: AnimalKind): number {
   if (kind === "mammoth") {
-    return 0.55;
+    return MAMMOTH_GAIT_RATE;
   }
 
   return 1;
@@ -232,7 +242,7 @@ export class FaunaSystem {
     const herd: Herd = { goalX: x, goalZ: z, id: this.#identifiers.next(), kind, memberIds: [], retargetSeconds: 0 };
 
     for (let member = 0; member < size; member += 1) {
-      this.#addAnimal(herd, x + random.signed() * 15, z + random.signed() * 15, random);
+      this.#addAnimal(herd, x + random.signed() * HERD_START_SCATTER, z + random.signed() * HERD_START_SCATTER, random);
     }
 
     this.#addHerd(herd);
@@ -414,9 +424,9 @@ export class FaunaSystem {
       },
       offsetX: random.signed() * HERD_SPREAD * 0.5,
       offsetZ: random.signed() * HERD_SPREAD * 0.5,
-      phase: random.next() * 10,
+      phase: random.next() * GAIT_PHASE_SPREAD,
       pose: "graze",
-      poseSeconds: random.next() * 5,
+      poseSeconds: random.next() * FIRST_GRAZE_SECONDS,
       speed: 0,
       threatCheckSeconds: random.next(),
       youth: 0,
@@ -502,7 +512,7 @@ export class FaunaSystem {
 
     const random = this.#randomFor(herd.kind, tick);
 
-    herd.retargetSeconds = random.between(25, 65);
+    herd.retargetSeconds = random.between(HERD_RETARGET_SECONDS[0], HERD_RETARGET_SECONDS[1]);
 
     const pasture = findPasture(this.#world, herd.kind, leader.mover, random);
 
@@ -599,8 +609,8 @@ export class FaunaSystem {
     animal.health -= FIRE_DAMAGE_PER_SECOND * tick.seconds;
     startleAnimal(
       animal,
-      animal.mover.x - Math.sin(animal.mover.heading) * 5,
-      animal.mover.z - Math.cos(animal.mover.heading) * 5,
+      animal.mover.x - Math.sin(animal.mover.heading) * FIRE_STARTLE_DISTANCE,
+      animal.mover.z - Math.cos(animal.mover.heading) * FIRE_STARTLE_DISTANCE,
       1
     );
 
@@ -632,7 +642,7 @@ export class FaunaSystem {
     }
 
     if (hunter !== null && !isEngaged) {
-      startleAnimal(animal, hunter.x, hunter.z, 0.8);
+      startleAnimal(animal, hunter.x, hunter.z, HUNTER_FEAR);
     }
 
     const predator = isSmallGame ? this.#nearestPredator(x, z, fleeDistance) : null;
@@ -708,7 +718,7 @@ export class FaunaSystem {
 
     if (moveAlong(animal.mover, tick.seconds, animal.speed, this.#world, this.#navigation)) {
       animal.pose = "graze";
-      animal.poseSeconds = this.#randomFor(animal.kind, tick).between(4, 12);
+      animal.poseSeconds = this.#randomFor(animal.kind, tick).between(GRAZE_SECONDS[0], GRAZE_SECONDS[1]);
     }
   }
 
@@ -724,7 +734,7 @@ export class FaunaSystem {
     const targetZ = herd.goalZ + animal.offsetZ;
 
     if (Math.hypot(targetX - animal.mover.x, targetZ - animal.mover.z) <= WANDER_DISTANCE_TO_FOLLOW) {
-      animal.poseSeconds = this.#randomFor(animal.kind, tick).between(3, 9);
+      animal.poseSeconds = this.#randomFor(animal.kind, tick).between(LINGER_SECONDS[0], LINGER_SECONDS[1]);
 
       return;
     }
@@ -771,7 +781,7 @@ export class FaunaSystem {
     const litter = litterSize(breeding.litterSize, random);
 
     for (let young = 0; young < litter && herd.memberIds.length < maximumHerdSize; young += 1) {
-      const calf = this.#addAnimal(herd, mother.mover.x + 2, mother.mover.z + 2, random);
+      const calf = this.#addAnimal(herd, mother.mover.x + CALF_OFFSET, mother.mover.z + CALF_OFFSET, random);
 
       calf.youth = 1;
     }
@@ -830,7 +840,7 @@ export class FaunaSystem {
       memberIds: grown.map((member) => {
         return member.id;
       }),
-      retargetSeconds: random.between(25, 65),
+      retargetSeconds: random.between(HERD_RETARGET_SECONDS[0], HERD_RETARGET_SECONDS[1]),
     };
 
     herd.memberIds = herd.memberIds.filter((id) => {
