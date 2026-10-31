@@ -16,8 +16,12 @@ export function campDistance(first: Tribe, second: Tribe): number {
   return Math.hypot(first.campX - second.campX, first.campZ - second.campZ);
 }
 
+export function nearPoint(center: Waypoint, spread: number, random: RandomSource): Waypoint {
+  return { x: center.x + random.signed() * spread, z: center.z + random.signed() * spread };
+}
+
 export function nearCamp(tribe: Tribe, spread: number, random: RandomSource): Waypoint {
-  return { x: tribe.campX + random.signed() * spread, z: tribe.campZ + random.signed() * spread };
+  return nearPoint(campPoint(tribe), spread, random);
 }
 
 export function campfireOf(tribe: Tribe, buildings: BuildingSystem): Building | null {

@@ -1,7 +1,7 @@
 import type { Waypoint } from "../../agents/navigation.ts";
 import { dropCarrying, walkSpeed } from "../person.ts";
 import type { PersonTick } from "../society-context.ts";
-import { completedBuilding, nearCamp } from "../tribe-places.ts";
+import { campPoint, completedBuilding, nearPoint } from "../tribe-places.ts";
 import { headTo, type Job, walk } from "./job.ts";
 
 const HEAVY_LOAD = 3;
@@ -13,11 +13,7 @@ function deliveryPoint(tick: PersonTick): Waypoint {
 
   const storehouse = completedBuilding(tick.context.buildings, tick.tribe.buildings.storehouseId);
 
-  if (storehouse === null) {
-    return nearCamp(tick.tribe, DROP_SPREAD, random);
-  }
-
-  return { x: storehouse.x + random.signed() * DROP_SPREAD, z: storehouse.z + random.signed() * DROP_SPREAD };
+  return nearPoint(storehouse === null ? campPoint(tick.tribe) : storehouse, DROP_SPREAD, random);
 }
 
 function storeCarrying(tick: PersonTick): void {
