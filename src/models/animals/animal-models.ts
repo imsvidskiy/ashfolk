@@ -1,4 +1,5 @@
 import { ANIMAL_KINDS, type AnimalKind } from "../../content/animals.ts";
+import { ignore } from "../../shared/ignore.ts";
 import type { AnimalPose } from "../../world/agent-poses.ts";
 import { MeshBuilder } from "../mesh/mesh-builder.ts";
 import type { MeshData } from "../mesh/mesh-data.ts";
@@ -37,7 +38,7 @@ interface PartDefinition {
 }
 
 interface AnimalSpecies {
-  readonly extraMotion: ExtraMotion | null;
+  readonly extraMotion: ExtraMotion;
   readonly gait: GaitStyle;
   readonly parts: readonly PartDefinition[];
   readonly skeleton: Skeleton;
@@ -45,7 +46,7 @@ interface AnimalSpecies {
 
 export const ANIMAL_SPECIES: Readonly<Record<AnimalKind, AnimalSpecies>> = {
   deer: {
-    extraMotion: null,
+    extraMotion: ignore,
     gait: DEER_GAIT,
     parts: [
       { build: addDeerBody, isShown: always, name: "body" },
@@ -80,7 +81,7 @@ export const ANIMAL_SPECIES: Readonly<Record<AnimalKind, AnimalSpecies>> = {
     skeleton: createQuadrupedSkeleton(HARE_FRAME),
   },
   ibex: {
-    extraMotion: null,
+    extraMotion: ignore,
     gait: IBEX_GAIT,
     parts: [
       { build: addIbexBody, isShown: always, name: "body" },
@@ -124,7 +125,7 @@ export const ANIMAL_SPECIES: Readonly<Record<AnimalKind, AnimalSpecies>> = {
     skeleton: createQuadrupedSkeleton(MAMMOTH_FRAME),
   },
   wolf: {
-    extraMotion: null,
+    extraMotion: ignore,
     gait: WOLF_GAIT,
     parts: [
       { build: addWolfBody, isShown: always, name: "body" },

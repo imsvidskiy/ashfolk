@@ -190,12 +190,9 @@ export function applyAnimalClip(
   clip: AnimalPose,
   phase: number,
   context: AnimalClipContext,
-  extra: ExtraMotion | null
+  extra: ExtraMotion
 ): void {
   pose.reset();
   QUADRUPED_CLIPS[clip].apply(pose, phase, context);
-
-  if (extra !== null) {
-    extra(pose, clip, phase);
-  }
+  extra(pose, clip, phase);
 }
