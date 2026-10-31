@@ -2,9 +2,15 @@ import { FULL_TURN } from "../shared/math.ts";
 
 export const SEASONS = ["Spring", "Summer", "Autumn", "Winter"] as const;
 
-type SeasonName = (typeof SEASONS)[number];
-
 export const SEASON_COUNT = SEASONS.length;
+
+const SEASONAL_TEMPERATURE_SWING = 10;
+const MIDSUMMER = 1.5;
+const WINTER_START = 3;
+const GROWING_SEASON_START = 0.2;
+const GROWING_SEASON_END = 2.6;
+
+type SeasonName = (typeof SEASONS)[number];
 
 export function seasonName(season: number): SeasonName {
   const name = SEASONS[Math.floor(season) % SEASON_COUNT];
@@ -17,13 +23,13 @@ export function seasonName(season: number): SeasonName {
 }
 
 export function seasonTemperatureOffset(season: number): number {
-  return 10 * Math.cos((FULL_TURN * (season - 1.5)) / SEASON_COUNT);
+  return SEASONAL_TEMPERATURE_SWING * Math.cos((FULL_TURN * (season - MIDSUMMER)) / SEASON_COUNT);
 }
 
 export function isWinter(season: number): boolean {
-  return season >= 3;
+  return season >= WINTER_START;
 }
 
 export function isGrowingSeason(season: number): boolean {
-  return season >= 0.2 && season < 2.6;
+  return season >= GROWING_SEASON_START && season < GROWING_SEASON_END;
 }
