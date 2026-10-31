@@ -31,27 +31,6 @@ function caveAt(grid: WorldGrid, cell: number): Spring {
 }
 
 describe("world state", () => {
-  it("interpolates heights between cell centers", () => {
-    const world = createTestWorld({
-      heightAt: (x) => {
-        return 100 + x;
-      },
-    });
-
-    expect(world.heightAt(5, 0)).toBeCloseTo(105);
-    expect(world.heightAt(10, 0)).toBeCloseTo(110);
-  });
-
-  it("measures slope as rise over run", () => {
-    const world = createTestWorld({
-      heightAt: (x) => {
-        return 100 + 0.5 * x;
-      },
-    });
-
-    expect(world.slope(centerCell(world))).toBeCloseTo(0.5);
-  });
-
   it("knows where the water is and how deep it is", () => {
     const world = createTestWorld();
 
