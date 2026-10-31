@@ -13,6 +13,7 @@ const WORKSHOP_SPEED = 1.6;
 const CAMP_WORK_SPREAD = 5;
 const STATION_REACH = 0.7;
 const STATION_SHARE = 0.8;
+const KNOWLEDGE_PER_ORDER = 1;
 
 export function findCraftWork(tick: PersonTick, construction: ResourceAmounts): CraftJob | null {
   const order = chooseCraft(tick.tribe, tick.context, construction);
@@ -36,7 +37,7 @@ function craftingSeconds(tribe: Tribe, order: CraftOrder): number {
 
 function finishOrder(tribe: Tribe, order: CraftOrder, context: SocietyContext): void {
   addResources(tribe.stock, order.outputs);
-  learn(tribe, 1, context.rules);
+  learn(tribe, KNOWLEDGE_PER_ORDER, context.rules);
 
   if (order.material === null) {
     return;

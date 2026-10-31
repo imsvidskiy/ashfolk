@@ -19,6 +19,14 @@ const LOOKAHEAD_STEPS = 4;
 const BURNT_OUT = 0.8;
 const STEEP = 1;
 const NOT_WET = -1;
+const TURN_PENALTY = 0.8;
+const OFF_MAP_PENALTY = 8;
+const FIRE_PENALTY = 6;
+const HOT_GROUND_PENALTY = 1.5;
+const BROOK_BONUS = 1;
+const WATER_PENALTY = 4;
+const BURNT_GROUND_BONUS = 0.6;
+const STEEP_PENALTY = 2;
 
 interface Flight {
   readonly heading: number;
@@ -35,7 +43,8 @@ function safestFlight(world: WorldState, from: Waypoint, danger: Waypoint): Flig
     const heading = away + offset;
     const reach = openRun(world, from, heading);
 
-    const score = routeScore(world, from, heading) - Math.abs(offset) * 0.8 + (reach / FLEE_DISTANCE) * OPEN_RUN_WEIGHT;
+    const score =
+      routeScore(world, from, heading) - Math.abs(offset) * TURN_PENALTY + (reach / FLEE_DISTANCE) * OPEN_RUN_WEIGHT;
 
     if (score > bestScore) {
       bestScore = score;
@@ -84,7 +93,7 @@ function routeScore(world: WorldState, from: Waypoint, heading: number): number 
     );
 
     if (cell < 0) {
-      return score - 8;
+      return score - OFF_MAP_PENALTY;
     }
 
     score += cellScore(world, cell) / step;
@@ -99,21 +108,21 @@ function cellScore(world: WorldState, cell: number): number {
   let score = 0;
 
   if (fields.fire[cell] > 0) {
-    score -= 6;
+    score -= FIRE_PENALTY;
   } else if (fields.heat[cell] > HOT_GROUND) {
-    score -= 1.5;
+    score -= HOT_GROUND_PENALTY;
   }
 
   if (world.isBrook(cell)) {
-    score += 1;
+    score += BROOK_BONUS;
   } else if (world.isWater(cell)) {
-    score -= 4;
+    score -= WATER_PENALTY;
   } else if (fields.scorch[cell] > BURNT_OUT) {
-    score += 0.6;
+    score += BURNT_GROUND_BONUS;
   }
 
   if (world.slope(cell) > STEEP) {
-    score -= 2;
+    score -= STEEP_PENALTY;
   }
 
   return score;

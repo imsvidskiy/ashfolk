@@ -13,6 +13,7 @@ const MINING_SECONDS = 30;
 const ORE_PER_TRIP = 12;
 const PICK_REACH = 0.6;
 const ENTRANCE_SHARE = 0.55;
+const KNOWLEDGE_PER_TRIP = 0.5;
 
 export function findMineWork(tick: PersonTick, kind: DepositKind): MineJob | null {
   const mine = mineFor(tick.tribe, tick.context, kind);
@@ -57,7 +58,7 @@ export class MineJob implements Job {
     }
 
     pickUp(tick.person, DEPOSITS[this.ore].resource, ORE_PER_TRIP, "ore");
-    learn(tick.tribe, 0.5, tick.context.rules);
+    learn(tick.tribe, KNOWLEDGE_PER_TRIP, tick.context.rules);
 
     return new DeliverJob(tick);
   }

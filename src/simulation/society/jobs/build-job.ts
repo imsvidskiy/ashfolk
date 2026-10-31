@@ -9,6 +9,9 @@ import { Errand, headTo, type Job } from "./job.ts";
 const EXPEDITION_DISTANCE = 220;
 const FIRST_SEASON_FOR_EXPEDITIONS = 0.3;
 const LAST_SEASON_FOR_EXPEDITIONS = 2.4;
+const BUILDER_SPREAD = 3;
+const NEAREST_BUILDER_STANDOFF = 4;
+const FARTHEST_BUILDER_STANDOFF = 6;
 
 export function isFarSite(tribe: Tribe, site: Building): boolean {
   return Math.hypot(site.x - tribe.campX, site.z - tribe.campZ) > EXPEDITION_DISTANCE;
@@ -27,10 +30,15 @@ export class BuildJob implements Job {
   constructor(tick: PersonTick, site: Building) {
     const { random } = tick.context;
 
+    const standing = {
+      x: site.x + random.signed() * BUILDER_SPREAD,
+      z: site.z + random.between(NEAREST_BUILDER_STANDOFF, FARTHEST_BUILDER_STANDOFF),
+    };
+
     this.isExpedition = isFarSite(tick.tribe, site);
     this.#errand = new Errand(Number.POSITIVE_INFINITY, "build", site);
     this.#siteId = site.id;
-    headTo(tick.person, { x: site.x + random.signed() * 3, z: site.z + random.between(4, 6) }, tick.context);
+    headTo(tick.person, standing, tick.context);
   }
 
   update(tick: PersonTick): Job | null {

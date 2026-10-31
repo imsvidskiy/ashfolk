@@ -10,6 +10,7 @@ const FISHING_SECONDS = 11;
 const CATCH_CHANCE = 0.7;
 const FISH_PER_CATCH = 3;
 const SEARCH_RADIUS = 320;
+const KNOWLEDGE_PER_CAST = 0.5;
 
 export function findFishingSpot(tick: PersonTick): FishJob | null {
   const { person, tribe } = tick;
@@ -48,7 +49,7 @@ class FishJob implements Job {
       pickUp(tick.person, "fish", FISH_PER_CATCH, "fish");
     }
 
-    learn(tick.tribe, 0.5, tick.context.rules);
+    learn(tick.tribe, KNOWLEDGE_PER_CAST, tick.context.rules);
 
     if (carriedFood(tick.person) >= FISH_PER_CATCH) {
       return new DeliverJob(tick);

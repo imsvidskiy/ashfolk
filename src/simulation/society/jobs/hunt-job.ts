@@ -27,6 +27,13 @@ const MAMMOTH_WOUND = 0.35;
 const HELPER_HIT_BONUS = 0.05;
 const SMALL_GAME_RANGE = 360;
 const SMALL_GAME_PREFERENCE = 0.35;
+const CLOSING_DISTANCE = 60;
+const CLOSING_PACE = 1.1;
+const STALKING_PACE = 0.75;
+const MISS_SPREAD = 4;
+const MISS_FEAR = 0.8;
+const WOUND_FEAR = 1;
+const KNOWLEDGE_PER_KILL = 3;
 
 type HuntPhase = "stalk" | "strike";
 
@@ -89,8 +96,8 @@ function loose(tick: PersonTick, animal: Animal, isHit: boolean): void {
   const { mover } = tick.person;
   const { random } = tick.context;
 
-  const missX = isHit ? 0 : random.signed() * 4;
-  const missZ = isHit ? 0 : random.signed() * 4;
+  const missX = isHit ? 0 : random.signed() * MISS_SPREAD;
+  const missZ = isHit ? 0 : random.signed() * MISS_SPREAD;
 
   const toX = animal.mover.x + missX;
   const toZ = animal.mover.z + missZ;
@@ -163,7 +170,7 @@ function bringDown(tick: PersonTick, animal: Animal): Job {
   tick.context.fauna.kill(animal, "hunt");
   pickUp(tick.person, "meat", carried, "meat");
   tick.tribe.stock.meat += food - carried;
-  learn(tick.tribe, 3, tick.context.rules);
+  learn(tick.tribe, KNOWLEDGE_PER_KILL, tick.context.rules);
 
   if (!isSmallGame) {
     tick.context.chronicle.record({
@@ -221,7 +228,7 @@ export class HuntJob implements Job {
       headTo(tick.person, animal.mover, tick.context);
     }
 
-    walk(tick, walkSpeed(tick.person) * (distance > 60 ? 1.1 : 0.75));
+    walk(tick, walkSpeed(tick.person) * (distance > CLOSING_DISTANCE ? CLOSING_PACE : STALKING_PACE));
 
     if (distance < strikingRange(this.#weapon)) {
       this.#phase = "strike";
@@ -265,7 +272,7 @@ export class HuntJob implements Job {
     }
 
     if (!isHit) {
-      startleAnimal(animal, tick.person.mover.x, tick.person.mover.z, 0.8);
+      startleAnimal(animal, tick.person.mover.x, tick.person.mover.z, MISS_FEAR);
       this.#phase = "stalk";
 
       return this;
@@ -274,7 +281,7 @@ export class HuntJob implements Job {
     animal.health -= 1;
 
     if (animal.health > 0) {
-      startleAnimal(animal, tick.person.mover.x, tick.person.mover.z, 1);
+      startleAnimal(animal, tick.person.mover.x, tick.person.mover.z, WOUND_FEAR);
       provokeAnimal(tick, animal);
 
       return this;

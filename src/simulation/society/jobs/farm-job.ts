@@ -11,6 +11,7 @@ const FARMING_SECONDS = 9;
 const TENDING_PER_VISIT = 0.5;
 const FENCED_YIELD = 1.25;
 const FIELD_SPREAD = 0.35;
+const KNOWLEDGE_PER_VISIT = 0.4;
 
 function harvest(tick: PersonTick, field: Field): Job {
   const crop = CROPS[field.crop];
@@ -69,7 +70,7 @@ export class FarmJob implements Job {
       return null;
     }
 
-    learn(tick.tribe, 0.4, tick.context.rules);
+    learn(tick.tribe, KNOWLEDGE_PER_VISIT, tick.context.rules);
 
     const task = fieldTask(tick.tribe, field, season);
 

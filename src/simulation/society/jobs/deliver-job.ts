@@ -6,6 +6,7 @@ import { headTo, type Job, walk } from "./job.ts";
 
 const HEAVY_LOAD = 3;
 const HEAVY_LOAD_SPEED = 0.85;
+const DROP_SPREAD = 3;
 
 function deliveryPoint(tick: PersonTick): Waypoint {
   const { random } = tick.context;
@@ -13,10 +14,10 @@ function deliveryPoint(tick: PersonTick): Waypoint {
   const storehouse = completedBuilding(tick.context.buildings, tick.tribe.buildings.storehouseId);
 
   if (storehouse === null) {
-    return nearCamp(tick.tribe, 3, random);
+    return nearCamp(tick.tribe, DROP_SPREAD, random);
   }
 
-  return { x: storehouse.x + random.signed() * 3, z: storehouse.z + random.signed() * 3 };
+  return { x: storehouse.x + random.signed() * DROP_SPREAD, z: storehouse.z + random.signed() * DROP_SPREAD };
 }
 
 function storeCarrying(tick: PersonTick): void {

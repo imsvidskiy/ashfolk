@@ -5,6 +5,10 @@ import type { PersonTick } from "../society-context.ts";
 import { campPoint } from "../tribe-places.ts";
 import { headTo, type Job, standStill, walk } from "./job.ts";
 
+const WANDER_PACE = 0.7;
+const SHORTEST_LINGER_SECONDS = 5;
+const LONGEST_LINGER_SECONDS = 13;
+
 type WanderKind = "idle" | "play";
 
 const WANDER_RANGES: Readonly<Record<WanderKind, readonly [number, number]>> = {
@@ -16,10 +20,10 @@ type WanderPhase = "linger" | "travel";
 
 function wanderSpeed(kind: WanderKind, person: Person): number {
   if (kind === "play") {
-    return runSpeed(person) * 0.7;
+    return runSpeed(person) * WANDER_PACE;
   }
 
-  return walkSpeed(person) * 0.7;
+  return walkSpeed(person) * WANDER_PACE;
 }
 
 export class WanderJob implements Job {
@@ -38,7 +42,7 @@ export class WanderJob implements Job {
     );
 
     this.kind = kind;
-    this.#lingerSeconds = random.between(5, 13);
+    this.#lingerSeconds = random.between(SHORTEST_LINGER_SECONDS, LONGEST_LINGER_SECONDS);
     headTo(tick.person, destination, tick.context);
   }
 
