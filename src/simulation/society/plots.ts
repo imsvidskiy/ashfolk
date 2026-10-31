@@ -14,6 +14,8 @@ import type { SocietyContext } from "./society-context.ts";
 import { knows, type Plot, type PlotKind, type PlotSpot, type Tribe } from "./tribe.ts";
 import { campPoint } from "./tribe-places.ts";
 
+export const RIPE_FRUIT = 0.25;
+
 const BERRY_MATURE_DAYS = 3;
 const BERRY_SAPLING_HEIGHT = 0.5;
 const PLOT_SLOPE = 0.35;
@@ -27,7 +29,6 @@ const FRUIT_START = 1.45;
 const FRUIT_END = 2.75;
 const FRUIT_GROWTH_PER_DAY = 0.75;
 const FRUIT_FALL_PER_DAY = 1.5;
-const RIPE_FRUIT = 0.25;
 const SPECIES_SALT = 7.7;
 const HEIGHT_SALT = 3.3;
 const FALLBACK_TIMBER: readonly PlantSpeciesIndex[] = [PlantSpecies.Oak, PlantSpecies.Birch, PlantSpecies.Pine];

@@ -1,6 +1,6 @@
 import { plantSpeciesDefinition } from "../../../content/plants.ts";
 import { carriedFood, isChild, pickUp } from "../person.ts";
-import { ripestFruitTree } from "../plots.ts";
+import { RIPE_FRUIT, ripestFruitTree } from "../plots.ts";
 import { nearestPlant } from "../resources.ts";
 import type { PersonTick } from "../society-context.ts";
 import { learn, markScarce } from "../tribe.ts";
@@ -9,7 +9,6 @@ import { canWorkAtPlant, Errand, headToWork, isFreePlant, type Job, plantTarget 
 
 const GATHERING_SECONDS = 4;
 const GATHERING_REACH = 0.35;
-const RIPE_BUSH = 0.25;
 const PICKABLE_FRUIT = 0.1;
 const HANDFUL = 0.5;
 const FOOD_PER_FRUIT = 4;
@@ -33,7 +32,7 @@ function isRipeBush(tick: PersonTick, plant: number): boolean {
     return false;
   }
 
-  return plantSpeciesDefinition(vegetation.species[plant]).givesBerries && vegetation.fruit[plant] > RIPE_BUSH;
+  return plantSpeciesDefinition(vegetation.species[plant]).givesBerries && vegetation.fruit[plant] > RIPE_FRUIT;
 }
 
 function gatheringArea(tick: PersonTick): SearchArea {
