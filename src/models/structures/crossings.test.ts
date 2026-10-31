@@ -134,15 +134,25 @@ describe("fallen logs", () => {
     }
   });
 
-  it("picks the closest length and both shapes of a log", () => {
-    const variants = new Set(
-      [0.1, 0.2, 0.6, 0.7].map((seed) => {
-        return fallenLogVariant(19, seed);
-      })
-    );
+  it("picks the closest length and every shape of a log", () => {
+    const shapes = FALLEN_LOG_VARIANTS / FALLEN_LOG_LENGTHS.length;
 
-    expect(variants.size).toBe(2);
-    expect(fallenLogVariant(28, 0.1) % FALLEN_LOG_LENGTHS.length).toBe(1);
-    expect(Math.max(...variants)).toBeLessThan(FALLEN_LOG_VARIANTS);
+    for (const [lengthIndex, length] of FALLEN_LOG_LENGTHS.entries()) {
+      for (const span of [length - 1, length + 1]) {
+        const variants = new Set(
+          Array.from({ length: 16 }, (_, step) => {
+            return fallenLogVariant(span, step / 16);
+          })
+        );
+
+        for (const variant of variants) {
+          expect(Number.isInteger(variant)).toBe(true);
+          expect(variant).toBeLessThan(FALLEN_LOG_VARIANTS);
+          expect(variant % FALLEN_LOG_LENGTHS.length).toBe(lengthIndex);
+        }
+
+        expect(variants.size).toBe(shapes);
+      }
+    }
   });
 });
