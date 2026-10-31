@@ -44,7 +44,7 @@ describe("territory", () => {
       z: 0,
     };
 
-    const claim = claimOf(tribe, 7, [outpost]);
+    const claim = claimOf(tribe, [outpost]);
 
     expect(claim.radius).toBeGreaterThan(600);
     expect(claim.range).toBeGreaterThan(claim.radius);

@@ -86,7 +86,7 @@ function claimFor(tribe: Tribe, context: SocietyContext): Claim {
     return building.tribeId === tribe.id && isComplete(building);
   });
 
-  return claimOf(tribe, tribe.memberCount, buildings);
+  return claimOf(tribe, buildings);
 }
 
 function recordFall(victim: Person, raid: Raid | null): void {
