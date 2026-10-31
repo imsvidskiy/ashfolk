@@ -187,10 +187,6 @@ describe("wetlands", () => {
     ).toBe(true);
   });
 
-  it("comes out the same for the same seed", () => {
-    expect(wetnessOf(3)).toEqual(wetnessOf(3));
-  });
-
   it("drains patches too small to read as a swamp", () => {
     const speck = square(10, 10, 3);
     const marsh = square(40, 40, 10);

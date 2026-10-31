@@ -90,7 +90,8 @@ function wanderingReceiver(grid: WorldGrid, filled: Float32Array, cell: number, 
 
   let steepest = 0;
 
-  for (const [index, offset] of NEIGHBOR_OFFSETS.entries()) {
+  for (let index = 0; index < NEIGHBOR_OFFSETS.length; index += 1) {
+    const offset = NEIGHBOR_OFFSETS[index];
     const neighbor = grid.neighborIndex(column, row, offset);
 
     weights[index] = neighbor < 0 ? 0 : Math.max(0, (level - filled[neighbor]) / offset.distance);
@@ -110,11 +111,11 @@ function wanderingReceiver(grid: WorldGrid, filled: Float32Array, cell: number, 
 
   let pick = hashToUnit(column, row, WANDER_SALT) * total;
 
-  for (const [index, offset] of NEIGHBOR_OFFSETS.entries()) {
+  for (let index = 0; index < NEIGHBOR_OFFSETS.length; index += 1) {
     pick -= weights[index];
 
     if (weights[index] > 0 && pick <= 0) {
-      return grid.neighborIndex(column, row, offset);
+      return grid.neighborIndex(column, row, NEIGHBOR_OFFSETS[index]);
     }
   }
 
@@ -130,7 +131,7 @@ function wanderReceivers(grid: WorldGrid, heights: Float32Array, filled: Float32
       continue;
     }
 
-    if (hashToUnit(grid.columnOf(cell), grid.rowOf(cell), WANDER_CHANCE_SALT) >= wanderChance) {
+    if (wanderChance < 1 && hashToUnit(grid.columnOf(cell), grid.rowOf(cell), WANDER_CHANCE_SALT) >= wanderChance) {
       continue;
     }
 
@@ -168,7 +169,7 @@ function fillDepressions(heights: Float32Array, grid: WorldGrid, coastDistance: 
   }
 
   for (let cell = 0; cell < grid.cellCount; cell += 1) {
-    if (touchesOffIsland(grid, coastDistance, cell)) {
+    if (isOnIsland(coastDistance, cell) && touchesOffIsland(grid, coastDistance, cell)) {
       seedCell(cell);
     }
   }

@@ -28,6 +28,14 @@ const SMALLEST_RIVER_GAP = 35;
 const CONFLUENCE_REACH = 100;
 const TRUNK_LAKE_CELLS = 1.5;
 const SMOOTHING_SLACK = 10;
+const SIDE_STREAM_COLUMN = 35;
+const SIDE_STREAM_ROWS = [2, 90] as const;
+const RAISED_FROM_ROW = 50;
+const SIDE_SLOPE = 0.18;
+const CROSSING_ROW = 80;
+const CROSSING_HEAD_COLUMN = 5;
+const STEEP_STREAM_ROWS = [2, 60] as const;
+const STEEP_SLOPE = 0.13;
 
 const grid = new WorldGrid({ cellSize: 10, cellsPerSide: 100 });
 
@@ -85,18 +93,26 @@ function rowCells(row: number, fromColumn: number, toColumn: number): number[] {
   return cells;
 }
 
+function columnCells(column: number, fromRow: number, toRow: number): number[] {
+  const cells: number[] = [];
+
+  for (let row = fromRow; row <= toRow; row += 1) {
+    cells.push(grid.index(column, row));
+  }
+
+  return cells;
+}
+
+function unjoinedChain(cells: number[]): RiverChain {
+  return { cells, joinsCell: NO_CELL, mouthReceiver: NO_CELL };
+}
+
 function trunkCell(row: number): number {
   return grid.index(TRUNK_COLUMN, row);
 }
 
 function trunk(): RiverChain {
-  const cells: number[] = [];
-
-  for (let row = TRUNK_HEAD_ROW; row < grid.cellsPerSide; row += 1) {
-    cells.push(trunkCell(row));
-  }
-
-  return { cells, joinsCell: NO_CELL, mouthReceiver: NO_CELL };
+  return unjoinedChain(columnCells(TRUNK_COLUMN, TRUNK_HEAD_ROW, grid.cellsPerSide - 1));
 }
 
 function stream(land: RiverLand, cells: number[], joinRow: number, flow: number): RiverChain {
@@ -295,9 +311,7 @@ describe("spaceRiverChains", () => {
 
     const spaced = spaceRiverChains(land, [upper, trunk()]);
 
-    expect(spaced).toEqual([
-      { cells: [...upper.cells, ...trunk().cells.slice(5)], joinsCell: NO_CELL, mouthReceiver: NO_CELL },
-    ]);
+    expect(spaced).toEqual([unjoinedChain([...upper.cells, ...trunk().cells.slice(5)])]);
   });
 
   it("frees the source stretch a stream replaces", () => {
@@ -322,6 +336,58 @@ describe("spaceRiverChains", () => {
       joinsCell: trunkCell(15),
       mouthReceiver: trunkCell(15),
     });
+  });
+
+  it("leads a stream that runs high above a river down the slope ahead into it", () => {
+    const land = landWithLake();
+    const [headRow, endRow] = SIDE_STREAM_ROWS;
+    const raisedAt = RAISED_FROM_ROW - headRow;
+    const side = stream(land, columnCells(SIDE_STREAM_COLUMN, headRow, endRow), 95, STREAM_FLOW);
+
+    for (let cell = 0; cell < grid.cellCount; cell += 1) {
+      if (grid.rowOf(cell) >= RAISED_FROM_ROW) {
+        land.heights[cell] += SIDE_SLOPE * Math.abs(grid.columnOf(cell) - TRUNK_COLUMN) * grid.cellSize;
+      }
+    }
+
+    const [, captured] = spaceRiverChains(land, [side, trunk()]);
+    const connector = captured.cells.slice(raisedAt + 1);
+    const descent = [...captured.cells.slice(raisedAt), captured.joinsCell].map((cell) => {
+      return land.heights[cell];
+    });
+
+    expect(captured.cells.slice(0, raisedAt + 1)).toEqual(columnCells(SIDE_STREAM_COLUMN, headRow, RAISED_FROM_ROW));
+    expect(trunk().cells).toContain(captured.joinsCell);
+    expect(grid.rowOf(captured.joinsCell)).toBeGreaterThan(RAISED_FROM_ROW);
+    expect(descent).toEqual(
+      [...descent].sort((first, second) => {
+        return second - first;
+      })
+    );
+    expect(connector.length).toBeGreaterThan(0);
+    expect(
+      connector.every((cell) => {
+        return grid.columnOf(cell) >= SIDE_STREAM_COLUMN && grid.columnOf(cell) < TRUNK_COLUMN;
+      })
+    ).toBe(true);
+  });
+
+  it("leads a stream down a steep slope into a river that crosses its way far ahead", () => {
+    const land = landWithLake();
+    const [headRow, endRow] = STEEP_STREAM_ROWS;
+    const crossing = unjoinedChain(rowCells(CROSSING_ROW, CROSSING_HEAD_COLUMN, grid.cellsPerSide - 1));
+    const side = unjoinedChain(columnCells(SIDE_STREAM_COLUMN, headRow, endRow));
+
+    land.basins.network.accumulation[grid.index(grid.cellsPerSide - 1, CROSSING_ROW)] = TRUNK_FLOW;
+
+    for (let cell = 0; cell < grid.cellCount; cell += 1) {
+      land.heights[cell] -= STEEP_SLOPE * grid.rowOf(cell) * grid.cellSize;
+    }
+
+    const [, captured] = spaceRiverChains(land, [side, crossing]);
+
+    expect(captured.cells[0]).toBe(side.cells[0]);
+    expect(crossing.cells).toContain(captured.joinsCell);
   });
 
   it("keeps a lake's outflow and joins a stream to it near the lake", () => {

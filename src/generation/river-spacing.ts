@@ -3,6 +3,8 @@ import type { WorldGrid } from "../world/world-grid.ts";
 import { type DrainageBasins, isNearLake, NO_CELL } from "./drainage.ts";
 import { chainCells, type RiverChain, riverWidthFor } from "./river-chains.ts";
 
+export const SOURCE_REACH = 100;
+
 const SMALLEST_SPACING = 40;
 const SPACING_WIDTHS = 2.5;
 const LARGEST_SPACING = 65;
@@ -15,10 +17,11 @@ const CAPTURE_REACH = 350;
 const CAPTURE_DROP = 0.12;
 const CAPTURE_FACING = 0.5;
 const CAPTURE_BUMP = 8;
+const RIVER_LOW_BLOCK = 8;
 const FLOW_LOOKAROUND = 3;
 const PARALLEL_REACH = 180;
 const PARALLEL_RUN = 400;
-export const SOURCE_REACH = 100;
+const NEARBY_REACH = Math.max(CAPTURE_REACH, PARALLEL_REACH);
 
 export interface RiverLand {
   readonly basins: DrainageBasins;
@@ -31,6 +34,12 @@ interface Spacing extends RiverLand {
   readonly nearbyOffsets: readonly NearbyOffset[];
   readonly owners: Int32Array;
   readonly reach: number;
+  readonly riverLows: RiverLows;
+}
+
+interface RiverLows {
+  readonly blocksPerSide: number;
+  readonly lowest: Float32Array;
 }
 
 interface NearbyOffset {
@@ -76,17 +85,17 @@ function spacingBetween(spacing: Spacing, cell: number, other: number): number {
   );
 }
 
-function riverCellAt(spacing: Spacing, cell: number, offset: NearbyOffset): number {
+function riverCellAt(spacing: Spacing, column: number, row: number, offset: NearbyOffset): number {
   const { grid, owners } = spacing;
 
-  const column = grid.columnOf(cell) + offset.column;
-  const row = grid.rowOf(cell) + offset.row;
+  const otherColumn = column + offset.column;
+  const otherRow = row + offset.row;
 
-  if (!grid.contains(column, row)) {
+  if (!grid.contains(otherColumn, otherRow)) {
     return NO_CELL;
   }
 
-  const other = grid.index(column, row);
+  const other = grid.index(otherColumn, otherRow);
 
   return owners[other] === NO_CELL ? NO_CELL : other;
 }
@@ -97,12 +106,15 @@ function nearestRiver(
   meters: number,
   isAllowed: (other: number) => boolean
 ): NearbyRiver | null {
+  const column = spacing.grid.columnOf(cell);
+  const row = spacing.grid.rowOf(cell);
+
   for (const offset of spacing.nearbyOffsets) {
     if (offset.distance > meters) {
       return null;
     }
 
-    const other = riverCellAt(spacing, cell, offset);
+    const other = riverCellAt(spacing, column, row, offset);
 
     if (other !== NO_CELL && isAllowed(other)) {
       return { cell: other, distance: offset.distance };
@@ -293,22 +305,66 @@ function offsetsWithin(grid: WorldGrid, meters: number): NearbyOffset[] {
   return offsets.sort(byDistance);
 }
 
+function createRiverLows(grid: WorldGrid): RiverLows {
+  const blocksPerSide = Math.ceil(grid.cellsPerSide / RIVER_LOW_BLOCK);
+
+  return { blocksPerSide, lowest: new Float32Array(blocksPerSide * blocksPerSide).fill(Number.POSITIVE_INFINITY) };
+}
+
+function markRiverLow(spacing: Spacing, cell: number): void {
+  const { grid, heights, riverLows } = spacing;
+
+  const block =
+    Math.floor(grid.rowOf(cell) / RIVER_LOW_BLOCK) * riverLows.blocksPerSide +
+    Math.floor(grid.columnOf(cell) / RIVER_LOW_BLOCK);
+
+  riverLows.lowest[block] = Math.min(riverLows.lowest[block], heights[cell]);
+}
+
+function lowestRiverNearby(spacing: Spacing, column: number, row: number): number {
+  const { grid, riverLows } = spacing;
+
+  const reach = Math.ceil(NEARBY_REACH / grid.cellSize);
+  const last = grid.cellsPerSide - 1;
+  const firstColumn = Math.floor(Math.max(0, column - reach) / RIVER_LOW_BLOCK);
+  const lastColumn = Math.floor(Math.min(last, column + reach) / RIVER_LOW_BLOCK);
+  const firstRow = Math.floor(Math.max(0, row - reach) / RIVER_LOW_BLOCK);
+  const lastRow = Math.floor(Math.min(last, row + reach) / RIVER_LOW_BLOCK);
+
+  let lowest = Number.POSITIVE_INFINITY;
+
+  for (let blockRow = firstRow; blockRow <= lastRow; blockRow += 1) {
+    for (let blockColumn = firstColumn; blockColumn <= lastColumn; blockColumn += 1) {
+      lowest = Math.min(lowest, riverLows.lowest[blockRow * riverLows.blocksPerSide + blockColumn]);
+    }
+  }
+
+  return lowest;
+}
+
 function captureFor(spacing: Spacing, cells: readonly number[], head: number, index: number): RiverChain | null {
   const { grid, heights, nearbyOffsets, owners } = spacing;
 
   const cell = cells[index];
+  const column = grid.columnOf(cell);
+  const row = grid.rowOf(cell);
   const direction = flowDirection(grid, cells, index);
+  const deepestDrop = heights[cell] - lowestRiverNearby(spacing, column, row);
 
   for (const offset of nearbyOffsets) {
-    const other = riverCellAt(spacing, cell, offset);
-
-    if (other === NO_CELL) {
-      continue;
+    if (CAPTURE_DROP * offset.distance > deepestDrop) {
+      return null;
     }
 
     const facing = ((offset.column * direction.x + offset.row * direction.z) * grid.cellSize) / offset.distance;
 
-    if (facing < CAPTURE_FACING || heights[cell] - heights[other] < CAPTURE_DROP * offset.distance) {
+    if (facing < CAPTURE_FACING) {
+      continue;
+    }
+
+    const other = riverCellAt(spacing, column, row, offset);
+
+    if (other === NO_CELL || heights[cell] - heights[other] < CAPTURE_DROP * offset.distance) {
       continue;
     }
 
@@ -378,6 +434,7 @@ function runsBesideRiver(spacing: Spacing, chain: RiverChain): boolean {
 function claim(spacing: Spacing, spaced: RiverChain[], chain: RiverChain, index: number): void {
   for (const cell of chain.cells) {
     spacing.owners[cell] = index;
+    markRiverLow(spacing, cell);
   }
 
   spaced[index] = chain;
@@ -460,9 +517,10 @@ export function spaceRiverChains(land: RiverLand, chains: readonly RiverChain[])
 
   const spacing: Spacing = {
     ...land,
-    nearbyOffsets: offsetsWithin(grid, Math.max(CAPTURE_REACH, PARALLEL_REACH)),
+    nearbyOffsets: offsetsWithin(grid, NEARBY_REACH),
     owners: new Int32Array(grid.cellCount).fill(NO_CELL),
     reach: Math.max(LARGEST_SPACING, HEAD_CLEARANCE, grid.cellSize * SPACING_CELLS),
+    riverLows: createRiverLows(grid),
   };
 
   const spaced: RiverChain[] = [];

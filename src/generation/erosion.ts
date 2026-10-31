@@ -1,5 +1,6 @@
 import { clamp, lerp } from "../shared/math.ts";
 import type { RandomSource } from "../shared/random.ts";
+import { CellSet } from "../world/cell-set.ts";
 
 const BRUSH_RADIUS = 3;
 const CAPACITY = 4;
@@ -54,9 +55,10 @@ export interface ErosionPlan {
 }
 
 interface SlopeRelaxation {
-  readonly active: Uint8Array;
+  readonly active: CellSet;
   readonly cellSize: number;
   readonly change: Float32Array;
+  readonly changed: CellSet;
   readonly excesses: Float64Array;
   readonly heights: Float32Array;
   readonly neighborhood: Neighborhood;
@@ -150,8 +152,20 @@ function erode(
 
   let removed = 0;
 
+  if (isInside) {
+    for (let brushIndex = 0; brushIndex < weights.length; brushIndex += 1) {
+      const index = center + offsets[brushIndex];
+      const take = Math.min(map[index], amount * weights[brushIndex]);
+
+      map[index] -= take;
+      removed += take;
+    }
+
+    return removed;
+  }
+
   for (let brushIndex = 0; brushIndex < weights.length; brushIndex += 1) {
-    if (!(isInside || isOnMap(centerColumn + brush.columns[brushIndex], centerRow + brush.rows[brushIndex], size))) {
+    if (!isOnMap(centerColumn + brush.columns[brushIndex], centerRow + brush.rows[brushIndex], size)) {
       continue;
     }
 
@@ -361,10 +375,11 @@ export function erodeAcrossScales(
   }
 }
 
-function shedExcess(relaxation: SlopeRelaxation, column: number, row: number): boolean {
-  const { change, excesses, heights, neighborhood, size } = relaxation;
+function shedExcess(relaxation: SlopeRelaxation, cell: number): boolean {
+  const { change, changed, excesses, heights, neighborhood, size } = relaxation;
 
-  const cell = row * size + column;
+  const column = cell % size;
+  const row = (cell - column) / size;
   const height = heights[cell];
   const allowedDrop = relaxation.talus[cell] * relaxation.cellSize;
   const isInside = column > 0 && row > 0 && column < size - 1 && row < size - 1;
@@ -395,14 +410,18 @@ function shedExcess(relaxation: SlopeRelaxation, column: number, row: number): b
 
   const moved = 0.4 * largest;
 
+  changed.add(cell);
+
   for (let neighbor = 0; neighbor < 8; neighbor += 1) {
     const excess = excesses[neighbor];
 
     if (excess > 0) {
       const share = (moved * excess) / total;
+      const target = cell + neighborhood.offsets[neighbor];
 
-      change[cell + neighborhood.offsets[neighbor]] += share;
+      change[target] += share;
       change[cell] -= share;
+      changed.add(target);
     }
   }
 
@@ -410,13 +429,11 @@ function shedExcess(relaxation: SlopeRelaxation, column: number, row: number): b
 }
 
 function applyRelaxation(relaxation: SlopeRelaxation): void {
-  const { active, change, heights, neighborhood, size } = relaxation;
+  const { active, change, changed, heights, neighborhood, size } = relaxation;
 
-  active.fill(0);
-
-  for (let cell = 0; cell < heights.length; cell += 1) {
+  changed.retain((cell) => {
     if (change[cell] === 0) {
-      continue;
+      return false;
     }
 
     const column = cell % size;
@@ -425,14 +442,33 @@ function applyRelaxation(relaxation: SlopeRelaxation): void {
 
     heights[cell] += change[cell];
     change[cell] = 0;
-    active[cell] = 1;
+    active.add(cell);
 
     for (let neighbor = 0; neighbor < 8; neighbor += 1) {
       if (isInside || isOnMap(column + neighborhood.columns[neighbor], row + neighborhood.rows[neighbor], size)) {
-        active[cell + neighborhood.offsets[neighbor]] = 1;
+        active.add(cell + neighborhood.offsets[neighbor]);
       }
     }
-  }
+
+    return false;
+  });
+}
+
+function shedActiveCells(relaxation: SlopeRelaxation): boolean {
+  const { active } = relaxation;
+
+  let hasShed = false;
+
+  active.sort();
+  active.retain((cell) => {
+    if (shedExcess(relaxation, cell)) {
+      hasShed = true;
+    }
+
+    return false;
+  });
+
+  return hasShed;
 }
 
 export function relaxSlopes(
@@ -443,9 +479,10 @@ export function relaxSlopes(
   maximumIterations: number
 ): number {
   const relaxation: SlopeRelaxation = {
-    active: new Uint8Array(heights.length).fill(1),
+    active: new CellSet(heights.length),
     cellSize,
     change: new Float32Array(heights.length),
+    changed: new CellSet(heights.length),
     excesses: new Float64Array(8),
     heights,
     neighborhood: createNeighborhood(size),
@@ -453,18 +490,12 @@ export function relaxSlopes(
     talus,
   };
 
+  for (let cell = 0; cell < heights.length; cell += 1) {
+    relaxation.active.add(cell);
+  }
+
   for (let iteration = 0; iteration < maximumIterations; iteration += 1) {
-    let isSettled = true;
-
-    for (let row = 0; row < size; row += 1) {
-      for (let column = 0; column < size; column += 1) {
-        if (relaxation.active[row * size + column] === 1 && shedExcess(relaxation, column, row)) {
-          isSettled = false;
-        }
-      }
-    }
-
-    if (isSettled) {
+    if (!shedActiveCells(relaxation)) {
       return iteration;
     }
 
