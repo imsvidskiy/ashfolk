@@ -27,7 +27,7 @@ interface GuideStore {
 
 export const useGuideStore = create<GuideStore>()(
   persist(
-    (set) => {
+    (set, get) => {
       return {
         dismiss: () => {
           set((state) => {
@@ -36,9 +36,12 @@ export const useGuideStore = create<GuideStore>()(
         },
         progress: FRESH_GUIDE,
         record: (event) => {
-          set((state) => {
-            return { progress: applyGuideEvent(state.progress, event) };
-          });
+          const { progress } = get();
+          const next = applyGuideEvent(progress, event);
+
+          if (next !== progress) {
+            set({ progress: next });
+          }
         },
         setTipsShown: (areShown) => {
           set({ progress: areShown ? FRESH_GUIDE : { ...FRESH_GUIDE, isOff: true } });

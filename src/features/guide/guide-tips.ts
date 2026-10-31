@@ -127,7 +127,8 @@ export function applyGuideEvent(progress: GuideProgress, event: GuideEvent): Gui
   const done = withDone(progress.done, completedIntroTip(event));
   const hasActed = event.kind === "powerUsed" && progress.shown !== null;
   const shown = hasActed ? null : progress.shown;
-  const advanced = { ...progress, done, shown };
+  const isUnchanged = done === progress.done && shown === progress.shown;
+  const advanced = isUnchanged ? progress : { ...progress, done, shown };
 
   if (shown !== null || !hasFinishedIntro(advanced)) {
     return advanced;

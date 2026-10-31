@@ -47,6 +47,13 @@ describe("guide tips", () => {
     expect(applyGuideEvent(FRESH_GUIDE, { kind: "speedChanged", speed: 1 }).done).toEqual([]);
   });
 
+  it("keeps the same progress when an event changes nothing", () => {
+    const looked = applyGuideEvent(FRESH_GUIDE, { kind: "cameraMoved" });
+
+    expect(applyGuideEvent(looked, { kind: "cameraMoved" })).toBe(looked);
+    expect(applyGuideEvent(FINISHED_INTRO, { kind: "season", name: "Summer" })).toBe(FINISHED_INTRO);
+  });
+
   it("skips the intro tip on dismiss", () => {
     expect(currentTip(dismissTip(FRESH_GUIDE))).toBe("pick");
   });
