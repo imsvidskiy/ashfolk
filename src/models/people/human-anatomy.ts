@@ -255,11 +255,7 @@ function addArms(builder: MeshBuilder, detail: HumanDetail): void {
 
     builder.add(
       tube(alongTube(detail.hasFineDetails ? DOMED_ARM : ARM, detail), { radialSegments: detail.limbSegments }),
-      {
-        seam: SKIN_SEAM,
-        style,
-        transform: mirror,
-      }
+      { seam: SKIN_SEAM, style, transform: mirror }
     );
     builder.add(sphere(SHOULDER_RADIUS, detail.limbSegments, Math.max(4, detail.limbSegments - 3)), {
       seam: SKIN_SEAM,

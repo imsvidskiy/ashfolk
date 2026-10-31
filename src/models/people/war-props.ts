@@ -55,9 +55,7 @@ export function addWarPaint(builder: MeshBuilder, detail: HumanDetail): void {
         ],
         0.006
       ),
-      {
-        radialSegments: segments,
-      }
+      { radialSegments: segments }
     ),
     { style: face }
   );
