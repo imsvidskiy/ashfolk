@@ -1,10 +1,11 @@
-import { Frustum, InstancedBufferGeometry, Matrix4, Mesh, PerspectiveCamera } from "three/webgpu";
+import { Frustum, Matrix4, PerspectiveCamera } from "three/webgpu";
 import { describe, expect, it } from "vitest";
 import { cropCode, FENCED_CROP_OFFSET } from "../../content/crops.ts";
 import { Ground } from "../../content/grounds.ts";
 import type { WorldMirror } from "../../game/world-mirror.ts";
 import { GROUND_CHANNELS, GroundChannel } from "../../world/agent-buffers.ts";
 import { FieldPlan } from "../terrain/field-plan.ts";
+import { drawnInstances, drawnMeshes } from "../testing/drawn-meshes.ts";
 import { createVegetatedMirror } from "../testing/vegetated-mirror.ts";
 import { CropField } from "./crop-field.ts";
 import { PlantWeather } from "./plant-material.ts";
@@ -43,7 +44,7 @@ function createFarm(code: number): Farm {
   return { field: new CropField(mirror, new PlantWeather(), new FieldPlan(mirror)), mirror };
 }
 
-function drawnMeshes({ field, mirror }: Farm, attribute: string): Mesh<InstancedBufferGeometry>[] {
+function updateFromAbove({ field, mirror }: Farm): void {
   const { grid } = mirror;
 
   const x = grid.centerX(FIELD_COLUMNS[0]);
@@ -60,25 +61,18 @@ function drawnMeshes({ field, mirror }: Farm, attribute: string): Mesh<Instanced
     ),
     1
   );
-
-  return field.group.children.filter((child): child is Mesh<InstancedBufferGeometry> => {
-    return (
-      child instanceof Mesh &&
-      child.visible &&
-      child.geometry instanceof InstancedBufferGeometry &&
-      child.geometry.getAttribute(attribute) !== undefined
-    );
-  });
 }
 
 function drawnCount(farm: Farm, attribute: string): number {
-  return drawnMeshes(farm, attribute).reduce((total, mesh) => {
-    return total + mesh.geometry.instanceCount;
-  }, 0);
+  updateFromAbove(farm);
+
+  return drawnInstances(farm.field.group, attribute);
 }
 
 function firstCrop(farm: Farm): FirstCrop {
-  const [mesh] = drawnMeshes(farm, "cropPlacement");
+  updateFromAbove(farm);
+
+  const [mesh] = drawnMeshes(farm.field.group, "cropPlacement");
 
   if (mesh === undefined) {
     throw new Error("No crops are drawn");

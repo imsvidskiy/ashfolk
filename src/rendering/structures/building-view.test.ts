@@ -1,10 +1,17 @@
-import { Frustum, InstancedBufferGeometry, Mesh, MeshStandardNodeMaterial, PerspectiveCamera } from "three/webgpu";
+import {
+  Frustum,
+  type InstancedBufferGeometry,
+  type Mesh,
+  MeshStandardNodeMaterial,
+  PerspectiveCamera,
+} from "three/webgpu";
 import { describe, expect, it } from "vitest";
 import type { WorldMirror } from "../../game/world-mirror.ts";
 import { buildBuildingModel } from "../../models/structures/building-models.ts";
 import type { BuildingView as BuildingSnapshot } from "../../simulation/frame.ts";
 import { CAMERA_FADE_REACH, extentOf } from "../camera-fade.ts";
 import { TerrainTextures } from "../terrain/terrain-textures.ts";
+import { drawnMeshes } from "../testing/drawn-meshes.ts";
 import { createVegetatedMirror } from "../testing/vegetated-mirror.ts";
 import { TribeLooks } from "../tribe-looks.ts";
 import { BuildingView } from "./building-view.ts";
@@ -39,18 +46,6 @@ function createView(buildings: BuildingSnapshot[] = [HUT]): { mirror: WorldMirro
   return { mirror, view: new BuildingView(new TribeLooks(), new TerrainTextures(mirror), mirror.grid) };
 }
 
-function drawnMeshes(view: BuildingView, attribute: string): Mesh<InstancedBufferGeometry>[] {
-  return view.group.children.filter((child): child is Mesh<InstancedBufferGeometry> => {
-    return (
-      child instanceof Mesh &&
-      child.geometry instanceof InstancedBufferGeometry &&
-      child.visible &&
-      child.geometry.instanceCount > 0 &&
-      child.geometry.getAttribute(attribute) !== undefined
-    );
-  });
-}
-
 function firstInstance(meshes: readonly Mesh<InstancedBufferGeometry>[], attribute: string): number[] {
   const [mesh] = meshes;
 
@@ -79,7 +74,7 @@ function hutFrom(view: BuildingView, mirror: WorldMirror, y: number): PlacedHut 
   camera.position.set(HUT.x, y, HUT.z);
   view.update({ camera, detail: 1, frustum: new Frustum(), mirror });
 
-  const [mesh] = drawnMeshes(view, "buildingState");
+  const [mesh] = drawnMeshes(view.group, "buildingState");
 
   if (mesh === undefined) {
     throw new Error("The hut isn't drawn");
@@ -96,7 +91,7 @@ function glowOf(view: BuildingView, mirror: WorldMirror, building: Partial<Build
   mirror.frame = { ...mirror.frame, buildings: [{ ...HUT, ...building }] };
   hutFrom(view, mirror, 2000);
 
-  const [, glow] = firstInstance(drawnMeshes(view, "buildingState"), "buildingState");
+  const [, glow] = firstInstance(drawnMeshes(view.group, "buildingState"), "buildingState");
 
   return glow;
 }
@@ -107,7 +102,7 @@ describe("building view", () => {
 
     const { floor } = hutFrom(view, mirror, 2000);
     const inside = hutFrom(view, mirror, floor + 1);
-    const plinths = drawnMeshes(view, "plinthLook");
+    const plinths = drawnMeshes(view.group, "plinthLook");
 
     expect(inside.isFading).toBe(true);
     expect(inside.visibility).toBe(0);
@@ -122,7 +117,7 @@ describe("building view", () => {
     const { height } = extentOf(buildBuildingModel("hut", "high").positions);
     const { floor } = hutFrom(view, mirror, 2000);
     const above = hutFrom(view, mirror, floor + height + CAMERA_FADE_REACH + 0.1);
-    const plinths = drawnMeshes(view, "plinthLook");
+    const plinths = drawnMeshes(view.group, "plinthLook");
 
     expect(above.isFading).toBe(false);
     expect(above.visibility).toBe(1);
@@ -135,8 +130,8 @@ describe("building view", () => {
     const { mirror, view } = createView([worn]);
 
     const { floor } = hutFrom(view, mirror, 2000);
-    const buildings = drawnMeshes(view, "buildingState");
-    const plinths = drawnMeshes(view, "plinthLook");
+    const buildings = drawnMeshes(view.group, "buildingState");
+    const plinths = drawnMeshes(view.group, "plinthLook");
     const accent = new TribeLooks().accent(worn.tribeId);
     const [depth, ...plinthLook] = firstInstance(plinths, "plinthLook");
 

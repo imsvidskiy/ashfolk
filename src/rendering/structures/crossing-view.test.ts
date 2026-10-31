@@ -1,10 +1,11 @@
-import { Frustum, InstancedBufferGeometry, Matrix4, Mesh, PerspectiveCamera } from "three/webgpu";
+import { Frustum, Matrix4, PerspectiveCamera } from "three/webgpu";
 import { describe, expect, it } from "vitest";
 import { WorldMirror } from "../../game/world-mirror.ts";
 import { Simulation } from "../../simulation/simulation.ts";
 import { createVegetatedWorld, floodStrip, fordAcross } from "../../simulation/testing/test-world.ts";
 import type { Crossing } from "../../world/crossings.ts";
 import { TerrainTextures } from "../terrain/terrain-textures.ts";
+import { drawnInstances } from "../testing/drawn-meshes.ts";
 import { CrossingView } from "./crossing-view.ts";
 
 const GROUND = 100;
@@ -46,19 +47,6 @@ function createView(crossing: Crossing): CrossingView {
   return new CrossingView(mirror, new TerrainTextures(mirror));
 }
 
-function instancesWith(view: CrossingView, attribute: string): number {
-  return view.group.children.reduce((total, child) => {
-    if (
-      !(child instanceof Mesh && child.visible && child.geometry instanceof InstancedBufferGeometry) ||
-      child.geometry.getAttribute(attribute) === undefined
-    ) {
-      return total;
-    }
-
-    return total + child.geometry.instanceCount;
-  }, 0);
-}
-
 function drawnFrom(view: CrossingView, height: number): Drawn {
   const camera = new PerspectiveCamera(60, 1.5, 1, 40_000);
 
@@ -72,7 +60,7 @@ function drawnFrom(view: CrossingView, height: number): Drawn {
 
   view.update(camera, frustum, 1);
 
-  return { foam: instancesWith(view, "foamPlacement"), pieces: instancesWith(view, "crossingPlacement") };
+  return { foam: drawnInstances(view.group, "foamPlacement"), pieces: drawnInstances(view.group, "crossingPlacement") };
 }
 
 describe("crossing view", () => {
