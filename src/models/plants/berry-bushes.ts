@@ -94,16 +94,16 @@ interface BushStructure {
   readonly stems: readonly (readonly TubePoint[])[];
 }
 
-interface BushGrowth extends Growth {
-  readonly leaves: BushLeaf[];
-  readonly stems: TubePoint[][];
-}
-
 const BUSH_GENERATORS: Readonly<Record<BerryBushSpecies, (seed: number) => BushStructure>> = {
   [CultivatedSpecies.Blueberry]: blueberry,
   [CultivatedSpecies.Currant]: currant,
   [CultivatedSpecies.Raspberry]: raspberry,
 };
+
+interface BushGrowth extends Growth {
+  readonly leaves: BushLeaf[];
+  readonly stems: TubePoint[][];
+}
 
 function createBushGrowth(seed: number): BushGrowth {
   return { ...createGrowth(seed), leaves: [], stems: [] };
