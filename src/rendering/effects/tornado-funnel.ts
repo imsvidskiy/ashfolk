@@ -1,8 +1,9 @@
 import type { Mesh } from "three/webgpu";
+import type { Color } from "../../content/grounds.ts";
 import { FULL_TURN, hashToUnit, lerp, smoothstep } from "../../shared/math.ts";
 import type { TornadoEffect } from "../../simulation/effects.ts";
 import { tornadoDuration, tornadoPositionAt } from "../../simulation/powers/tornadoes.ts";
-import type { ActiveEffect, EffectContext, SpriteColor, SpriteSinks } from "./transient-effects.ts";
+import type { ActiveEffect, EffectContext, SpriteSinks } from "./transient-effects.ts";
 
 const GROWING_SECONDS = 1.5;
 const FADING_SECONDS = 2.5;
@@ -19,10 +20,10 @@ const CAP_SPREAD = 3.4;
 const DUST_PUFFS = 28;
 const DEBRIS = 40;
 const DEBRIS_ORBIT_SECONDS = 2.6;
-const FUNNEL_SHADE: SpriteColor = [0.5, 0.52, 0.55];
-const CAP_SHADE: SpriteColor = [0.36, 0.38, 0.42];
-const DUST_SHADE: SpriteColor = [0.42, 0.36, 0.29];
-const DEBRIS_SHADE: SpriteColor = [0.2, 0.16, 0.12];
+const FUNNEL_SHADE: Color = [0.5, 0.52, 0.55];
+const CAP_SHADE: Color = [0.36, 0.38, 0.42];
+const DUST_SHADE: Color = [0.42, 0.36, 0.29];
+const DEBRIS_SHADE: Color = [0.2, 0.16, 0.12];
 
 interface Base {
   ground: number;

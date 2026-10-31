@@ -1,4 +1,5 @@
 import { type Mesh, Vector3 } from "three/webgpu";
+import type { Color } from "../../content/grounds.ts";
 import { FULL_TURN, hashToUnit, lerp, saturate, smoothstep } from "../../shared/math.ts";
 import type {
   BlessingEffect,
@@ -24,13 +25,11 @@ const RING_COLOR = 0xff_f0_d8;
 const SPLASH_SECONDS = 0.55;
 const SPLASH_DROPS = 9;
 
-export type SpriteColor = readonly [number, number, number];
+const SPLASH_COLOR: Color = [0.86, 0.93, 0.97];
+const WATER_DUST: Color = [0.85, 0.9, 0.95];
+const LAND_DUST: Color = [0.3, 0.27, 0.24];
 
-const SPLASH_COLOR: SpriteColor = [0.86, 0.93, 0.97];
-const WATER_DUST: SpriteColor = [0.85, 0.9, 0.95];
-const LAND_DUST: SpriteColor = [0.3, 0.27, 0.24];
-
-const BLESSING_COLORS: Readonly<Record<BlessingEffect["style"], SpriteColor>> = {
+const BLESSING_COLORS: Readonly<Record<BlessingEffect["style"], Color>> = {
   abundance: [1, 0.78, 0.3],
   healing: [0.45, 1, 0.55],
   inspiration: [0.55, 0.75, 1],
@@ -106,7 +105,7 @@ function branchFrom(trunk: readonly Vector3[], share: number): RibbonPoint[] {
   return toRibbon(jaggedPath(start, start.clone().add(offset), 0.5).slice(0, 24), 0.7);
 }
 
-function addPuffs(sinks: SpriteSinks, center: Vector3, spread: number, age: number, color: SpriteColor): void {
+function addPuffs(sinks: SpriteSinks, center: Vector3, spread: number, age: number, color: Color): void {
   const fade = (1 - smoothstep(0.2, 1, age / EXPLOSION_SECONDS)) * 0.8;
   const look = [...color, fade];
 
