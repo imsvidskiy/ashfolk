@@ -165,19 +165,17 @@ function waterPosition(textures: TerrainTextures, grid: WorldGrid): Node<"vec3">
     return select(level.greaterThan(PRESENT_LEVEL), level, float(NO_LOWER_WATER));
   }
 
-  function lowestAround(base: Node<"vec2">, offsets: readonly Node<"vec2">[]): Node<"float"> {
-    return offsets.reduce<Node<"float">>((lowest, offset) => {
-      return min(lowest, levelAt(base, offset));
-    }, float(NO_LOWER_WATER));
-  }
-
   function bankAround(base: Node<"vec2">, offsets: readonly Node<"vec2">[]): Node<"float"> {
-    const highest = offsets.reduce<Node<"float">>((top, offset) => {
-      const level = levelAt(base, offset);
+    const levels = offsets.map((offset) => {
+      return levelAt(base, offset);
+    });
 
+    const highest = levels.reduce<Node<"float">>((top, level) => {
       return max(top, select(level.lessThan(NO_LOWER_WATER), level, float(-NO_LOWER_WATER)));
     }, float(-NO_LOWER_WATER));
-    const lowest = lowestAround(base, offsets);
+    const lowest = levels.reduce<Node<"float">>((bottom, level) => {
+      return min(bottom, level);
+    }, float(NO_LOWER_WATER));
 
     return select(lowest.lessThan(NO_LOWER_WATER), min(highest, lowest.add(BANK_STEP)), float(NO_LOWER_WATER));
   }
