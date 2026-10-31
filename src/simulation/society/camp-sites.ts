@@ -91,8 +91,8 @@ export function scoreSite(
   );
 }
 
-function isOpenAround(shares: GroundShares | null): boolean {
-  return shares !== null && shares.meanSlope <= STEEPEST_MEAN_SLOPE && shares.openShare >= SMALLEST_OPEN_SHARE;
+function isOpenAround(shares: GroundShares): boolean {
+  return shares.meanSlope <= STEEPEST_MEAN_SLOPE && shares.openShare >= SMALLEST_OPEN_SHARE;
 }
 
 function isCampable(world: WorldState, cell: number, point: Waypoint): boolean {
@@ -178,11 +178,7 @@ function forageScore(surroundings: Surroundings): number {
   return Math.min(4, surroundings.bushes * 0.4) + Math.min(2.5, surroundings.trees * 0.06);
 }
 
-function groundShares(surroundings: Surroundings): GroundShares | null {
-  if (surroundings.nearSamples === 0) {
-    return null;
-  }
-
+function groundShares(surroundings: Surroundings): GroundShares {
   return {
     meanSlope: surroundings.slopeSum / surroundings.nearSamples,
     openShare: surroundings.openSamples / surroundings.nearSamples,
@@ -190,18 +186,14 @@ function groundShares(surroundings: Surroundings): GroundShares | null {
   };
 }
 
-function roughnessScore(shares: GroundShares | null): number {
-  if (shares === null) {
-    return 0;
-  }
-
+function roughnessScore(shares: GroundShares): number {
   const { meanSlope, openShare, woodedShare } = shares;
 
   return meanSlope * 12 + (1 - openShare) * 4 + Math.max(0, woodedShare - CLOSED_CANOPY_SHARE) * 12;
 }
 
 function marshScore(surroundings: Surroundings): number {
-  return surroundings.samples === 0 ? 0 : (surroundings.marsh / surroundings.samples) * MARSH_AVERSION;
+  return (surroundings.marsh / surroundings.samples) * MARSH_AVERSION;
 }
 
 function countSurroundings(world: WorldState, cell: number, isNear: boolean, surroundings: Surroundings): void {

@@ -73,7 +73,7 @@ function plotCells(world: WorldState, column: number, row: number, layout: PlotL
 
       const cell = grid.index(column + columnOffset, row + rowOffset);
 
-      if (!(world.isWalkable(cell) && world.canPlace(cell, PLOT_SLOPE)) || world.isTrodden(cell)) {
+      if (!world.canPlace(cell, PLOT_SLOPE) || world.isTrodden(cell)) {
         return null;
       }
 

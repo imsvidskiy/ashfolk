@@ -52,19 +52,11 @@ function wantedFields(tribe: Tribe): number {
 function isFarmable(tribe: Tribe, cell: number, context: SocietyContext): boolean {
   const { world } = context;
 
-  if (cell < 0 || !world.isWalkable(cell) || !world.canPlace(cell, FIELD_SLOPE) || world.isTrodden(cell)) {
+  if (cell < 0 || !world.canPlace(cell, FIELD_SLOPE) || world.isTrodden(cell)) {
     return false;
   }
 
   if (groundDefinition(world.terrain.ground[cell]).fertility < FERTILE_GROUND) {
-    return false;
-  }
-
-  if (
-    tribe.fields.some((field) => {
-      return field.cell === cell;
-    })
-  ) {
     return false;
   }
 
