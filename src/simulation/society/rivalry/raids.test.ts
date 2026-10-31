@@ -1,7 +1,19 @@
 import { describe, expect, it } from "vitest";
 import { enclosure, foundNeighboringTribes, foundTribe, SPRING_HARNESS } from "../../testing/test-rivalry.ts";
 import { SocietyHarness } from "../../testing/test-society.ts";
+import type { Job, JobKind } from "../jobs/job.ts";
 import { burnableBuilding, chooseWarriors } from "./raids.ts";
+
+function steadyJob(kind: JobKind): Job {
+  const job: Job = {
+    kind,
+    update: () => {
+      return job;
+    },
+  };
+
+  return job;
+}
 
 describe("a raid", () => {
   it("sets fire only to what can burn", () => {
@@ -36,5 +48,21 @@ describe("a raid", () => {
     expect(warriors).not.toContain(bruised);
     expect(chooseWarriors(harness.society.membersOf(small))).toHaveLength(3);
     expect(chooseWarriors(harness.society.membersOf(tiny))).toEqual([]);
+  });
+
+  it("leaves envoys and those fighting beasts to their task", () => {
+    const harness = new SocietyHarness(SPRING_HARNESS);
+
+    const tribe = foundTribe(harness, { adults: 10, children: 0, x: 0, z: 0 });
+    const [envoy, hunter] = harness.society.membersOf(tribe);
+
+    envoy.job = steadyJob("envoy");
+    hunter.job = steadyJob("fight");
+
+    const warriors = chooseWarriors(harness.society.membersOf(tribe));
+
+    expect(warriors).toHaveLength(4);
+    expect(warriors).not.toContain(envoy);
+    expect(warriors).not.toContain(hunter);
   });
 });

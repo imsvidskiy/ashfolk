@@ -97,7 +97,7 @@ function strongerFirst(first: Person, second: Person): number {
 
 export function chooseWarriors(members: readonly Person[]): Person[] {
   const able = members.filter((person) => {
-    return isFitForRaid(person) && person.job?.kind !== "flee";
+    return isFitForRaid(person) && !isBusy(person);
   });
 
   return able.toSorted(strongerFirst).slice(0, partySize(able.length));
