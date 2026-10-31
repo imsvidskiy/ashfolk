@@ -15,9 +15,10 @@ const KNOWLEDGE_PER_TRIP = 0.3;
 export function findClay(tick: PersonTick): ClayJob | null {
   const { context, tribe } = tick;
 
-  const deposit = nearestDeposit(context.world, "clay", campPoint(tribe), DEPOSITS.clay.reach);
+  const camp = campPoint(tribe);
+  const deposit = nearestDeposit(context.world, "clay", camp, DEPOSITS.clay.reach);
 
-  if (deposit === null || !context.navigation.isWithinWalk(campPoint(tribe), deposit)) {
+  if (deposit === null || !context.navigation.isWithinWalk(camp, deposit)) {
     markScarce(tribe, "clay", context.environment.day);
 
     return null;
