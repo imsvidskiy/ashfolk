@@ -1,7 +1,7 @@
 import { Vector3 } from "three";
 import { describe, expect, it, it as test } from "vitest";
-import { ANIMAL_KINDS } from "../../content/animals.ts";
-import { ANIMAL_POSES } from "../../world/agent-poses.ts";
+import { ANIMAL_KINDS, type AnimalKind } from "../../content/animals.ts";
+import { ANIMAL_POSES, type AnimalPose } from "../../world/agent-poses.ts";
 import { type MeshData, mergeMeshes } from "../mesh/mesh-data.ts";
 import { Pose } from "../rig/pose.ts";
 import { SkeletonPoser } from "../rig/skeleton-poser.ts";
@@ -26,7 +26,7 @@ const THINNEST = 0.001;
 const PHASES = [0, 0.25, 0.5, 0.75];
 const LEVELS = ["high", "low", "far"] as const;
 
-function posedAnimal(kind: (typeof ANIMAL_KINDS)[number], clip: (typeof ANIMAL_POSES)[number], phase: number) {
+function posedAnimal(kind: AnimalKind, clip: AnimalPose, phase: number): SkeletonPoser {
   const species = ANIMAL_SPECIES[kind];
 
   const poser = new SkeletonPoser(species.skeleton);
