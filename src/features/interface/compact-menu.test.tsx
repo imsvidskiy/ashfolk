@@ -46,6 +46,8 @@ describe("compact menu", () => {
   });
 
   it("opens the world settings", async () => {
+    useInterfaceStore.setState({ settingsTab: "island" });
+
     const screen = await render(<CompactMenu />);
 
     await screen.getByRole("button", { name: "Menu" }).click();
