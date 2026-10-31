@@ -119,7 +119,7 @@ export class VegetationChunks {
   #bucketOfPlant = new Int32Array(0);
   #chunkOfPlant = new Int32Array(0);
   #heldPlant = NO_PLANT;
-  #keptWhenSparse = new Int32Array(0);
+  #isKeptWhenSparse = new Int32Array(0);
 
   constructor(mirror: WorldMirror, crowns = NO_CROWNS) {
     this.#mirror = mirror;
@@ -230,7 +230,7 @@ export class VegetationChunks {
 
     this.#chunkOfPlant = grownIndexArray(this.#chunkOfPlant, plant + 1, NO_CHUNK);
     this.#bucketOfPlant = grownIndexArray(this.#bucketOfPlant, plant + 1, NO_BUCKET);
-    this.#keptWhenSparse = grownIndexArray(this.#keptWhenSparse, plant + 1, 0);
+    this.#isKeptWhenSparse = grownIndexArray(this.#isKeptWhenSparse, plant + 1, 0);
 
     const previous = this.#chunkOfPlant[plant];
     const next = this.#chunkFor(plant);
@@ -242,7 +242,7 @@ export class VegetationChunks {
 
     this.#chunkOfPlant[plant] = next;
     this.#bucketOfPlant[plant] = bucketOf(vegetation.species[plant], vegetation.seed[plant]);
-    this.#keptWhenSparse[plant] = isKeptWhenSparse(plant) ? 1 : 0;
+    this.#isKeptWhenSparse[plant] = isKeptWhenSparse(plant) ? 1 : 0;
 
     if (next !== NO_CHUNK) {
       this.chunks[next].plants.add(plant);
@@ -291,7 +291,7 @@ export class VegetationChunks {
 
       counts[bucket] += 1;
 
-      if (this.#keptWhenSparse[plant] === 1) {
+      if (this.#isKeptWhenSparse[plant] === 1) {
         sparseCounts[bucket] += 1;
         sparse.push(plant);
       } else {
