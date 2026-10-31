@@ -234,13 +234,9 @@ function nextLavaCell(services: PowerServices, lava: ReadonlyMap<number, number>
   let bestSlope = Number.POSITIVE_INFINITY;
 
   for (const offset of NEIGHBOR_OFFSETS) {
-    if (!grid.contains(column + offset.column, row + offset.row)) {
-      continue;
-    }
+    const neighbor = grid.neighborIndex(column, row, offset);
 
-    const neighbor = grid.index(column + offset.column, row + offset.row);
-
-    if (lava.has(neighbor)) {
+    if (neighbor < 0 || lava.has(neighbor)) {
       continue;
     }
 
@@ -348,8 +344,10 @@ function cover(volcano: Volcano, cell: number, services: PowerServices): void {
   volcano.lava.set(cell, 1);
 
   for (const offset of NEIGHBOR_OFFSETS) {
-    if (grid.contains(column + offset.column, row + offset.row)) {
-      fire.addHeat(grid.index(column + offset.column, row + offset.row), LAVA_HEAT);
+    const neighbor = grid.neighborIndex(column, row, offset);
+
+    if (neighbor >= 0) {
+      fire.addHeat(neighbor, LAVA_HEAT);
     }
   }
 
