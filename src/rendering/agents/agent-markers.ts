@@ -28,6 +28,7 @@ import { type SightGround, terrainSight } from "./terrain-sight.ts";
 export const NO_HERD = -1;
 
 const FLOATS_PER_MARKER = 12;
+const FIRST_LAYER_MARKERS = 64;
 const FIRST_RENDER_ORDER = 9;
 const PASS_RENDER_ORDER_STEP = 0.25;
 const FADED = 0.002;
@@ -44,6 +45,11 @@ interface StagedMarker {
   style: MarkerStyle;
 }
 
+interface MarkerLayer {
+  floats: Float32Array;
+  length: number;
+}
+
 interface GatheredHerd {
   readonly center: Vector3;
   extent: number;
@@ -51,6 +57,21 @@ interface GatheredHerd {
   leader: number;
   members: number;
   squares: number;
+}
+
+function reserveMarker(layer: MarkerLayer): number {
+  const offset = layer.length;
+
+  if (offset + FLOATS_PER_MARKER > layer.floats.length) {
+    const grown = new Float32Array(layer.floats.length * 2);
+
+    grown.set(layer.floats);
+    layer.floats = grown;
+  }
+
+  layer.length = offset + FLOATS_PER_MARKER;
+
+  return offset;
 }
 
 function joinHerd(herd: GatheredHerd, staged: StagedMarker, index: number): void {
@@ -79,8 +100,8 @@ export class AgentMarkers {
   readonly #ground: SightGround;
   readonly #herds = new Map<number, GatheredHerd>();
   readonly #instances: InterleavedInstances;
-  readonly #layers: readonly number[][] = Object.values(MarkerImportance).map(() => {
-    return [];
+  readonly #layers: readonly MarkerLayer[] = Object.values(MarkerImportance).map(() => {
+    return { floats: new Float32Array(FIRST_LAYER_MARKERS * FLOATS_PER_MARKER), length: 0 };
   });
   readonly #materials: readonly MeshBasicNodeMaterial[];
   readonly #offset = new Vector3();
@@ -284,21 +305,21 @@ export class AgentMarkers {
 
     const { b: blue, g: green, r: red } = this.#colorOf(style.color);
     const layer = this.#layers[isSelected ? MarkerImportance.Selected : style.importance];
+    const offset = reserveMarker(layer);
+    const { floats } = layer;
 
-    layer.push(
-      position.x,
-      position.y,
-      position.z,
-      size,
-      red,
-      green,
-      blue,
-      opacity,
-      style.shape,
-      pixels,
-      isSelected ? 1 : 0,
-      0
-    );
+    floats[offset] = position.x;
+    floats[offset + 1] = position.y;
+    floats[offset + 2] = position.z;
+    floats[offset + 3] = size;
+    floats[offset + 4] = red;
+    floats[offset + 5] = green;
+    floats[offset + 6] = blue;
+    floats[offset + 7] = opacity;
+    floats[offset + 8] = style.shape;
+    floats[offset + 9] = pixels;
+    floats[offset + 10] = isSelected ? 1 : 0;
+    floats[offset + 11] = 0;
   }
 
   #upload(): void {
@@ -312,7 +333,7 @@ export class AgentMarkers {
     let offset = 0;
 
     for (const layer of this.#layers) {
-      this.#instances.array.set(layer, offset);
+      this.#instances.array.set(layer.floats.subarray(0, layer.length), offset);
       offset += layer.length;
     }
 
