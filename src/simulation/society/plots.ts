@@ -255,6 +255,10 @@ export function plantSpot(tribe: Tribe, spot: PlotSpot, context: SocietyContext)
     z: spot.z,
   });
 
+  if (plant === NO_PLANT) {
+    return false;
+  }
+
   spot.plant = plant;
   spot.plantedDay = environment.day;
 
