@@ -71,6 +71,9 @@ function litSpots(fire: FireView): number[][] {
     })
     .map((light) => {
       return [light.position.x, light.position.z];
+    })
+    .toSorted((first, second) => {
+      return first[0] - second[0] || first[1] - second[1];
     });
 }
 
@@ -309,12 +312,10 @@ describe("fire view", () => {
 
     fire.update(mirror, camera, 1);
 
-    expect(new Set(litSpots(fire))).toEqual(
-      new Set([
-        [0, 300],
-        [50, 300],
-        [120, 300],
-      ])
-    );
+    expect(litSpots(fire)).toEqual([
+      [0, 300],
+      [50, 300],
+      [120, 300],
+    ]);
   });
 });
