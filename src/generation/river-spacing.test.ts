@@ -32,6 +32,10 @@ const SIDE_STREAM_COLUMN = 35;
 const SIDE_STREAM_ROWS = [2, 90] as const;
 const RAISED_FROM_ROW = 50;
 const SIDE_SLOPE = 0.18;
+const CROSSING_ROW = 80;
+const CROSSING_HEAD_COLUMN = 5;
+const STEEP_STREAM_ROWS = [2, 60] as const;
+const STEEP_SLOPE = 0.13;
 
 const grid = new WorldGrid({ cellSize: 10, cellsPerSide: 100 });
 
@@ -369,6 +373,32 @@ describe("spaceRiverChains", () => {
         return grid.columnOf(cell) >= SIDE_STREAM_COLUMN && grid.columnOf(cell) < TRUNK_COLUMN;
       })
     ).toBe(true);
+  });
+
+  it("leads a stream down a steep slope into a river that crosses its way far ahead", () => {
+    const land = landWithLake();
+    const [headRow, endRow] = STEEP_STREAM_ROWS;
+    const crossing: RiverChain = {
+      cells: rowCells(CROSSING_ROW, CROSSING_HEAD_COLUMN, grid.cellsPerSide - 1),
+      joinsCell: NO_CELL,
+      mouthReceiver: NO_CELL,
+    };
+    const side: RiverChain = {
+      cells: columnCells(SIDE_STREAM_COLUMN, headRow, endRow),
+      joinsCell: NO_CELL,
+      mouthReceiver: NO_CELL,
+    };
+
+    land.basins.network.accumulation[grid.index(grid.cellsPerSide - 1, CROSSING_ROW)] = TRUNK_FLOW;
+
+    for (let cell = 0; cell < grid.cellCount; cell += 1) {
+      land.heights[cell] -= STEEP_SLOPE * grid.rowOf(cell) * grid.cellSize;
+    }
+
+    const [, captured] = spaceRiverChains(land, [side, crossing]);
+
+    expect(captured.cells[0]).toBe(side.cells[0]);
+    expect(crossing.cells).toContain(captured.joinsCell);
   });
 
   it("keeps a lake's outflow and joins a stream to it near the lake", () => {
