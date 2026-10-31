@@ -16,11 +16,6 @@ import { createListeners } from "./listener-fixtures.ts";
 
 const TEST_CAMERA: CameraState = { distance: 300, pitch: 0.6, targetX: 0, targetZ: 0, yaw: 0.8 };
 
-interface Renders {
-  readonly renderFrame: () => void;
-  readonly subscribeToRenders: (listener: () => void) => () => void;
-}
-
 interface TestEngine {
   readonly clearSelection: Mock<() => void>;
   readonly engine: EngineHandle;
@@ -39,17 +34,6 @@ interface TestEngineOptions {
   readonly landmarks?: readonly Landmark[];
 }
 
-function createRenders(): Renders {
-  const renders = createListeners();
-
-  return {
-    renderFrame: () => {
-      renders.emit();
-    },
-    subscribeToRenders: renders.subscribe,
-  };
-}
-
 export async function createTestSession(): Promise<GameSession> {
   const simulation = new Simulation(createVegetatedWorld({ dimensions: { cellSize: 10, cellsPerSide: 64 } }));
   const { session } = await createLocalSession(simulation);
@@ -62,7 +46,7 @@ export async function startTestEngine(options: TestEngineOptions = {}): Promise<
   let { landmarks = [] } = options;
 
   const session = await createTestSession();
-  const { renderFrame, subscribeToRenders } = createRenders();
+  const renders = createListeners();
   const camera = {
     camera: { matrixWorld: new Matrix4() },
     groundFootprint: () => {
@@ -113,7 +97,7 @@ export async function startTestEngine(options: TestEngineOptions = {}): Promise<
     session,
     setOutlinesShown: vi.fn<(areShown: boolean) => void>(),
     stopFollowing,
-    subscribeToRenders,
+    subscribeToRenders: renders.subscribe,
   };
 
   useEngineStore.setState({ status: { engine, kind: "ready" } });
@@ -124,7 +108,7 @@ export async function startTestEngine(options: TestEngineOptions = {}): Promise<
     focusOn,
     followSelection,
     placeLabel,
-    renderFrame,
+    renderFrame: renders.emit,
     send,
     setFollowing,
     setLandmarks,
