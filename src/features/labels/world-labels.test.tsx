@@ -1,4 +1,5 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, onTestFinished } from "vitest";
+import { page } from "vitest/browser";
 import { render } from "vitest-browser-react";
 import type { Landmark } from "../../game/landmarks.ts";
 import { useInterfaceStore } from "../interface/interface-store.ts";
@@ -19,6 +20,7 @@ const RING: Landmark = {
   z: 65,
 };
 const ON_SCREEN = { left: 240, top: 320 };
+const ADDRESS_BAR_HEIGHT = 56;
 
 describe("world labels", () => {
   it("shows nothing before the game runs", async () => {
@@ -285,6 +287,27 @@ describe("world labels", () => {
     await expect.element(screen.getByText("Graycrown", { exact: true })).toBeVisible();
     placeLabel.mockClear();
     engine.session.mirror.landVersion += 1;
+    renderFrame();
+
+    expect(placeLabel).toHaveBeenCalledExactlyOnceWith(40, -20, 30);
+  });
+
+  it("places the labels again once only the window height changes", async () => {
+    const { placeLabel, renderFrame } = await startTestEngine({ landmarks: [PEAK] });
+    const { innerHeight, innerWidth } = window;
+
+    onTestFinished(async () => {
+      await page.viewport(innerWidth, innerHeight);
+    });
+    placeLabel.mockReturnValue(ON_SCREEN);
+    showWorld({ tribes: [] });
+
+    const screen = await render(<WorldLabels />);
+
+    renderFrame();
+    await expect.element(screen.getByText("Graycrown", { exact: true })).toBeVisible();
+    placeLabel.mockClear();
+    await page.viewport(innerWidth, innerHeight - ADDRESS_BAR_HEIGHT);
     renderFrame();
 
     expect(placeLabel).toHaveBeenCalledExactlyOnceWith(40, -20, 30);
