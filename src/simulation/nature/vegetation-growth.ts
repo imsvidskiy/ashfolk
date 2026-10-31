@@ -16,6 +16,7 @@ const REGROWTH_VISITS_PER_SQUARE_KILOMETER = 76.3;
 const BERRY_UPDATE_DAYS = 0.05;
 const SCORCH_BLOCKING_REGROWTH = 0.3;
 const MEADOW_REGROWTH_CHANCE = 0.15;
+const SPROUT_OFFSET_WITHIN_CELL = 0.35;
 const REGROWING_BIOMES: ReadonlySet<number> = new Set([Biome.Forest, Biome.Swamp, Biome.Taiga]);
 
 interface GrowthConditions {
@@ -30,7 +31,7 @@ export interface VegetationGrowthSnapshot {
   visitBudget: number;
 }
 
-export function berryGrowthPerDay(season: number): number {
+function berryGrowthPerDay(season: number): number {
   if (season < 0.2) {
     return 0;
   }
@@ -154,8 +155,8 @@ export class VegetationGrowthSystem {
       rotation: random.next() * FULL_TURN,
       seed: random.next(),
       species,
-      x: grid.cellCenterX(cell) + random.between(-0.35, 0.35) * grid.cellSize,
-      z: grid.cellCenterZ(cell) + random.between(-0.35, 0.35) * grid.cellSize,
+      x: grid.cellCenterX(cell) + random.between(-SPROUT_OFFSET_WITHIN_CELL, SPROUT_OFFSET_WITHIN_CELL) * grid.cellSize,
+      z: grid.cellCenterZ(cell) + random.between(-SPROUT_OFFSET_WITHIN_CELL, SPROUT_OFFSET_WITHIN_CELL) * grid.cellSize,
     };
 
     if (world.vegetation.hasTreeWithin(placement.x, placement.z, TREE_SPACING)) {

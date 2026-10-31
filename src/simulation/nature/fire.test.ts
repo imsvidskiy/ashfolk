@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { Biome } from "../../content/biomes.ts";
-import { Ground } from "../../content/grounds.ts";
+import { Ground, groundDefinition } from "../../content/grounds.ts";
 import { PlantSpecies } from "../../content/plants.ts";
 import { DEFAULT_WORLD_RULES, type WorldRules, worldRulesSchema } from "../../content/world-rules.ts";
 import { plantInitialVegetation } from "../../generation/vegetation.ts";
@@ -190,6 +190,26 @@ describe("burning out", () => {
     burnFor(scenario, 1);
 
     expect(scenario.fire.burningCount).toBe(0);
+  });
+
+  it("leaves ground as scorched as the share of fuel it burnt when doused early", () => {
+    const world = forestWorld();
+
+    const cell = world.initialCanopyFuel.indexOf(Math.max(...world.initialCanopyFuel));
+    const startingFuel = groundDefinition(world.terrain.ground[cell]).fuel + world.initialCanopyFuel[cell];
+    const scenario: FireScenario = { fire: new FireSystem(world), world };
+
+    scenario.fire.ignite(cell, 0.45);
+    burnFor(scenario, 4);
+    scenario.fire.douse(cell, 1);
+    burnFor(scenario, TICK_SECONDS);
+
+    const fuelLeft = world.fields.fuel[cell] + world.canopyFuel[cell];
+
+    expect(world.fields.fire[cell]).toBe(0);
+    expect(world.fields.scorch[cell]).toBeGreaterThan(0);
+    expect(world.fields.scorch[cell]).toBeLessThan(1);
+    expect(world.fields.scorch[cell]).toBeCloseTo(1 - fuelLeft / startingFuel);
   });
 
   it("throws embers from burning crowns in the wind", () => {
