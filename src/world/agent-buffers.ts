@@ -37,6 +37,24 @@ export const AnimalField = {
   Z: 2,
 } as const;
 
+export const SURFACE_CHANNELS = 4;
+
+export const SurfaceChannel = {
+  Fire: 3,
+  Scorch: 2,
+  Snow: 0,
+  Wetness: 1,
+} as const;
+
+export const GROUND_CHANNELS = 4;
+
+export const GroundChannel = {
+  Crop: 1,
+  CropKind: 3,
+  Ground: 0,
+  Trodden: 2,
+} as const;
+
 export interface MotionFields {
   readonly VelocityX: number;
   readonly VelocityZ: number;
@@ -55,21 +73,3 @@ export function restPositionOf(
     z: data[offset + fields.Z] + data[offset + fields.VelocityZ] * secondsSinceTick,
   };
 }
-
-export const SURFACE_CHANNELS = 4;
-
-export const SurfaceChannel = {
-  Fire: 3,
-  Scorch: 2,
-  Snow: 0,
-  Wetness: 1,
-} as const;
-
-export const GROUND_CHANNELS = 4;
-
-export const GroundChannel = {
-  Crop: 1,
-  CropKind: 3,
-  Ground: 0,
-  Trodden: 2,
-} as const;
