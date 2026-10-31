@@ -4,7 +4,7 @@ import { lerp } from "../shared/math.ts";
 const SKETCH_CELLS_PER_SIDE = 640;
 const SKETCH_CELL_COUNT = SKETCH_CELLS_PER_SIDE * SKETCH_CELLS_PER_SIDE;
 
-function sampleCells<Cells extends Float32Array | Uint8Array>(
+function nearestCells<Cells extends Float32Array | Uint8Array>(
   source: Cells,
   sampled: Cells,
   sourceCells: number
@@ -62,10 +62,10 @@ export function shrinkSketch(island: IslandSketch): IslandSketch {
     cellSize: (island.cellSize * cellsPerSide) / SKETCH_CELLS_PER_SIDE,
     cellsPerSide: SKETCH_CELLS_PER_SIDE,
     coastDistance: blendCells(island.coastDistance, cellsPerSide),
-    ground: ground === null ? null : sampleCells(ground, new Uint8Array(SKETCH_CELL_COUNT), cellsPerSide),
+    ground: ground === null ? null : nearestCells(ground, new Uint8Array(SKETCH_CELL_COUNT), cellsPerSide),
     height: blendCells(island.height, cellsPerSide),
     waterSurface:
-      waterSurface === null ? null : sampleCells(waterSurface, new Float32Array(SKETCH_CELL_COUNT), cellsPerSide),
+      waterSurface === null ? null : nearestCells(waterSurface, new Float32Array(SKETCH_CELL_COUNT), cellsPerSide),
   };
 }
 
