@@ -108,6 +108,16 @@ describe("saved worlds", () => {
     expect(await readSavedWorld("old")).toBeNull();
   });
 
+  it("lists a world whose record cannot be read without loading it", async () => {
+    const state = savedState();
+
+    await writeSavedWorld(createSavedRecord("broken", state), state, []);
+    await putRawRecord({ ...createSavedRecord("broken", state), shape: "triangle" });
+
+    expect(await listSavedWorlds()).toMatchObject([{ id: "broken", isLoadable: false, shape: "round" }]);
+    expect(await readSavedWorld("broken")).toBeNull();
+  });
+
   it("loads a saved world back into a simulation", async () => {
     const state = savedState();
 
