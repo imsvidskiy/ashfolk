@@ -61,6 +61,7 @@ export class SkeletonPoser {
   readonly #parents: readonly number[];
   readonly #point = new Vector3();
   readonly #rotation = new Quaternion();
+  readonly #scale = new Vector3();
   readonly #skin: readonly Matrix4[];
   readonly #translation = new Vector3();
   readonly #world: readonly Matrix4[];
@@ -153,24 +154,9 @@ export class SkeletonPoser {
   }
 
   #writeSkin(index: number, world: Matrix4, scales: Float32Array): void {
-    const fromJoint = this.#fromJoints[index];
-    const placed = world.elements;
-    const { elements } = this.#skin[index];
+    const skin = this.#skin[index].copy(world).scale(this.#scale.fromArray(scales, index * 3));
 
-    const scaleX = scales[index * 3];
-    const scaleY = scales[index * 3 + 1];
-    const scaleZ = scales[index * 3 + 2];
-
-    for (let row = 0; row < 4; row += 1) {
-      const x = placed[row] * scaleX;
-      const y = placed[row + 4] * scaleY;
-      const z = placed[row + 8] * scaleZ;
-
-      elements[row] = x;
-      elements[row + 4] = y;
-      elements[row + 8] = z;
-      elements[row + 12] = x * fromJoint.x + y * fromJoint.y + z * fromJoint.z + placed[row + 12];
-    }
+    skin.setPosition(this.#point.copy(this.#fromJoints[index]).applyMatrix4(skin));
   }
 
   #placeOnGround(pose: Pose): void {
