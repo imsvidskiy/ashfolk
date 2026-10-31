@@ -5,6 +5,7 @@ import { TOOL_MATERIALS, WEAPON_KINDS } from "../content/weapons.ts";
 import { createRandom } from "../shared/random.ts";
 import { AnimalField, GROUND_CHANNELS, PersonField, SURFACE_CHANNELS } from "../world/agent-buffers.ts";
 import { ANIMAL_POSES, CARRIED_ITEMS, PERSON_POSES } from "../world/agent-poses.ts";
+import { NO_WEAPON_CODE } from "../world/gear.ts";
 import { createMover } from "./agents/movement.ts";
 import type { Animal } from "./fauna/fauna.ts";
 import {
@@ -146,6 +147,25 @@ describe("packed agents", () => {
       x: 12.5,
       z: -7.25,
     });
+  });
+
+  it("show a weapon only on an armed job and dress everyone else in the tools of their tribe", () => {
+    const person = raidingArcher();
+    const tribe = createTribe({ campX: 0, campZ: 0, day: 0, id: 3, identity: tribeIdentity(0) });
+
+    tribe.tools = "copper";
+    person.job = idleJob();
+
+    const [inTribe, withoutTribe] = [tribe, null].map((found) => {
+      const buffer = packPeople([person], () => {
+        return found;
+      });
+
+      return { gear: TOOL_MATERIALS[buffer[PersonField.Gear]], weapon: buffer[PersonField.Weapon] };
+    });
+
+    expect(inTribe).toEqual({ gear: "copper", weapon: NO_WEAPON_CODE });
+    expect(withoutTribe).toEqual({ gear: "stone", weapon: NO_WEAPON_CODE });
   });
 
   it("carry each field of an animal to the renderer", () => {
