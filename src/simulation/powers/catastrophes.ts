@@ -314,17 +314,17 @@ function shatter(plant: number, blast: Blast, services: PowerServices): void {
   const { vegetation } = world;
 
   const height = vegetation.height[plant];
-  const shardSeed = vegetation.seed[plant] * SHARD_SALT;
-  const x = vegetation.x[plant];
-  const z = vegetation.z[plant];
 
   if (height < SHATTERING_HEIGHT) {
     return;
   }
 
-  world.removePlant(plant);
-
+  const shardSeed = vegetation.seed[plant] * SHARD_SALT;
+  const x = vegetation.x[plant];
+  const z = vegetation.z[plant];
   const away = Math.atan2(z - blast.z, x - blast.x);
+
+  world.removePlant(plant);
 
   for (let shard = 0; shard < SHARDS; shard += 1) {
     const angle = away + (hashToUnit(shardSeed, shard, 1) - 0.5) * 1.8;
