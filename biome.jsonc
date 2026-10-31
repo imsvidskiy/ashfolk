@@ -7,7 +7,7 @@
   },
   "extends": ["ultracite/biome/core", "ultracite/biome/react", "ultracite/biome/vitest"],
   "files": {
-    "includes": ["!!.claude"]
+    "includes": ["!!.claude", "!!docs"]
   },
   "formatter": {
     "lineWidth": 120
