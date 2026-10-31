@@ -28,13 +28,15 @@ describe("island shapes", () => {
   });
 
   it("keep a round island on land at its middle and inside the square it is cut from", () => {
-    for (const seed of [1, 7, 42, 900]) {
+    for (const seed of [1, 7, 42, 149, 900]) {
       const round = createIslandShape("round", seed);
 
       expect(round.coastDistanceAt(0, 0)).toBeGreaterThan(0.7);
       expect(Math.max(...coastAround(round, 0.98))).toBeLessThan(0);
       expect(round.coastDistanceAt(0.97, 0.97)).toBeLessThan(0);
     }
+
+    expect(createIslandShape("round", 149).coastDistanceAt(-0.98, 0)).toBeLessThan(0);
   });
 
   it("know their names", () => {
