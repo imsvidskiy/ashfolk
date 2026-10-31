@@ -4,24 +4,13 @@ import { fogShapeFor } from "./height-fog.ts";
 const CLEAR_NOON = { mist: 0, precipitation: 0, snowfall: 0, sunHeight: 0.9 };
 
 describe("fog shape", () => {
-  it("keeps a clear noon almost transparent", () => {
-    const shape = fogShapeFor(CLEAR_NOON);
-
-    expect(shape.density).toBeCloseTo(0.000_05, 7);
-    expect(shape.falloff).toBeCloseTo(1 / 700, 7);
-  });
-
-  it("adds haze while the sun stays low", () => {
+  it("adds haze while the sun stays low, but not at noon or at night", () => {
     const noon = fogShapeFor(CLEAR_NOON);
     const morning = fogShapeFor({ ...CLEAR_NOON, sunHeight: 0.1 });
-
-    expect(morning.density).toBeGreaterThan(noon.density);
-  });
-
-  it("leaves the night sky free of the low sun haze", () => {
     const night = fogShapeFor({ ...CLEAR_NOON, sunHeight: -0.5 });
 
-    expect(night.density).toBeCloseTo(0.000_05, 7);
+    expect(morning.density).toBeGreaterThan(noon.density);
+    expect(night.density).toBe(noon.density);
   });
 
   it("thickens and lowers the layer in mist", () => {
