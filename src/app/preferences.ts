@@ -3,15 +3,15 @@ import { QUALITY_LEVELS, type QualityLevel } from "../rendering/render-quality.t
 
 const QUALITY_KEY = "ashfolk.quality";
 
+const qualitySchema = z.enum(QUALITY_LEVELS);
+const visibilitySchema = z.enum(["hidden", "shown"]);
+
 export type ShownSetting = "labels" | "outlines";
 
 const SHOWN_SETTINGS: Readonly<Record<ShownSetting, { readonly key: string; readonly subject: string }>> = {
   labels: { key: "ashfolk.labels", subject: "label setting" },
   outlines: { key: "ashfolk.outlines", subject: "outline setting" },
 };
-
-const qualitySchema = z.enum(QUALITY_LEVELS);
-const visibilitySchema = z.enum(["hidden", "shown"]);
 
 function readStorage(key: string): string | null {
   try {

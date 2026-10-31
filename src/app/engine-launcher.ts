@@ -26,9 +26,9 @@ export type EngineStatus =
   | { readonly island: IslandSketch | null; readonly kind: "loading"; readonly stage: LoadingStage }
   | { readonly kind: "stopped"; readonly message: string };
 
-type EngineStatusListener = (status: EngineStatus) => void;
-
 export const WAKING_STATUS: EngineStatus = { island: null, kind: "loading", stage: "waking" };
+
+type EngineStatusListener = (status: EngineStatus) => void;
 
 let hud: ComponentType | null = null;
 

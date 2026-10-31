@@ -4,6 +4,7 @@ import { storedQuality, storedShown, storeQuality, storeShown } from "./preferen
 
 const QUALITY_KEY = "ashfolk.quality";
 const LABELS_KEY = "ashfolk.labels";
+const OUTLINES_KEY = "ashfolk.outlines";
 
 describe("saved preferences", () => {
   it("has no saved quality at first", () => {
@@ -44,7 +45,7 @@ describe("saved preferences", () => {
 
     expect(storedShown("outlines")).toBe(false);
     expect(storedShown("labels")).toBe(true);
-    expect(localStorage.getItem("ashfolk.outlines")).toBe("hidden");
+    expect(localStorage.getItem(OUTLINES_KEY)).toBe("hidden");
   });
 
   it("shows map labels when the saved setting is unknown", () => {

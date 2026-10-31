@@ -44,6 +44,17 @@ function startAgain(): void {
   useLaunchStore.getState().relaunch({});
 }
 
+function useReloadAfterSave(saved: Promise<unknown>) {
+  const [isReloading, setIsReloading] = useState(false);
+
+  function handleReload(): void {
+    setIsReloading(true);
+    saved.then(reloadPage, reloadPage);
+  }
+
+  return { handleReload, isReloading };
+}
+
 function Caption({ name, stage }: CaptionProps) {
   const label = STAGE_LABELS[stage];
 
@@ -97,17 +108,6 @@ function StoppedMessage({ message }: { readonly message: string }) {
       </TextButton>
     </div>
   );
-}
-
-function useReloadAfterSave(saved: Promise<unknown>) {
-  const [isReloading, setIsReloading] = useState(false);
-
-  function handleReload(): void {
-    setIsReloading(true);
-    saved.then(reloadPage, reloadPage);
-  }
-
-  return { handleReload, isReloading };
 }
 
 function GraphicsLostMessage({ saved }: { readonly saved: Promise<unknown> }) {

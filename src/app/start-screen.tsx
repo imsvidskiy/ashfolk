@@ -64,6 +64,25 @@ function useTitleCard() {
   };
 }
 
+function useHasListedWorlds(): boolean {
+  const refresh = useSavesStore((state) => {
+    return state.refresh;
+  });
+  const [hasListedWorlds, setHasListedWorlds] = useState(() => {
+    return useSavesStore.getState().worlds.length > 0;
+  });
+
+  useEffect(() => {
+    function showWorlds(): void {
+      setHasListedWorlds(true);
+    }
+
+    refresh().then(showWorlds, showWorlds);
+  }, [refresh]);
+
+  return hasListedWorlds;
+}
+
 function Subview({ children, onBack, title }: SubviewProps) {
   return (
     <div className="flex flex-col gap-5">
@@ -153,25 +172,6 @@ function TitleCard() {
       </div>
     </div>
   );
-}
-
-function useHasListedWorlds(): boolean {
-  const refresh = useSavesStore((state) => {
-    return state.refresh;
-  });
-  const [hasListedWorlds, setHasListedWorlds] = useState(() => {
-    return useSavesStore.getState().worlds.length > 0;
-  });
-
-  useEffect(() => {
-    function showWorlds(): void {
-      setHasListedWorlds(true);
-    }
-
-    refresh().then(showWorlds, showWorlds);
-  }, [refresh]);
-
-  return hasListedWorlds;
 }
 
 function StartCard() {
