@@ -5,6 +5,7 @@ import { isChild, isElder, NEED_SECONDS, type Person } from "../person.ts";
 import type { SocietySystem } from "../society.ts";
 import type { Stock } from "../stock.ts";
 import type { Tribe } from "../tribe.ts";
+import type { Relation } from "./relations.ts";
 
 export const MARCH_SPEED = 4.2;
 
@@ -19,6 +20,7 @@ const DEFENDING_HUNGER = 0.85;
 const PARTY_SHARE = 0.5;
 const SMALLEST_PARTY = 3;
 const LARGEST_PARTY = 6;
+const BURNING_STANDING = -50;
 
 export type RaidPhase = "assault" | "march" | "muster" | "retreat";
 
@@ -95,12 +97,12 @@ export function chooseWarriors(members: readonly Person[]): Person[] {
   return able.toSorted(strongerFirst).slice(0, partySize(able.length));
 }
 
-export function chooseAim(isAvengingBlood: boolean, canBurn: boolean, bitterness: number): RaidAim {
-  if (isAvengingBlood) {
+export function chooseAim(relation: Relation, canBurn: boolean): RaidAim {
+  if (relation.lastGrudge === "blood") {
     return "revenge";
   }
 
-  if (canBurn && bitterness > 0.5) {
+  if (canBurn && relation.standing < BURNING_STANDING) {
     return "burn";
   }
 

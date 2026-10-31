@@ -11,7 +11,9 @@ import { type Relation, stanceFor } from "./relations.ts";
 import { isBusy } from "./responses.ts";
 
 const PEACE_WEARINESS = 30;
+const WEARINESS_PER_PRESSURE = 40;
 const LONG_FEUD_DAYS = 6;
+const FEUD_DAYS_PER_PRESSURE = 12;
 const PEACE_STANDING = 15;
 const TRUCE_DAYS = 12;
 const LINGERING_WEARINESS = 0.3;
@@ -23,7 +25,7 @@ const ENVOY_HEALTH = 0.6;
 export function peacePressure(relation: Relation, feudDays: number): number {
   const weariness = Math.max(relation.first.weariness, relation.second.weariness);
 
-  return (weariness - PEACE_WEARINESS) / 40 + (feudDays - LONG_FEUD_DAYS) / 12;
+  return (weariness - PEACE_WEARINESS) / WEARINESS_PER_PRESSURE + (feudDays - LONG_FEUD_DAYS) / FEUD_DAYS_PER_PRESSURE;
 }
 
 export function sendEnvoy(relation: Relation, seeker: Tribe, host: Tribe, context: SocietyContext): boolean {

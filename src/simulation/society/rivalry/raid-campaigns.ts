@@ -15,7 +15,16 @@ import { FOOD_RESERVE, totalGoods } from "./provisions.ts";
 import { type RaiderState, RaidJob } from "./raid-job.ts";
 import { advancePhase, enterPhase, RALLY_DISTANCE } from "./raid-phases.ts";
 import { burnableBuilding, chooseAim, chooseWarriors, livingRaiders, type Raid, rationsFor } from "./raids.ts";
-import { aggrieve, areKin, isTruce, otherSideOf, type Relation, type RelationBook, sideOf } from "./relations.ts";
+import {
+  aggrieve,
+  areKin,
+  isTruce,
+  otherSideOf,
+  type Relation,
+  type RelationBook,
+  type RelationSide,
+  sideOf,
+} from "./relations.ts";
 import { isBusy } from "./responses.ts";
 import { mourningText, raidLaunchText, raidSummary } from "./stories.ts";
 
@@ -24,6 +33,10 @@ const BURNING_WEARINESS = 8;
 const PLUNDER_GRIEVANCE = 0.6;
 const REVENGE_RELIEF = 0.45;
 const RAID_GRIEVANCE = 18;
+const GRIEVANCE_PER_ANGER = 40;
+const BITTER_STANDING = -60;
+const STANDING_PER_BITTERNESS = 80;
+const LARGEST_BITTERNESS = 0.5;
 const RAIDS_PER_DAY = 2.2;
 const RAID_REST_DAYS = 3;
 const REST_PER_LOSS_DAYS = 1.5;
@@ -79,6 +92,14 @@ function weighRaid(raid: Raid, relation: Relation): void {
   if (raid.fallenDefenders.length > 0 || plunder > 0 || raid.burned.length > 0) {
     raiders.grievance *= REVENGE_RELIEF;
   }
+}
+
+function raidUrgency(side: RelationSide, standing: number): number {
+  const anger =
+    clamp((side.grievance - RAID_GRIEVANCE) / GRIEVANCE_PER_ANGER, 0, 1) +
+    clamp((BITTER_STANDING - standing) / STANDING_PER_BITTERNESS, 0, LARGEST_BITTERNESS);
+
+  return anger * clamp(1 - side.weariness / WEARY_LIMIT, 0, 1);
 }
 
 function untilDay(dates: ReadonlyMap<number, number>, tribeId: number): number {
@@ -209,7 +230,7 @@ export class RaidCampaigns {
 
     const campfire = litCampfireOf(attacker, context.buildings);
     const canBurn = knows(attacker, "fire") && burnableBuilding(context.buildings.all, defender) !== null;
-    const aim = chooseAim(relation.lastGrudge === "blood", canBurn, -relation.standing / 100);
+    const aim = chooseAim(relation, canBurn);
     const rally = campfire === null ? campPoint(attacker) : towards(campfire, defender, RALLY_DISTANCE);
 
     const raid: Raid = {
@@ -285,8 +306,7 @@ export class RaidCampaigns {
         continue;
       }
 
-      const anger = clamp((side.grievance - RAID_GRIEVANCE) / 40, 0, 1) + clamp((-relation.standing - 60) / 80, 0, 0.5);
-      const urgency = anger * clamp(1 - side.weariness / WEARY_LIMIT, 0, 1);
+      const urgency = raidUrgency(side, relation.standing);
       const chance = 1 - Math.exp(-RAIDS_PER_DAY * urgency * context.rules.life.rivalry * days);
 
       if (urgency > 0 && this.#random.chance(chance)) {

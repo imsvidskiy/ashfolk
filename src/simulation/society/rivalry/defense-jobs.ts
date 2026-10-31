@@ -18,7 +18,10 @@ const DEFEND_ENGAGE_RADIUS = 35;
 const WOUNDED_HEALTH = 0.25;
 const POST_DISTANCE = 16;
 const POST_SPREAD = 7;
+const POST_FILES = 5;
+const MIDDLE_FILE = (POST_FILES - 1) / 2;
 const LONGEST_FIGHT_SECONDS = 40;
+const FIGHT_FIRST_DELAY_SHARE = 0.5;
 const GIVE_UP_DISTANCE = 45;
 const FLED_BEAST_DISTANCE = 12;
 const REFUGE_SPREAD = 4;
@@ -32,7 +35,7 @@ function guardPost(tribe: Tribe, raid: Raid, person: Person): Waypoint {
   const towardX = raid.rally.x - tribe.campX;
   const towardZ = raid.rally.z - tribe.campZ;
   const length = Math.max(1, Math.hypot(towardX, towardZ));
-  const sideways = ((person.id % 5) - 2) / 2;
+  const sideways = ((person.id % POST_FILES) - MIDDLE_FILE) / MIDDLE_FILE;
 
   return {
     x: tribe.campX + (towardX / length) * POST_DISTANCE - (towardZ / length) * POST_SPREAD * sideways,
@@ -146,7 +149,7 @@ export class FightJob implements Job {
 
   constructor(tick: PersonTick, foe: Foe, weapon: CarriedWeapon) {
     this.#foe = foe;
-    this.#engagement = new Engagement(weapon, tick.context.rivalry.random.next() * 0.5);
+    this.#engagement = new Engagement(weapon, tick.context.rivalry.random.next() * FIGHT_FIRST_DELAY_SHARE);
   }
 
   update(tick: PersonTick): Job | null {

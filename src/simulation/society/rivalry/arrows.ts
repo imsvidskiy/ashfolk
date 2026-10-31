@@ -12,6 +12,7 @@ const SHORTEST_FLIGHT = 0.15;
 const LONG_SHOT_PENALTY = 0.45;
 const MOVING_TARGET = 3;
 const MOVING_TARGET_PENALTY = 0.7;
+const MISS_ANGLE_SPREAD = 0.5;
 const SHORTEST_MISS = 1.5;
 const LONGEST_MISS = 5;
 const LANDING_TOLERANCE = 3;
@@ -73,7 +74,7 @@ export class ArrowFlights {
 
     const aimX = target.x + target.velocityX * durationSeconds;
     const aimZ = target.z + target.velocityZ * durationSeconds;
-    const missAngle = Math.atan2(aimX - shooter.mover.x, aimZ - shooter.mover.z) + random.signed() * 0.5;
+    const missAngle = Math.atan2(aimX - shooter.mover.x, aimZ - shooter.mover.z) + random.signed() * MISS_ANGLE_SPREAD;
     const miss = isHit ? 0 : random.between(SHORTEST_MISS, LONGEST_MISS) + foeGirth(foe);
 
     const landX = aimX + Math.sin(missAngle) * miss;
