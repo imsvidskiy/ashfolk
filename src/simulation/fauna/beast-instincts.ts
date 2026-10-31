@@ -14,6 +14,8 @@ const PROWL_HUNGER = 0.55;
 const PROWL_STAND_OFF = 90;
 const HUNT_CHECK_SECONDS = 3;
 const HUNT_CHANCE = 0.9;
+const MOST_HUNT_CHANCE = 0.9;
+const STARTING_HUNGER = 0.5;
 const HUNGER_PER_DAY = 0.7;
 const LONGEST_HUNT_SECONDS = 60;
 const REST_AFTER_FEAST_DAYS = 2;
@@ -26,6 +28,8 @@ const BITE_CHANCE = 0.62;
 const BITE_DAMAGE: readonly [number, number] = [0.12, 0.19];
 const BITE_SECONDS: readonly [number, number] = [0.9, 1.4];
 const RETARGET_SECONDS = 0.5;
+const FIRST_STRIKE_SECONDS: readonly [number, number] = [0.2, 0.8];
+const CLOSING_DISTANCE = BITE_REACH * 0.6;
 const FLINCH_SECONDS = 0.45;
 const STALKING_SPEED_SHARE = 0.85;
 const CHARGE_SECONDS = 7;
@@ -172,6 +176,10 @@ function packBoldness(hunger: number, packSize: number, tick: FaunaTick): number
   return tick.rules.nature.beastBoldness * nightFactor(tick.hours) * winter * hunger * strength;
 }
 
+function isTame(tick: FaunaTick): boolean {
+  return tick.rules.nature.beastBoldness <= 0;
+}
+
 function refill<Value>(target: Map<number, Value>, source: ReadonlyMap<number, Value>): void {
   target.clear();
 
@@ -187,9 +195,7 @@ export function isHurt(animal: Animal): boolean {
 function prowl(pack: Pack, mood: PackMood, members: readonly Animal[], tick: FaunaTick): void {
   const [leader] = members;
 
-  const isTame = tick.rules.nature.beastBoldness <= 0;
-
-  if (leader === undefined || mood.hunt !== null || mood.hunger < PROWL_HUNGER || isTame) {
+  if (leader === undefined || mood.hunt !== null || mood.hunger < PROWL_HUNGER || isTame(tick)) {
     return;
   }
 
@@ -405,10 +411,7 @@ export class BeastInstincts {
       return;
     }
 
-    mood.hunt = null;
-    mood.restDays = REST_AFTER_FAILURE_DAYS;
-    this.#forgetStrikes(members);
-    scatter(members, from);
+    this.#callOffHunt(mood, members, from);
   }
 
   #steerPack(pack: Pack, members: readonly Animal[], tick: FaunaTick): void {
@@ -467,19 +470,21 @@ export class BeastInstincts {
     const isGuarded = prey.isSheltered || prey.companions >= GROUP_COMPANIONS;
 
     if (isGuarded || isBroken || hunt.seconds > LONGEST_HUNT_SECONDS) {
-      mood.hunt = null;
-      mood.restDays = REST_AFTER_FAILURE_DAYS;
-      this.#forgetStrikes(members);
-      scatter(members, prey);
+      this.#callOffHunt(mood, members, prey);
     }
+  }
+
+  #callOffHunt(mood: PackMood, members: readonly Animal[], from: Waypoint): void {
+    mood.hunt = null;
+    mood.restDays = REST_AFTER_FAILURE_DAYS;
+    this.#forgetStrikes(members);
+    scatter(members, from);
   }
 
   #trackPrey(pack: Pack, mood: PackMood, members: readonly Animal[], tick: FaunaTick): boolean {
     const [leader] = members;
 
-    const isTame = tick.rules.nature.beastBoldness <= 0;
-
-    if (leader === undefined || mood.hunt !== null || mood.hunger < CHASE_HUNGER || isTame) {
+    if (leader === undefined || mood.hunt !== null || mood.hunger < CHASE_HUNGER || isTame(tick)) {
       return false;
     }
 
@@ -594,7 +599,7 @@ export class BeastInstincts {
 
     const boldness = packBoldness(mood.hunger, members.length, tick);
 
-    if (!this.#random.chance(clamp(boldness * quarry.frailty * HUNT_CHANCE, 0, 0.9))) {
+    if (!this.#random.chance(clamp(boldness * quarry.frailty * HUNT_CHANCE, 0, MOST_HUNT_CHANCE))) {
       return;
     }
 
@@ -703,7 +708,7 @@ export class BeastInstincts {
 
     if (strike.retargetSeconds <= 0) {
       strike.retargetSeconds = RETARGET_SECONDS;
-      setDestination(animal.mover, target, this.#navigation, { arrivalDistance: BITE_REACH * 0.6 });
+      setDestination(animal.mover, target, this.#navigation, { arrivalDistance: CLOSING_DISTANCE });
     }
 
     animal.pose = "charge";
@@ -718,7 +723,7 @@ export class BeastInstincts {
       return existing;
     }
 
-    const strike: Strike = { cooldownSeconds: random.between(0.2, 0.8), retargetSeconds: 0 };
+    const strike: Strike = { cooldownSeconds: between(random, FIRST_STRIKE_SECONDS), retargetSeconds: 0 };
 
     this.#strikes.set(animal.id, strike);
 
@@ -735,7 +740,7 @@ export class BeastInstincts {
     const mood: PackMood = {
       chase: null,
       checkSeconds: this.#random.next() * HUNT_CHECK_SECONDS,
-      hunger: 0.5,
+      hunger: STARTING_HUNGER,
       hunt: null,
       restDays: 0,
     };
