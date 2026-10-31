@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { firstMemberTick, MORNING, runToCompletion, SocietyHarness, settle } from "../../testing/test-society.ts";
 import { carriedFood, pickUp } from "../person.ts";
 import { totalFood } from "../stock.ts";
+import { campPoint } from "../tribe-places.ts";
 import { EatJob, eatProvisions } from "./eat-job.ts";
 
 describe("eating", () => {
@@ -31,7 +32,7 @@ describe("eating", () => {
     const tribe = settle(harness, 1);
     const tick = firstMemberTick(harness, tribe);
     const { person } = tick;
-    const camp = { x: tribe.campX, z: tribe.campZ };
+    const camp = campPoint(tribe);
 
     tribe.stock.berries = 5;
     person.hunger = 0.9;
