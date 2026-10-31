@@ -342,12 +342,10 @@ export class BuildingView {
   readonly #base = new Vector3();
   readonly #bounds = new Sphere(new Vector3(), PIECE_RADIUS);
   readonly #extents = new Map<ModelKey, ObjectExtent>();
-  readonly #fading: readonly InstanceBatch[];
   readonly #fadingPlinths: readonly InstanceBatch[];
   readonly #footings = new Map<ModelKey, Footing>();
   readonly #plinths: readonly InstanceBatch[];
   readonly #tribes: TribeLooks;
-  #isWarmingFading: boolean;
   #laidOutFrame: SimulationFrame | null = null;
   #pieces: PlacedPiece[] = [];
 
@@ -381,14 +379,6 @@ export class BuildingView {
       createPlinthBatch(new BoxGeometry(1, 1, 1), fadingPlinthMaterial),
       createPlinthBatch(new CylinderGeometry(0.5, 0.5, 1, ROUND_PLINTH_SIDES), fadingPlinthMaterial),
     ];
-    this.#fading = [
-      ...[...this.#batches.values()].map((batches) => {
-        return batches[FADING_BATCH];
-      }),
-      ...this.#fadingPlinths,
-    ];
-    this.#isWarmingFading = true;
-
     this.#all = [...[...this.#batches.values()].flat(), ...this.#plinths, ...this.#fadingPlinths];
     this.group.add(
       ...this.#all.map((batch) => {
@@ -411,8 +401,6 @@ export class BuildingView {
     for (const batch of this.#all) {
       batch.commit();
     }
-
-    this.#warmFadingBatches();
   }
 
   dispose(): void {
@@ -500,15 +488,5 @@ export class BuildingView {
       [box.centerX, box.centerZ, box.width, box.length],
       [depth, saturate(1 - building.health), building.style, visibility]
     );
-  }
-
-  #warmFadingBatches(): void {
-    const isWarming = this.#isWarmingFading;
-
-    this.#isWarmingFading = false;
-
-    for (const batch of this.#fading) {
-      batch.mesh.visible = isWarming || batch.count > 0;
-    }
   }
 }

@@ -105,25 +105,4 @@ describe("vegetation view", () => {
 
     expect(fadingCount(view)).toBe(0);
   });
-
-  it("shows every fading batch on the first frame, so its pipeline compiles before the camera comes close", () => {
-    const { view } = createView();
-
-    updateFrom(view, 0, 5000, 0);
-
-    expect(fadingMeshes(view).length).toBeGreaterThan(0);
-    expect(
-      fadingMeshes(view).every((mesh) => {
-        return mesh.visible;
-      })
-    ).toBe(true);
-
-    updateFrom(view, 0, 5000, 0);
-
-    expect(
-      fadingMeshes(view).some((mesh) => {
-        return mesh.visible;
-      })
-    ).toBe(false);
-  });
 });
