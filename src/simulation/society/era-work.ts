@@ -1,5 +1,6 @@
 import { DEPOSITS, type DepositKind, MINED_DEPOSIT_KINDS } from "../../content/deposits.ts";
-import type { RecipeId, ResourceAmounts } from "../../content/recipes.ts";
+import type { RecipeId } from "../../content/recipes.ts";
+import type { ResourceAmounts } from "../../content/resources.ts";
 import { isWinter } from "../../content/seasons.ts";
 import { isComplete } from "./buildings.ts";
 import { mineFor } from "./camp-plan.ts";

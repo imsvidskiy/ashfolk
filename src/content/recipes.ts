@@ -1,12 +1,10 @@
 import type { BuildingKind } from "./buildings.ts";
-import type { ResourceKind } from "./resources.ts";
+import type { ResourceAmounts } from "./resources.ts";
 import type { TechnologyId } from "./technologies.ts";
 
 const RECIPE_IDS = ["pottery", "copper", "bronze", "iron", "spears", "bows", "arrows", "tools"] as const;
 
 export type RecipeId = (typeof RECIPE_IDS)[number];
-
-export type ResourceAmounts = Readonly<Partial<Record<ResourceKind, number>>>;
 
 interface RecipeDefinition {
   inputs: ResourceAmounts;

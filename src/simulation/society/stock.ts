@@ -1,5 +1,11 @@
-import type { ResourceAmounts } from "../../content/recipes.ts";
-import { FOOD_KINDS, type FoodKind, RESOURCE_KINDS, RESOURCES, type ResourceKind } from "../../content/resources.ts";
+import {
+  FOOD_KINDS,
+  type FoodKind,
+  RESOURCE_KINDS,
+  RESOURCES,
+  type ResourceAmounts,
+  type ResourceKind,
+} from "../../content/resources.ts";
 
 const EATING_ORDER: readonly FoodKind[] = ["fish", "meat", "berries", "fruit", "vegetables", "grain"];
 const STOREHOUSE_SPOILAGE = 0.35;
