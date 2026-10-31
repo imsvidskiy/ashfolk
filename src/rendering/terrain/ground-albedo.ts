@@ -116,7 +116,7 @@ function albedoNode({ ground, lushness, palette, size }: AlbedoSources): Node<"v
 
   for (let row = -COVER_REACH; row <= COVER_REACH; row += 1) {
     for (let column = -COVER_REACH; column <= COVER_REACH; column += 1) {
-      const neighbor = lookAt(column, row);
+      const neighbor = column === 0 && row === 0 ? own : lookAt(column, row);
 
       around = around.add(neighbor.color.mul(neighbor.isOpen));
       weight = weight.add(neighbor.isOpen);
