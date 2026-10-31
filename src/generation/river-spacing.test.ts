@@ -104,13 +104,11 @@ function trunkCell(row: number): number {
 }
 
 function trunk(): RiverChain {
-  const cells: number[] = [];
-
-  for (let row = TRUNK_HEAD_ROW; row < grid.cellsPerSide; row += 1) {
-    cells.push(trunkCell(row));
-  }
-
-  return { cells, joinsCell: NO_CELL, mouthReceiver: NO_CELL };
+  return {
+    cells: columnCells(TRUNK_COLUMN, TRUNK_HEAD_ROW, grid.cellsPerSide - 1),
+    joinsCell: NO_CELL,
+    mouthReceiver: NO_CELL,
+  };
 }
 
 function stream(land: RiverLand, cells: number[], joinRow: number, flow: number): RiverChain {
