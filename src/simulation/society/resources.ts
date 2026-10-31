@@ -32,23 +32,18 @@ interface NearestPlant {
 }
 
 export function nearestPlant(world: WorldState, search: PlantSearch): number | null {
-  const { grid } = world;
+  const { cellSize } = world.grid;
 
-  const centerColumn = grid.columnAt(search.x);
-  const centerRow = grid.rowAt(search.z);
+  const ringCount = Math.ceil(search.radius / cellSize);
 
-  const ringCount = Math.ceil(search.radius / grid.cellSize);
-
-  let nearest: NearestPlant = { distanceSquared: search.radius * search.radius, plant: NO_PLANT };
+  const nearest: NearestPlant = { distanceSquared: search.radius * search.radius, plant: NO_PLANT };
 
   for (let ring = 0; ring <= ringCount; ring += 1) {
-    if (nearest.plant !== NO_PLANT && (ring - 1) * grid.cellSize > Math.sqrt(nearest.distanceSquared)) {
+    if (nearest.plant !== NO_PLANT && (ring - 1) * cellSize > Math.sqrt(nearest.distanceSquared)) {
       break;
     }
 
-    for (const cell of ringCells(world, centerColumn, centerRow, ring)) {
-      nearest = nearerPlantInCell(world, cell, search, nearest);
-    }
+    searchRing(world, search, ring, nearest);
   }
 
   if (nearest.plant === NO_PLANT) {
@@ -58,44 +53,41 @@ export function nearestPlant(world: WorldState, search: PlantSearch): number | n
   return nearest.plant;
 }
 
-function ringCells(world: WorldState, centerColumn: number, centerRow: number, ring: number): number[] {
+function searchRing(world: WorldState, search: PlantSearch, ring: number, nearest: NearestPlant): void {
   const { grid } = world;
 
-  const cells: number[] = [];
+  const centerColumn = grid.columnAt(search.x);
+  const centerRow = grid.rowAt(search.z);
 
   for (let rowOffset = -ring; rowOffset <= ring; rowOffset += 1) {
-    for (let columnOffset = -ring; columnOffset <= ring; columnOffset += 1) {
-      const isOnRing = Math.max(Math.abs(rowOffset), Math.abs(columnOffset)) === ring;
+    const columnStep = Math.abs(rowOffset) === ring ? 1 : 2 * ring;
+
+    for (let columnOffset = -ring; columnOffset <= ring; columnOffset += columnStep) {
       const column = centerColumn + columnOffset;
       const row = centerRow + rowOffset;
 
-      if (isOnRing && grid.contains(column, row)) {
-        cells.push(grid.index(column, row));
+      if (grid.contains(column, row)) {
+        searchCell(world, grid.index(column, row), search, nearest);
       }
     }
   }
-
-  return cells;
 }
 
-function nearerPlantInCell(world: WorldState, cell: number, search: PlantSearch, nearest: NearestPlant): NearestPlant {
+function searchCell(world: WorldState, cell: number, search: PlantSearch, nearest: NearestPlant): void {
   const { fields, vegetation } = world;
 
   if (fields.fire[cell] > 0 || fields.heat[cell] > HOT_GROUND || world.isWater(cell)) {
-    return nearest;
+    return;
   }
-
-  let result = nearest;
 
   for (let plant = vegetation.firstPlantInCell(cell); plant !== NO_PLANT; plant = vegetation.nextPlantInCell(plant)) {
     const squaredDistance = distanceSquared(search.x, search.z, vegetation.x[plant], vegetation.z[plant]);
 
-    if (squaredDistance < result.distanceSquared && search.accepts(plant)) {
-      result = { distanceSquared: squaredDistance, plant };
+    if (squaredDistance < nearest.distanceSquared && search.accepts(plant)) {
+      nearest.distanceSquared = squaredDistance;
+      nearest.plant = plant;
     }
   }
-
-  return result;
 }
 
 export function nearestQuarry(world: WorldState, x: number, z: number, radius: number): Waypoint | null {
