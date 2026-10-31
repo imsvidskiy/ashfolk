@@ -176,9 +176,7 @@ export function findLandmarks(source: LandmarkSource): Landmark[] {
   const ponds = namedPonds.map((spring, index) => {
     return pondLandmark(spring, pondNamesByCell[index]);
   });
-  const monuments = source.monuments.map((monument) => {
-    return monumentLandmark(monument);
-  });
+  const monuments = source.monuments.map(monumentLandmark);
 
   return [peakLandmark(source, peakName), ...lakes, ...ponds, ...monuments];
 }
