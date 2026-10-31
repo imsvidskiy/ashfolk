@@ -59,10 +59,10 @@ function quantizedReach(reach: number): number {
 export class Atmosphere {
   readonly sun: DirectionalLight;
   readonly #cloudSea: CloudSea;
-  readonly #group = new Group();
-  readonly #hemisphere: HemisphereLight;
   readonly #fogColor = uniform(new Color(0xcf_e2_f0));
+  readonly #group = new Group();
   readonly #heightFog = new HeightFog();
+  readonly #hemisphere: HemisphereLight;
   readonly #islandReach: number;
   readonly #lightDirection = new Vector3(0, 1, 0);
   readonly #shadowFocus = new Vector3();
