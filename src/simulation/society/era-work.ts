@@ -26,7 +26,7 @@ export const ERA_WORK_OPTIONS: readonly WorkOption[] = [
 
       const wanted = clayWanted(tick, construction);
 
-      if (!knows(tick.tribe, "pottery") || wanted <= 0 || !isWorthIt(tick, "clay", 1) || !isExpeditionSeason(season)) {
+      if (!knows(tick.tribe, "pottery") || wanted <= 0 || !isWorthIt(tick, "clay") || !isExpeditionSeason(season)) {
         return 0;
       }
 

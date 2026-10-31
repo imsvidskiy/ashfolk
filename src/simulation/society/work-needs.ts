@@ -5,6 +5,14 @@ import { totalFood } from "./stock.ts";
 import { isWorthLookingFor, type ScarceResource } from "./tribe.ts";
 
 const PRE_WINTER_SEASON = 1.6;
+const SEARCH_PATIENCE_DAYS: Readonly<Record<ScarceResource, number>> = {
+  berries: 0.3,
+  clay: 1,
+  fish: 0.5,
+  game: 0.4,
+  stone: 0.5,
+  wood: 0.4,
+};
 
 export interface WorkOption {
   kind: JobKind;
@@ -22,6 +30,6 @@ export function foodNeed(tick: PersonTick): number {
   return Math.max(0.15, 1 - totalFood(tribe.stock) / target);
 }
 
-export function isWorthIt(tick: PersonTick, resource: ScarceResource, patience: number): boolean {
-  return isWorthLookingFor(tick.tribe, resource, tick.context.environment.day, patience);
+export function isWorthIt(tick: PersonTick, resource: ScarceResource): boolean {
+  return isWorthLookingFor(tick.tribe, resource, tick.context.environment.day, SEARCH_PATIENCE_DAYS[resource]);
 }

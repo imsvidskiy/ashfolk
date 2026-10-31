@@ -95,7 +95,7 @@ const WORK_OPTIONS: readonly WorkOption[] = [
     kind: "gather",
     start: findBerries,
     weight: (tick) => {
-      if (isWinter(tick.context.environment.season) || !isWorthIt(tick, "berries", 0.3)) {
+      if (isWinter(tick.context.environment.season) || !isWorthIt(tick, "berries")) {
         return 0;
       }
 
@@ -108,7 +108,7 @@ const WORK_OPTIONS: readonly WorkOption[] = [
     weight: (tick) => {
       const isArmed = tick.person.weapon !== null || hasWeaponsToHunt(tick.tribe);
 
-      if (!(knows(tick.tribe, "spear") && isArmed && isWorthIt(tick, "game", 0.4))) {
+      if (!(knows(tick.tribe, "spear") && isArmed && isWorthIt(tick, "game"))) {
         return 0;
       }
 
@@ -119,7 +119,7 @@ const WORK_OPTIONS: readonly WorkOption[] = [
     kind: "fish",
     start: findFishingSpot,
     weight: (tick) => {
-      if (!(knows(tick.tribe, "fishing") && isWorthIt(tick, "fish", 0.5))) {
+      if (!(knows(tick.tribe, "fishing") && isWorthIt(tick, "fish"))) {
         return 0;
       }
 
@@ -150,7 +150,7 @@ const WORK_OPTIONS: readonly WorkOption[] = [
     kind: "chop",
     start: findTree,
     weight: (tick, construction) => {
-      if (!isWorthIt(tick, "wood", 0.4)) {
+      if (!isWorthIt(tick, "wood")) {
         return 0;
       }
 
@@ -163,7 +163,7 @@ const WORK_OPTIONS: readonly WorkOption[] = [
     weight: (tick, construction) => {
       const wanted = stoneWanted(tick, construction);
 
-      if (!(knows(tick.tribe, "huts") && isWorthIt(tick, "stone", 0.5)) || tick.tribe.stock.stone >= wanted) {
+      if (!(knows(tick.tribe, "huts") && isWorthIt(tick, "stone")) || tick.tribe.stock.stone >= wanted) {
         return 0;
       }
 

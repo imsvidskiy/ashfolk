@@ -325,7 +325,7 @@ function shouldGatherBerries(tick: PersonTick): boolean {
     return false;
   }
 
-  if (!isWorthIt(tick, "berries", 0.3)) {
+  if (!isWorthIt(tick, "berries")) {
     return false;
   }
 
