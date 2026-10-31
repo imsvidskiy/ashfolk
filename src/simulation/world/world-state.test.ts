@@ -13,7 +13,16 @@ import {
   monumentAround,
   plantInCell,
 } from "../testing/test-world.ts";
-import { CROSSING_GROUND, MONUMENT_GROUND, NO_BUILDING, SPRING_GROUND } from "./world-state.ts";
+import {
+  CROP_GROWTH_STEP,
+  CROSSING_GROUND,
+  MONUMENT_GROUND,
+  NO_BUILDING,
+  SPRING_GROUND,
+  TRODDEN_LEVELS,
+} from "./world-state.ts";
+
+const STEP_FRACTION = 0.4;
 
 function caveAt(grid: WorldGrid, cell: number): Spring {
   return {
@@ -98,22 +107,28 @@ describe("world state", () => {
     expect(world.groundChanges.takeRuns()).toEqual([{ firstRow: world.grid.rowOf(cell), rowCount: 1 }]);
   });
 
-  it("redraws the ground only when trodden earth or a crop changes by a visible step", () => {
+  it("redraws the ground once small changes of trodden earth or a crop add up to a visible step", () => {
     const world = createTestWorld();
 
     const cell = centerCell(world);
     const changedRow = [{ firstRow: world.grid.rowOf(cell), rowCount: 1 }];
+    const troddenStep = 1 / TRODDEN_LEVELS;
 
-    world.setTrodden(cell, 0.01);
-    world.setCrop(cell, 0.01);
+    world.setTrodden(cell, troddenStep * STEP_FRACTION);
 
     expect(world.groundChanges.takeRuns()).toEqual([]);
 
-    world.setTrodden(cell, 0.5);
+    world.setTrodden(cell, troddenStep * STEP_FRACTION * 2);
+    world.setTrodden(cell, troddenStep * STEP_FRACTION * 3);
 
     expect(world.groundChanges.takeRuns()).toEqual(changedRow);
 
-    world.setCrop(cell, 0.5);
+    world.setCrop(cell, CROP_GROWTH_STEP * STEP_FRACTION);
+
+    expect(world.groundChanges.takeRuns()).toEqual([]);
+
+    world.setCrop(cell, CROP_GROWTH_STEP * STEP_FRACTION * 2);
+    world.setCrop(cell, CROP_GROWTH_STEP * STEP_FRACTION * 3);
 
     expect(world.groundChanges.takeRuns()).toEqual(changedRow);
   });

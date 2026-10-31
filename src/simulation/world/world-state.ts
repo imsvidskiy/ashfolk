@@ -37,13 +37,13 @@ export const SPRING_GROUND = -3;
 export const PLOT_GROUND = -4;
 export const CROSSING_GROUND = -5;
 export const SNOW_CAPACITY = 1.2;
+export const CROP_GROWTH_STEP = 0.02;
+export const TRODDEN_LEVELS = 32;
 
 const TRODDEN_GROUND = 0.35;
-const CROP_GROWTH_STEP = 0.02;
 const MAXIMUM_TERRAIN_HEIGHT = 3200;
 const CROSSING_TOLERANCE = 0.01;
 const LOWEST_EDIT_BELOW_ORIGINAL = 60;
-const TRODDEN_LEVELS = 32;
 
 const SPARSE_FIELDS = ["crop", "fire", "heat", "scorch", "trodden"] as const;
 const DENSE_FIELDS = ["snow", "wetness"] as const;
