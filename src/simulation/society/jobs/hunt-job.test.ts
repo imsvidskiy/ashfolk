@@ -14,7 +14,7 @@ import { carriedAmount } from "../person.ts";
 import type { PersonTick } from "../society-context.ts";
 import { findGame, HuntJob } from "./hunt-job.ts";
 
-const HIT_ROLL = 0.16;
+const HIT_ROLL = 0.2;
 const STRIKING_DISTANCE = 20;
 const HELPER_DISTANCE = 30;
 
@@ -48,6 +48,8 @@ function strikeOnce(harness: SocietyHarness, tick: PersonTick, animal: Animal): 
     return HIT_ROLL < probability;
   });
   const hunt = new HuntJob(tick, animal, STONE_SPEAR);
+
+  tick.person.job = hunt;
 
   for (let elapsed = 0; elapsed < 5 && roll.mock.calls.length === 0; elapsed += tick.seconds) {
     hunt.update(tick);
