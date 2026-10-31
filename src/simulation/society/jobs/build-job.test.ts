@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { wrapAngle } from "../../../shared/math.ts";
-import { FACING_TOLERANCE, workUntilPosed } from "../../testing/test-jobs.ts";
+import { FACING_TOLERANCE, turnedAwayFrom, workUntilPosed } from "../../testing/test-jobs.ts";
 import { firstMemberTick, MORNING, runToCompletion, SocietyHarness, settle } from "../../testing/test-society.ts";
 import { BuildJob } from "./build-job.ts";
 
@@ -21,9 +20,7 @@ describe("building", () => {
     harness.chronicle.takeEntries();
     workUntilPosed(job, tick, "build");
 
-    expect(Math.abs(wrapAngle(Math.atan2(site.x - mover.x, site.z - mover.z) - mover.heading))).toBeLessThan(
-      FACING_TOLERANCE
-    );
+    expect(turnedAwayFrom(mover, site)).toBeLessThan(FACING_TOLERANCE);
     expect(runToCompletion(job, tick, 120)).toBe(true);
     expect(site.progress).toBe(1);
     expect(harness.chronicle.takeEntries()).toContainEqual(

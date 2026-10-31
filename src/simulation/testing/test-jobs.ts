@@ -1,5 +1,7 @@
 import { type PlantSpeciesIndex, plantSpeciesDefinition } from "../../content/plants.ts";
 import { wrapAngle } from "../../shared/math.ts";
+import type { Mover } from "../agents/movement.ts";
+import type { Waypoint } from "../agents/navigation.ts";
 import type { Job } from "../society/jobs/job.ts";
 import type { Person, Weapon } from "../society/person.ts";
 import type { PersonTick } from "../society/society-context.ts";
@@ -54,6 +56,10 @@ export function workUntilPosed(job: Job, tick: PersonTick, pose: string): void {
   throw new Error(`Expected the person to start the ${pose} pose`);
 }
 
+export function turnedAwayFrom(mover: Mover, point: Waypoint): number {
+  return Math.abs(wrapAngle(Math.atan2(point.x - mover.x, point.z - mover.z) - mover.heading));
+}
+
 export function placementAt(tick: PersonTick, plant: number, reach: number): WorkPlacement {
   const { vegetation } = tick.context.world;
   const { mover } = tick.person;
@@ -64,6 +70,6 @@ export function placementAt(tick: PersonTick, plant: number, reach: number): Wor
 
   return {
     missedBy: Math.abs(Math.hypot(towardX, towardZ) - (radius + reach)),
-    turnedAwayBy: Math.abs(wrapAngle(Math.atan2(towardX, towardZ) - mover.heading)),
+    turnedAwayBy: turnedAwayFrom(mover, { x: vegetation.x[plant], z: vegetation.z[plant] }),
   };
 }
