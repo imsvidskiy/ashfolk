@@ -29,6 +29,49 @@ function depthAt(simulation: Simulation, x: number, z: number): number {
   return simulation.world.waterDepth(simulation.world.grid.cellAt(x, z));
 }
 
+function createForest(): Simulation {
+  const simulation = new Simulation(
+    createVegetatedWorld({ biome: Biome.Forest, dimensions: { cellSize: 10, cellsPerSide: 96 }, ground: Ground.Forest })
+  );
+
+  simulation.weather.setKind("clear");
+  simulation.weather.setWind(0, 0, 1);
+
+  return simulation;
+}
+
+function treesWithin(simulation: Simulation, radius: number, state: number): number {
+  const { vegetation } = simulation.world;
+
+  let count = 0;
+
+  for (let plant = 0; plant < vegetation.count; plant += 1) {
+    const isNear = Math.hypot(vegetation.x[plant], vegetation.z[plant]) < radius;
+
+    if (isNear && vegetation.state[plant] === state && isTreeSpecies(vegetation.species[plant])) {
+      count += 1;
+    }
+  }
+
+  return count;
+}
+
+function standingTreesOnScorchedGround(simulation: Simulation): number {
+  const { fields, vegetation } = simulation.world;
+
+  let count = 0;
+
+  for (let plant = 0; plant < vegetation.count; plant += 1) {
+    const isScorched = fields.scorch[vegetation.cell[plant]] > 0.05;
+
+    if (isScorched && vegetation.isAlive(plant) && isTreeSpecies(vegetation.species[plant])) {
+      count += 1;
+    }
+  }
+
+  return count;
+}
+
 describe("water after the land changes", () => {
   it("runs a river down the valley before anything happens", () => {
     const simulation = createValleySimulation();
@@ -165,49 +208,6 @@ describe("water after the land changes", () => {
     expect(drowned).toEqual([]);
   });
 });
-
-function createForest(): Simulation {
-  const simulation = new Simulation(
-    createVegetatedWorld({ biome: Biome.Forest, dimensions: { cellSize: 10, cellsPerSide: 96 }, ground: Ground.Forest })
-  );
-
-  simulation.weather.setKind("clear");
-  simulation.weather.setWind(0, 0, 1);
-
-  return simulation;
-}
-
-function treesWithin(simulation: Simulation, radius: number, state: number): number {
-  const { vegetation } = simulation.world;
-
-  let count = 0;
-
-  for (let plant = 0; plant < vegetation.count; plant += 1) {
-    const isNear = Math.hypot(vegetation.x[plant], vegetation.z[plant]) < radius;
-
-    if (isNear && vegetation.state[plant] === state && isTreeSpecies(vegetation.species[plant])) {
-      count += 1;
-    }
-  }
-
-  return count;
-}
-
-function standingTreesOnScorchedGround(simulation: Simulation): number {
-  const { fields, vegetation } = simulation.world;
-
-  let count = 0;
-
-  for (let plant = 0; plant < vegetation.count; plant += 1) {
-    const isScorched = fields.scorch[vegetation.cell[plant]] > 0.05;
-
-    if (isScorched && vegetation.isAlive(plant) && isTreeSpecies(vegetation.species[plant])) {
-      count += 1;
-    }
-  }
-
-  return count;
-}
 
 describe("fire after a blast", () => {
   it("fells the trees around the crater outward and sets the forest beyond burning", () => {
