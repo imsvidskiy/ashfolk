@@ -4,7 +4,7 @@ import { ANIMAL_WADING_DEPTH, PERSON_WADING_DEPTH, standingHeight } from "../ren
 import { createGraphics } from "../rendering/create-graphics.ts";
 import { type QualityLevel, RENDER_QUALITY } from "../rendering/render-quality.ts";
 import { WorldRenderer } from "../rendering/world-renderer.ts";
-import { clamp } from "../shared/math.ts";
+import { clamp, MILLISECONDS_PER_SECOND } from "../shared/math.ts";
 import type { ChronicleEntry } from "../simulation/chronicle.ts";
 import type { SimulationFrame } from "../simulation/frame.ts";
 import type { GrabTarget } from "../simulation/hand/grab-target.ts";
@@ -27,7 +27,6 @@ import { type HandCursor, HandTool } from "./tools/hand-tool.ts";
 import { type PowerSelection, PowerTool } from "./tools/power-tool.ts";
 
 const LONGEST_FRAME_SECONDS = 0.1;
-const MILLISECONDS_PER_SECOND = 1000;
 const FIELD_OF_VIEW = 45;
 const NEAR_PLANE = 0.5;
 const FAR_PLANE = 40_000;

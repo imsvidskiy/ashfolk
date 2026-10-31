@@ -1,3 +1,4 @@
+import { MILLISECONDS_PER_SECOND } from "../shared/math.ts";
 import { MUSIC_TRACKS } from "./sound-catalog.ts";
 import type { MusicOutput, SoundEngine } from "./sound-engine.ts";
 
@@ -7,7 +8,6 @@ const LONGEST_REST_SECONDS = 120;
 const RETRY_SECONDS = 5;
 const FADE_IN_SECONDS = 4;
 const FADE_OUT_SECONDS = 3;
-const MILLISECONDS_PER_SECOND = 1000;
 
 export type Mood = "day" | "dusk" | "night";
 
