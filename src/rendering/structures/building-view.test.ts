@@ -31,10 +31,10 @@ interface PlacedHut {
   readonly visibility: number;
 }
 
-function createView(): { mirror: WorldMirror; view: BuildingView } {
+function createView(buildings: BuildingSnapshot[] = [HUT]): { mirror: WorldMirror; view: BuildingView } {
   const mirror = createVegetatedMirror();
 
-  mirror.frame = { ...mirror.frame, buildings: [HUT] };
+  mirror.frame = { ...mirror.frame, buildings };
 
   return { mirror, view: new BuildingView(new TribeLooks(), new TerrainTextures(mirror), mirror.grid) };
 }
@@ -48,6 +48,24 @@ function drawnMeshes(view: BuildingView, attribute: string): Mesh<InstancedBuffe
       child.geometry.instanceCount > 0 &&
       child.geometry.getAttribute(attribute) !== undefined
     );
+  });
+}
+
+function firstInstance(meshes: readonly Mesh<InstancedBufferGeometry>[], attribute: string): number[] {
+  const [mesh] = meshes;
+
+  if (mesh === undefined) {
+    throw new Error(`Nothing is drawn with ${attribute}`);
+  }
+
+  const values = mesh.geometry.getAttribute(attribute);
+
+  return [values.getX(0), values.getY(0), values.getZ(0), values.getW(0)];
+}
+
+function closeTo(values: readonly number[]): unknown[] {
+  return values.map((value) => {
+    return expect.closeTo(value, 5);
   });
 }
 
@@ -72,6 +90,15 @@ function hutFrom(view: BuildingView, mirror: WorldMirror, y: number): PlacedHut 
     isFading: isFading(mesh),
     visibility: mesh.geometry.getAttribute("buildingState").getW(0),
   };
+}
+
+function glowOf(view: BuildingView, mirror: WorldMirror, building: Partial<BuildingSnapshot>): number {
+  mirror.frame = { ...mirror.frame, buildings: [{ ...HUT, ...building }] };
+  hutFrom(view, mirror, 2000);
+
+  const [, glow] = firstInstance(drawnMeshes(view, "buildingState"), "buildingState");
+
+  return glow;
 }
 
 describe("building view", () => {
@@ -101,5 +128,36 @@ describe("building view", () => {
     expect(above.visibility).toBe(1);
     expect(plinths.some(isFading)).toBe(false);
     expect(plinths[0].geometry.getAttribute("plinthLook").getW(0)).toBe(1);
+  });
+
+  it("writes where a building stands, how far it is built and how worn it is into its instance", () => {
+    const worn: BuildingSnapshot = { ...HUT, health: 0.4, progress: 0.75, rotation: 0.7, style: 2 };
+    const { mirror, view } = createView([worn]);
+
+    const { floor } = hutFrom(view, mirror, 2000);
+    const buildings = drawnMeshes(view, "buildingState");
+    const plinths = drawnMeshes(view, "plinthLook");
+    const accent = new TribeLooks().accent(worn.tribeId);
+    const [depth, ...plinthLook] = firstInstance(plinths, "plinthLook");
+
+    expect(firstInstance(buildings, "buildingPlacement")).toEqual(closeTo([worn.x, floor, worn.z, worn.rotation]));
+    expect(firstInstance(buildings, "buildingLook")).toEqual(closeTo([worn.progress, accent.r, accent.g, accent.b]));
+    expect(firstInstance(buildings, "buildingState")).toEqual(closeTo([0.6, 0, worn.style, 1]));
+    expect(firstInstance(plinths, "plinthPlacement")).toEqual(closeTo([worn.x, floor - 0.03, worn.z, worn.rotation]));
+    expect(plinthLook).toEqual(closeTo([0.6, worn.style, 1]));
+    expect(depth).toBeGreaterThan(0.5);
+  });
+
+  it("lights finished workplaces and burning campfires and leaves the rest dark", () => {
+    const { mirror, view } = createView();
+
+    expect(glowOf(view, mirror, { kind: "forge", progress: 1 })).toBeGreaterThan(0);
+    expect(glowOf(view, mirror, { kind: "forge", progress: 0.5 })).toBe(0);
+    expect(glowOf(view, mirror, { fuel: 0.6, kind: "campfire" })).toBeGreaterThan(
+      glowOf(view, mirror, { fuel: 0.1, kind: "campfire" })
+    );
+    expect(glowOf(view, mirror, { fuel: 0.1, kind: "campfire" })).toBeGreaterThan(0);
+    expect(glowOf(view, mirror, { fuel: 0, kind: "campfire" })).toBe(0);
+    expect(glowOf(view, mirror, { kind: "hut" })).toBe(0);
   });
 });
