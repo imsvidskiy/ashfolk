@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { arc, cyclicDistance, degrees, keyframes, pulse, triangleWave } from "./curves.ts";
+import { arc, degrees, keyframes, pulse, triangleWave } from "./curves.ts";
 
 describe("animation curves", () => {
   it("converts degrees to radians", () => {
@@ -13,13 +13,9 @@ describe("animation curves", () => {
     expect(triangleWave(1.75)).toBeCloseTo(0.5);
   });
 
-  it("measures distance around the cycle", () => {
-    expect(cyclicDistance(0.95, 0.05)).toBeCloseTo(0.1);
-    expect(cyclicDistance(1.3, 0.3)).toBeCloseTo(0);
-  });
-
   it("peaks a pulse at its center and wraps around", () => {
     expect(pulse(0.4, 0.4, 0.1)).toBe(1);
+    expect(pulse(1.4, 0.4, 0.1)).toBeCloseTo(1);
     expect(pulse(0.98, 0.02, 0.05)).toBeCloseTo(pulse(0.06, 0.02, 0.05));
     expect(pulse(0.9, 0.4, 0.1)).toBeLessThan(0.001);
   });

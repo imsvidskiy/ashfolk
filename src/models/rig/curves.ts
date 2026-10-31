@@ -18,7 +18,7 @@ export function triangleWave(phase: number): number {
   return 1 - Math.abs(fractionalPart(phase) * 2 - 1);
 }
 
-export function cyclicDistance(phase: number, center: number): number {
+function cyclicDistance(phase: number, center: number): number {
   const difference = fractionalPart(phase - center);
 
   return Math.min(difference, 1 - difference);
