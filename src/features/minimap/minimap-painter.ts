@@ -211,6 +211,9 @@ export class MinimapPainter {
   }
 
   #drawTribes(context: CanvasRenderingContext2D, frame: SimulationFrame): void {
+    context.lineWidth = OUTLINE_WIDTH * this.#scale;
+    context.strokeStyle = TRIBE_OUTLINE;
+
     for (const tribe of frame.tribes) {
       const [x, y] = this.#toMap(tribe.campX, tribe.campZ);
 
@@ -218,8 +221,6 @@ export class MinimapPainter {
       context.arc(x, y, TRIBE_RADIUS * this.#scale, 0, Math.PI * 2);
       context.fillStyle = tribe.color;
       context.fill();
-      context.lineWidth = OUTLINE_WIDTH * this.#scale;
-      context.strokeStyle = TRIBE_OUTLINE;
       context.stroke();
     }
   }
