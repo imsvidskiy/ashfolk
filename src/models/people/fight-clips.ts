@@ -184,10 +184,11 @@ function fightingLegs(pose: Pose, crouch: number, lunge: number): void {
 }
 
 function march(pose: Pose, phase: number, context: HumanClipContext): void {
-  const swing = cosineWave(phase);
-  const { armSwing } = context.motion;
+  const { armSwing, stride } = context.motion;
 
-  cycleLegs(pose, phase, strideScale(context, context.motion.stride), MARCHING);
+  const swing = cosineWave(phase);
+
+  cycleLegs(pose, phase, strideScale(context, stride), MARCHING);
   moveBody(pose, { forward: degrees(3), toLeft: degrees(2) * wave(phase), turnLeft: -degrees(4) * swing });
   bendTrunk(pose, HumanBone.Spine, { forward: degrees(2), turnLeft: degrees(4) * swing });
   bendTrunk(pose, HumanBone.Chest, { forward: -degrees(3), turnLeft: degrees(3) * swing });
