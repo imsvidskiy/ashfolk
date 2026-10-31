@@ -7,17 +7,15 @@ import {
   type MeshData,
   VERTEX_CHANNELS,
   type VertexChannel,
-  vertexCount,
 } from "./mesh-data.ts";
 import { blendSeamNormals, type SeamSurface } from "./seams.ts";
-import { readShapeVertex, type Shape, shapeVertexCount } from "./shape.ts";
+import { type Shape, shapeVertexCount } from "./shape.ts";
 
 const IDENTITY = new Matrix4();
 
 export interface SurfacePoint {
   readonly along: number;
   readonly around: number;
-  readonly local: Vector3;
   readonly normal: Vector3;
   readonly position: Vector3;
 }
@@ -31,6 +29,14 @@ interface Placement {
   readonly style?: VertexStyle;
   readonly transform?: Matrix4;
 }
+
+interface PlacedSurface {
+  readonly indices: Uint32Array;
+  readonly normals: Float32Array;
+  readonly positions: Float32Array;
+}
+
+type ChannelWriter = (vertex: number, normal: Vector3, position: Vector3) => void;
 
 export function resolveChannel(value: ChannelValue | undefined, fallback: number, point: SurfacePoint): number {
   if (value === undefined) {
@@ -62,55 +68,27 @@ export class MeshBuilder {
   }
 
   add(shape: Shape, placement: Placement = {}): void {
-    const { style = {}, transform = IDENTITY } = placement;
+    const style: VertexStyle = { ...this.#baseStyle, ...placement.style };
 
-    const combinedStyle: VertexStyle = { ...this.#baseStyle, ...style };
-    const normalMatrix = new Matrix3().getNormalMatrix(transform);
-    const isMirrored = transform.determinant() < 0;
-    const firstVertex = this.#vertexCount;
+    this.#place(shape, placement, (vertex, normal, position) => {
+      const point = { along: shape.along[vertex], around: shape.around[vertex], normal, position };
 
-    this.#recordSeam(placement, shapeVertexCount(shape), shape.indices.length / 3);
-
-    for (let index = 0; index < shapeVertexCount(shape); index += 1) {
-      const vertex = readShapeVertex(shape, index);
-      const local = new Vector3(vertex.x, vertex.y, vertex.z);
-      const position = local.clone().applyMatrix4(transform);
-      const normal = new Vector3(vertex.normalX, vertex.normalY, vertex.normalZ).applyMatrix3(normalMatrix).normalize();
-
-      this.#pushVertex(position, normal);
-      this.#pushChannels(combinedStyle, { along: vertex.along, around: vertex.around, local, normal, position });
-    }
-
-    this.#pushTriangles(shape.indices, firstVertex, isMirrored);
+      for (const channel of VERTEX_CHANNELS) {
+        this.#channels[channel].push(resolveChannel(style[channel], DEFAULT_VERTEX_VALUES[channel], point));
+      }
+    });
   }
 
   addMesh(mesh: MeshData, placement: Placement = {}): void {
-    const { style = {}, transform = IDENTITY } = placement;
+    const { style = {} } = placement;
 
-    const normalMatrix = new Matrix3().getNormalMatrix(transform);
-    const isMirrored = transform.determinant() < 0;
-    const firstVertex = this.#vertexCount;
-
-    this.#recordSeam(placement, vertexCount(mesh), mesh.indices.length / 3);
-
-    for (let index = 0; index < vertexCount(mesh); index += 1) {
-      const offset = index * 3;
-      const local = new Vector3(mesh.positions[offset], mesh.positions[offset + 1], mesh.positions[offset + 2]);
-      const position = local.clone().applyMatrix4(transform);
-      const normal = new Vector3(mesh.normals[offset], mesh.normals[offset + 1], mesh.normals[offset + 2])
-        .applyMatrix3(normalMatrix)
-        .normalize();
-
-      const point = { along: 0, around: 0, local, normal, position };
-
-      this.#pushVertex(position, normal);
+    this.#place(mesh, placement, (vertex, normal, position) => {
+      const point = { along: 0, around: 0, normal, position };
 
       for (const channel of VERTEX_CHANNELS) {
-        this.#channels[channel].push(resolveChannel(style[channel], mesh.channels[channel][index], point));
+        this.#channels[channel].push(resolveChannel(style[channel], mesh.channels[channel][vertex], point));
       }
-    }
-
-    this.#pushTriangles(mesh.indices, firstVertex, isMirrored);
+    });
   }
 
   addSeamReference(shape: Shape): void {
@@ -213,16 +191,28 @@ export class MeshBuilder {
     });
   }
 
-  #pushVertex(position: Vector3, normal: Vector3): void {
-    this.#positions.pushThree(position.x, position.y, position.z);
-    this.#normals.pushThree(normal.x, normal.y, normal.z);
-    this.#vertexCount += 1;
-  }
+  #place(surface: PlacedSurface, placement: Placement, pushChannels: ChannelWriter): void {
+    const { transform = IDENTITY } = placement;
 
-  #pushChannels(style: VertexStyle, point: SurfacePoint): void {
-    for (const channel of VERTEX_CHANNELS) {
-      this.#channels[channel].push(resolveChannel(style[channel], DEFAULT_VERTEX_VALUES[channel], point));
+    const normalMatrix = new Matrix3().getNormalMatrix(transform);
+    const isMirrored = transform.determinant() < 0;
+    const firstVertex = this.#vertexCount;
+    const vertices = surface.positions.length / 3;
+
+    this.#recordSeam(placement, vertices, surface.indices.length / 3);
+
+    for (let vertex = 0; vertex < vertices; vertex += 1) {
+      const offset = vertex * 3;
+      const position = new Vector3().fromArray(surface.positions, offset).applyMatrix4(transform);
+      const normal = new Vector3().fromArray(surface.normals, offset).applyMatrix3(normalMatrix).normalize();
+
+      this.#positions.pushThree(position.x, position.y, position.z);
+      this.#normals.pushThree(normal.x, normal.y, normal.z);
+      this.#vertexCount += 1;
+      pushChannels(vertex, normal, position);
     }
+
+    this.#pushTriangles(surface.indices, firstVertex, isMirrored);
   }
 
   #pushTriangles(indices: Uint32Array, firstVertex: number, isMirrored: boolean): void {

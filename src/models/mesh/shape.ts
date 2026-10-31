@@ -27,7 +27,7 @@ export function shapeVertexCount(shape: Shape): number {
   return shape.positions.length / 3;
 }
 
-export function readShapeVertex(shape: Shape, index: number): ShapeVertex {
+function readShapeVertex(shape: Shape, index: number): ShapeVertex {
   const offset = index * 3;
 
   return {
