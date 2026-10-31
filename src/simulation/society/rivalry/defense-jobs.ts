@@ -2,15 +2,14 @@ import type { RandomSource } from "../../../shared/random.ts";
 import { faceTowards } from "../../agents/movement.ts";
 import type { Waypoint } from "../../agents/navigation.ts";
 import { Errand, headTo, type Job, standStill, walk } from "../jobs/job.ts";
-import { dropCarrying, type Person, runSpeed, walkSpeed } from "../person.ts";
+import { dropCarrying, type Person, runSpeed } from "../person.ts";
 import type { PersonTick } from "../society-context.ts";
 import type { Tribe } from "../tribe.ts";
 import { nearCamp } from "../tribe-places.ts";
 import type { CarriedWeapon } from "../weapons.ts";
 import { Engagement } from "./engagement.ts";
 import { distanceTo, type Foe, foeMover, isFoeAlive, personFoe } from "./foes.ts";
-import { packFood } from "./provisions.ts";
-import { eatRation, livingRaiders, type Raid } from "./raids.ts";
+import { livingRaiders, type Raid } from "./raids.ts";
 import { assailantOf, nearestFoeAmong } from "./war-parties.ts";
 
 const GUARD_RADIUS = 110;
@@ -193,40 +192,6 @@ export class ShelterJob implements Job {
     }
 
     return this;
-  }
-}
-
-export class EnvoyJob implements Job {
-  readonly kind = "envoy";
-  readonly #giftAmount: number;
-  readonly #hostId: number;
-  #rations: number;
-
-  constructor(tick: PersonTick, host: Tribe, giftAmount: number, rations: number) {
-    this.#giftAmount = giftAmount;
-    this.#hostId = host.id;
-    this.#rations = rations;
-    headTo(tick.person, nearCamp(host, REFUGE_SPREAD, tick.context.rivalry.random), tick.context);
-  }
-
-  update(tick: PersonTick): Job | null {
-    const { person, tribe } = tick;
-
-    const host = tick.context.people.findTribe(this.#hostId);
-
-    if (host === null) {
-      return null;
-    }
-
-    this.#rations = eatRation(person, this.#rations);
-
-    if (!walk(tick, walkSpeed(person))) {
-      return this;
-    }
-
-    tick.context.rivalry.receiveEnvoy(tribe, host, packFood(tribe.stock, this.#giftAmount), tick.context);
-
-    return null;
   }
 }
 

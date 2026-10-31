@@ -1,12 +1,12 @@
 import { takeUpJob } from "../decisions.ts";
-import { isChild } from "../person.ts";
-import type { SocietyContext } from "../society-context.ts";
+import { headTo, type Job, walk } from "../jobs/job.ts";
+import { isChild, walkSpeed } from "../person.ts";
+import type { PersonTick, SocietyContext } from "../society-context.ts";
 import { takeFood, totalFood } from "../stock.ts";
 import type { Tribe } from "../tribe.ts";
-import { campDistance } from "../tribe-places.ts";
-import { EnvoyJob } from "./defense-jobs.ts";
-import { FOOD_RESERVE } from "./provisions.ts";
-import { rationsFor } from "./raids.ts";
+import { campDistance, nearCamp } from "../tribe-places.ts";
+import { FOOD_RESERVE, packFood } from "./provisions.ts";
+import { eatRation, rationsFor } from "./raids.ts";
 import { type Relation, stanceFor } from "./relations.ts";
 import { isBusy } from "./responses.ts";
 
@@ -21,6 +21,7 @@ const SMALLEST_GIFT = 6;
 const LARGEST_GIFT = 16;
 const GIFT_SHARE = 0.3;
 const ENVOY_HEALTH = 0.6;
+const ENVOY_SPREAD = 4;
 
 export function peacePressure(relation: Relation, feudDays: number): number {
   const weariness = Math.max(relation.first.weariness, relation.second.weariness);
@@ -68,5 +69,39 @@ export function agreeTruce(relation: Relation, day: number): void {
   for (const side of [relation.first, relation.second]) {
     side.grievance = 0;
     side.weariness *= LINGERING_WEARINESS;
+  }
+}
+
+class EnvoyJob implements Job {
+  readonly kind = "envoy";
+  readonly #giftAmount: number;
+  readonly #hostId: number;
+  #rations: number;
+
+  constructor(tick: PersonTick, host: Tribe, giftAmount: number, rations: number) {
+    this.#giftAmount = giftAmount;
+    this.#hostId = host.id;
+    this.#rations = rations;
+    headTo(tick.person, nearCamp(host, ENVOY_SPREAD, tick.context.rivalry.random), tick.context);
+  }
+
+  update(tick: PersonTick): Job | null {
+    const { person, tribe } = tick;
+
+    const host = tick.context.people.findTribe(this.#hostId);
+
+    if (host === null) {
+      return null;
+    }
+
+    this.#rations = eatRation(person, this.#rations);
+
+    if (!walk(tick, walkSpeed(person))) {
+      return this;
+    }
+
+    tick.context.rivalry.receiveEnvoy(tribe, host, packFood(tribe.stock, this.#giftAmount), tick.context);
+
+    return null;
   }
 }
