@@ -81,6 +81,8 @@ const DROWNED_SHADE = 0.55;
 const MURK_DEPTH = 2.2;
 const WATERLINE_FOAM = vec3(0.84, 0.89, 0.9);
 
+const CROSSING_CHANNELS = ["shade", "slot"] as const;
+
 const CROSSING_FIELDS = [
   { name: "crossingPlacement", size: 4 },
   { name: "crossingShape", size: 4 },
@@ -346,7 +348,7 @@ export class CrossingView {
   }
 
   #createBatch(model: MeshData, material: MeshStandardNodeMaterial, shouldCastShadow: boolean): InstanceBatch {
-    const batch = new InstanceBatch(geometryFromMeshData(model, ["shade", "slot"]), material, CROSSING_FIELDS, 16);
+    const batch = new InstanceBatch(geometryFromMeshData(model, CROSSING_CHANNELS), material, CROSSING_FIELDS, 16);
 
     batch.mesh.castShadow = shouldCastShadow;
     batch.mesh.receiveShadow = true;

@@ -73,6 +73,8 @@ const LEAF_GREEN = vec3(0.27, 0.47, 0.18);
 const EAR_GREEN = vec3(0.52, 0.62, 0.28);
 const SEED_CAPSULE = vec3(0.55, 0.42, 0.24);
 
+const MODEL_CHANNELS = ["part", "shade", "slot", "sway"] as const;
+
 const CROP_FIELDS = [
   { name: "cropPlacement", size: 4 },
   { name: "cropLook", size: 4 },
@@ -82,8 +84,6 @@ const FENCE_FIELDS = [
   { name: "fenceStart", size: 4 },
   { name: "fenceEnd", size: 4 },
 ] as const;
-
-const MODEL_CHANNELS = ["part", "shade", "slot", "sway"] as const;
 
 interface FieldCell {
   readonly bounds: Sphere;
