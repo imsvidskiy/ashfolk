@@ -220,10 +220,12 @@ export function paintPower(
   parameters: PowerParameters<"paint">,
   services: PowerServices
 ): PowerOutcome {
+  const { world } = services;
+
   const ground = PAINT_GROUNDS[parameters.material];
 
-  for (const { cell } of cellsInArea(services.world, { ...target, radius: parameters.radius })) {
-    paintCell(services.world, cell, ground);
+  for (const { cell } of cellsInArea(world, { ...target, radius: parameters.radius })) {
+    paintCell(world, cell, ground);
   }
 
   return APPLIED;

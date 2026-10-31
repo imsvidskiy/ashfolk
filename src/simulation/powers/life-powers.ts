@@ -66,11 +66,12 @@ export const harePower = herdPower("hare", "Hares need dry land away from water.
 export const wolfPower = herdPower("wolf", "Wolves need flat, dry land.");
 
 function ripenBushes(services: PowerServices, x: number, z: number, radius: number): boolean {
-  const { vegetation } = services.world;
+  const { world } = services;
+  const { vegetation } = world;
 
   let hasBushes = false;
 
-  for (const { cell } of cellsInArea(services.world, { radius, x, z })) {
+  for (const { cell } of cellsInArea(world, { radius, x, z })) {
     for (let plant = vegetation.firstPlantInCell(cell); plant !== NO_PLANT; plant = vegetation.nextPlantInCell(plant)) {
       if (vegetation.isAlive(plant) && plantSpeciesDefinition(vegetation.species[plant]).givesBerries) {
         vegetation.setFruit(plant, 1);

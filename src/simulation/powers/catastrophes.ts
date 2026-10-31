@@ -385,7 +385,8 @@ function ruinMonuments(shock: Shock, services: PowerServices): void {
 }
 
 function vaporize(cell: number, services: PowerServices): void {
-  const { fields } = services.world;
+  const { environment, world } = services;
+  const { fields } = world;
 
   fields.fire[cell] = 0;
   fields.heat[cell] = 0;
@@ -393,8 +394,8 @@ function vaporize(cell: number, services: PowerServices): void {
   fields.scorch[cell] = 1;
   fields.wetness[cell] = 0;
   fields.snow[cell] = 0;
-  services.world.clearPlants(cell, true);
-  services.world.markDisturbed(cell, services.environment.day);
+  world.clearPlants(cell, true);
+  world.markDisturbed(cell, environment.day);
 }
 
 export function shakeLand(quake: Quake, services: PowerServices): void {
