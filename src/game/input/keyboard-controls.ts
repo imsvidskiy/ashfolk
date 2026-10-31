@@ -4,6 +4,7 @@ const MOVE_SPEED_PER_DISTANCE = 0.9;
 const TURN_SPEED = 1.6;
 const PITCH_SPEED = 0.9;
 const ZOOM_SPEED = 1.8;
+const TYPING_TAGS: ReadonlySet<string> = new Set(["INPUT", "SELECT", "TEXTAREA"]);
 
 type CameraAction =
   | "back"
@@ -41,7 +42,7 @@ export function isTypingTarget(target: EventTarget | null): boolean {
     return false;
   }
 
-  return target.isContentEditable || ["INPUT", "SELECT", "TEXTAREA"].includes(target.tagName);
+  return target.isContentEditable || TYPING_TAGS.has(target.tagName);
 }
 
 function actionOf(event: KeyboardEvent): CameraAction | undefined {
