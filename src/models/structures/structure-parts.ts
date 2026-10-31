@@ -271,7 +271,7 @@ export function prism(outline: Outline, depth: number): Shape {
     return y;
   });
   const lowest = Math.min(...heights);
-  const span = Math.max(Math.max(...heights) - lowest, 1e-5);
+  const span = Math.max(...heights) - lowest;
   const halfDepth = depth / 2;
 
   function vertex(x: number, y: number, z: number, normal: Triple): number {
