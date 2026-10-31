@@ -215,7 +215,7 @@ export function moveAlong(
   const obstacles = obstaclesOnTheWay(mover, step, world);
 
   if (
-    hasReachedWaypoint(mover, distanceLeft, world, navigation) ||
+    hasReachedWaypoint(mover, waypoint, distanceLeft, world, navigation) ||
     isBehindObstacle(mover, waypoint, distanceLeft, obstacles)
   ) {
     mover.pathIndex += 1;
@@ -248,11 +248,11 @@ export function moveAlong(
 
 function hasReachedWaypoint(
   mover: Mover,
+  waypoint: Waypoint,
   distanceLeft: number,
   world: WorldState,
   navigation: NavigationGrid
 ): boolean {
-  const waypoint = mover.path[mover.pathIndex];
   const next = mover.path[mover.pathIndex + 1];
 
   if (next === undefined) {
