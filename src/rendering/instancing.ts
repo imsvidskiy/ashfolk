@@ -55,6 +55,13 @@ export function geometryFromMeshData(mesh: MeshData, channels: readonly VertexCh
   return geometry;
 }
 
+export function writeVec4(target: Float32Array, offset: number, x: number, y: number, z: number, w: number): void {
+  target[offset] = x;
+  target[offset + 1] = y;
+  target[offset + 2] = z;
+  target[offset + 3] = w;
+}
+
 export class InterleavedInstances {
   readonly stride: number;
   readonly #fields: readonly InterleavedField[];

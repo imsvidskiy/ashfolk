@@ -12,7 +12,7 @@ import {
 } from "three/webgpu";
 import { lerp } from "../../shared/math.ts";
 import { BILLBOARD_FIELDS, type CameraAxes, createQuadGeometry } from "../effects/billboards.ts";
-import { InterleavedInstances } from "../instancing.ts";
+import { InterleavedInstances, writeVec4 } from "../instancing.ts";
 import {
   herdGathering,
   herdScale,
@@ -294,18 +294,9 @@ export class AgentMarkers {
 
     const floats = this.#instances.array;
 
-    floats[offset] = position.x;
-    floats[offset + 1] = position.y;
-    floats[offset + 2] = position.z;
-    floats[offset + 3] = size;
-    floats[offset + 4] = red;
-    floats[offset + 5] = green;
-    floats[offset + 6] = blue;
-    floats[offset + 7] = opacity;
-    floats[offset + 8] = style.shape;
-    floats[offset + 9] = pixels;
-    floats[offset + 10] = isSelected ? 1 : 0;
-    floats[offset + 11] = 0;
+    writeVec4(floats, offset, position.x, position.y, position.z, size);
+    writeVec4(floats, offset + 4, red, green, blue, opacity);
+    writeVec4(floats, offset + 8, style.shape, pixels, isSelected ? 1 : 0, 0);
     this.#count += 1;
   }
 

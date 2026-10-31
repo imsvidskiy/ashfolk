@@ -25,7 +25,7 @@ import { clamp, FULL_TURN, saturate } from "../../shared/math.ts";
 import type { BuildingView as BuildingSnapshot, SimulationFrame } from "../../simulation/frame.ts";
 import type { WorldGrid } from "../../world/world-grid.ts";
 import { columnVisibility, extentOf, type ObjectExtent } from "../camera-fade.ts";
-import { geometryFromMeshData, InstanceBatch, toInstancedGeometry } from "../instancing.ts";
+import { geometryFromMeshData, InstanceBatch, toInstancedGeometry, writeVec4 } from "../instancing.ts";
 import type { TerrainTextures } from "../terrain/terrain-textures.ts";
 import type { TribeLooks } from "../tribe-looks.ts";
 import type { ViewInput } from "../view-input.ts";
@@ -176,13 +176,6 @@ function plinthFooting(high: MeshData, isRound: boolean): Footing {
   }
 
   return { lift: TALLEST_PLINTH, plinth: box, probes, sinking: SINKING_ALLOWANCE };
-}
-
-function writeVec4(target: Float32Array, offset: number, x: number, y: number, z: number, w: number): void {
-  target[offset] = x;
-  target[offset + 1] = y;
-  target[offset + 2] = z;
-  target[offset + 3] = w;
 }
 
 function seatOf(mirror: WorldMirror, piece: PiecePlacement, footing: Footing): Seat {
