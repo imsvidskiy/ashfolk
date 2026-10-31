@@ -13,6 +13,7 @@ const MAXIMUM_STEPS = 60;
 const MINIMUM_CAPACITY = 0.01;
 const SETTLED_EXCESS = 0.02;
 const SMOOTHING = 0.2;
+const LARGEST_SORTED_SHARE = 0.1;
 
 interface ErosionBrush {
   columns: Int32Array;
@@ -53,10 +54,17 @@ export interface ErosionPlan {
   readonly scales: readonly ErosionScale[];
 }
 
+interface CellList {
+  readonly cells: Int32Array;
+  count: number;
+  readonly isListed: Uint8Array;
+}
+
 interface SlopeRelaxation {
-  readonly active: Uint8Array;
+  readonly active: CellList;
   readonly cellSize: number;
   readonly change: Float32Array;
+  readonly changed: CellList;
   readonly excesses: Float64Array;
   readonly heights: Float32Array;
   readonly neighborhood: Neighborhood;
@@ -373,10 +381,25 @@ export function erodeAcrossScales(
   }
 }
 
-function shedExcess(relaxation: SlopeRelaxation, column: number, row: number): boolean {
-  const { change, excesses, heights, neighborhood, size } = relaxation;
+function createCellList(cellCount: number): CellList {
+  return { cells: new Int32Array(cellCount), count: 0, isListed: new Uint8Array(cellCount) };
+}
 
-  const cell = row * size + column;
+function listCell(list: CellList, cell: number): void {
+  if (list.isListed[cell] === 1) {
+    return;
+  }
+
+  list.isListed[cell] = 1;
+  list.cells[list.count] = cell;
+  list.count += 1;
+}
+
+function shedExcess(relaxation: SlopeRelaxation, cell: number): boolean {
+  const { change, changed, excesses, heights, neighborhood, size } = relaxation;
+
+  const column = cell % size;
+  const row = (cell - column) / size;
   const height = heights[cell];
   const allowedDrop = relaxation.talus[cell] * relaxation.cellSize;
   const isInside = column > 0 && row > 0 && column < size - 1 && row < size - 1;
@@ -407,14 +430,18 @@ function shedExcess(relaxation: SlopeRelaxation, column: number, row: number): b
 
   const moved = 0.4 * largest;
 
+  listCell(changed, cell);
+
   for (let neighbor = 0; neighbor < 8; neighbor += 1) {
     const excess = excesses[neighbor];
 
     if (excess > 0) {
       const share = (moved * excess) / total;
+      const target = cell + neighborhood.offsets[neighbor];
 
-      change[cell + neighborhood.offsets[neighbor]] += share;
+      change[target] += share;
       change[cell] -= share;
+      listCell(changed, target);
     }
   }
 
@@ -422,11 +449,13 @@ function shedExcess(relaxation: SlopeRelaxation, column: number, row: number): b
 }
 
 function applyRelaxation(relaxation: SlopeRelaxation): void {
-  const { active, change, heights, neighborhood, size } = relaxation;
+  const { active, change, changed, heights, neighborhood, size } = relaxation;
 
-  active.fill(0);
+  for (let index = 0; index < changed.count; index += 1) {
+    const cell = changed.cells[index];
 
-  for (let cell = 0; cell < heights.length; cell += 1) {
+    changed.isListed[cell] = 0;
+
     if (change[cell] === 0) {
       continue;
     }
@@ -437,14 +466,57 @@ function applyRelaxation(relaxation: SlopeRelaxation): void {
 
     heights[cell] += change[cell];
     change[cell] = 0;
-    active[cell] = 1;
+    listCell(active, cell);
 
     for (let neighbor = 0; neighbor < 8; neighbor += 1) {
       if (isInside || isOnMap(column + neighborhood.columns[neighbor], row + neighborhood.rows[neighbor], size)) {
-        active[cell + neighborhood.offsets[neighbor]] = 1;
+        listCell(active, cell + neighborhood.offsets[neighbor]);
       }
     }
   }
+
+  changed.count = 0;
+}
+
+function sortListed(list: CellList): void {
+  const { cells, isListed } = list;
+
+  if (list.count < isListed.length * LARGEST_SORTED_SHARE) {
+    cells.subarray(0, list.count).sort();
+
+    return;
+  }
+
+  list.count = 0;
+
+  for (let cell = 0; cell < isListed.length; cell += 1) {
+    if (isListed[cell] === 1) {
+      cells[list.count] = cell;
+      list.count += 1;
+    }
+  }
+}
+
+function shedActiveCells(relaxation: SlopeRelaxation): boolean {
+  const { active } = relaxation;
+
+  let hasShed = false;
+
+  sortListed(active);
+
+  for (let index = 0; index < active.count; index += 1) {
+    const cell = active.cells[index];
+
+    active.isListed[cell] = 0;
+
+    if (shedExcess(relaxation, cell)) {
+      hasShed = true;
+    }
+  }
+
+  active.count = 0;
+
+  return hasShed;
 }
 
 export function relaxSlopes(
@@ -455,9 +527,10 @@ export function relaxSlopes(
   maximumIterations: number
 ): number {
   const relaxation: SlopeRelaxation = {
-    active: new Uint8Array(heights.length).fill(1),
+    active: createCellList(heights.length),
     cellSize,
     change: new Float32Array(heights.length),
+    changed: createCellList(heights.length),
     excesses: new Float64Array(8),
     heights,
     neighborhood: createNeighborhood(size),
@@ -465,18 +538,12 @@ export function relaxSlopes(
     talus,
   };
 
+  for (let cell = 0; cell < heights.length; cell += 1) {
+    listCell(relaxation.active, cell);
+  }
+
   for (let iteration = 0; iteration < maximumIterations; iteration += 1) {
-    let isSettled = true;
-
-    for (let row = 0; row < size; row += 1) {
-      for (let column = 0; column < size; column += 1) {
-        if (relaxation.active[row * size + column] === 1 && shedExcess(relaxation, column, row)) {
-          isSettled = false;
-        }
-      }
-    }
-
-    if (isSettled) {
+    if (!shedActiveCells(relaxation)) {
       return iteration;
     }
 
