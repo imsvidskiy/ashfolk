@@ -178,39 +178,21 @@ export class RaidCampaigns {
   }
 
   raidOf(id: number): Raid | null {
-    const raid = this.#raids.find((candidate) => {
-      return candidate.id === id;
+    return this.#findRaid((raid) => {
+      return raid.id === id;
     });
-
-    if (raid === undefined) {
-      return null;
-    }
-
-    return raid;
   }
 
   raidAgainst(tribeId: number): Raid | null {
-    const raid = this.#raids.find((candidate) => {
-      return candidate.defenderId === tribeId && candidate.isAlarmRaised;
+    return this.#findRaid((raid) => {
+      return raid.defenderId === tribeId && raid.isAlarmRaised;
     });
-
-    if (raid === undefined) {
-      return null;
-    }
-
-    return raid;
   }
 
   raidBetween(firstId: number, secondId: number): Raid | null {
-    const raid = this.#raids.find((candidate) => {
-      return isRaidBetween(candidate, firstId, secondId);
+    return this.#findRaid((raid) => {
+      return isRaidBetween(raid, firstId, secondId);
     });
-
-    if (raid === undefined) {
-      return null;
-    }
-
-    return raid;
   }
 
   launch(attacker: Tribe, defender: Tribe, context: SocietyContext): Raid | null {
@@ -335,6 +317,16 @@ export class RaidCampaigns {
   forgetVanished(living: ReadonlySet<number>): void {
     forgetDates(this.#mourningUntil, living);
     forgetDates(this.#restingUntil, living);
+  }
+
+  #findRaid(accepts: (raid: Raid) => boolean): Raid | null {
+    const raid = this.#raids.find(accepts);
+
+    if (raid === undefined) {
+      return null;
+    }
+
+    return raid;
   }
 
   #canRaid(attacker: Tribe, defender: Tribe, context: SocietyContext): boolean {
