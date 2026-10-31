@@ -1,5 +1,6 @@
 import { BUILDINGS } from "../../../content/buildings.ts";
-import { RECIPES, type ResourceAmounts } from "../../../content/recipes.ts";
+import { RECIPES } from "../../../content/recipes.ts";
+import type { ResourceAmounts } from "../../../content/resources.ts";
 import { TOOL_MATERIAL_DEFINITIONS } from "../../../content/weapons.ts";
 import type { PersonTick, SocietyContext } from "../society-context.ts";
 import { addResources, spendResources } from "../stock.ts";

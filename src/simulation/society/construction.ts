@@ -1,5 +1,5 @@
 import { BUILDINGS, type BuildingKind, isEnclosure } from "../../content/buildings.ts";
-import type { ResourceAmounts } from "../../content/recipes.ts";
+import type { ResourceAmounts } from "../../content/resources.ts";
 import { FULL_TURN } from "../../shared/math.ts";
 import { aroundPoint, type Waypoint } from "../agents/navigation.ts";
 import { NO_BUILDING } from "../world/world-state.ts";

@@ -24,6 +24,8 @@ export const RESOURCE_KINDS = [...FOOD_KINDS, ...MATERIAL_KINDS, ...ARM_KINDS] a
 
 export type ResourceKind = (typeof RESOURCE_KINDS)[number];
 
+export type ResourceAmounts = Readonly<Partial<Record<ResourceKind, number>>>;
+
 export type ResourceGroup = "arms" | "food" | "material" | "metal" | "ore";
 
 export const RESOURCE_GROUPS: readonly ResourceGroup[] = ["food", "material", "ore", "metal", "arms"];

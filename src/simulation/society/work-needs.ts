@@ -1,4 +1,4 @@
-import type { ResourceAmounts } from "../../content/recipes.ts";
+import type { ResourceAmounts } from "../../content/resources.ts";
 import type { Job, JobKind } from "./jobs/job.ts";
 import type { PersonTick } from "./society-context.ts";
 import { totalFood } from "./stock.ts";

@@ -78,6 +78,10 @@ export const CROPS: Readonly<Record<CropKind, CropDefinition>> = {
   },
 };
 
+function isWithin(window: SeasonWindow, season: number): boolean {
+  return season >= window[0] && season < window[1];
+}
+
 export function cropCode(kind: CropKind): number {
   return CROP_KINDS.indexOf(kind) + 1;
 }
@@ -94,10 +98,6 @@ export function cropOfCode(code: number): CropKind | null {
 
 export function isFencedCode(code: number): boolean {
   return code >= FENCED_CROP_OFFSET;
-}
-
-function isWithin(window: SeasonWindow, season: number): boolean {
-  return season >= window[0] && season < window[1];
 }
 
 export function isSowingTime(kind: CropKind, season: number): boolean {

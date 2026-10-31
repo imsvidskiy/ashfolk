@@ -1,5 +1,6 @@
 import type { Vector3 } from "three/webgpu";
-import { type ParameterValueMap, POWERS, type PowerId } from "../../content/powers.ts";
+import type { ParameterValueMap } from "../../content/parameters.ts";
+import { POWERS, type PowerId } from "../../content/powers.ts";
 import type { SimulationCommand } from "../../simulation/commands.ts";
 import type { ToolGestures } from "../input/pointer-controls.ts";
 

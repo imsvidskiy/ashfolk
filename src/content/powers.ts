@@ -1,13 +1,9 @@
 import { z } from "zod";
-import { choiceParameter, rangeParameter, toggleParameter } from "./parameters.ts";
+import { choiceParameter, type ParameterValueMap, rangeParameter, toggleParameter } from "./parameters.ts";
 
 export type PowerCategory = "elements" | "land" | "life";
 
 type PowerUsage = "brush" | "point";
-
-export type ParameterValue = boolean | number | string;
-
-export type ParameterValueMap = Readonly<Record<string, ParameterValue>>;
 
 interface PowerCategoryDefinition {
   id: PowerCategory;

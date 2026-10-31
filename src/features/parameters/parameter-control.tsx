@@ -1,5 +1,4 @@
-import type { ParameterField } from "../../content/parameters.ts";
-import type { ParameterValue } from "../../content/powers.ts";
+import type { ParameterField, ParameterValue } from "../../content/parameters.ts";
 import { ChoiceField, type ChoiceOption } from "../../design/choice-field.tsx";
 import { formatParameterValue } from "../../design/format.ts";
 import { GameIcon } from "../../design/game-icon.tsx";

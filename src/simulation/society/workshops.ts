@@ -1,4 +1,5 @@
-import { RECIPES, type RecipeId, type ResourceAmounts } from "../../content/recipes.ts";
+import { RECIPES, type RecipeId } from "../../content/recipes.ts";
+import type { ResourceAmounts } from "../../content/resources.ts";
 import { isBetterMaterial, TOOL_MATERIAL_DEFINITIONS, type ToolMaterial } from "../../content/weapons.ts";
 import type { Building } from "./buildings.ts";
 import type { SocietyContext } from "./society-context.ts";

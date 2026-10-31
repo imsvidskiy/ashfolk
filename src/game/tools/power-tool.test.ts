@@ -1,6 +1,7 @@
 import { Vector3 } from "three/webgpu";
 import { describe, expect, it, vi } from "vitest";
-import { defaultPowerParameters, type ParameterValueMap, type PowerId } from "../../content/powers.ts";
+import type { ParameterValueMap } from "../../content/parameters.ts";
+import { defaultPowerParameters, type PowerId } from "../../content/powers.ts";
 import type { SimulationCommand } from "../../simulation/commands.ts";
 import { PowerTool } from "./power-tool.ts";
 

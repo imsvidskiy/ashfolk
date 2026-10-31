@@ -1,4 +1,4 @@
-import type { ResourceAmounts } from "../../content/recipes.ts";
+import type { ResourceAmounts } from "../../content/resources.ts";
 import { isWinter } from "../../content/seasons.ts";
 import type { Building } from "./buildings.ts";
 import { constructionNeeds } from "./construction.ts";

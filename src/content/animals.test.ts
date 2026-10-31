@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { ANIMALS, animalsAt } from "./animals.ts";
+import { ANIMALS, animalsAt, animalWithArticle } from "./animals.ts";
 import { Biome } from "./biomes.ts";
 
 describe("animals", () => {
@@ -12,5 +12,10 @@ describe("animals", () => {
   it("list the big game of a biome without the hares", () => {
     expect(animalsAt(Biome.Meadow)).toEqual(["deer"]);
     expect(animalsAt(Biome.Desert)).toEqual([]);
+  });
+
+  it('take "an" before a vowel and "a" otherwise', () => {
+    expect(animalWithArticle("ibex")).toBe("an ibex");
+    expect(animalWithArticle("deer")).toBe("a deer");
   });
 });
