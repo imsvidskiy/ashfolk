@@ -1,4 +1,3 @@
-import { faceTowards } from "../../agents/movement.ts";
 import { carriedFood, pickUp } from "../person.ts";
 import { nearestShore, type ShoreSpot } from "../resources.ts";
 import type { PersonTick } from "../society-context.ts";
@@ -31,27 +30,18 @@ export function findFishingSpot(tick: PersonTick): FishJob | null {
 
 class FishJob implements Job {
   readonly kind = "fish";
-  readonly #errand = new Errand(FISHING_SECONDS, "fish");
-  readonly #spot: ShoreSpot;
+  readonly #errand: Errand;
 
   constructor(tick: PersonTick, spot: ShoreSpot) {
-    this.#spot = spot;
+    this.#errand = new Errand(FISHING_SECONDS, "fish", { x: spot.waterX, z: spot.waterZ });
     headToBank(tick.person, spot, tick.context);
   }
 
   update(tick: PersonTick): Job | null {
     const progress = this.#errand.update(tick);
 
-    if (progress === "abandoned") {
-      return null;
-    }
-
-    if (progress !== "traveling") {
-      faceTowards(tick.person.mover, this.#spot.waterX, this.#spot.waterZ);
-    }
-
     if (progress !== "finished") {
-      return this;
+      return progress === "abandoned" ? null : this;
     }
 
     if (tick.context.random.chance(CATCH_CHANCE)) {
