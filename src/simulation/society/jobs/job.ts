@@ -184,7 +184,7 @@ export function walk(tick: PersonTick, speed: number): boolean {
   return isThere;
 }
 
-export function isAtGoal(person: Person): boolean {
+function isAtGoal(person: Person): boolean {
   const { mover } = person;
 
   return Math.hypot(mover.goalX - mover.x, mover.goalZ - mover.z) <= WORKPLACE_TOLERANCE;
