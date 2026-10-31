@@ -103,16 +103,16 @@ function columnCells(column: number, fromRow: number, toRow: number): number[] {
   return cells;
 }
 
+function unjoinedChain(cells: number[]): RiverChain {
+  return { cells, joinsCell: NO_CELL, mouthReceiver: NO_CELL };
+}
+
 function trunkCell(row: number): number {
   return grid.index(TRUNK_COLUMN, row);
 }
 
 function trunk(): RiverChain {
-  return {
-    cells: columnCells(TRUNK_COLUMN, TRUNK_HEAD_ROW, grid.cellsPerSide - 1),
-    joinsCell: NO_CELL,
-    mouthReceiver: NO_CELL,
-  };
+  return unjoinedChain(columnCells(TRUNK_COLUMN, TRUNK_HEAD_ROW, grid.cellsPerSide - 1));
 }
 
 function stream(land: RiverLand, cells: number[], joinRow: number, flow: number): RiverChain {
@@ -311,9 +311,7 @@ describe("spaceRiverChains", () => {
 
     const spaced = spaceRiverChains(land, [upper, trunk()]);
 
-    expect(spaced).toEqual([
-      { cells: [...upper.cells, ...trunk().cells.slice(5)], joinsCell: NO_CELL, mouthReceiver: NO_CELL },
-    ]);
+    expect(spaced).toEqual([unjoinedChain([...upper.cells, ...trunk().cells.slice(5)])]);
   });
 
   it("frees the source stretch a stream replaces", () => {
@@ -343,6 +341,7 @@ describe("spaceRiverChains", () => {
   it("leads a stream that runs high above a river down the slope ahead into it", () => {
     const land = landWithLake();
     const [headRow, endRow] = SIDE_STREAM_ROWS;
+    const raisedAt = RAISED_FROM_ROW - headRow;
     const side = stream(land, columnCells(SIDE_STREAM_COLUMN, headRow, endRow), 95, STREAM_FLOW);
 
     for (let cell = 0; cell < grid.cellCount; cell += 1) {
@@ -352,14 +351,12 @@ describe("spaceRiverChains", () => {
     }
 
     const [, captured] = spaceRiverChains(land, [side, trunk()]);
-    const connector = captured.cells.slice(RAISED_FROM_ROW - headRow + 1);
-    const descent = [...captured.cells.slice(RAISED_FROM_ROW - headRow), captured.joinsCell].map((cell) => {
+    const connector = captured.cells.slice(raisedAt + 1);
+    const descent = [...captured.cells.slice(raisedAt), captured.joinsCell].map((cell) => {
       return land.heights[cell];
     });
 
-    expect(captured.cells.slice(0, RAISED_FROM_ROW - headRow + 1)).toEqual(
-      columnCells(SIDE_STREAM_COLUMN, headRow, RAISED_FROM_ROW)
-    );
+    expect(captured.cells.slice(0, raisedAt + 1)).toEqual(columnCells(SIDE_STREAM_COLUMN, headRow, RAISED_FROM_ROW));
     expect(trunk().cells).toContain(captured.joinsCell);
     expect(grid.rowOf(captured.joinsCell)).toBeGreaterThan(RAISED_FROM_ROW);
     expect(descent).toEqual(
@@ -378,16 +375,8 @@ describe("spaceRiverChains", () => {
   it("leads a stream down a steep slope into a river that crosses its way far ahead", () => {
     const land = landWithLake();
     const [headRow, endRow] = STEEP_STREAM_ROWS;
-    const crossing: RiverChain = {
-      cells: rowCells(CROSSING_ROW, CROSSING_HEAD_COLUMN, grid.cellsPerSide - 1),
-      joinsCell: NO_CELL,
-      mouthReceiver: NO_CELL,
-    };
-    const side: RiverChain = {
-      cells: columnCells(SIDE_STREAM_COLUMN, headRow, endRow),
-      joinsCell: NO_CELL,
-      mouthReceiver: NO_CELL,
-    };
+    const crossing = unjoinedChain(rowCells(CROSSING_ROW, CROSSING_HEAD_COLUMN, grid.cellsPerSide - 1));
+    const side = unjoinedChain(columnCells(SIDE_STREAM_COLUMN, headRow, endRow));
 
     land.basins.network.accumulation[grid.index(grid.cellsPerSide - 1, CROSSING_ROW)] = TRUNK_FLOW;
 
