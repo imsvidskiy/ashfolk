@@ -16,6 +16,7 @@ const LOG_THICKNESS_PER_METER = 0.012;
 const LOG_SHORTEST = 9;
 const CELL_SAMPLE_SPACING = 0.5;
 const CELL_SAMPLES_ACROSS = 5;
+const SHORTEST_SPAN = 1e-6;
 
 interface CrossingSpan {
   readonly endX: number;
@@ -45,6 +46,11 @@ interface CrossingPoint {
   readonly along: number;
 }
 
+interface Point {
+  readonly x: number;
+  readonly z: number;
+}
+
 interface FallenLog {
   readonly rootBottom: number;
   readonly rootRadius: number;
@@ -59,12 +65,16 @@ export function crossingLength(crossing: CrossingSpan): number {
   return Math.hypot(crossing.endX - crossing.startX, crossing.endZ - crossing.startZ);
 }
 
-export function crossingMiddle(crossing: CrossingSpan): { x: number; z: number } {
+function spanLength(crossing: CrossingSpan): number {
+  return Math.max(SHORTEST_SPAN, crossingLength(crossing));
+}
+
+export function crossingMiddle(crossing: CrossingSpan): Point {
   return { x: (crossing.startX + crossing.endX) / 2, z: (crossing.startZ + crossing.endZ) / 2 };
 }
 
-export function crossingDirection(crossing: CrossingSpan): { x: number; z: number } {
-  const length = Math.max(1e-6, crossingLength(crossing));
+export function crossingDirection(crossing: CrossingSpan): Point {
+  const length = spanLength(crossing);
 
   return { x: (crossing.endX - crossing.startX) / length, z: (crossing.endZ - crossing.startZ) / length };
 }
@@ -81,7 +91,7 @@ export function crossingPointOf(crossing: CrossingSpan, x: number, z: number): C
   };
 }
 
-export function pointOnCrossing(crossing: CrossingSpan, along: number, across: number): { x: number; z: number } {
+export function pointOnCrossing(crossing: CrossingSpan, along: number, across: number): Point {
   const direction = crossingDirection(crossing);
 
   return {
@@ -101,7 +111,7 @@ export function isOnCrossing(crossing: Crossing, x: number, z: number, margin = 
 }
 
 export function logDeckAt(log: LogBridge, along: number): number {
-  const amount = clamp(along / Math.max(1e-6, crossingLength(log)), 0, 1);
+  const amount = clamp(along / spanLength(log), 0, 1);
 
   return lerp(log.startDeck, log.endDeck, amount);
 }
@@ -141,7 +151,7 @@ export function logRadiusAt(crossing: CrossingSpan, along: number): number {
 }
 
 export function fallenLog(log: LogBridge): FallenLog {
-  const length = Math.max(1e-6, crossingLength(log));
+  const length = spanLength(log);
   const hasRootAtStart = isRootAtStart(log);
   const direction = crossingDirection(log);
 
