@@ -88,7 +88,7 @@ export function nearestWorkers(people: Float32Array, count: number, view: Hearin
 export class WorkSounds {
   readonly #engine: SoundEngine;
   readonly #groundPoint: (x: number, z: number) => SoundPoint;
-  readonly #phases = new Map<number, number>();
+  #phases = new Map<number, number>();
   #workers: Worker[] = [];
 
   constructor(engine: SoundEngine, groundPoint: (x: number, z: number) => SoundPoint) {
@@ -104,16 +104,17 @@ export class WorkSounds {
       return;
     }
 
-    const known = new Map(this.#phases);
+    const phases = new Map<number, number>();
 
     this.#workers = nearestWorkers(people, count, view);
-    this.#phases.clear();
 
     for (const worker of this.#workers) {
-      const local = known.get(worker.id);
+      const local = this.#phases.get(worker.id);
 
-      this.#phases.set(worker.id, local === undefined ? fractionalPart(worker.phase) : local);
+      phases.set(worker.id, local === undefined ? fractionalPart(worker.phase) : local);
     }
+
+    this.#phases = phases;
   }
 
   update(gameSeconds: number): void {
