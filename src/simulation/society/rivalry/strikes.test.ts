@@ -27,7 +27,7 @@ describe("combat", () => {
       defender.health = 1;
       harness.rivalry.ledger.update(5);
 
-      return strike(attacker, SPEAR, personFoe(defender), harness.rivalry, harness.context);
+      return strike(attacker, SPEAR, personFoe(defender), harness.context);
     });
 
     expect(outcomes).toContain("blocked");
@@ -48,7 +48,7 @@ describe("combat", () => {
     victim.mover.z = slayer.mover.z;
 
     for (let attempt = 0; attempt < 20 && victim.isAlive; attempt += 1) {
-      strike(slayer, SPEAR, personFoe(victim), harness.rivalry, harness.context);
+      strike(slayer, SPEAR, personFoe(victim), harness.context);
     }
 
     const relation = harness.rivalry.relations.find(first.id, second.id);

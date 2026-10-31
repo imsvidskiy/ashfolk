@@ -98,7 +98,7 @@ export class Engagement {
     }
 
     this.#cooldownSeconds = this.#nextCooldown(tick);
-    strike(person, weapon, foe, tick.context.rivalry, tick.context);
+    strike(person, weapon, foe, tick.context);
 
     return "striking";
   }

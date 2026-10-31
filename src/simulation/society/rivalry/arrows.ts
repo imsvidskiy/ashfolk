@@ -1,10 +1,11 @@
+import type { RandomSource } from "../../../shared/random.ts";
 import type { EffectLog } from "../../effects.ts";
 import type { Person } from "../person.ts";
 import type { SocietyContext } from "../society-context.ts";
 import type { CarriedWeapon } from "../weapons.ts";
 import { WEAPON_STATS } from "./combat-stats.ts";
 import { distanceTo, type Foe, foeGirth, foeMover, isFoeAlive } from "./foes.ts";
-import { type Battleground, hurtAnimal, hurtPerson, rolledDamage } from "./strikes.ts";
+import { hurtAnimal, hurtPerson, rolledDamage } from "./strikes.ts";
 
 export const ARROW_SPEED = 38;
 const SHORTEST_FLIGHT = 0.15;
@@ -35,7 +36,7 @@ function hitChance(weapon: CarriedWeapon, foe: Foe, distance: number): number {
   return accuracy * range * (speed > MOVING_TARGET ? MOVING_TARGET_PENALTY : 1);
 }
 
-function land(flight: ArrowFlight, battleground: Battleground, context: SocietyContext): void {
+function land(flight: ArrowFlight, context: SocietyContext): void {
   const { foe } = flight;
 
   const target = foeMover(foe);
@@ -52,7 +53,7 @@ function land(flight: ArrowFlight, battleground: Battleground, context: SocietyC
     return;
   }
 
-  hurtPerson(foe.person, flight.damage, flight.shooter, battleground, context);
+  hurtPerson(foe.person, flight.damage, flight.shooter, context);
 }
 
 export class ArrowFlights {
@@ -63,9 +64,7 @@ export class ArrowFlights {
     this.#effects = effects;
   }
 
-  loose(shooter: Person, weapon: CarriedWeapon, foe: Foe, battleground: Battleground): void {
-    const { random } = battleground;
-
+  loose(shooter: Person, weapon: CarriedWeapon, foe: Foe, random: RandomSource): void {
     const target = foeMover(foe);
 
     const distance = distanceTo(shooter.mover, foe);
@@ -104,7 +103,7 @@ export class ArrowFlights {
     this.#flights = [];
   }
 
-  update(seconds: number, battleground: Battleground, context: SocietyContext): void {
+  update(seconds: number, context: SocietyContext): void {
     if (this.#flights.length === 0) {
       return;
     }
@@ -122,7 +121,7 @@ export class ArrowFlights {
     });
 
     for (const flight of landed) {
-      land(flight, battleground, context);
+      land(flight, context);
     }
   }
 }

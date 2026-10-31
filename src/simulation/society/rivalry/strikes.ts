@@ -22,12 +22,6 @@ const FIGHTING_JOBS: ReadonlySet<JobKind> = new Set(["defend", "fight", "raid"])
 
 type StrikeOutcome = "blocked" | "hit" | "killed" | "missed";
 
-export interface Battleground {
-  readonly ledger: CombatLedger;
-  readonly random: RandomSource;
-  slay: (victim: Person, slayer: Person, context: SocietyContext) => void;
-}
-
 function isFighting(person: Person): boolean {
   const { job } = person;
 
@@ -63,30 +57,26 @@ export function rolledDamage(weapon: CarriedWeapon, random: RandomSource): numbe
   return weaponDamage(weapon) * (1 + random.signed() * DAMAGE_SPREAD);
 }
 
-export function hurtPerson(
-  victim: Person,
-  damage: number,
-  slayer: Person,
-  battleground: Battleground,
-  context: SocietyContext
-): StrikeOutcome {
+export function hurtPerson(victim: Person, damage: number, slayer: Person, context: SocietyContext): StrikeOutcome {
+  const { rivalry } = context;
+
   const frailty = isChild(victim) ? CHILD_FRAILTY : 1;
   const cover = wallCover(victim, slayer, context.buildings.all);
 
   victim.health -= damage * frailty * (1 - cover);
-  battleground.ledger.stagger(victim.id, slayer.id);
+  rivalry.ledger.stagger(victim.id, slayer.id);
 
   if (victim.health > 0) {
     return "hit";
   }
 
-  if (battleground.random.chance(SPARED_SHARE)) {
+  if (rivalry.random.chance(SPARED_SHARE)) {
     victim.health = SPARED_HEALTH;
 
     return "hit";
   }
 
-  battleground.slay(victim, slayer, context);
+  rivalry.slay(victim, slayer, context);
 
   return "killed";
 }
@@ -101,14 +91,8 @@ export function hurtAnimal(animal: Animal, damage: number, slayer: Person, conte
   return "hit";
 }
 
-export function strike(
-  attacker: Person,
-  weapon: CarriedWeapon,
-  foe: Foe,
-  battleground: Battleground,
-  context: SocietyContext
-): StrikeOutcome {
-  const { ledger, random } = battleground;
+export function strike(attacker: Person, weapon: CarriedWeapon, foe: Foe, context: SocietyContext): StrikeOutcome {
+  const { ledger, random } = context.rivalry;
 
   if (!random.chance(WEAPON_STATS[weapon.kind].accuracy)) {
     return "missed";
@@ -126,5 +110,5 @@ export function strike(
     return "blocked";
   }
 
-  return hurtPerson(foe.person, damage, attacker, battleground, context);
+  return hurtPerson(foe.person, damage, attacker, context);
 }

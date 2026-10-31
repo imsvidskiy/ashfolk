@@ -30,7 +30,6 @@ import {
   stanceFor,
 } from "./relations.ts";
 import { envoyText, fallText, stanceNews, truceText } from "./stories.ts";
-import type { Battleground } from "./strikes.ts";
 import { type Claim, claimOf } from "./territory.ts";
 
 const SURVEY_SECONDS = 2;
@@ -104,7 +103,7 @@ function recordFall(victim: Person, raid: Raid | null): void {
   raid.fallenDefenders.push(victim.name);
 }
 
-export class RivalrySystem implements Battleground {
+export class RivalrySystem {
   readonly campaigns: RaidCampaigns;
   readonly ledger = new CombatLedger();
   readonly random: RandomSource;
@@ -159,7 +158,7 @@ export class RivalrySystem implements Battleground {
   }
 
   loose(shooter: Person, weapon: CarriedWeapon, foe: Foe): void {
-    this.#arrows.loose(shooter, weapon, foe, this);
+    this.#arrows.loose(shooter, weapon, foe, this.random);
   }
 
   slay(victim: Person, slayer: Person, context: SocietyContext): void {
@@ -213,7 +212,7 @@ export class RivalrySystem implements Battleground {
 
   update(seconds: number, days: number, context: SocietyContext): void {
     this.ledger.update(seconds);
-    this.#arrows.update(seconds, this, context);
+    this.#arrows.update(seconds, context);
     this.campaigns.advance(seconds, context);
     this.#surveySeconds -= seconds;
     this.#surveyDays += days;
