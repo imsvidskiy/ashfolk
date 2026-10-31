@@ -1,20 +1,16 @@
 import { describe, expect, it } from "vitest";
 import { ANIMALS } from "../../../content/animals.ts";
-import type { Animal } from "../../fauna/fauna.ts";
 import { STONE_SPEAR } from "../../testing/test-jobs.ts";
-import { firstMemberTick, MORNING, runToCompletion, SocietyHarness, settle } from "../../testing/test-society.ts";
+import {
+  firstAnimal,
+  firstMemberTick,
+  MORNING,
+  runToCompletion,
+  SocietyHarness,
+  settle,
+} from "../../testing/test-society.ts";
 import { carriedAmount } from "../person.ts";
 import { findGame, HuntJob } from "./hunt-job.ts";
-
-function firstAnimal(harness: SocietyHarness, herd: { memberIds: number[] } | null): Animal {
-  const animal = herd === null ? null : harness.fauna.findAnimal(herd.memberIds[0]);
-
-  if (animal === null) {
-    throw new Error("Expected an animal");
-  }
-
-  return animal;
-}
 
 describe("hunting mammoths", () => {
   it("names the mammoth when its counterattack kills a hunter", () => {

@@ -1,10 +1,9 @@
 import { describe, expect, it } from "vitest";
 import type { Selection } from "./commands.ts";
-import type { Animal } from "./fauna/fauna.ts";
 import { describeTribe } from "./frame-packing.ts";
 import { type Inspection, inspect } from "./inspection.ts";
 import type { Building } from "./society/buildings.ts";
-import { MORNING, SocietyHarness, settle } from "./testing/test-society.ts";
+import { firstAnimal, MORNING, SocietyHarness, settle } from "./testing/test-society.ts";
 import { floodCells } from "./testing/test-world.ts";
 
 const MISSING_ID = 999;
@@ -23,21 +22,10 @@ function hutAt(harness: SocietyHarness, tribeId: number, x: number): Building {
   return harness.buildings.add({ kind: "hut", rotation: 0, tribeId, x, z: 60 }, harness.random);
 }
 
-function mammothIn(harness: SocietyHarness): Animal {
-  const herd = harness.fauna.spawnHerd("mammoth", -150, -150, 1, harness.random);
-  const mammoth = herd === null ? null : harness.fauna.findAnimal(herd.memberIds[0]);
-
-  if (mammoth === null) {
-    throw new Error("Expected a mammoth");
-  }
-
-  return mammoth;
-}
-
 describe("inspection", () => {
   it("tells what an animal is doing, how hurt it is and whether it is young", () => {
     const harness = new SocietyHarness({ day: MORNING });
-    const mammoth = mammothIn(harness);
+    const mammoth = firstAnimal(harness, harness.fauna.spawnHerd("mammoth", -150, -150, 1, harness.random));
 
     mammoth.health = 2.5;
     mammoth.youth = 1;

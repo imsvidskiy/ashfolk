@@ -8,7 +8,7 @@ import { NavigationGrid } from "../agents/navigation.ts";
 import { isDryFooting } from "../agents/walkable-ground.ts";
 import { Chronicle } from "../chronicle.ts";
 import { EffectLog } from "../effects.ts";
-import { FaunaSystem } from "../fauna/fauna.ts";
+import { type Animal, FaunaSystem } from "../fauna/fauna.ts";
 import { IdentifierSource } from "../identifiers.ts";
 import { Calendar } from "../nature/calendar.ts";
 import { describeEnvironment } from "../nature/environment.ts";
@@ -61,6 +61,16 @@ export function settle(harness: SocietyHarness, people: number): Tribe {
   }
 
   return tribe;
+}
+
+export function firstAnimal(harness: SocietyHarness, herd: { memberIds: number[] } | null): Animal {
+  const animal = herd === null ? null : harness.fauna.findAnimal(herd.memberIds[0]);
+
+  if (animal === null) {
+    throw new Error("Expected an animal");
+  }
+
+  return animal;
 }
 
 export function tickFor(harness: SocietyHarness, person: Person, tribe: Tribe): PersonTick {
