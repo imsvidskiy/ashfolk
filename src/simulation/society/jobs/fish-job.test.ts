@@ -30,6 +30,7 @@ describe("staying dry", () => {
     const tribe = settle(harness, 4);
 
     const [fisher] = harness.society.membersOf(tribe);
+    const { cellSize } = harness.world.grid;
 
     const tick = tickFor(harness, fisher, tribe);
 
@@ -42,7 +43,6 @@ describe("staying dry", () => {
       fisher.job = fisher.job.update(tick);
 
       const { heading, x, z } = fisher.mover;
-      const { cellSize } = harness.world.grid;
 
       hasEnteredWater = hasEnteredWater || harness.world.isWaterAt(x, z);
 
