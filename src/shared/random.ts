@@ -85,6 +85,10 @@ export function randomFromUnitSeed(seed: number, salt: number): RandomSource {
   return createRandom(Math.floor(seed * 2_147_483_647) + salt);
 }
 
+export function between(random: RandomSource, range: readonly [number, number]): number {
+  return random.between(range[0], range[1]);
+}
+
 export function shuffle<Items extends { [index: number]: unknown; length: number }>(
   random: RandomSource,
   items: Items

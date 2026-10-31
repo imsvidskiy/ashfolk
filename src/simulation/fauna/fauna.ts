@@ -1,7 +1,7 @@
 import { ADULT_YOUTH, ANIMALS, type AnimalKind } from "../../content/animals.ts";
 import type { WorldRules } from "../../content/world-rules.ts";
 import { clamp, distanceSquared, FULL_TURN } from "../../shared/math.ts";
-import { createRandom, type RandomSource, type RandomState } from "../../shared/random.ts";
+import { between, createRandom, type RandomSource, type RandomState } from "../../shared/random.ts";
 import type { AnimalPose } from "../../world/agent-poses.ts";
 import { isHopping } from "../agents/hops.ts";
 import {
@@ -493,7 +493,7 @@ export class FaunaSystem {
 
   #ageFounders(herd: Herd, random: RandomSource): void {
     for (const founder of this.#membersOf(herd)) {
-      founder.lifeDays *= 1 - random.between(LIVED_SHARE[0], LIVED_SHARE[1]);
+      founder.lifeDays *= 1 - between(random, LIVED_SHARE);
     }
   }
 
@@ -512,7 +512,7 @@ export class FaunaSystem {
 
     const random = this.#randomFor(herd.kind, tick);
 
-    herd.retargetSeconds = random.between(HERD_RETARGET_SECONDS[0], HERD_RETARGET_SECONDS[1]);
+    herd.retargetSeconds = between(random, HERD_RETARGET_SECONDS);
 
     const pasture = findPasture(this.#world, herd.kind, leader.mover, random);
 
@@ -717,7 +717,7 @@ export class FaunaSystem {
 
     if (moveAlong(animal.mover, tick.seconds, animal.speed, this.#world, this.#navigation)) {
       animal.pose = "graze";
-      animal.poseSeconds = this.#randomFor(animal.kind, tick).between(GRAZE_SECONDS[0], GRAZE_SECONDS[1]);
+      animal.poseSeconds = between(this.#randomFor(animal.kind, tick), GRAZE_SECONDS);
     }
   }
 
@@ -733,7 +733,7 @@ export class FaunaSystem {
     const targetZ = herd.goalZ + animal.offsetZ;
 
     if (Math.hypot(targetX - animal.mover.x, targetZ - animal.mover.z) <= WANDER_DISTANCE_TO_FOLLOW) {
-      animal.poseSeconds = this.#randomFor(animal.kind, tick).between(LINGER_SECONDS[0], LINGER_SECONDS[1]);
+      animal.poseSeconds = between(this.#randomFor(animal.kind, tick), LINGER_SECONDS);
 
       return;
     }
@@ -839,7 +839,7 @@ export class FaunaSystem {
       memberIds: grown.map((member) => {
         return member.id;
       }),
-      retargetSeconds: random.between(HERD_RETARGET_SECONDS[0], HERD_RETARGET_SECONDS[1]),
+      retargetSeconds: between(random, HERD_RETARGET_SECONDS),
     };
 
     herd.memberIds = herd.memberIds.filter((id) => {

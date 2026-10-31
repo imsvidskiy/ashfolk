@@ -1,7 +1,7 @@
 import { ADULT_YOUTH, ANIMALS } from "../../content/animals.ts";
 import { isWinter } from "../../content/seasons.ts";
 import { clamp } from "../../shared/math.ts";
-import type { RandomSource, RandomState } from "../../shared/random.ts";
+import { between, type RandomSource, type RandomState } from "../../shared/random.ts";
 import { faceTowards, moveAlong, setDestination, stopMoving } from "../agents/movement.ts";
 import type { NavigationGrid, Waypoint } from "../agents/navigation.ts";
 import type { WorldState } from "../world/world-state.ts";
@@ -163,10 +163,6 @@ function nightFactor(hours: number): number {
   }
 
   return 0.25;
-}
-
-function between(random: RandomSource, range: readonly [number, number]): number {
-  return random.between(range[0], range[1]);
 }
 
 function packBoldness(hunger: number, packSize: number, tick: FaunaTick): number {
