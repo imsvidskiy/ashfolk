@@ -25,6 +25,11 @@ export interface SimulationWorkerApi {
 
 type SimulationFactory = (request: WorldRequest, onProgress: (progress: GenerationProgress) => void) => Simulation;
 
+interface RunningWorld {
+  readonly request: WorldRequest;
+  readonly simulation: Simulation;
+}
+
 function generateIsland(request: WorldRequest, onProgress: (progress: GenerationProgress) => void): Simulation {
   return Simulation.generate(request.seed, request.options, onProgress);
 }
@@ -118,21 +123,21 @@ export function createSimulationWorkerApi(
   createSimulation: SimulationFactory = generateSimulation,
   generateUnsettled: SimulationFactory = generateIsland
 ): SimulationWorkerApi {
-  let simulation: Simulation | null = null;
-  let request: WorldRequest | null = null;
+  let running: RunningWorld | null = null;
 
-  function startWorld(created: Simulation, createdFrom: WorldRequest): InitialWorld {
-    simulation = created;
-    request = createdFrom;
+  function startWorld(simulation: Simulation, request: WorldRequest): InitialWorld {
+    running = { request, simulation };
 
-    return created.initialWorld();
+    return simulation.initialWorld();
   }
 
   return {
     advance: (realSeconds, commands) => {
-      if (simulation === null) {
+      if (running === null) {
         throw new Error("The world has not been created yet");
       }
+
+      const { simulation } = running;
 
       for (const command of commands) {
         simulation.execute(command);
@@ -159,10 +164,11 @@ export function createSimulationWorkerApi(
       return transfer({ hasLandChanged: hasLandChanged(loaded, state), world }, initialWorldTransferables(world));
     },
     saveWorld: () => {
-      if (simulation === null || request === null) {
+      if (running === null) {
         return null;
       }
 
+      const { request, simulation } = running;
       const snapshot = simulation.snapshot();
 
       if (snapshot === null) {
