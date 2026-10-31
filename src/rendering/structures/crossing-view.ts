@@ -54,6 +54,7 @@ import {
   STEPPING_STONE_VARIANTS,
 } from "../../world/crossings.ts";
 import { NO_WATER } from "../../world/water.ts";
+import type { WorldGrid } from "../../world/world-grid.ts";
 import { geometryFromMeshData, InstanceBatch, toInstancedGeometry } from "../instancing.ts";
 import { rotateAroundUp, SNOW_COLOR, slotColorTable, snowCoverNode } from "../node-helpers.ts";
 import { markOutlined } from "../outlines.ts";
@@ -72,6 +73,7 @@ const FOAM_BATCH = -1;
 const FOAM_WAKE = 3.2;
 const FOAM_ABOVE = 0.15;
 const FLOW_PROBE = 8;
+const BOUNDS_MARGIN = 4;
 const WET_STONE = vec3(0.55, 0.58, 0.52);
 const RIVERBED = vec3(0.07, 0.17, 0.19);
 const MURKIEST = 0.85;
@@ -110,8 +112,7 @@ function pitched(vector: Node<"vec3">, angle: Node<"float">): Node<"vec3"> {
   return vec3(vector.x.mul(cosine).sub(vector.y.mul(sine)), vector.x.mul(sine).add(vector.y.mul(cosine)), vector.z);
 }
 
-function createCrossingMaterial(textures: TerrainTextures, mirror: WorldMirror): MeshStandardNodeMaterial {
-  const { grid } = mirror;
+function createCrossingMaterial(textures: TerrainTextures, grid: WorldGrid): MeshStandardNodeMaterial {
   const material = new MeshStandardNodeMaterial();
   const placement = attribute("crossingPlacement", "vec4");
   const shape = attribute("crossingShape", "vec4");
@@ -249,7 +250,7 @@ export class CrossingView {
     this.#mirror = mirror;
     this.#textures = textures;
 
-    const material = createCrossingMaterial(textures, mirror);
+    const material = createCrossingMaterial(textures, mirror.grid);
 
     this.#batches = CROSSING_DETAIL_LEVELS.map((level, levelIndex) => {
       return [...buildSteppingStones(level), ...buildFallenLogs(level), ...buildSteppingStones("low")].map(
@@ -267,7 +268,7 @@ export class CrossingView {
     );
     this.#foam.mesh.renderOrder = 3;
     this.#all = [...this.#batches.flat(), this.#foam];
-    this.#bar = new Mesh(new BufferGeometry(), createBarMaterial(textures, mirror));
+    this.#bar = new Mesh(new BufferGeometry(), createBarMaterial(textures, mirror.grid));
     this.#bar.receiveShadow = true;
     this.group.add(this.#foam.mesh, this.#bar);
 
@@ -361,7 +362,7 @@ export class CrossingView {
     const middle = crossingMiddle(crossing);
     const bounds = new Sphere(
       new Vector3(middle.x, this.#mirror.heightAt(middle.x, middle.z), middle.z),
-      crossingLength(crossing) / 2 + 4
+      crossingLength(crossing) / 2 + BOUNDS_MARGIN
     );
 
     return { bar, bounds, level: HIDDEN_LEVEL, pieces };
@@ -389,10 +390,7 @@ export class CrossingView {
 
     const foam = stones
       .filter((stone) => {
-        return stone.kind === "step" || stone.kind === "boulder";
-      })
-      .filter((stone) => {
-        return stone.top > stone.waterLevel - FOAM_ABOVE;
+        return (stone.kind === "step" || stone.kind === "boulder") && stone.top > stone.waterLevel - FOAM_ABOVE;
       })
       .map((stone) => {
         return foamPiece(stone, flow);
