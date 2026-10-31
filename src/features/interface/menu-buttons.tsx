@@ -1,4 +1,4 @@
-import { BookOpen, Download, Map as MapIcon, Settings, Volume2, VolumeX } from "lucide-react";
+import { BookOpen, Download, Map as MapIcon, Settings } from "lucide-react";
 import { IconButton } from "../../design/buttons.tsx";
 import { cn } from "../../design/cn.ts";
 import { WithTooltip } from "../../design/tooltip.tsx";
@@ -52,9 +52,7 @@ function InstallButton() {
 }
 
 function SoundButton() {
-  const { isMuted, label, toggleSound } = useSoundToggle();
-
-  const Icon = isMuted ? VolumeX : Volume2;
+  const { icon: Icon, label, toggleSound } = useSoundToggle();
 
   return (
     <WithTooltip content={label} side="bottom">

@@ -1,3 +1,4 @@
+import { Volume2, VolumeX } from "lucide-react";
 import { useSoundStore } from "./sound-store.ts";
 
 export function useSoundToggle() {
@@ -12,5 +13,10 @@ export function useSoundToggle() {
     setMuted(!isMuted);
   }
 
-  return { isMuted, label: isMuted ? "Turn the sound on" : "Turn the sound off", toggleSound };
+  return {
+    icon: isMuted ? VolumeX : Volume2,
+    isMuted,
+    label: isMuted ? "Turn the sound on" : "Turn the sound off",
+    toggleSound,
+  };
 }

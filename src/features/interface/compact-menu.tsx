@@ -1,5 +1,5 @@
 import { Menu } from "@base-ui/react/menu";
-import { BookOpen, Download, Map as MapIcon, Menu as MenuIcon, Settings, Volume2, VolumeX } from "lucide-react";
+import { BookOpen, Download, Map as MapIcon, Menu as MenuIcon, Settings } from "lucide-react";
 import type { ReactNode } from "react";
 import { IconButton } from "../../design/buttons.tsx";
 import { cn } from "../../design/cn.ts";
@@ -74,9 +74,7 @@ function InstallEntry() {
 }
 
 function SoundEntry() {
-  const { isMuted, label, toggleSound } = useSoundToggle();
-
-  const Icon = isMuted ? VolumeX : Volume2;
+  const { icon: Icon, label, toggleSound } = useSoundToggle();
 
   return (
     <MenuEntry icon={<Icon aria-hidden="true" size={17} />} onClick={toggleSound}>
