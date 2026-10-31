@@ -21,7 +21,7 @@ function isRenderPipelines(value: unknown): value is RenderPipelines {
 }
 
 export function isSoftwareAdapter(info: GPUAdapterInfo | undefined): boolean {
-  return info !== undefined && (info.isFallbackAdapter === true || info.architecture === "swiftshader");
+  return info !== undefined && (info.isFallbackAdapter || info.architecture === "swiftshader");
 }
 
 // Workaround: three.js r186 compiles a pipeline synchronously in the frame that first draws an object, which holds the
