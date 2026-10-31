@@ -126,7 +126,7 @@ function singleBuilding(
   kind: BuildingKind,
   nearest: number,
   farthest: number,
-  isWanted: (tribe: Tribe, context: SocietyContext) => boolean = () => {
+  isWanted: (tribe: Tribe) => boolean = () => {
     return true;
   }
 ): Planner {
@@ -135,11 +135,7 @@ function singleBuilding(
       return building.kind === kind;
     });
 
-    if (!isUnlocked(tribe, kind, context) || isBuilt) {
-      return null;
-    }
-
-    if (!isWanted(tribe, context)) {
+    if (!isUnlocked(tribe, kind, context) || isBuilt || !isWanted(tribe)) {
       return null;
     }
 
