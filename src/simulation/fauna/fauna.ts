@@ -417,7 +417,7 @@ export class FaunaSystem {
       id: this.#identifiers.next(),
       isAlive: true,
       kind: herd.kind,
-      lifeDays: lifespanDays === null ? Number.POSITIVE_INFINITY : random.between(lifespanDays[0], lifespanDays[1]),
+      lifeDays: lifespanDays === null ? Number.POSITIVE_INFINITY : between(random, lifespanDays),
       mover: {
         ...createMover(start.x, start.z, random.next() * FULL_TURN, bodyRadius),
         hopSpeed: hopSpeedOf(herd.kind),
@@ -626,12 +626,11 @@ export class FaunaSystem {
     }
 
     const { fleeDistance, isSmallGame } = ANIMALS[animal.kind];
-
-    const [soonest, latest] = isSmallGame ? SKITTISH_ALERT_SECONDS : ALERT_SECONDS;
-
-    animal.threatCheckSeconds = this.#randomFor(animal.kind, tick).between(soonest, latest);
-
     const { x, z } = animal.mover;
+
+    const alertSeconds = isSmallGame ? SKITTISH_ALERT_SECONDS : ALERT_SECONDS;
+
+    animal.threatCheckSeconds = between(this.#randomFor(animal.kind, tick), alertSeconds);
 
     const fire = tick.threats.dangerNear(x, z, FIRE_AWARENESS);
     const hunter = tick.threats.hunterNear(x, z, fleeDistance);
