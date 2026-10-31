@@ -397,6 +397,16 @@ describe("hares", () => {
     expect(fauna.herds.length).toBeGreaterThan(1);
   });
 
+  it("found no new groups once the island holds as many as it can feed", () => {
+    const { fauna } = createFauna();
+
+    fauna.spawnHerd("hare", 0, 0, 2, createRandom(1));
+    runFor(fauna, 150, { days: 0.01, season: SUMMER });
+
+    expect(fauna.herds).toHaveLength(1);
+    expect(hares(fauna)).toHaveLength(ANIMALS.hare.maximumHerdSize);
+  });
+
   it("die of age within a few years while deer live on", () => {
     const { fauna } = createFauna();
 
