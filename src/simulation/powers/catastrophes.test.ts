@@ -5,7 +5,7 @@ import { isTreeSpecies, PlantSpecies, plantSpeciesDefinition } from "../../conte
 import { PlantState } from "../../world/vegetation-store.ts";
 import { WorldGrid } from "../../world/world-grid.ts";
 import { Simulation } from "../simulation.ts";
-import { createValleySimulation, valleyHeight } from "../testing/test-simulation.ts";
+import { createValleySimulation, VALLEY_DIMENSIONS } from "../testing/test-simulation.ts";
 import { createVegetatedWorld, floodCells, monumentAround, plantInCell } from "../testing/test-world.ts";
 import { raiseTerrain } from "../world/terrain-editing.ts";
 
@@ -376,18 +376,10 @@ describe("earthquakes", () => {
 
 describe("determinism", () => {
   function replay(): Simulation {
-    const dimensions = { cellSize: 10, cellsPerSide: 96 };
+    const simulation = createValleySimulation({
+      monuments: [monumentAround(new WorldGrid(VALLEY_DIMENSIONS), 200, 150, 20)],
+    });
 
-    const simulation = new Simulation(
-      createVegetatedWorld({
-        dimensions,
-        heightAt: valleyHeight,
-        monuments: [monumentAround(new WorldGrid(dimensions), 200, 150, 20)],
-      })
-    );
-
-    simulation.weather.setKind("clear");
-    simulation.waterRecomputation.recompute();
     simulation.populate();
     simulation.execute({
       parameters: { craterRadius: 140, fallTime: 0.5 },
