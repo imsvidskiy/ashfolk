@@ -31,6 +31,7 @@ function everyTriangle(): boolean {
 function readCorners(surface: Surface, triangle: number, corners: Corners): void {
   const { indices, positions } = surface;
   const [first, second, third] = corners;
+
   const offset = triangle * 3;
 
   first.fromArray(positions, indices[offset] * 3);
