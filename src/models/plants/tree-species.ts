@@ -121,7 +121,7 @@ function oak(seed: number): TreeStructure {
   return finish(growth, TREE_HEIGHTS[PlantSpecies.Oak]);
 }
 
-function stemOffset(random: RandomSource, stem: number, stems: number): Vector3 {
+function birchStemOffset(random: RandomSource, stem: number, stems: number): Vector3 {
   if (stems === 1) {
     return new Vector3();
   }
@@ -156,7 +156,7 @@ function birch(seed: number): TreeStructure {
         segments: 6,
         wobble: 0.12,
       },
-      stemOffset(random, stem, stems)
+      birchStemOffset(random, stem, stems)
     );
 
     const branchCount = random.integer(6, 9);

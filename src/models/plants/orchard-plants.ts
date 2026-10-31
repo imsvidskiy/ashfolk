@@ -32,12 +32,11 @@ export const ORCHARD_VARIANT_COUNTS = {
 
 const TRUNK_SEGMENTS = 3;
 const ORCHARD_SPECIES: ReadonlySet<number> = new Set(Object.keys(ORCHARD_HEIGHTS).map(Number));
+const TREE_FRUIT = { high: ROUND_FRUIT, medium: ROUND_FRUIT };
 
 type OrchardSpecies = keyof typeof ORCHARD_HEIGHTS;
 
 type FruitTreeSpecies = keyof typeof FRUIT_TREE_HEIGHTS;
-
-const TREE_FRUIT = { high: ROUND_FRUIT, medium: ROUND_FRUIT };
 
 const FRUIT_LOOKS: Readonly<Record<FruitTreeSpecies, FruitLook>> = {
   [CultivatedSpecies.AppleTree]: {
