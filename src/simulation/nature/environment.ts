@@ -1,3 +1,4 @@
+import { SEASON_COUNT } from "../../content/seasons.ts";
 import { isSnowfallWeather } from "../../content/weather.ts";
 import { sunDirection } from "../../shared/astronomy.ts";
 import { clamp, FULL_TURN } from "../../shared/math.ts";
@@ -25,7 +26,7 @@ export interface Environment {
 }
 
 export function droughtLevel(season: number, precipitation: number, isHeatwave: boolean): number {
-  const summer = Math.max(0, Math.cos((FULL_TURN * (season - SUMMER_PEAK_SEASON)) / 4));
+  const summer = Math.max(0, Math.cos((FULL_TURN * (season - SUMMER_PEAK_SEASON)) / SEASON_COUNT));
   const heat = isHeatwave ? HEATWAVE_DROUGHT : 0;
 
   return clamp(0.42 + 0.35 * summer - 0.7 * precipitation + heat, 0, 1);
