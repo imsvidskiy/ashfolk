@@ -14,7 +14,7 @@ import {
   PLANT_DETAIL_LEVELS,
   plantVariantCount,
 } from "./plant-models.ts";
-import { FOLIAGE_FLUTTER, type PlantDetailLevel, plantSway } from "./tree-mesher.ts";
+import { FOLIAGE_FLUTTER, type NearLevel, type PlantDetailLevel, plantSway } from "./tree-mesher.ts";
 
 const RADIUS_TOLERANCE = 0.2;
 const STORM_PUSH = 2;
@@ -23,6 +23,7 @@ const SPECIES: readonly PlantSpeciesIndex[] = PLANT_SPECIES.map((definition) => 
   return definition.index;
 });
 const FOLIAGE_SLOTS: ReadonlySet<number> = new Set([MaterialSlot.Leaf, MaterialSlot.Needle]);
+const NEAR_LEVELS: readonly NearLevel[] = ["high", "medium"];
 
 const TREES = [
   PlantSpecies.Acacia,
@@ -259,7 +260,7 @@ describe("tree details", () => {
   });
 
   it("sways the top of every willow crown with the tree", () => {
-    for (const level of ["high", "medium"] as const) {
+    for (const level of NEAR_LEVELS) {
       for (const willow of variantsOf(PlantSpecies.Willow, level)) {
         const foliage = meshPieces(willow).filter((piece) => {
           return willow.channels.flutter[piece.vertices[0]] === FOLIAGE_FLUTTER;
@@ -276,7 +277,7 @@ describe("tree details", () => {
   });
 
   it("moves each berry as one piece with the leaves it grows on", () => {
-    for (const level of ["high", "medium"] as const) {
+    for (const level of NEAR_LEVELS) {
       for (const bush of variantsOf(PlantSpecies.Bush, level)) {
         const berries = berryPieces(bush);
 
@@ -305,7 +306,7 @@ describe("tree details", () => {
   });
 
   it("keeps every berry small and whole through a storm", () => {
-    for (const level of ["high", "medium"] as const) {
+    for (const level of NEAR_LEVELS) {
       for (const bush of variantsOf(PlantSpecies.Bush, level)) {
         const bent = windBentMesh(bush, STORM_PUSH);
 
@@ -325,7 +326,7 @@ describe("tree details", () => {
   });
 
   it("tucks the tip of every spruce tier inside the tier above it", () => {
-    for (const level of ["high", "medium"] as const) {
+    for (const level of NEAR_LEVELS) {
       for (const spruce of variantsOf(PlantSpecies.Spruce, level)) {
         const tiers = meshPieces(spruce)
           .filter((piece) => {
