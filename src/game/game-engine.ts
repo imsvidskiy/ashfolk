@@ -51,6 +51,14 @@ interface EngineParts {
   readonly session: GameSession;
 }
 
+function afterNextPaint(): Promise<void> {
+  return new Promise((resolve) => {
+    requestAnimationFrame(() => {
+      setTimeout(resolve, 0);
+    });
+  });
+}
+
 async function openTogether(
   graphics: Promise<Graphics>,
   session: Promise<GameSession>
@@ -196,6 +204,8 @@ export class GameEngine implements EngineHandle {
       createGraphics(options.canvas, RENDER_QUALITY[options.quality]),
       options.session
     );
+
+    await afterNextPaint();
 
     const engine = new GameEngine({
       canvas: options.canvas,

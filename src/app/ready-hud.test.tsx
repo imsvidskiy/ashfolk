@@ -31,7 +31,7 @@ describe("ready hud", () => {
     await page.viewport(1440, 900);
 
     showWorld();
-    useEngineStore.setState({ status: { kind: "loading", progress: { island: null, stage: "relief" } } });
+    useEngineStore.setState({ status: { island: null, kind: "loading", stage: "relief" } });
 
     const screen = await render(<ReadyHud />);
 

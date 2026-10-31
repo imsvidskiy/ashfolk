@@ -5,20 +5,29 @@ import { readFilming } from "../game/filming.ts";
 import type { GameEngine } from "../game/game-engine.ts";
 import type { GameSession } from "../game/game-session.ts";
 import type { WorldSource } from "../game/open-session.ts";
-import { DEFAULT_GENERATION_OPTIONS, type GenerationProgress } from "../generation/generation-options.ts";
+import {
+  DEFAULT_GENERATION_OPTIONS,
+  type GenerationProgress,
+  type GenerationStage,
+  type IslandSketch,
+} from "../generation/generation-options.ts";
 import { toError } from "../shared/errors.ts";
 import { ignore } from "../shared/ignore.ts";
 import { islandDimensions } from "../world/island-size.ts";
 import type { LaunchOptions } from "./launch-options.ts";
 
+export type LoadingStage = GenerationStage | "lighting" | "waking";
+
 export type EngineStatus =
   | { readonly engine: EngineHandle; readonly kind: "ready" }
   | { readonly kind: "failed"; readonly message: string }
   | { readonly kind: "graphicsLost"; readonly saved: Promise<unknown> }
-  | { readonly kind: "loading"; readonly progress: GenerationProgress | null }
+  | { readonly island: IslandSketch | null; readonly kind: "loading"; readonly stage: LoadingStage }
   | { readonly kind: "stopped"; readonly message: string };
 
 type EngineStatusListener = (status: EngineStatus) => void;
+
+export const WAKING_STATUS: EngineStatus = { island: null, kind: "loading", stage: "waking" };
 
 function loadGameEngine() {
   return import("../game/game-engine.ts");
@@ -104,12 +113,13 @@ export class EngineLauncher {
   readonly #onStatus: EngineStatusListener;
   readonly #opening = new AbortController();
   #engine: GameEngine | null = null;
+  #island: IslandSketch | null = null;
   #state: "canceled" | "running" | "starting" = "starting";
 
   constructor(container: HTMLElement, launch: LaunchOptions, worldId: string, onStatus: EngineStatusListener) {
     this.#canvas = createCanvas(container);
     this.#onStatus = onStatus;
-    this.#onStatus({ kind: "loading", progress: null });
+    this.#onStatus(WAKING_STATUS);
     queueMicrotask(() => {
       this.#startUnlessCanceled(launch, worldId);
     });
@@ -148,7 +158,9 @@ export class EngineLauncher {
       this.#opening.signal
     );
 
-    session.catch(ignore);
+    session.then(() => {
+      this.#reportStage("lighting");
+    }, ignore);
 
     const [engineModule] = await Promise.all([loadGameEngine(), loadHud()]);
 
@@ -192,12 +204,17 @@ export class EngineLauncher {
     );
   }
 
-  #reportProgress(progress: GenerationProgress): void {
+  #reportProgress({ island, stage }: GenerationProgress): void {
+    this.#island = island;
+    this.#reportStage(stage);
+  }
+
+  #reportStage(stage: LoadingStage): void {
     if (this.#state !== "starting") {
       return;
     }
 
-    this.#onStatus({ kind: "loading", progress });
+    this.#onStatus({ island: this.#island, kind: "loading", stage });
   }
 
   #fail(error: unknown): void {
