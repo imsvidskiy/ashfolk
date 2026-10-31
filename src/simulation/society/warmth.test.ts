@@ -1,15 +1,13 @@
 import { describe, expect, it } from "vitest";
 import { addShelter, firstMemberTick, SocietyHarness, settle } from "../testing/test-society.ts";
-import { decideJob } from "./decisions.ts";
 import { chillPerDay, isSheltered, nearestWarmPlace, warmthOnArrival } from "./warmth.ts";
 
 const WINTER = 3.5;
-const LATE_SPRING = 0.9;
 
-function wintryHarness(season = WINTER): SocietyHarness {
+function wintryHarness(): SocietyHarness {
   const harness = new SocietyHarness();
 
-  harness.context.environment = { ...harness.context.environment, airTemperatureOffset: -25, season };
+  harness.context.environment = { ...harness.context.environment, airTemperatureOffset: -25, season: WINTER };
 
   return harness;
 }
@@ -70,31 +68,5 @@ describe("staying warm", () => {
     tick.person.mover.x = house.x + 200;
 
     expect(warmthOnArrival(tick, place)).toBeLessThan(near);
-  });
-});
-
-describe("coming home before winter", () => {
-  it("sends people far from camp home once expeditions are over", () => {
-    const harness = wintryHarness();
-
-    const tribe = settle(harness, 3);
-    const tick = firstMemberTick(harness, tribe);
-
-    tick.person.mover.x = tribe.campX + 300;
-    tick.person.mover.z = tribe.campZ;
-
-    expect(decideJob(tick).kind).toBe("migrate");
-  });
-
-  it("lets them work far away in the traveling season", () => {
-    const harness = wintryHarness(LATE_SPRING);
-
-    const tribe = settle(harness, 3);
-    const tick = firstMemberTick(harness, tribe);
-
-    tick.person.mover.x = tribe.campX + 300;
-    tick.person.mover.z = tribe.campZ;
-
-    expect(decideJob(tick).kind).not.toBe("migrate");
   });
 });

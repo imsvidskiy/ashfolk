@@ -1,8 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { firstMemberTick, SocietyHarness, settle } from "../testing/test-society.ts";
+import { firstMemberTick, moveToSeason, SocietyHarness, settle } from "../testing/test-society.ts";
 import { decideJob } from "./decisions.ts";
 
 const TRIBE_SIZE = 6;
+const WINTER = 3.5;
+const LATE_SPRING = 0.9;
+const FAR_FROM_CAMP = 300;
 
 describe("deciding what to do", () => {
   it("sends people to sleep at night", () => {
@@ -54,5 +57,33 @@ describe("deciding what to do", () => {
     tribe.stock.berries = 5;
 
     expect(decideJob(tick).kind).toBe("eat");
+  });
+});
+
+describe("coming home before winter", () => {
+  it("sends people far from camp home once expeditions are over", () => {
+    const harness = new SocietyHarness();
+
+    const tribe = settle(harness, 3);
+    const tick = firstMemberTick(harness, tribe);
+
+    moveToSeason(harness, WINTER);
+    tick.person.mover.x = tribe.campX + FAR_FROM_CAMP;
+    tick.person.mover.z = tribe.campZ;
+
+    expect(decideJob(tick).kind).toBe("migrate");
+  });
+
+  it("lets them work far away in the traveling season", () => {
+    const harness = new SocietyHarness();
+
+    const tribe = settle(harness, 3);
+    const tick = firstMemberTick(harness, tribe);
+
+    moveToSeason(harness, LATE_SPRING);
+    tick.person.mover.x = tribe.campX + FAR_FROM_CAMP;
+    tick.person.mover.z = tribe.campZ;
+
+    expect(decideJob(tick).kind).not.toBe("migrate");
   });
 });
