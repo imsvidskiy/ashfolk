@@ -7,6 +7,7 @@ const LONGEST_REST_SECONDS = 120;
 const RETRY_SECONDS = 5;
 const FADE_IN_SECONDS = 4;
 const FADE_OUT_SECONDS = 3;
+const MILLISECONDS_PER_SECOND = 1000;
 
 export type Mood = "day" | "dusk" | "night";
 
@@ -87,7 +88,7 @@ export class MusicPlayer {
     setTimeout(() => {
       output.element.pause();
       output.element.removeAttribute("src");
-    }, FADE_OUT_SECONDS * 1000);
+    }, FADE_OUT_SECONDS * MILLISECONDS_PER_SECOND);
   }
 
   #start(output: MusicOutput, now: number, hours: number): void {
