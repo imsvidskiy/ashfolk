@@ -14,7 +14,7 @@ import { Calendar } from "../nature/calendar.ts";
 import { describeEnvironment } from "../nature/environment.ts";
 import { FireSystem } from "../nature/fire.ts";
 import { WeatherSystem } from "../nature/weather.ts";
-import { type Building, BuildingSystem } from "../society/buildings.ts";
+import { type Building, type BuildingPlacement, BuildingSystem } from "../society/buildings.ts";
 import type { Job } from "../society/jobs/job.ts";
 import type { Person } from "../society/person.ts";
 import { RivalrySystem } from "../society/rivalry/rivalry-system.ts";
@@ -44,7 +44,7 @@ export const THROUGH_MINING: readonly TechnologyId[] = [
 ];
 
 const SEED = 3;
-const MINING_DIMENSIONS = { cellSize: 10, cellsPerSide: 96 };
+const DIMENSIONS = { cellSize: 10, cellsPerSide: 96 };
 
 interface SocietyHarnessOptions {
   day: number;
@@ -52,6 +52,8 @@ interface SocietyHarnessOptions {
   rules: WorldRules;
   world: Partial<TestWorldOptions>;
 }
+
+type StructurePlacement = Omit<BuildingPlacement, "rotation" | "tribeId">;
 
 export function settle(harness: SocietyHarness, people: number): Tribe {
   const tribe = harness.spawnTribe(people);
@@ -107,19 +109,21 @@ export function addShelter(harness: SocietyHarness, tribe: Tribe, kind: Building
   return shelter;
 }
 
-export function completeStructure(tribe: Tribe, building: Building): Building {
-  building.progress = 1;
-  tribe.buildings.structureIds.push(building.id);
+export function addStructure(harness: SocietyHarness, tribe: Tribe, placement: StructurePlacement): Building {
+  const structure = harness.buildings.add({ ...placement, rotation: 0, tribeId: tribe.id }, harness.random);
 
-  return building;
+  structure.progress = 1;
+  tribe.buildings.structureIds.push(structure.id);
+
+  return structure;
 }
 
 export function createMiningHarness(): SocietyHarness {
-  const grid = new WorldGrid(MINING_DIMENSIONS);
+  const grid = new WorldGrid(DIMENSIONS);
 
   return new SocietyHarness({
     day: MORNING,
-    world: { deposits: [depositAround(grid, "copper", 160, 40)], dimensions: MINING_DIMENSIONS },
+    world: { deposits: [depositAround(grid, "copper", 160, 40)], dimensions: DIMENSIONS },
   });
 }
 
@@ -175,7 +179,7 @@ export class SocietyHarness {
       day: 0.36,
       isFaunaAwake: false,
       rules: DEFAULT_WORLD_RULES,
-      world: { dimensions: { cellSize: 10, cellsPerSide: 96 } },
+      world: { dimensions: DIMENSIONS },
       ...options,
     };
 

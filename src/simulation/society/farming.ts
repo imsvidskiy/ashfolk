@@ -32,6 +32,7 @@ const FARTHEST_FIELD = 80;
 const TENDED_GROWTH = 0.45;
 const TENDING_DECAY = 0.5;
 const SPROUT_DISPLAY = 0.04;
+const SOWN_TENDING = 0.3;
 
 export type FieldTask = "harvest" | "sow" | "tend";
 
@@ -52,19 +53,11 @@ function wantedFields(tribe: Tribe): number {
 function isFarmable(tribe: Tribe, cell: number, context: SocietyContext): boolean {
   const { world } = context;
 
-  if (cell < 0 || !world.isWalkable(cell) || !world.canPlace(cell, FIELD_SLOPE) || world.isTrodden(cell)) {
+  if (cell < 0 || !world.canPlace(cell, FIELD_SLOPE) || world.isTrodden(cell)) {
     return false;
   }
 
   if (groundDefinition(world.terrain.ground[cell]).fertility < FERTILE_GROUND) {
-    return false;
-  }
-
-  if (
-    tribe.fields.some((field) => {
-      return field.cell === cell;
-    })
-  ) {
     return false;
   }
 
@@ -313,5 +306,5 @@ export function sowField(tribe: Tribe, field: Field, season: number): void {
   field.isSown = true;
   field.growth = 0;
   field.plantings += 1;
-  field.tending = 0.3;
+  field.tending = SOWN_TENDING;
 }

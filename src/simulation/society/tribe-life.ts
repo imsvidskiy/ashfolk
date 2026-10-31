@@ -2,7 +2,6 @@ import { BUILDINGS } from "../../content/buildings.ts";
 import { personName } from "../../content/names.ts";
 import { nearestWalkableSpot } from "../agents/walkable-ground.ts";
 import { isComplete } from "./buildings.ts";
-import { completedOfKind, tribeBuildings } from "./camp-plan.ts";
 import { planConstruction } from "./construction.ts";
 import { abandonFloodedFields, updateFields } from "./farming.ts";
 import { assignHomes, housingCapacity } from "./housing.ts";
@@ -13,6 +12,7 @@ import { considerMoving, considerSplit, updateMigration } from "./settlement.ts"
 import type { SocietyContext } from "./society-context.ts";
 import { type Storage, spoilFood, totalFood } from "./stock.ts";
 import { knows, learn, type Tribe, upcomingTechnology } from "./tribe.ts";
+import { completedOfKind, tribeBuildings } from "./tribe-places.ts";
 
 const BASE_LEARNING_PER_DAY = 24;
 const ADULT_LEARNING = 4.5;
@@ -57,8 +57,8 @@ export function updateTribe(tick: TribeTick): void {
 function buildingLearning(tick: TribeTick): number {
   const { context, tribe } = tick;
 
-  const workshop = completedOfKind(tribe, context, "workshop") === null ? 0 : WORKSHOP_LEARNING;
-  const totem = completedOfKind(tribe, context, "totem") === null ? 0 : TOTEM_LEARNING;
+  const workshop = completedOfKind(tribe, context.buildings, "workshop") === null ? 0 : WORKSHOP_LEARNING;
+  const totem = completedOfKind(tribe, context.buildings, "totem") === null ? 0 : TOTEM_LEARNING;
 
   return workshop + totem;
 }
@@ -106,7 +106,7 @@ function discoverUpcoming(tribe: Tribe, context: SocietyContext): void {
 }
 
 function storageOf(tribe: Tribe, context: SocietyContext): Storage {
-  const stores = tribeBuildings(tribe, context).filter((building) => {
+  const stores = tribeBuildings(tribe, context.buildings).filter((building) => {
     return isComplete(building) && BUILDINGS[building.kind].storage > 0;
   });
 

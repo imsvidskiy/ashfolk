@@ -1,9 +1,15 @@
 import { describe, expect, it } from "vitest";
-import { addShelter, SocietyHarness, settle } from "../testing/test-society.ts";
+import { addShelter, MORNING, SocietyHarness, settle } from "../testing/test-society.ts";
+import { floodCells } from "../testing/test-world.ts";
+import { LONGEST_MIGRATION_DAYS } from "./camp-sites.ts";
 import { assignHomes } from "./housing.ts";
 import type { Person } from "./person.ts";
-import { considerSplit } from "./settlement.ts";
+import { considerMoving, considerSplit, updateMigration } from "./settlement.ts";
 import type { Tribe } from "./tribe.ts";
+
+const TRIBE_SIZE = 6;
+const STRAY_DISTANCE = 150;
+const OVERDUE_DAYS = 0.5;
 
 interface SplittingTribe {
   harness: SocietyHarness;
@@ -62,5 +68,61 @@ describe("splits", () => {
         return person.homeId === tent.id;
       })
     ).toHaveLength(3);
+  });
+});
+
+describe("migrations", () => {
+  it("set out for a new camp when water floods the old one", () => {
+    const harness = new SocietyHarness({ day: MORNING });
+
+    const tribe = settle(harness, TRIBE_SIZE);
+    const members = harness.society.membersOf(tribe);
+    const camp = { x: tribe.campX, z: tribe.campZ };
+
+    floodCells(harness.world, [harness.world.grid.cellAt(camp.x, camp.z)], 1.5);
+    considerMoving(tribe, members, harness.context);
+
+    expect(tribe.isMigrating).toBe(true);
+    expect(Math.hypot(tribe.campX - camp.x, tribe.campZ - camp.z)).toBeGreaterThan(0);
+    expect(harness.chronicle.takeEntries().at(-1)?.text).toContain("water flooded the camp");
+  });
+
+  it("end once most of the tribe has reached the camp", () => {
+    const harness = new SocietyHarness({ day: MORNING });
+
+    const tribe = settle(harness, TRIBE_SIZE);
+    const members = harness.society.membersOf(tribe);
+
+    tribe.isMigrating = true;
+    tribe.migrationStartDay = harness.context.environment.day;
+    members[0].mover.x += STRAY_DISTANCE;
+    updateMigration(tribe, members, harness.context);
+
+    expect(tribe.isMigrating).toBe(false);
+  });
+
+  it("settle the tribe where it stands when the journey runs too long", () => {
+    const harness = new SocietyHarness({ day: MORNING });
+
+    const tribe = settle(harness, TRIBE_SIZE);
+    const members = harness.society.membersOf(tribe);
+    const camp = { x: tribe.campX, z: tribe.campZ };
+
+    tribe.isMigrating = true;
+    tribe.migrationStartDay = harness.context.environment.day;
+
+    for (const person of members) {
+      person.mover.x += STRAY_DISTANCE;
+    }
+
+    updateMigration(tribe, members, harness.context);
+
+    expect(tribe.isMigrating).toBe(true);
+
+    tribe.migrationStartDay -= LONGEST_MIGRATION_DAYS + OVERDUE_DAYS;
+    updateMigration(tribe, members, harness.context);
+
+    expect(tribe.isMigrating).toBe(false);
+    expect(tribe.campX).toBeGreaterThan(camp.x + STRAY_DISTANCE / 2);
   });
 });

@@ -1,10 +1,9 @@
 import { BUILDINGS, type BuildingRole } from "../../content/buildings.ts";
 import { type Building, isComplete } from "./buildings.ts";
-import { tribeBuildings } from "./camp-plan.ts";
 import { walkSpeed } from "./person.ts";
 import type { PersonTick } from "./society-context.ts";
 import { knows, type Tribe } from "./tribe.ts";
-import { completedBuilding, litCampfireOf } from "./tribe-places.ts";
+import { completedBuilding, litCampfireOf, tribeBuildings } from "./tribe-places.ts";
 
 const COMFORTABLE_TEMPERATURE = 9;
 const WET_COLD_FACTOR = 1.4;
@@ -63,7 +62,7 @@ export function chillPerDay(tick: PersonTick): number {
 function warmPlaces(tick: PersonTick): WarmPlace[] {
   const campfire = litCampfireOf(tick.tribe, tick.context.buildings);
 
-  const hearths = tribeBuildings(tick.tribe, tick.context)
+  const hearths = tribeBuildings(tick.tribe, tick.context.buildings)
     .filter((building) => {
       return isComplete(building) && HEARTH_ROLES.has(BUILDINGS[building.kind].role);
     })
