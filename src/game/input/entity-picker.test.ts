@@ -262,17 +262,11 @@ function pickAt(heightAt: HeightField, ...positions: readonly (readonly [number,
 
 describe("entity picker", () => {
   it("picks the person under the pointer", () => {
-    expect(
-      pickAt(() => {
-        return 0;
-      }, [0, 0])
-    ).toEqual({ id: 1, kind: "person" });
+    expect(pickAt(flatGround, [0, 0])).toEqual({ id: 1, kind: "person" });
   });
 
   it("falls back to the ground when nobody is near the pointer", () => {
-    const selection = pickAt(() => {
-      return 0;
-    }, [300, 0]);
+    const selection = pickAt(flatGround, [300, 0]);
 
     expect(selection).toMatchObject({ kind: "cell" });
   });

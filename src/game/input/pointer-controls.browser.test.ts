@@ -17,6 +17,7 @@ interface Rig {
   readonly camera: GodCamera;
   readonly canvas: HTMLCanvasElement;
   readonly controls: PointerControls;
+  readonly picker: GroundPicker;
   readonly tool: ToolSpy;
 }
 
@@ -64,7 +65,7 @@ function createRig(
   const tool = createTool(canBegin, isActive);
   const tools = leading === null ? [tool] : [leading, tool];
   const picker = new GroundPicker(perspective, flatGround, WORLD_HALF_SIZE);
-  const rig = { camera, canvas, controls: new PointerControls(canvas, camera, picker, tools, tool.tap), tool };
+  const rig = { camera, canvas, controls: new PointerControls(canvas, camera, picker, tools, tool.tap), picker, tool };
 
   rigs.push(rig);
 
@@ -99,6 +100,10 @@ function runFrames(rig: Rig): void {
     rig.camera.update(0.05);
     rig.controls.update();
   }
+}
+
+function groundUnder(rig: Rig, x: number, y: number): Vector3 | null {
+  return rig.picker.pick({ x, y }, { height: CANVAS_HEIGHT, width: CANVAS_WIDTH });
 }
 
 function lastMovedPoint(tool: ToolSpy): Vector3 {
@@ -422,13 +427,12 @@ describe("pointer controls", () => {
 
   it("taps to select the ground under the release when no tool is selected", () => {
     const rig = createRig(isNeverTrue, null, isNeverTrue);
-    const picker = new GroundPicker(rig.camera.camera, flatGround, WORLD_HALF_SIZE);
 
     mouse(rig, "pointerdown", 195, 420);
     mouse(rig, "pointermove", 198, 422);
     mouse(rig, "pointerup", 198, 422);
 
-    const released = picker.pick({ x: 198, y: 422 }, { height: CANVAS_HEIGHT, width: CANVAS_WIDTH });
+    const released = groundUnder(rig, 198, 422);
 
     expect(released).toMatchObject({ y: 0 });
     expect(rig.tool.tap).toHaveBeenCalledTimes(1);
@@ -465,7 +469,6 @@ describe("pointer controls", () => {
 
   it("hovers the ground under the still pointer in the view the camera turned to", () => {
     const rig = createRig();
-    const picker = new GroundPicker(rig.camera.camera, flatGround, WORLD_HALF_SIZE);
 
     mouse(rig, "pointermove", 120, 200);
     rig.camera.orbit(0.6, 0);
@@ -476,7 +479,7 @@ describe("pointer controls", () => {
 
     rig.camera.camera.updateMatrixWorld();
 
-    const drawn = picker.pick({ x: 120, y: 200 }, { height: CANVAS_HEIGHT, width: CANVAS_WIDTH });
+    const drawn = groundUnder(rig, 120, 200);
 
     if (hovered === undefined || hovered === null || drawn === null) {
       throw new Error("The pointer should be over the ground");
