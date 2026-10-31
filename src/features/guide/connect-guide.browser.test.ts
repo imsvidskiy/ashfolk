@@ -2,6 +2,7 @@ import { describe, expect, it, onTestFinished } from "vitest";
 import type { SimulationCommand } from "../../simulation/commands.ts";
 import type { SimulationFrame } from "../../simulation/frame.ts";
 import { usePowerStore } from "../powers/power-store.ts";
+import { addCanvas } from "../testing/canvas-fixtures.ts";
 import { createCalendar, createChronicleEntry, createFrame } from "../testing/world-fixtures.ts";
 import { connectGuide } from "./connect-guide.ts";
 import { useGuideStore } from "./guide-store.ts";
@@ -52,17 +53,6 @@ function connectSession(seasonName = "Autumn") {
 
 function finishIntro(): void {
   useGuideStore.setState({ progress: { ...FRESH_GUIDE, done: [...INTRO_TIPS] } });
-}
-
-function addCanvas(): HTMLCanvasElement {
-  const canvas = document.createElement("canvas");
-
-  document.body.append(canvas);
-  onTestFinished(() => {
-    canvas.remove();
-  });
-
-  return canvas;
 }
 
 function doneTips(): readonly string[] {
