@@ -63,11 +63,12 @@ export class ObstacleMap {
       }
     }
 
+    const around: Obstacle = { radius: reach, x, z };
     const bounds = this.#grid.circleBounds(x, z, reach + LARGEST_PLANT_RADIUS);
 
     for (let row = bounds.firstRow; row <= bounds.lastRow; row += 1) {
       for (let column = bounds.firstColumn; column <= bounds.lastColumn; column += 1) {
-        this.#addPlants(obstacles, this.#grid.index(column, row), { radius: reach, x, z });
+        this.#addPlants(obstacles, this.#grid.index(column, row), around);
       }
     }
 
@@ -79,11 +80,12 @@ export class ObstacleMap {
 
     for (let plant = vegetation.firstPlantInCell(cell); plant !== NO_PLANT; plant = vegetation.nextPlantInCell(plant)) {
       const radius = BLOCKING_RADIUS_PER_METER[vegetation.species[plant]] * vegetation.height[plant];
-      const distance = around.radius + radius;
 
       if (radius < SMALLEST_OBSTACLE || !isStanding(vegetation, plant)) {
         continue;
       }
+
+      const distance = around.radius + radius;
 
       if (distanceSquared(vegetation.x[plant], vegetation.z[plant], around.x, around.z) < distance * distance) {
         obstacles.push({ radius, x: vegetation.x[plant], z: vegetation.z[plant] });
