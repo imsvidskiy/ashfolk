@@ -157,10 +157,6 @@ function reactToDanger(tick: PersonTick): void {
 }
 
 function answerFoes(tick: PersonTick): void {
-  if (tick.person.job?.kind === "flee") {
-    return;
-  }
-
   const response = respondToFoes(tick);
 
   if (response !== null) {
