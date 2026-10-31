@@ -98,6 +98,26 @@ describe("world state", () => {
     expect(world.groundChanges.takeRuns()).toEqual([{ firstRow: world.grid.rowOf(cell), rowCount: 1 }]);
   });
 
+  it("redraws the ground only when trodden earth or a crop changes by a visible step", () => {
+    const world = createTestWorld();
+
+    const cell = centerCell(world);
+    const changedRow = [{ firstRow: world.grid.rowOf(cell), rowCount: 1 }];
+
+    world.setTrodden(cell, 0.01);
+    world.setCrop(cell, 0.01);
+
+    expect(world.groundChanges.takeRuns()).toEqual([]);
+
+    world.setTrodden(cell, 0.5);
+
+    expect(world.groundChanges.takeRuns()).toEqual(changedRow);
+
+    world.setCrop(cell, 0.5);
+
+    expect(world.groundChanges.takeRuns()).toEqual(changedRow);
+  });
+
   it("tracks canopy fuel as trees are planted and removed", () => {
     const world = createTestWorld();
 
