@@ -41,7 +41,7 @@ interface FruitHost {
   readonly squash: number;
 }
 
-export interface FruitPlacement {
+interface FruitPlacement {
   readonly detail: NearLevel;
   readonly height: number;
   readonly hosts: readonly FruitHost[];

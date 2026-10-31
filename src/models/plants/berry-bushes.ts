@@ -36,7 +36,7 @@ const STEM_WIDENING = 1.18;
 const LEAF_NOISE = createVolumeNoise(createRandom(7171));
 const GROUNDED_ENVELOPE = 0.8;
 
-export type BerryBushSpecies = keyof typeof BERRY_BUSH_HEIGHTS;
+type BerryBushSpecies = keyof typeof BERRY_BUSH_HEIGHTS;
 
 const BERRY_LOOKS: Readonly<Record<BerryBushSpecies, FruitLook>> = {
   [CultivatedSpecies.Blueberry]: {

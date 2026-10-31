@@ -31,7 +31,7 @@ const FENCE_POST_TOP = 0.95;
 const FENCE_RAIL_RADIUS = 0.035;
 const FENCE_RAIL_HEIGHTS: readonly number[] = [0.42, 0.8];
 
-export type CropDetailLevel = "high" | "low";
+type CropDetailLevel = "high" | "low";
 
 interface LeafPlacement {
   readonly angle: number;
