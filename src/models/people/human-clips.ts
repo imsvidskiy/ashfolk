@@ -7,9 +7,11 @@ import type { MotionStyle } from "./appearance.ts";
 import { FIGHT_CLIPS } from "./fight-clips.ts";
 import { bendAnkle, bendElbow, bendKnee, bendTrunk, bendWrist, moveBody, swingArm, swingLeg } from "./human-joints.ts";
 import { HumanBone, otherSide } from "./human-skeleton.ts";
-import { cycleLegs, RUNNING, WALKING } from "./leg-cycles.ts";
+import { bounceBody, cycleLegs, RUNNING, strideScale, WALKING } from "./leg-cycles.ts";
 import { plantFeet } from "./planted-feet.ts";
 
+const CARRYING_STRIDE = 0.9;
+const CARRYING_ARM_SWING = 0.6;
 const LEAP_STRIDE = 1.45;
 const LEAP_LIFT = 0.24;
 const KNEELING_SIDE: Side = -1;
@@ -98,6 +100,56 @@ const DRAW_ELBOW: readonly Keyframe[] = [
   [0.85, 60],
 ];
 
+const DIG_THRUST: readonly Keyframe[] = [
+  [0, 0],
+  [0.4, 0.15],
+  [0.55, 1],
+  [0.7, 0.85],
+];
+
+const FISH_STRIKE: readonly Keyframe[] = [
+  [0, 0],
+  [0.6, 0.05],
+  [0.72, 1],
+  [0.82, 0.9],
+];
+
+const BUILD_HAMMER: readonly Keyframe[] = [
+  [0, 0.1],
+  [0.5, 1],
+  [0.64, 0],
+];
+
+const THROW_WIND_UP: readonly Keyframe[] = [
+  [0, 0.2],
+  [0.38, 1],
+  [0.52, -0.6],
+  [0.7, -0.8],
+];
+
+const EAT_BITE: readonly Keyframe[] = [
+  [0, 0],
+  [0.3, 0],
+  [0.45, 1],
+  [0.62, 1],
+  [0.78, 0],
+];
+
+const PRAY_BOW: readonly Keyframe[] = [
+  [0, 0],
+  [0.35, 1],
+  [0.6, 1],
+  [0.85, 0],
+];
+
+const PLAY_CROUCH: readonly Keyframe[] = [
+  [0, 1],
+  [0.22, 0.9],
+  [0.32, 0],
+  [0.62, 0],
+  [0.76, 0.8],
+];
+
 type HumanTool = "axe" | "basket" | "diggingStick" | "drawnBow" | "hammerStone" | "pickaxe" | "spear";
 
 export interface HumanClipContext {
@@ -135,14 +187,6 @@ export const HUMAN_CLIPS: Readonly<Record<PersonPose, HumanClip>> = {
   ...FIGHT_CLIPS,
 };
 
-function strideScale(context: HumanClipContext, stride: number): number {
-  if (context.ageGroup === "elder") {
-    return stride * 0.78;
-  }
-
-  return stride;
-}
-
 function stoop(pose: Pose, context: HumanClipContext): void {
   const { posture } = context.motion;
 
@@ -175,7 +219,7 @@ function walkingArm(pose: Pose, phase: number, side: Side, amplitude: number): v
 }
 
 function carryingArms(pose: Pose, phase: number, context: HumanClipContext): void {
-  const swing = context.motion.armSwing * 0.6;
+  const swing = context.motion.armSwing * CARRYING_ARM_SWING;
 
   switch (context.carried) {
     case "wood":
@@ -228,7 +272,7 @@ function walk(pose: Pose, phase: number, context: HumanClipContext): void {
 }
 
 function carry(pose: Pose, phase: number, context: HumanClipContext): void {
-  cycleLegs(pose, phase, strideScale(context, context.motion.stride) * 0.9, WALKING);
+  cycleLegs(pose, phase, strideScale(context, context.motion.stride) * CARRYING_STRIDE, WALKING);
   walkingTrunk(pose, phase);
   carryingArms(pose, phase, context);
   stoop(pose, context);
@@ -248,7 +292,7 @@ function running(pose: Pose, phase: number, context: HumanClipContext, stride: n
   bendTrunk(pose, HumanBone.Spine, { forward: degrees(5), turnLeft: degrees(6) * cosineWave(phase) });
   bendTrunk(pose, HumanBone.Chest, { forward: degrees(4), turnLeft: degrees(5) * cosineWave(phase) });
   bendTrunk(pose, HumanBone.Head, { forward: -degrees(6) });
-  pose.height = 0.05 * Math.max(0, wave(phase * 2, -0.05));
+  bounceBody(pose, phase);
 }
 
 function run(pose: Pose, phase: number, context: HumanClipContext): void {
@@ -336,12 +380,7 @@ function chop(pose: Pose, phase: number): void {
 }
 
 function dig(pose: Pose, phase: number): void {
-  const thrust = keyframes(phase, [
-    [0, 0],
-    [0.4, 0.15],
-    [0.55, 1],
-    [0.7, 0.85],
-  ]);
+  const thrust = keyframes(phase, DIG_THRUST);
 
   moveBody(pose, { forward: degrees(18) });
   bendTrunk(pose, HumanBone.Spine, { forward: degrees(10) + degrees(8) * thrust });
@@ -363,12 +402,7 @@ function dig(pose: Pose, phase: number): void {
 }
 
 function fish(pose: Pose, phase: number): void {
-  const strike = keyframes(phase, [
-    [0, 0],
-    [0.6, 0.05],
-    [0.72, 1],
-    [0.82, 0.9],
-  ]);
+  const strike = keyframes(phase, FISH_STRIKE);
 
   moveBody(pose, { forward: degrees(10) });
   bendTrunk(pose, HumanBone.Spine, { forward: degrees(6) + degrees(10) * strike });
@@ -387,11 +421,7 @@ function fish(pose: Pose, phase: number): void {
 }
 
 function build(pose: Pose, phase: number): void {
-  const hammer = keyframes(phase, [
-    [0, 0.1],
-    [0.5, 1],
-    [0.64, 0],
-  ]);
+  const hammer = keyframes(phase, BUILD_HAMMER);
 
   pose.grounding = "body";
   moveBody(pose, { forward: degrees(8) });
@@ -412,12 +442,7 @@ function build(pose: Pose, phase: number): void {
 }
 
 function throwSpear(pose: Pose, phase: number): void {
-  const windUp = keyframes(phase, [
-    [0, 0.2],
-    [0.38, 1],
-    [0.52, -0.6],
-    [0.7, -0.8],
-  ]);
+  const windUp = keyframes(phase, THROW_WIND_UP);
 
   moveBody(pose, { forward: -degrees(6) * windUp, turnLeft: degrees(28) * windUp });
   bendTrunk(pose, HumanBone.Chest, { forward: -degrees(8) * windUp, turnLeft: degrees(18) * windUp });
@@ -509,13 +534,7 @@ function sit(pose: Pose, phase: number): void {
 }
 
 function eat(pose: Pose, phase: number): void {
-  const bite = keyframes(phase, [
-    [0, 0],
-    [0.3, 0],
-    [0.45, 1],
-    [0.62, 1],
-    [0.78, 0],
-  ]);
+  const bite = keyframes(phase, EAT_BITE);
 
   sitting(pose);
   bendTrunk(pose, HumanBone.Head, { forward: degrees(10) - degrees(8) * bite });
@@ -540,12 +559,7 @@ function sleep(pose: Pose, phase: number): void {
 }
 
 function pray(pose: Pose, phase: number): void {
-  const bow = keyframes(phase, [
-    [0, 0],
-    [0.35, 1],
-    [0.6, 1],
-    [0.85, 0],
-  ]);
+  const bow = keyframes(phase, PRAY_BOW);
 
   pose.grounding = "body";
   bendTrunk(pose, HumanBone.Spine, { forward: degrees(6) + degrees(22) * bow });
@@ -562,13 +576,7 @@ function pray(pose: Pose, phase: number): void {
 }
 
 function play(pose: Pose, phase: number): void {
-  const crouch = keyframes(phase, [
-    [0, 1],
-    [0.22, 0.9],
-    [0.32, 0],
-    [0.62, 0],
-    [0.76, 0.8],
-  ]);
+  const crouch = keyframes(phase, PLAY_CROUCH);
 
   pose.height = 0.24 * arc(phase, 0.3, 0.36);
   moveBody(pose, { forward: degrees(18) * crouch });

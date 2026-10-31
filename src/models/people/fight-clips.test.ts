@@ -1,5 +1,6 @@
 import { Vector3 } from "three";
 import { describe, expect, it } from "vitest";
+import { ONCE_END } from "../../rendering/agents/agent-motion.ts";
 import { Pose } from "../rig/pose.ts";
 import { SkeletonPoser } from "../rig/skeleton-poser.ts";
 import { isTorso, loosePieces, TOUCHING } from "../testing/mesh-connectivity.ts";
@@ -8,7 +9,7 @@ import { ADULT, humanPartsMesh, jointOf, pointOf, posedHuman, TRIBE } from "../t
 import { personAppearance } from "./appearance.ts";
 import { applyHumanClip } from "./human-clips.ts";
 import { HUMAN_DETAILS } from "./human-detail.ts";
-import { buildHumanParts, type HumanPart } from "./human-model.ts";
+import { buildHumanParts } from "./human-model.ts";
 import { humanBoneScales } from "./human-proportions.ts";
 import { HUMAN_SKELETON, HumanBone } from "./human-skeleton.ts";
 import { LEFT_FIST, RIGHT_FIST } from "./prop-placement.ts";
@@ -62,21 +63,28 @@ describe("fight clips", () => {
     expect(jointOf(fallen, HumanBone.Head).distanceTo(jointOf(dead, HumanBone.Head))).toBeLessThan(0.15);
   });
 
+  it("stay lying where a played-once clip comes to rest", () => {
+    const fallen = posedHuman("fall", ONCE_END);
+    const dead = posedHuman("dead", 0);
+
+    expect(jointOf(fallen, HumanBone.Pelvis).y).toBeLessThan(0.3);
+    expect(jointOf(fallen, HumanBone.Head).distanceTo(jointOf(dead, HumanBone.Head))).toBeLessThan(0.15);
+  });
+
   it("keep the weapons in the hands through every fight", () => {
-    const appearance = personAppearance({ age: 30, isFemale: false, seed: 0.37, tribe: TRIBE });
-    const weapons: readonly HumanPart[] = ["spear", "bow", "quiver", "warPaint"];
+    const { body } = personAppearance({ age: 30, isFemale: false, seed: 0.37, tribe: TRIBE });
+
+    const armed = humanPartsMesh(parts, ["bodyMale", "spear", "bow", "quiver", "warPaint"]);
+    const scales = humanBoneScales(body);
     const poser = new SkeletonPoser(HUMAN_SKELETON);
     const pose = new Pose(HUMAN_SKELETON.bones.length);
 
     for (const clip of ["march", "charge", "thrust", "block", "flinch"] as const) {
       for (const phase of [0.1, 0.45, 0.8]) {
         applyHumanClip(pose, clip, phase, ADULT);
-        poser.pose(pose, humanBoneScales(appearance.body));
+        poser.pose(pose, scales);
 
-        const names: HumanPart[] = ["bodyMale", ...weapons];
-        const mesh = posedMesh(humanPartsMesh(parts, names), poser);
-
-        expect(loosePieces(mesh, TOUCHING, isTorso), `${clip} ${phase}`).toEqual([]);
+        expect(loosePieces(posedMesh(armed, poser), TOUCHING, isTorso), `${clip} ${phase}`).toEqual([]);
       }
     }
   });

@@ -37,8 +37,7 @@ export function addWarPaint(builder: MeshBuilder, detail: HumanDetail): void {
           [0.05, 1.606 - drop, 0.09],
           [0.074, 1.598 - drop, 0.072],
         ],
-        0.0055,
-        -0.001
+        0.0055
       );
 
       builder.add(tube(stroke, { radialSegments: segments }), { style: face, transform: mirror });
@@ -54,12 +53,9 @@ export function addWarPaint(builder: MeshBuilder, detail: HumanDetail): void {
           [0, 1.678, 0.1],
           [0.05, 1.672, 0.088],
         ],
-        0.006,
-        -0.001
+        0.006
       ),
-      {
-        radialSegments: segments,
-      }
+      { radialSegments: segments }
     ),
     { style: face }
   );

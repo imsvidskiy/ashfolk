@@ -1,7 +1,12 @@
 import { SIDES } from "../mesh/transforms.ts";
-import { cosineWave, degrees, pulse } from "../rig/curves.ts";
+import { cosineWave, degrees, pulse, wave } from "../rig/curves.ts";
 import type { Pose } from "../rig/pose.ts";
+import type { HumanClipContext } from "./human-clips.ts";
 import { bendAnkle, bendKnee, swingLeg } from "./human-joints.ts";
+
+const BOUNCE_HEIGHT = 0.05;
+const BOUNCE_LAG = 0.05;
+const ELDER_STRIDE = 0.78;
 
 interface StepTiming {
   readonly heelToes: number;
@@ -51,6 +56,14 @@ export const MARCHING: LegCycle = { knee: 8, lean: 6, lift: 18, outward: 3, reac
 export const RUNNING: LegCycle = { knee: 18, lean: 14, lift: 22, outward: 2, reach: 92, swing: 44, timing: RUN_STEP };
 export const CHARGING: LegCycle = { knee: 20, lean: 16, lift: 22, outward: 3, reach: 92, swing: 44, timing: RUN_STEP };
 
+export function strideScale(context: HumanClipContext, stride: number): number {
+  if (context.ageGroup === "elder") {
+    return stride * ELDER_STRIDE;
+  }
+
+  return stride;
+}
+
 export function cycleLegs(pose: Pose, phase: number, stride: number, cycle: LegCycle): void {
   const { knee, lean, lift, outward, reach, swing, timing } = cycle;
   const { heelToes, liftWidth, pushOffCenter, pushOffToes, pushOffWidth, reachCenter, reachWidth, swingToes } = timing;
@@ -72,4 +85,8 @@ export function cycleLegs(pose: Pose, phase: number, stride: number, cycle: LegC
     );
     bendAnkle(pose, side, toesUp);
   }
+}
+
+export function bounceBody(pose: Pose, phase: number): void {
+  pose.height = BOUNCE_HEIGHT * Math.max(0, wave(phase * 2, -BOUNCE_LAG));
 }

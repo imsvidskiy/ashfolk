@@ -3,13 +3,30 @@ import { createVolumeNoise } from "../../shared/noise.ts";
 import { createRandom } from "../../shared/random.ts";
 import { MaterialSlot, type MaterialSlotIndex } from "../materials.ts";
 import type { MeshBuilder } from "../mesh/mesh-builder.ts";
-import type { Shape } from "../mesh/shape.ts";
-import { blob, lathe, sphere } from "../mesh/shapes.ts";
+import { blob, sphere } from "../mesh/shapes.ts";
 import { type Triple, transformOf } from "../mesh/transforms.ts";
-import { type HumanDetail, trimmedRing, trimSegments } from "./human-detail.ts";
-import { CRADLE, inLeftHand, LEFT_FIST, onChest } from "./prop-placement.ts";
+import { type HumanDetail, trimSegments } from "./human-detail.ts";
+import { addBasket, type Basket, CRADLE, inLeftHand, LEFT_FIST, onChest } from "./prop-placement.ts";
 
 const LOAD_NOISE = createVolumeNoise(createRandom(5151));
+
+const FRUIT_BASKET: Basket = {
+  depth: 0.28,
+  profile: [
+    { radius: 0, y: 0 },
+    { radius: 0.08, y: 0.004 },
+    { radius: 0.11, y: 0.055 },
+    { radius: 0.12, y: 0.12 },
+    { radius: 0.112, y: 0.135 },
+    { radius: 0.1, y: 0.128 },
+    { radius: 0.092, y: 0.065 },
+    { radius: 0, y: 0.055 },
+  ],
+  rimHeight: 0.13,
+  rimRadius: 0.108,
+  rimStretch: 1.35,
+  rimThickness: 0.008,
+};
 
 interface Lump {
   readonly offset: Triple;
@@ -65,37 +82,11 @@ export function addCarriedClay(builder: MeshBuilder, detail: HumanDetail): void 
   );
 }
 
-function basketShape(detail: HumanDetail): Shape {
-  return lathe(
-    [
-      { radius: 0, y: 0 },
-      { radius: 0.08, y: 0.004 },
-      { radius: 0.11, y: 0.055 },
-      { radius: 0.12, y: 0.12 },
-      { radius: 0.112, y: 0.135 },
-      { radius: 0.1, y: 0.128 },
-      { radius: 0.092, y: 0.065 },
-      { radius: 0, y: 0.055 },
-    ],
-    detail.limbSegments + 3
-  );
-}
-
 export function addCarriedFruit(builder: MeshBuilder, detail: HumanDetail): void {
-  const [x, y, z] = LEFT_FIST;
-
-  const bottom = y - 0.28;
-
-  builder.add(basketShape(detail), {
-    style: inLeftHand(MaterialSlot.Thatch),
-    transform: transformOf({ position: [x, bottom, z] }),
-  });
-  builder.add(trimmedRing(detail, 0.108, 0.008, 14), {
-    style: inLeftHand(MaterialSlot.Wood),
-    transform: transformOf({ position: [x, bottom + 0.13, z], rotation: [0, 0, Math.PI / 2], scale: [1.35, 1, 1] }),
-  });
+  const [x, , z] = LEFT_FIST;
 
   const apples = detail.hasSmallParts ? 7 : 4;
+  const bottom = addBasket(builder, detail, FRUIT_BASKET);
 
   for (let apple = 0; apple < apples; apple += 1) {
     const angle = (apple / apples) * FULL_TURN;
