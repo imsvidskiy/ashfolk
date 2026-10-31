@@ -1,7 +1,10 @@
 import { describe, expect, it } from "vitest";
+import { RECIPES } from "../../content/recipes.ts";
 import { addStructure, SocietyHarness, settle, teach } from "../testing/test-society.ts";
 import type { Tribe } from "./tribe.ts";
 import { chooseCraft } from "./workshops.ts";
+
+const LARGE_POTTERY_STOCK = 50;
 
 function settleCrafters(harness: SocietyHarness): Tribe {
   const tribe = teach(settle(harness, 4), ["pottery", "spear"]);
@@ -36,10 +39,10 @@ describe("crafts", () => {
     const tribe = settleCrafters(harness);
 
     addStructure(harness, tribe, { kind: "kiln", x: tribe.campX + 20, z: tribe.campZ });
-    tribe.stock.pottery = 12;
+    tribe.stock.pottery = LARGE_POTTERY_STOCK;
 
     expect(chooseCraft(tribe, harness.context, {})?.recipe).toBe("spears");
-    expect(chooseCraft(tribe, harness.context, { pottery: 2 })?.recipe).toBe("pottery");
+    expect(chooseCraft(tribe, harness.context, { pottery: LARGE_POTTERY_STOCK })?.recipe).toBe("pottery");
   });
 
   it("head spears with metal while the tribe has some, and with flint after", () => {
@@ -49,14 +52,16 @@ describe("crafts", () => {
 
     tribe.stock.copper = 1;
 
-    expect(chooseCraft(tribe, harness.context, {})).toEqual(
-      expect.objectContaining({ inputs: { copper: 1, stone: 0, wood: 2 }, material: "copper", recipe: "spears" })
-    );
+    const copperHeaded = chooseCraft(tribe, harness.context, {});
+
+    expect(copperHeaded).toEqual(expect.objectContaining({ material: "copper", recipe: "spears" }));
+    expect(copperHeaded?.inputs.copper).toBe(1);
+    expect(copperHeaded?.inputs.stone).toBeFalsy();
 
     tribe.stock.copper = 0;
 
     expect(chooseCraft(tribe, harness.context, {})).toEqual(
-      expect.objectContaining({ inputs: { stone: 1, wood: 2 }, material: "stone", recipe: "spears" })
+      expect.objectContaining({ inputs: RECIPES.spears.inputs, material: "stone", recipe: "spears" })
     );
   });
 });

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { addShelter, MORNING, SocietyHarness, settle } from "../testing/test-society.ts";
 import { floodCells } from "../testing/test-world.ts";
+import { LONGEST_MIGRATION_DAYS } from "./camp-sites.ts";
 import { assignHomes } from "./housing.ts";
 import type { Person } from "./person.ts";
 import { considerMoving, considerSplit, updateMigration } from "./settlement.ts";
@@ -8,6 +9,7 @@ import type { Tribe } from "./tribe.ts";
 
 const TRIBE_SIZE = 6;
 const STRAY_DISTANCE = 150;
+const OVERDUE_DAYS = 0.5;
 
 interface SplittingTribe {
   harness: SocietyHarness;
@@ -117,7 +119,7 @@ describe("migrations", () => {
 
     expect(tribe.isMigrating).toBe(true);
 
-    tribe.migrationStartDay -= 2;
+    tribe.migrationStartDay -= LONGEST_MIGRATION_DAYS + OVERDUE_DAYS;
     updateMigration(tribe, members, harness.context);
 
     expect(tribe.isMigrating).toBe(false);

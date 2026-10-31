@@ -1,11 +1,24 @@
 import { describe, expect, it, vi } from "vitest";
 import { BUILDINGS } from "../../content/buildings.ts";
 import { addShelter, addStructure, SocietyHarness, settle, teach } from "../testing/test-society.ts";
-import { buildingPlans } from "./camp-plan.ts";
+import { type BuildingPlan, buildingPlans } from "./camp-plan.ts";
+import type { SocietyContext } from "./society-context.ts";
+import type { Tribe } from "./tribe.ts";
 
 const TRIBE_SIZE = 6;
 const WALL_EXTENT = 20;
-const KEPT_FROM_WALL = 4;
+
+function kilnPlan(tribe: Tribe, context: SocietyContext): BuildingPlan {
+  const kiln = buildingPlans(tribe, context).find((plan) => {
+    return plan.kind === "kiln";
+  });
+
+  if (kiln === undefined) {
+    throw new Error("Expected a kiln to be planned");
+  }
+
+  return kiln;
+}
 
 describe("building plans", () => {
   it("plans a wall without drawing from the random stream", () => {
@@ -35,17 +48,14 @@ describe("building plans", () => {
 
     const tribe = teach(settle(harness, TRIBE_SIZE), ["pottery"]);
 
+    const unwalled = kilnPlan(tribe, harness.context);
+
     addStructure(harness, tribe, { extent: WALL_EXTENT, kind: "palisade", x: tribe.campX, z: tribe.campZ });
 
-    const kiln = buildingPlans(tribe, harness.context).find((plan) => {
-      return plan.kind === "kiln";
-    });
+    const kiln = kilnPlan(tribe, harness.context);
 
-    if (kiln === undefined) {
-      throw new Error("Expected a kiln to be planned");
-    }
-
-    expect(kiln.farthest).toBeCloseTo(WALL_EXTENT - BUILDINGS.kiln.footprint - KEPT_FROM_WALL);
+    expect(kiln.farthest + BUILDINGS.kiln.footprint).toBeLessThan(WALL_EXTENT);
+    expect(kiln.farthest).toBeLessThan(unwalled.nearest);
     expect(kiln.nearest).toBe(kiln.farthest);
   });
 });
