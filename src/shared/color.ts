@@ -1,9 +1,10 @@
 import { lerp, saturate } from "./math.ts";
 
 const HEX_COLOR = /^#[0-9a-f]{6}$/iu;
-const CHANNEL_MAXIMUM = 255;
-const RED_FACTOR = 65_536;
-const GREEN_FACTOR = 256;
+const CHANNEL_LEVELS = 256;
+const CHANNEL_MAXIMUM = CHANNEL_LEVELS - 1;
+const RED_FACTOR = CHANNEL_LEVELS * CHANNEL_LEVELS;
+const GREEN_FACTOR = CHANNEL_LEVELS;
 
 type ColorChannels = readonly [red: number, green: number, blue: number];
 
@@ -16,9 +17,9 @@ export function parseHexColor(text: string): number {
 }
 
 export function colorChannels(color: number): ColorChannels {
-  const red = Math.floor(color / RED_FACTOR) % GREEN_FACTOR;
-  const green = Math.floor(color / GREEN_FACTOR) % GREEN_FACTOR;
-  const blue = color % GREEN_FACTOR;
+  const red = Math.floor(color / RED_FACTOR) % CHANNEL_LEVELS;
+  const green = Math.floor(color / GREEN_FACTOR) % CHANNEL_LEVELS;
+  const blue = color % CHANNEL_LEVELS;
 
   return [red / CHANNEL_MAXIMUM, green / CHANNEL_MAXIMUM, blue / CHANNEL_MAXIMUM];
 }
