@@ -1,7 +1,16 @@
 import { describe, expect, it } from "vitest";
 import { Ground } from "../content/grounds.ts";
 import { PlantSpecies } from "../content/plants.ts";
-import { admitsWildPlant, canGrowWild, canStandOn, type FootingTerrain, isOpenGround, slopeAt } from "./footing.ts";
+import {
+  admitsWildPlant,
+  canGrowWild,
+  canStandOn,
+  type FootingTerrain,
+  hasRoomToGrow,
+  isOpenGround,
+  isWalkableGround,
+  slopeAt,
+} from "./footing.ts";
 import { landEverywhere } from "./testing/terrain-fixtures.ts";
 import { NO_WATER } from "./water.ts";
 import { WorldGrid } from "./world-grid.ts";
@@ -115,6 +124,25 @@ describe("footing", () => {
   });
 });
 
+describe("walkable ground", () => {
+  it("takes walkers onto dry land below the walkable slope, right up to the water", () => {
+    const terrain = terrainOf((column) => {
+      return column * column;
+    });
+    const pond = grid.index(2, 3);
+    const cliff = grid.index(3, 5);
+
+    terrain.waterSurface[pond] = 50;
+    terrain.coastDistance[cliff] = -2;
+
+    expect(isWalkableGround(terrain, grid, grid.index(5, 3))).toBe(true);
+    expect(isWalkableGround(terrain, grid, grid.index(6, 3))).toBe(false);
+    expect(isWalkableGround(terrain, grid, grid.index(3, 3))).toBe(true);
+    expect(isWalkableGround(terrain, grid, pond)).toBe(false);
+    expect(isWalkableGround(terrain, grid, cliff)).toBe(false);
+  });
+});
+
 describe("wild growth", () => {
   it("lets wild plants into full woodland and keeps trees out of a bare glade", () => {
     expect(admittedCells(1, PlantSpecies.Spruce)).toBe(grid.cellCount);
@@ -125,6 +153,19 @@ describe("wild growth", () => {
   it("keeps more bushes than trees in a thin stand", () => {
     expect(admittedCells(0.3, PlantSpecies.Bush)).toBeGreaterThan(admittedCells(0.3, PlantSpecies.Oak));
     expect(admittedCells(0, PlantSpecies.Bush)).toBeGreaterThan(grid.cellCount * 0.3);
+  });
+
+  it("keeps wild plants clear of the coast and off the grid", () => {
+    const terrain = woodlandOf(1);
+    const x = grid.centerX(3);
+    const z = grid.centerZ(3);
+
+    const nearCoast = { ...terrain, coastDistance: new Float32Array(grid.cellCount).fill(3) };
+
+    expect(hasRoomToGrow(terrain, grid, x, z, PlantSpecies.Oak)).toBe(true);
+    expect(canGrowWild(nearCoast, grid, grid.cellAt(x, z), PlantSpecies.Oak)).toBe(true);
+    expect(hasRoomToGrow(nearCoast, grid, x, z, PlantSpecies.Oak)).toBe(false);
+    expect(hasRoomToGrow(terrain, grid, grid.halfSize + 5, z, PlantSpecies.Oak)).toBe(false);
   });
 
   it("asks the slope and the woodland together", () => {

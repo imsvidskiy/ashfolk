@@ -170,7 +170,7 @@ function endAtCoast(spacing: Spacing, chain: RiverChain): RiverChain {
   }
 
   const mouth = chain.cells.findIndex((cell) => {
-    return grid.isOnEdge(cell) || touchesOffIsland(grid, coastDistance, cell);
+    return grid.isOnEdge(cell) || touchesOffIsland(coastDistance, grid, cell);
   });
 
   if (mouth < 0) {
@@ -536,6 +536,7 @@ export function spaceRiverChains(land: RiverLand, chains: readonly RiverChain[])
 
     if (source === null) {
       claim(spacing, spaced, kept, spaced.length);
+
       continue;
     }
 

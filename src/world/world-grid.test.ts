@@ -58,6 +58,28 @@ describe("world grid", () => {
     expect(grid.distanceBetween(grid.index(2, 2), grid.index(3, 3))).toBeCloseTo(10 * Math.SQRT2);
   });
 
+  it("lists the cells whose centers lie within a radius, inside the grid", () => {
+    expect(columnsAndRows(grid.cellsInRadius(grid.centerX(4), grid.centerZ(4), 10))).toEqual([
+      "4,3",
+      "3,4",
+      "4,4",
+      "5,4",
+      "4,5",
+    ]);
+    expect(columnsAndRows(grid.cellsInRadius(grid.centerX(0), grid.centerZ(0), 15))).toEqual([
+      "0,0",
+      "1,0",
+      "0,1",
+      "1,1",
+    ]);
+  });
+
+  it("tells the cells on the rim of the grid", () => {
+    expect(grid.isOnEdge(grid.index(0, 3))).toBe(true);
+    expect(grid.isOnEdge(grid.index(4, 7))).toBe(true);
+    expect(grid.isOnEdge(grid.index(1, 6))).toBe(false);
+  });
+
   it("clamps the bounds of a circle to the grid", () => {
     expect(grid.circleBounds(-35, 30, 12)).toEqual({ firstColumn: 0, firstRow: 5, lastColumn: 1, lastRow: 7 });
   });

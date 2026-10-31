@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { pondEdgeReach, pondOutlineExtent, pondOutlineRadius, type Spring } from "./water.ts";
+import { hasWater, NO_WATER, pondEdgeReach, pondOutlineExtent, pondOutlineRadius, type Spring } from "./water.ts";
 
 const SAMPLES = 128;
 const SHAPE_SEEDS = 64;
@@ -112,5 +112,14 @@ describe("pond outline", () => {
     expect(quantileOf(ratios, 0.1)).toBeLessThan(1.3);
     expect(quantileOf(ratios, 0.5)).toBeGreaterThan(1.4);
     expect(quantileOf(ratios, 0.9)).toBeGreaterThan(2.1);
+  });
+});
+
+describe("the water rule", () => {
+  it("counts water only where it stands clearly above the ground", () => {
+    expect(hasWater(100.5, 100)).toBe(true);
+    expect(hasWater(100.04, 100)).toBe(false);
+    expect(hasWater(99, 100)).toBe(false);
+    expect(hasWater(NO_WATER, NO_WATER - 1)).toBe(false);
   });
 });

@@ -150,6 +150,7 @@ function fillDepressions(heights: Float32Array, grid: WorldGrid, coastDistance: 
   const receivers = new Int32Array(grid.cellCount).fill(NO_CELL);
   const order = new Int32Array(grid.cellCount);
   const heap = new MinHeap(size * 16);
+
   let processed = 0;
 
   function seedCell(cell: number): void {
@@ -169,7 +170,7 @@ function fillDepressions(heights: Float32Array, grid: WorldGrid, coastDistance: 
   }
 
   for (let cell = 0; cell < grid.cellCount; cell += 1) {
-    if (isOnIsland(coastDistance, cell) && touchesOffIsland(grid, coastDistance, cell)) {
+    if (isOnIsland(coastDistance, cell) && touchesOffIsland(coastDistance, grid, cell)) {
       seedCell(cell);
     }
   }

@@ -32,6 +32,17 @@ describe("row change tracker", () => {
 
     expect(tracker.takeRuns()).toEqual([]);
   });
+
+  it("takes one row at a time and leaves the others marked", () => {
+    const tracker = new RowChangeTracker(8);
+
+    tracker.markRows(2, 3);
+
+    expect(tracker.takeRow(2)).toBe(true);
+    expect(tracker.takeRow(2)).toBe(false);
+    expect(tracker.takeRow(4)).toBe(false);
+    expect(tracker.takeRuns()).toEqual([{ firstRow: 3, rowCount: 1 }]);
+  });
 });
 
 describe("region change tracker", () => {

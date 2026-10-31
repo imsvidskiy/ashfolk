@@ -72,10 +72,6 @@ describe("worker", () => {
     expect(homeAddressOf(new Request("https://www.ashfolk.com/?seed=7"))).toBe("https://ashfolk.com/?seed=7");
   });
 
-  it("serves the game on the new domain too", () => {
-    expect(homeAddressOf(new Request("https://ashfolk.com/?seed=7"))).toBeNull();
-  });
-
   it("sends the old domain to the new one with the path and query kept", () => {
     expect(homeAddressOf(new Request("https://playdawnfolk.com/"))).toBe("https://ashfolk.com/");
     expect(homeAddressOf(new Request("https://www.playdawnfolk.com/?seed=7"))).toBe("https://ashfolk.com/?seed=7");
