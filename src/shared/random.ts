@@ -53,13 +53,11 @@ class SeededRandom implements RandomSource {
   }
 
   pick<Item>(items: readonly Item[]): Item {
-    const item = items[this.integer(0, items.length)];
-
-    if (item === undefined) {
+    if (items.length === 0) {
       throw new RangeError("Cannot pick from an empty list");
     }
 
-    return item;
+    return items[this.integer(0, items.length)];
   }
 
   state(): RandomState {
