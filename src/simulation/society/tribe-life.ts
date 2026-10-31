@@ -63,22 +63,28 @@ function buildingLearning(tick: TribeTick): number {
   return workshop + totem;
 }
 
+function memberLearning(members: readonly Person[]): number {
+  let adults = 0;
+  let elders = 0;
+
+  for (const person of members) {
+    if (!isChild(person)) {
+      adults += 1;
+    }
+
+    if (isElder(person)) {
+      elders += 1;
+    }
+  }
+
+  return adults * ADULT_LEARNING + elders * ELDER_LEARNING;
+}
+
 function learnAndDiscover(tick: TribeTick): void {
   const { context, members, tribe } = tick;
 
-  const adults = members.filter((person) => {
-    return !isChild(person);
-  }).length;
-  const elders = members.filter((person) => {
-    return isElder(person);
-  }).length;
-
   const learning =
-    BASE_LEARNING_PER_DAY +
-    adults * ADULT_LEARNING +
-    elders * ELDER_LEARNING +
-    tribe.faith * FAITH_LEARNING +
-    buildingLearning(tick);
+    BASE_LEARNING_PER_DAY + memberLearning(members) + tribe.faith * FAITH_LEARNING + buildingLearning(tick);
 
   learn(tribe, tick.days * learning, context.rules);
   discoverUpcoming(tribe, context);
