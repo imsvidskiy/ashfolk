@@ -33,11 +33,13 @@ describe("opening a session", () => {
 
   it("starts no worker once the opening is canceled", async () => {
     const terminate = vi.spyOn(Worker.prototype, "terminate");
+    const createWorker = vi.spyOn(globalThis, "Worker");
     const opening = new AbortController();
 
     opening.abort();
 
     await expect(openSession(SMALL_WORLD, ignore, opening.signal)).rejects.toThrow();
+    expect(createWorker).not.toHaveBeenCalled();
     expect(terminate).not.toHaveBeenCalled();
   });
 });
