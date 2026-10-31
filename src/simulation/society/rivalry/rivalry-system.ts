@@ -353,16 +353,18 @@ export class RivalrySystem {
       return;
     }
 
-    if (!sendEnvoy(relation, seeker, host, context)) {
-      this.#makePeace(relation, context);
-      this.#chronicle.record({
-        category: "peace",
-        text: truceText(seeker, host),
-        tribeId: seeker.id,
-        x: (seeker.campX + host.campX) / 2,
-        z: (seeker.campZ + host.campZ) / 2,
-      });
+    if (sendEnvoy(relation, seeker, host, context)) {
+      return;
     }
+
+    this.#makePeace(relation, context);
+    this.#chronicle.record({
+      category: "peace",
+      text: truceText(seeker, host),
+      tribeId: seeker.id,
+      x: (seeker.campX + host.campX) / 2,
+      z: (seeker.campZ + host.campZ) / 2,
+    });
   }
 
   #makePeace(relation: Relation, context: SocietyContext): void {

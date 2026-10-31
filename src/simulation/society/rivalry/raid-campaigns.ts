@@ -329,7 +329,7 @@ export class RaidCampaigns {
   }
 
   #canRaid(attacker: Tribe, defender: Tribe, context: SocietyContext): boolean {
-    const { day } = context.environment;
+    const { day, season } = context.environment;
 
     if (attacker.isMigrating || defender.isMigrating || defender.memberCount < SMALLEST_VICTIM_TRIBE) {
       return false;
@@ -339,7 +339,7 @@ export class RaidCampaigns {
       return false;
     }
 
-    if (attacker.memberCount < SMALLEST_RAIDING_TRIBE || context.environment.season >= RAIDING_SEASON_END) {
+    if (attacker.memberCount < SMALLEST_RAIDING_TRIBE || season >= RAIDING_SEASON_END) {
       return false;
     }
 
