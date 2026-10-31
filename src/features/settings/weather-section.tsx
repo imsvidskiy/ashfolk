@@ -89,6 +89,7 @@ function WeatherSettings({ weather }: { readonly weather: WeatherView }) {
     useWeatherSettings(weather);
 
   const choice = weather.isAutomatic ? AUTOMATIC : weather.kind;
+  const temperatureOffset = Math.round(weather.userTemperatureOffset);
 
   return (
     <>
@@ -102,8 +103,8 @@ function WeatherSettings({ weather }: { readonly weather: WeatherView }) {
           minimum={MINIMUM_TEMPERATURE_OFFSET}
           onChange={handleTemperatureChange}
           step={1}
-          value={Math.round(weather.userTemperatureOffset)}
-          valueText={formatParameterValue(Math.round(weather.userTemperatureOffset), "celsius")}
+          value={temperatureOffset}
+          valueText={formatParameterValue(temperatureOffset, "celsius")}
         />
       </SettingsGroup>
 

@@ -9,7 +9,7 @@ const TIP_IDS: ReadonlySet<string> = new Set([...INTRO_TIPS, ...MOMENT_TIPS]);
 
 const WINTER = "Winter";
 
-export type GuideTipId = (typeof INTRO_TIPS)[number] | (typeof MOMENT_TIPS)[number];
+type GuideTipId = (typeof INTRO_TIPS)[number] | (typeof MOMENT_TIPS)[number];
 
 export type GuideEvent =
   | { readonly kind: "cameraMoved" }
