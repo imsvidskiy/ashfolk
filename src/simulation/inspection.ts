@@ -227,7 +227,7 @@ function inspectCell(x: number, z: number, sources: InspectionSources): CellInsp
     scorch: world.fields.scorch[cell],
     snow: world.fields.snow[cell],
     temperature: world.temperature(cell, sources.environment.airTemperatureOffset),
-    waterDepth: world.waterDepth(cell),
+    waterDepth: isWater ? world.waterDepth(cell) : 0,
     wetness: world.fields.wetness[cell],
     x,
     z,

@@ -22,7 +22,6 @@ import { GoalNeed } from "../tribes/goal-need.tsx";
 import { StockList } from "../tribes/stock-list.tsx";
 
 const STRONGEST_EMBERS = 0.05;
-const DEEPEST_DRY_WATER = 0.05;
 
 function landFacts({ farmland }: TribeSummary) {
   const crops = farmland.crops
@@ -146,7 +145,7 @@ export function CellDetails({ cell }: { readonly cell: CellInspection }) {
     { label: "Ground", value: cell.groundName },
     { label: "Height", value: `${Math.round(cell.height)} m` },
     { label: "Temperature", value: `${Math.round(cell.temperature)} °C` },
-    { label: "Water depth", value: cell.waterDepth > DEEPEST_DRY_WATER ? `${cell.waterDepth.toFixed(1)} m` : "Dry" },
+    { label: "Water depth", value: cell.waterDepth > 0 ? `${cell.waterDepth.toFixed(1)} m` : "Dry" },
     { label: "Snow", value: formatPercent(cell.snow) },
     { label: "Wetness", value: formatPercent(cell.wetness) },
     { label: "Scorched", value: formatPercent(cell.scorch) },
