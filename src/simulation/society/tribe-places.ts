@@ -8,6 +8,7 @@ import type { Tribe } from "./tribe.ts";
 
 export const GOLDEN_ANGLE = 2.399;
 
+const HOME_SPREAD = 1;
 const NEAREST_SLEEPER = 5;
 const SLEEPING_RINGS = 4;
 const SLEEPING_RING_GAP = 1.5;
@@ -20,8 +21,12 @@ export function campDistance(first: Tribe, second: Tribe): number {
   return Math.hypot(first.campX - second.campX, first.campZ - second.campZ);
 }
 
+export function nearPoint(center: Waypoint, spread: number, random: RandomSource): Waypoint {
+  return { x: center.x + random.signed() * spread, z: center.z + random.signed() * spread };
+}
+
 export function nearCamp(tribe: Tribe, spread: number, random: RandomSource): Waypoint {
-  return { x: tribe.campX + random.signed() * spread, z: tribe.campZ + random.signed() * spread };
+  return nearPoint(campPoint(tribe), spread, random);
 }
 
 export function campfireOf(tribe: Tribe, buildings: BuildingSystem): Building | null {
@@ -92,7 +97,7 @@ export function sleepingSpot(person: Person, tribe: Tribe, buildings: BuildingSy
   const home = completedBuilding(buildings, person.homeId);
 
   if (home !== null) {
-    return { x: home.x + random.signed(), z: home.z + random.signed() };
+    return nearPoint(home, HOME_SPREAD, random);
   }
 
   const angle = (person.id * GOLDEN_ANGLE) % FULL_TURN;
@@ -109,5 +114,5 @@ function fireOrCamp(tribe: Tribe, buildings: BuildingSystem): Waypoint {
     return campPoint(tribe);
   }
 
-  return { x: campfire.x, z: campfire.z };
+  return campfire;
 }

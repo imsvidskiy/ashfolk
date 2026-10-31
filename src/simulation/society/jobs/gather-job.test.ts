@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { isFruitTreeSpecies } from "../../../content/cultivated-plants.ts";
 import { PlantSpecies } from "../../../content/plants.ts";
 import {
   FACING_TOLERANCE,
@@ -7,10 +8,13 @@ import {
   WORK_SPOT_TOLERANCE,
   workUntilPosed,
 } from "../../testing/test-jobs.ts";
-import { firstMemberTick, isOnDryFooting, MORNING, SocietyHarness, settle } from "../../testing/test-society.ts";
+import { firstMemberTick, isOnDryFooting, MORNING, SocietyHarness, settle, teach } from "../../testing/test-society.ts";
 import { floodCells } from "../../testing/test-world.ts";
+import { carriedAmount } from "../person.ts";
+import { addPlotIfNeeded, plantSpot } from "../plots.ts";
 import type { PersonTick } from "../society-context.ts";
-import { findBerries } from "./gather-job.ts";
+import { findBerries, findFruit } from "./gather-job.ts";
+import type { Job } from "./job.ts";
 
 function ripeBushBeside(tick: PersonTick): number {
   const { mover } = tick.person;
@@ -33,6 +37,32 @@ function ripeBushBeside(tick: PersonTick): number {
   world.vegetation.setFruit(bush, 1);
 
   return bush;
+}
+
+function orchardTrees(harness: SocietyHarness, tick: PersonTick): number[] {
+  addPlotIfNeeded(tick.tribe, harness.context);
+
+  const spots = tick.tribe.plots.flatMap((plot) => {
+    return plot.spots.filter((spot) => {
+      return isFruitTreeSpecies(spot.species);
+    });
+  });
+
+  return spots.slice(0, 2).map((spot) => {
+    plantSpot(tick.tribe, spot, harness.context);
+
+    return spot.plant;
+  });
+}
+
+function nextJob(job: Job, tick: PersonTick): Job | null {
+  let current: Job | null = job;
+
+  for (let elapsed = 0; elapsed < 60 && current === job; elapsed += tick.seconds) {
+    current = job.update(tick);
+  }
+
+  return current;
 }
 
 describe("gathering berries", () => {
@@ -110,5 +140,39 @@ describe("staying dry", () => {
     expect(harness.world.touchesWater(harness.world.vegetation.cell[edgeBush])).toBe(true);
     expect(job?.claimedPlant).toBe(edgeBush);
     expect(isOnDryFooting(harness, tick.person.mover.goalX, tick.person.mover.goalZ)).toBe(true);
+  });
+});
+
+describe("picking fruit", () => {
+  it("picks the ripest orchard tree and then moves on to the next ripest", () => {
+    const harness = new SocietyHarness({ day: MORNING });
+
+    const tick = firstMemberTick(harness, teach(settle(harness, 6), ["farming", "orchards"]));
+    const { vegetation } = harness.world;
+
+    const [first, second] = orchardTrees(harness, tick);
+
+    if (first === undefined || second === undefined) {
+      throw new Error("Expected two fruit trees in the orchard");
+    }
+
+    vegetation.setFruit(first, 1);
+    vegetation.setFruit(second, 0.6);
+
+    const job = findFruit(tick);
+
+    if (job === null) {
+      throw new Error("Expected a fruit tree to pick");
+    }
+
+    expect(job.claimedPlant).toBe(first);
+
+    const next = nextJob(job, tick);
+
+    expect(next?.kind).toBe("pick");
+    expect(next?.claimedPlant).toBe(second);
+    expect(tick.tribe.claimedPlants.has(second)).toBe(true);
+    expect(vegetation.fruit[first]).toBeLessThan(1);
+    expect(carriedAmount(tick.person, "fruit")).toBeGreaterThan(0);
   });
 });

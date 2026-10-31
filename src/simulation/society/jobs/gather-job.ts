@@ -16,6 +16,7 @@ const FULL_BASKET = 5;
 const NEXT_BUSH_RADIUS = 70;
 const CHILD_SEARCH_RADIUS = 160;
 const ADULT_SEARCH_RADIUS = 380;
+const KNOWLEDGE_PER_HANDFUL = 0.25;
 
 type ForageKind = "gather" | "pick";
 
@@ -110,7 +111,7 @@ class ForageJob implements Job {
 
       vegetation.setFruit(plant, vegetation.fruit[plant] - taken);
       pickUp(tick.person, food, taken * FOOD_PER_FRUIT, food);
-      learn(tick.tribe, 0.25, tick.context.rules);
+      learn(tick.tribe, KNOWLEDGE_PER_HANDFUL, tick.context.rules);
     }
 
     if (carriedFood(tick.person) >= FULL_BASKET) {

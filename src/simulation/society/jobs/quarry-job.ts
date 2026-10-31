@@ -15,6 +15,7 @@ const CLIFF_SEARCH_RADIUS = 520;
 const TRIPS_PER_BOULDER = 3;
 const PICK_REACH = 0.6;
 const CLIFF_FACE_RADIUS = 0.5;
+const KNOWLEDGE_PER_TRIP = 0.4;
 
 export function findStone(tick: PersonTick): Job | null {
   const { person, tribe } = tick;
@@ -58,7 +59,7 @@ function startQuarrying(tick: PersonTick, target: WorkTarget): Errand {
 
 function collectStone(tick: PersonTick): Job {
   pickUp(tick.person, "stone", STONE_PER_TRIP, "stone");
-  learn(tick.tribe, 0.4, tick.context.rules);
+  learn(tick.tribe, KNOWLEDGE_PER_TRIP, tick.context.rules);
 
   return new DeliverJob(tick);
 }
