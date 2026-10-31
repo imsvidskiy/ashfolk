@@ -66,12 +66,12 @@ function chooseGame(tick: PersonTick): Animal | null {
   const { fauna } = tick.context;
 
   function isHuntable(candidate: Animal, isSmallGame: boolean): boolean {
-    const { huntingPartySize } = ANIMALS[candidate.kind];
+    const definition = ANIMALS[candidate.kind];
 
     return (
-      ANIMALS[candidate.kind].isSmallGame === isSmallGame &&
-      huntingPartySize !== null &&
-      memberCount >= huntingPartySize
+      definition.isSmallGame === isSmallGame &&
+      definition.huntingPartySize !== null &&
+      memberCount >= definition.huntingPartySize
     );
   }
 
