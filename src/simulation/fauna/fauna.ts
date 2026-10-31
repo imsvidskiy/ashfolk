@@ -570,9 +570,8 @@ export class FaunaSystem {
     }
 
     const packHunt = this.#instincts.huntOf(animal.herdId);
-    const isEngaged = this.#instincts.isEngaged(animal, packHunt);
 
-    this.#lookForThreats(animal, isEngaged, tick);
+    this.#lookForThreats(animal, this.#instincts.isEngaged(animal, packHunt), tick);
     this.#instincts.watchCornered(animal, tick);
 
     if (isHopping(animal.mover)) {
