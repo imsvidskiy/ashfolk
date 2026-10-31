@@ -28,6 +28,10 @@ const SMALLEST_RIVER_GAP = 35;
 const CONFLUENCE_REACH = 100;
 const TRUNK_LAKE_CELLS = 1.5;
 const SMOOTHING_SLACK = 10;
+const SIDE_STREAM_COLUMN = 35;
+const SIDE_STREAM_ROWS = [2, 90] as const;
+const RAISED_FROM_ROW = 50;
+const SIDE_SLOPE = 0.18;
 
 const grid = new WorldGrid({ cellSize: 10, cellsPerSide: 100 });
 
@@ -79,6 +83,16 @@ function rowCells(row: number, fromColumn: number, toColumn: number): number[] {
   const cells: number[] = [];
 
   for (let column = fromColumn; column !== toColumn + step; column += step) {
+    cells.push(grid.index(column, row));
+  }
+
+  return cells;
+}
+
+function columnCells(column: number, fromRow: number, toRow: number): number[] {
+  const cells: number[] = [];
+
+  for (let row = fromRow; row <= toRow; row += 1) {
     cells.push(grid.index(column, row));
   }
 
@@ -322,6 +336,32 @@ describe("spaceRiverChains", () => {
       joinsCell: trunkCell(15),
       mouthReceiver: trunkCell(15),
     });
+  });
+
+  it("leads a stream that runs high above a river down the slope ahead into it", () => {
+    const land = landWithLake();
+    const [headRow, endRow] = SIDE_STREAM_ROWS;
+    const side = stream(land, columnCells(SIDE_STREAM_COLUMN, headRow, endRow), 95, STREAM_FLOW);
+
+    for (let cell = 0; cell < grid.cellCount; cell += 1) {
+      if (grid.rowOf(cell) >= RAISED_FROM_ROW) {
+        land.heights[cell] += SIDE_SLOPE * Math.abs(grid.columnOf(cell) - TRUNK_COLUMN) * grid.cellSize;
+      }
+    }
+
+    const [, captured] = spaceRiverChains(land, [side, trunk()]);
+    const connector = captured.cells.slice(RAISED_FROM_ROW - headRow + 1);
+
+    expect(captured.cells.slice(0, RAISED_FROM_ROW - headRow + 1)).toEqual(
+      columnCells(SIDE_STREAM_COLUMN, headRow, RAISED_FROM_ROW)
+    );
+    expect(captured.joinsCell).toBe(trunkCell(59));
+    expect(connector.length).toBeGreaterThan(0);
+    expect(
+      connector.every((cell) => {
+        return grid.columnOf(cell) >= SIDE_STREAM_COLUMN && grid.columnOf(cell) < TRUNK_COLUMN;
+      })
+    ).toBe(true);
   });
 
   it("keeps a lake's outflow and joins a stream to it near the lake", () => {
