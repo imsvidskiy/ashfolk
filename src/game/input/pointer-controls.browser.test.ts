@@ -1,6 +1,7 @@
 import { PerspectiveCamera, type Vector3 } from "three/webgpu";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { GodCamera } from "../camera/god-camera.ts";
+import { flatGround, settle } from "../testing/view-fixtures.ts";
 import { GroundPicker } from "./ground-picker.ts";
 import { PointerControls, type TapListener, type ToolGestures } from "./pointer-controls.ts";
 
@@ -20,16 +21,6 @@ interface Rig {
 }
 
 const rigs: Rig[] = [];
-
-function settle(camera: GodCamera): void {
-  for (let step = 0; step < 60; step += 1) {
-    camera.update(0.1);
-  }
-}
-
-function flatGround(): number {
-  return 0;
-}
 
 function isAlwaysTrue(): boolean {
   return true;

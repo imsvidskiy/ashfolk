@@ -1,22 +1,13 @@
 import { PerspectiveCamera } from "three/webgpu";
 import { describe, expect, it } from "vitest";
+import { flatGround, settle } from "../testing/view-fixtures.ts";
 import { GodCamera, type GroundPoint } from "./god-camera.ts";
 
 const HALF_SIZE = 2560;
 const REACH = 10_000;
 
-function flatGround(): number {
-  return 0;
-}
-
 function createCamera(heightAt: (x: number, z: number) => number = flatGround): GodCamera {
   return new GodCamera(new PerspectiveCamera(50, 1.6, 1, 50_000), heightAt, HALF_SIZE);
-}
-
-function settle(camera: GodCamera): void {
-  for (let step = 0; step < 600; step += 1) {
-    camera.update(0.05);
-  }
 }
 
 function panDistance(pitch: number): number {

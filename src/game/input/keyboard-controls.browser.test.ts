@@ -1,6 +1,7 @@
 import { PerspectiveCamera } from "three/webgpu";
 import { afterEach, describe, expect, it } from "vitest";
 import { GodCamera } from "../camera/god-camera.ts";
+import { flatGround } from "../testing/view-fixtures.ts";
 import { KeyboardControls } from "./keyboard-controls.ts";
 
 const WORLD_HALF_SIZE = 4000;
@@ -13,13 +14,7 @@ interface Rig {
 const rigs: Rig[] = [];
 
 function createRig(): Rig {
-  const camera = new GodCamera(
-    new PerspectiveCamera(45, 1.5, 1, 40_000),
-    () => {
-      return 0;
-    },
-    WORLD_HALF_SIZE
-  );
+  const camera = new GodCamera(new PerspectiveCamera(45, 1.5, 1, 40_000), flatGround, WORLD_HALF_SIZE);
 
   camera.jumpTo({ distance: 500, targetX: 0, targetZ: 0, yaw: 0 });
 

@@ -11,7 +11,7 @@ import { createVegetatedWorld } from "../../simulation/testing/test-world.ts";
 import { ANIMAL_STRIDE, AnimalField, PERSON_STRIDE, PersonField } from "../../world/agent-buffers.ts";
 import { createVegetationChannels, PlantState, type VegetationBuffers } from "../../world/vegetation-store.ts";
 import type { GroundPoint } from "../camera/god-camera.ts";
-import { CENTER, cameraLookingAt, VIEWPORT } from "../testing/view-fixtures.ts";
+import { CENTER, cameraLookingAt, flatGround, VIEWPORT } from "../testing/view-fixtures.ts";
 import { type AgentFooting, EntityPicker, type GrabScene } from "./entity-picker.ts";
 import { GroundPicker, type HeightField, type ScreenPoint } from "./ground-picker.ts";
 import { normalizedToPixels, projectToNormalized } from "./screen-projection.ts";
@@ -249,10 +249,6 @@ function grabAt(vegetation: VegetationBuffers, ...people: readonly (readonly [nu
 
 function farCamera(): PerspectiveCamera {
   return cameraAt(0, 4000, 3000, { x: 0, y: 0, z: 0 });
-}
-
-function flatGround(): number {
-  return 0;
 }
 
 function pickAt(heightAt: HeightField, ...positions: readonly (readonly [number, number])[]): Selection | null {
