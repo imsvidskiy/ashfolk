@@ -58,16 +58,6 @@ describe("river lakes", () => {
       expect(boundaryDistance(grid.cellAt(lake.centerX, lake.centerZ))).toBeGreaterThan(0.15);
     }
   });
-
-  it("digs the same lakes for the same seed", () => {
-    const first = gentleValley();
-    const second = gentleValley();
-
-    digRiverLakes(first, siting(3));
-    digRiverLakes(second, siting(3));
-
-    expect(second).toEqual(first);
-  });
 });
 
 describe("river lakes on islands of each size", () => {

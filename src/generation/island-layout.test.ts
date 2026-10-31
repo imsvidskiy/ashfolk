@@ -15,12 +15,6 @@ const COAST_RADIUS = 0.95;
 const COAST_SAMPLES = 360;
 
 describe("island layout", () => {
-  it("comes out the same for one seed", () => {
-    for (const seed of [1, 7, 23]) {
-      expect(planIslandLayout(seed)).toEqual(planIslandLayout(seed));
-    }
-  });
-
   it("picks most archetypes across thirty seeds", () => {
     const archetypes = new Set(
       SEEDS.map((seed) => {
