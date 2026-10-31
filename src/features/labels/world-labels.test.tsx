@@ -1,9 +1,10 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, onTestFinished } from "vitest";
+import { page } from "vitest/browser";
 import { render } from "vitest-browser-react";
 import type { Landmark } from "../../game/landmarks.ts";
 import { useInterfaceStore } from "../interface/interface-store.ts";
 import { startTestEngine } from "../testing/engine-fixtures.ts";
-import { createRelation, createTribe, showWorld } from "../testing/world-fixtures.ts";
+import { createRaid, createRelation, createTribe, showWorld } from "../testing/world-fixtures.ts";
 import { WorldLabels } from "./world-labels.tsx";
 
 const PEAK: Landmark = { detail: "1460 m", id: "peak", kind: "peak", lift: 30, name: "Graycrown", x: 40, z: -20 };
@@ -19,6 +20,7 @@ const RING: Landmark = {
   z: 65,
 };
 const ON_SCREEN = { left: 240, top: 320 };
+const ADDRESS_BAR_HEIGHT = 56;
 
 describe("world labels", () => {
   it("shows nothing before the game runs", async () => {
@@ -72,6 +74,33 @@ describe("world labels", () => {
     await expect
       .element(screen.getByRole("button", { exact: false, name: "Elk Clan" }).getByRole("img", { name: "In a feud" }))
       .not.toBeInTheDocument();
+  });
+
+  it("marks a raid under way over a feud on both sides of it", async () => {
+    const { placeLabel, renderFrame } = await startTestEngine();
+
+    placeLabel.mockReturnValue(ON_SCREEN);
+    showWorld({
+      rivalry: {
+        raids: [createRaid({ attackerId: 2, defenderId: 1 })],
+        relations: [createRelation({ firstId: 1, secondId: 2, stance: "hostile" })],
+      },
+    });
+
+    const screen = await render(<WorldLabels />);
+
+    renderFrame();
+
+    await expect
+      .element(
+        screen.getByRole("button", { exact: false, name: "Bear Clan" }).getByRole("img", { name: "Raid under way" })
+      )
+      .toBeVisible();
+    await expect
+      .element(
+        screen.getByRole("button", { exact: false, name: "Wolf Clan" }).getByRole("img", { name: "Raid under way" })
+      )
+      .toBeVisible();
   });
 
   it("hides the banners the engine cannot place", async () => {
@@ -258,6 +287,27 @@ describe("world labels", () => {
     await expect.element(screen.getByText("Graycrown", { exact: true })).toBeVisible();
     placeLabel.mockClear();
     engine.session.mirror.landVersion += 1;
+    renderFrame();
+
+    expect(placeLabel).toHaveBeenCalledExactlyOnceWith(40, -20, 30);
+  });
+
+  it("places the labels again once only the window height changes", async () => {
+    const { placeLabel, renderFrame } = await startTestEngine({ landmarks: [PEAK] });
+    const { innerHeight, innerWidth } = window;
+
+    onTestFinished(async () => {
+      await page.viewport(innerWidth, innerHeight);
+    });
+    placeLabel.mockReturnValue(ON_SCREEN);
+    showWorld({ tribes: [] });
+
+    const screen = await render(<WorldLabels />);
+
+    renderFrame();
+    await expect.element(screen.getByText("Graycrown", { exact: true })).toBeVisible();
+    placeLabel.mockClear();
+    await page.viewport(innerWidth, innerHeight - ADDRESS_BAR_HEIGHT);
     renderFrame();
 
     expect(placeLabel).toHaveBeenCalledExactlyOnceWith(40, -20, 30);

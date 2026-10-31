@@ -5,7 +5,7 @@ import { TribeDot } from "../tribes/tribe-dot.tsx";
 import { useWorldStore } from "../world/world-store.ts";
 import { RAID_PHASE_LABELS } from "./rivalry-labels.ts";
 import { RelationNote, StanceBadge } from "./rivalry-parts.tsx";
-import { byStance, isRelationOf, otherTribeOf, raidOf } from "./rivalry-queries.ts";
+import { byStance, isRelationOf, otherTribeOf, raidOf, tribeWithId } from "./rivalry-queries.ts";
 
 interface NeighborProps {
   readonly relation: RelationView;
@@ -14,9 +14,7 @@ interface NeighborProps {
 }
 
 function Neighbor({ relation, tribeId, tribes }: NeighborProps) {
-  const other = tribes.find((tribe) => {
-    return tribe.id === otherTribeOf(relation, tribeId);
-  });
+  const other = tribeWithId(tribes, otherTribeOf(relation, tribeId));
 
   if (other === undefined) {
     return null;
@@ -47,9 +45,7 @@ function RaidLine({ tribeId, tribes }: { readonly tribeId: number; readonly trib
   }
 
   const isAttacker = raid.attackerId === tribeId;
-  const other = tribes.find((tribe) => {
-    return tribe.id === (isAttacker ? raid.defenderId : raid.attackerId);
-  });
+  const other = tribeWithId(tribes, isAttacker ? raid.defenderId : raid.attackerId);
   const otherName = other === undefined ? "their enemies" : `the ${other.name}`;
 
   return (

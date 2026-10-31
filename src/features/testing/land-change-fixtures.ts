@@ -7,12 +7,10 @@ import type { SavedWorldState } from "../../simulation/saved-world.ts";
 import { Simulation } from "../../simulation/simulation.ts";
 import { createVegetatedWorld } from "../../simulation/testing/test-world.ts";
 import { createSimulationWorkerApi } from "../../workers/simulation-worker-api.ts";
-import { startTestEngine } from "./engine-fixtures.ts";
+import { startTestEngine, TEST_DIMENSIONS } from "./engine-fixtures.ts";
 
 export const UNCHANGED_HEIGHT = 100;
 export const CHANGED_HEIGHT = 140;
-
-const TEST_DIMENSIONS = { cellSize: 10, cellsPerSide: 64 };
 
 interface LoadedWorldOptions {
   readonly isSavedPaused?: boolean;

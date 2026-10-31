@@ -14,6 +14,8 @@ import { Simulation } from "../../simulation/simulation.ts";
 import { createVegetatedWorld } from "../../simulation/testing/test-world.ts";
 import { createListeners } from "./listener-fixtures.ts";
 
+export const TEST_DIMENSIONS = { cellSize: 10, cellsPerSide: 64 };
+
 const TEST_CAMERA: CameraState = { distance: 300, pitch: 0.6, targetX: 0, targetZ: 0, yaw: 0.8 };
 
 interface TestEngine {
@@ -35,7 +37,7 @@ interface TestEngineOptions {
 }
 
 export async function createTestSession(): Promise<GameSession> {
-  const simulation = new Simulation(createVegetatedWorld({ dimensions: { cellSize: 10, cellsPerSide: 64 } }));
+  const simulation = new Simulation(createVegetatedWorld({ dimensions: TEST_DIMENSIONS }));
   const { session } = await createLocalSession(simulation);
 
   return session;

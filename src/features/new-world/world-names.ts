@@ -1,3 +1,5 @@
+export const LONGEST_WORLD_NAME = 32;
+
 const BEGINNINGS = [
   "Amber",
   "Ash",
@@ -47,8 +49,6 @@ const ENDINGS = [
   "vale",
   "wood",
 ] as const;
-
-export const LONGEST_WORLD_NAME = 32;
 
 function endingAfter(beginning: string, index: number): string {
   for (let offset = 0; offset < ENDINGS.length; offset += 1) {

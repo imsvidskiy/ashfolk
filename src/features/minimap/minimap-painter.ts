@@ -5,14 +5,18 @@ import { paintMinimapTerrain } from "../../rendering/minimap-image.ts";
 import { herdMarks, personMarks } from "../../rendering/minimap-marks.ts";
 import type { SimulationFrame } from "../../simulation/frame.ts";
 
-export const MAP_PIXELS = 176;
-
+const MAP_PIXELS = 176;
+const LARGEST_PIXEL_RATIO = 2;
 const TERRAIN_REFRESH_MILLISECONDS = 1000;
 const SEASON_STEP = 0.05;
 const OVERLAY_INTERVAL_MILLISECONDS = 100;
 const FIRE_COLOR = "rgb(230 82 40)";
+const SMALLEST_FIRE_PIXELS = 1.5;
+const TRIBE_RADIUS = 4.5;
+const TRIBE_OUTLINE = "white";
 const VIEW_FILL = "rgb(255 255 255 / 0.32)";
 const OUTLINE = "rgb(255 255 255 / 0.9)";
+const OUTLINE_WIDTH = 1.5;
 const FOOTPRINT_REACH_IN_WORLDS = 2;
 const TRIANGLE_HALF_WIDTH = Math.sqrt(3) / 2;
 
@@ -65,6 +69,8 @@ function isSameFootprint(first: readonly GroundPoint[], second: readonly GroundP
 export class MinimapPainter {
   readonly #canvas: HTMLCanvasElement;
   readonly #engine: EngineHandle;
+  readonly #scale: number;
+  readonly #size: number;
   readonly #terrain: HTMLCanvasElement;
   #frameRequest = 0;
   #lastOverlay = 0;
@@ -77,7 +83,14 @@ export class MinimapPainter {
   constructor(canvas: HTMLCanvasElement, engine: EngineHandle) {
     this.#canvas = canvas;
     this.#engine = engine;
+    this.#size = Math.round(MAP_PIXELS * Math.min(LARGEST_PIXEL_RATIO, window.devicePixelRatio));
+    this.#scale = this.#size / MAP_PIXELS;
     this.#terrain = document.createElement("canvas");
+
+    canvas.width = this.#size;
+    canvas.height = this.#size;
+    this.#terrain.width = this.#size;
+    this.#terrain.height = this.#size;
   }
 
   start(): void {
@@ -110,12 +123,11 @@ export class MinimapPainter {
       return;
     }
 
-    const size = this.#canvas.width;
     const { frame, grid } = this.#engine.session.mirror;
 
     const footprint = this.#engine.camera.groundFootprint(grid.worldSize * FOOTPRINT_REACH_IN_WORLDS);
 
-    const isTerrainStale = this.#isTerrainStale(time, size);
+    const isTerrainStale = this.#isTerrainStale(time);
     const isOverlayCurrent = frame === this.#paintedFrame && isSameFootprint(footprint, this.#paintedFootprint);
 
     if (!isTerrainStale && isOverlayCurrent) {
@@ -123,26 +135,22 @@ export class MinimapPainter {
     }
 
     if (isTerrainStale) {
-      this.#refreshTerrain(size);
+      this.#refreshTerrain();
       this.#lastTerrain = time;
     }
 
     this.#paintedFrame = frame;
     this.#paintedFootprint = footprint;
 
-    context.clearRect(0, 0, size, size);
+    context.clearRect(0, 0, this.#size, this.#size);
     context.drawImage(this.#terrain, 0, 0);
-    this.#drawFires(context, size);
-    this.#drawAgents(context, size);
-    this.#drawTribes(context, size);
-    this.#drawView(context, size, footprint);
+    this.#drawFires(context, frame);
+    this.#drawAgents(context, frame);
+    this.#drawTribes(context, frame);
+    this.#drawView(context, footprint);
   }
 
-  #isTerrainStale(time: number, size: number): boolean {
-    if (this.#terrain.width !== size) {
-      return true;
-    }
-
+  #isTerrainStale(time: number): boolean {
     if (time - this.#lastTerrain < TERRAIN_REFRESH_MILLISECONDS) {
       return false;
     }
@@ -155,76 +163,71 @@ export class MinimapPainter {
     return hasLandChanged || hasSeasonTurned;
   }
 
-  #refreshTerrain(size: number): void {
+  #refreshTerrain(): void {
     const { mirror } = this.#engine.session;
 
     this.#paintedLandVersion = mirror.landVersion;
     this.#paintedSeason = mirror.frame.calendar.season;
-    this.#terrain.width = size;
-    this.#terrain.height = size;
 
     const context = this.#terrain.getContext("2d");
 
-    if (context !== null) {
-      context.putImageData(paintMinimapTerrain(mirror, size), 0, 0);
+    if (context === null) {
+      return;
     }
+
+    context.putImageData(paintMinimapTerrain(mirror, this.#size), 0, 0);
   }
 
-  #toMap(x: number, z: number, size: number): [number, number] {
+  #toMap(x: number, z: number): [number, number] {
     const { grid } = this.#engine.session.mirror;
 
-    return [((x + grid.halfSize) / grid.worldSize) * size, ((z + grid.halfSize) / grid.worldSize) * size];
+    return [((x + grid.halfSize) / grid.worldSize) * this.#size, ((z + grid.halfSize) / grid.worldSize) * this.#size];
   }
 
-  #drawFires(context: CanvasRenderingContext2D, size: number): void {
-    const { frame, grid } = this.#engine.session.mirror;
+  #drawFires(context: CanvasRenderingContext2D, frame: SimulationFrame): void {
+    const { grid } = this.#engine.session.mirror;
 
-    const pixel = Math.max(1.5, size / grid.cellsPerSide);
+    const pixel = Math.max(SMALLEST_FIRE_PIXELS, this.#size / grid.cellsPerSide);
 
     context.fillStyle = FIRE_COLOR;
 
     for (const cell of frame.burningCells) {
-      const [x, y] = this.#toMap(grid.cellCenterX(cell), grid.cellCenterZ(cell), size);
+      const [x, y] = this.#toMap(grid.cellCenterX(cell), grid.cellCenterZ(cell));
 
       context.fillRect(x - pixel / 2, y - pixel / 2, pixel, pixel);
     }
   }
 
-  #drawAgents(context: CanvasRenderingContext2D, size: number): void {
-    const { frame } = this.#engine.session;
-
-    const scale = size / MAP_PIXELS;
-
-    context.lineWidth = scale;
+  #drawAgents(context: CanvasRenderingContext2D, frame: SimulationFrame): void {
+    context.lineWidth = this.#scale;
     context.strokeStyle = OUTLINE;
 
     for (const mark of [...herdMarks(frame), ...personMarks(frame)]) {
-      const [x, y] = this.#toMap(mark.x, mark.z, size);
+      const [x, y] = this.#toMap(mark.x, mark.z);
 
-      traceMark(context, mark.shape, x, y, MARK_RADII[mark.shape] * mark.scale * scale);
+      traceMark(context, mark.shape, x, y, MARK_RADII[mark.shape] * mark.scale * this.#scale);
       context.fillStyle = mark.color;
       context.fill();
       context.stroke();
     }
   }
 
-  #drawTribes(context: CanvasRenderingContext2D, size: number): void {
-    const scale = size / MAP_PIXELS;
+  #drawTribes(context: CanvasRenderingContext2D, frame: SimulationFrame): void {
+    context.lineWidth = OUTLINE_WIDTH * this.#scale;
+    context.strokeStyle = TRIBE_OUTLINE;
 
-    for (const tribe of this.#engine.session.frame.tribes) {
-      const [x, y] = this.#toMap(tribe.campX, tribe.campZ, size);
+    for (const tribe of frame.tribes) {
+      const [x, y] = this.#toMap(tribe.campX, tribe.campZ);
 
       context.beginPath();
-      context.arc(x, y, 4.5 * scale, 0, Math.PI * 2);
+      context.arc(x, y, TRIBE_RADIUS * this.#scale, 0, Math.PI * 2);
       context.fillStyle = tribe.color;
       context.fill();
-      context.lineWidth = 1.5 * scale;
-      context.strokeStyle = "white";
       context.stroke();
     }
   }
 
-  #drawView(context: CanvasRenderingContext2D, size: number, footprint: readonly GroundPoint[]): void {
+  #drawView(context: CanvasRenderingContext2D, footprint: readonly GroundPoint[]): void {
     if (footprint.length === 0) {
       return;
     }
@@ -232,7 +235,7 @@ export class MinimapPainter {
     context.beginPath();
 
     for (const point of footprint) {
-      const [x, y] = this.#toMap(point.x, point.z, size);
+      const [x, y] = this.#toMap(point.x, point.z);
 
       context.lineTo(x, y);
     }
@@ -240,7 +243,7 @@ export class MinimapPainter {
     context.closePath();
     context.fillStyle = VIEW_FILL;
     context.fill();
-    context.lineWidth = 1.5 * (size / MAP_PIXELS);
+    context.lineWidth = OUTLINE_WIDTH * this.#scale;
     context.strokeStyle = OUTLINE;
     context.stroke();
   }

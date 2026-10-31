@@ -16,18 +16,6 @@ describe("compact menu", () => {
     expect(screen.getByRole("menu").elements()).toHaveLength(0);
   });
 
-  it("lists the panels it can open", async () => {
-    useInterfaceStore.setState({ isMapOpen: false });
-
-    const screen = await render(<CompactMenu />);
-
-    await screen.getByRole("button", { name: "Menu" }).click();
-
-    await expect.element(screen.getByRole("menuitem", { name: "Journal" })).toBeVisible();
-    await expect.element(screen.getByRole("menuitem", { name: "Show the map" })).toBeVisible();
-    await expect.element(screen.getByRole("menuitem", { name: "Settings" })).toBeVisible();
-  });
-
   it("opens the journal on the tribes", async () => {
     useInterfaceStore.setState({ journalTab: "chronicle" });
 
@@ -58,6 +46,8 @@ describe("compact menu", () => {
   });
 
   it("opens the world settings", async () => {
+    useInterfaceStore.setState({ settingsTab: "island" });
+
     const screen = await render(<CompactMenu />);
 
     await screen.getByRole("button", { name: "Menu" }).click();

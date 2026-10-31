@@ -8,16 +8,6 @@ import { useInterfaceStore } from "./interface-store.ts";
 import { MenuButtons } from "./menu-buttons.tsx";
 
 describe("menu buttons", () => {
-  it("offers the journal, the map and the settings", async () => {
-    const screen = await render(<MenuButtons />);
-
-    const panels = screen.getByRole("navigation", { name: "Panels" });
-
-    await expect.element(panels.getByRole("button", { name: "Journal" })).toBeVisible();
-    await expect.element(panels.getByRole("button", { name: "Map" })).toBeVisible();
-    await expect.element(panels.getByRole("button", { name: "Settings" })).toBeVisible();
-  });
-
   it("opens and closes the journal", async () => {
     const screen = await render(<MenuButtons />);
 
