@@ -80,6 +80,13 @@ interface ScreenHit {
   readonly reach: number;
 }
 
+type PixelPoint = readonly [number, number];
+
+interface RaySearch {
+  readonly farthest: number;
+  readonly spots: GroundPoint[];
+}
+
 interface AgentLayout {
   readonly body: (data: Float32Array, offset: number) => AgentBody;
   readonly fields: MotionFields & { readonly Heading: number; readonly Id: number };
@@ -89,13 +96,6 @@ interface AgentLayout {
 
 const PEOPLE: AgentLayout = { body: personBody, fields: PersonField, kind: "person", stride: PERSON_STRIDE };
 const ANIMALS: AgentLayout = { body: animalBody, fields: AnimalField, kind: "animal", stride: ANIMAL_STRIDE };
-
-type PixelPoint = readonly [number, number];
-
-interface RaySearch {
-  readonly farthest: number;
-  readonly spots: GroundPoint[];
-}
 
 function searchAlong(ray: Ray, end: Vector3, heightAt: HeightField): RaySearch {
   const { origin } = ray;
@@ -159,10 +159,10 @@ export class EntityPicker {
   readonly #camera: PerspectiveCamera;
   readonly #drawnHeading: DrawnHeading;
   readonly #heightAt: HeightField;
-  readonly #standingAt: AgentFooting;
   readonly #point = new Vector3();
   readonly #projected = new Vector3();
   readonly #raycaster = new Raycaster();
+  readonly #standingAt: AgentFooting;
 
   constructor(camera: PerspectiveCamera, heightAt: HeightField, standingAt: AgentFooting, drawnHeading: DrawnHeading) {
     this.#camera = camera;
@@ -295,10 +295,10 @@ export class EntityPicker {
 
   #grabbablePlant(scene: GrabScene, pointer: PointerPick): Candidate<GrabTarget> | null {
     const { vegetation } = scene;
-
     const { ray } = pointer;
-    const end = pointer.ground === null ? ray.at(this.#camera.far, new Vector3()) : pointer.ground;
     const { origin } = ray;
+
+    const end = pointer.ground === null ? ray.at(this.#camera.far, new Vector3()) : pointer.ground;
     const { farthest, spots } = searchAlong(ray, end, this.#heightAt);
     const slackPerMeter = this.#metersPerPixel(pointer.viewport) * PLANT_SLACK_PIXELS;
     const groundReach = pointer.ground === null ? Number.POSITIVE_INFINITY : origin.distanceTo(pointer.ground);

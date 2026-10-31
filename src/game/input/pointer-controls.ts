@@ -94,9 +94,9 @@ export class PointerControls {
   readonly #abort = new AbortController();
   readonly #camera: GodCamera;
   readonly #canvas: HTMLCanvasElement;
+  readonly #onTap: TapListener;
   readonly #picker: GroundPicker;
   readonly #pointers = new Map<number, TrackedPointer>();
-  readonly #onTap: TapListener;
   readonly #tools: readonly ToolGestures[];
   readonly #viewAtPick = new Matrix4();
   #carriedX = Number.NaN;
