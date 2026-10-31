@@ -248,6 +248,7 @@ function buildUnderside(outline: BaseOutline): BufferGeometry {
   }
 
   const tip = positions.length / 3;
+  const lowest = outline.points.length + rings.length - 1;
 
   positions.push(0, outline.plinth - outline.undersideDepth * 1.12, 0);
   pushStitch(indices, outline.points.length, stride, rings.length);
@@ -255,7 +256,6 @@ function buildUnderside(outline: BaseOutline): BufferGeometry {
 
   for (let point = 0; point < coarsePoints.length; point += 1) {
     const next = (point + 1) % coarsePoints.length;
-    const lowest = outline.points.length + rings.length - 1;
 
     indices.push(lowest + point * rings.length, lowest + next * rings.length, tip);
   }
