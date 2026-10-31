@@ -28,7 +28,7 @@ import { type SightGround, terrainSight } from "./terrain-sight.ts";
 export const NO_HERD = -1;
 
 const FLOATS_PER_MARKER = 12;
-const FIRST_LAYER_MARKERS = 64;
+const IMPORTANCE_LEVEL_COUNT = Object.values(MarkerImportance).length;
 const FIRST_RENDER_ORDER = 9;
 const PASS_RENDER_ORDER_STEP = 0.25;
 const FADED = 0.002;
@@ -45,11 +45,6 @@ interface StagedMarker {
   style: MarkerStyle;
 }
 
-interface MarkerLayer {
-  floats: Float32Array;
-  length: number;
-}
-
 interface GatheredHerd {
   readonly center: Vector3;
   extent: number;
@@ -59,19 +54,8 @@ interface GatheredHerd {
   squares: number;
 }
 
-function reserveMarker(layer: MarkerLayer): number {
-  const offset = layer.length;
-
-  if (offset + FLOATS_PER_MARKER > layer.floats.length) {
-    const grown = new Float32Array(layer.floats.length * 2);
-
-    grown.set(layer.floats);
-    layer.floats = grown;
-  }
-
-  layer.length = offset + FLOATS_PER_MARKER;
-
-  return offset;
+function importanceOf(staged: StagedMarker): number {
+  return staged.isSelected ? MarkerImportance.Selected : staged.style.importance;
 }
 
 function joinHerd(herd: GatheredHerd, staged: StagedMarker, index: number): void {
@@ -100,9 +84,6 @@ export class AgentMarkers {
   readonly #ground: SightGround;
   readonly #herds = new Map<number, GatheredHerd>();
   readonly #instances: InterleavedInstances;
-  readonly #layers: readonly MarkerLayer[] = Object.values(MarkerImportance).map(() => {
-    return { floats: new Float32Array(FIRST_LAYER_MARKERS * FLOATS_PER_MARKER), length: 0 };
-  });
   readonly #materials: readonly MeshBasicNodeMaterial[];
   readonly #offset = new Vector3();
   readonly #position = new Vector3();
@@ -166,13 +147,16 @@ export class AgentMarkers {
 
   commit(): void {
     this.#gatherHerds();
+    this.#count = 0;
 
-    for (const layer of this.#layers) {
-      layer.length = 0;
-    }
+    for (let importance = 0; importance < IMPORTANCE_LEVEL_COUNT; importance += 1) {
+      for (let index = 0; index < this.#stagedCount; index += 1) {
+        const staged = this.#staged[index];
 
-    for (let index = 0; index < this.#stagedCount; index += 1) {
-      this.#place(this.#staged[index], index);
+        if (importanceOf(staged) === importance) {
+          this.#place(staged, index);
+        }
+      }
     }
 
     this.#upload();
@@ -304,9 +288,11 @@ export class AgentMarkers {
     }
 
     const { b: blue, g: green, r: red } = this.#colorOf(style.color);
-    const layer = this.#layers[isSelected ? MarkerImportance.Selected : style.importance];
-    const offset = reserveMarker(layer);
-    const { floats } = layer;
+    const offset = this.#count * FLOATS_PER_MARKER;
+
+    this.#instances.ensureCapacity(this.#count + 1);
+
+    const floats = this.#instances.array;
 
     floats[offset] = position.x;
     floats[offset + 1] = position.y;
@@ -320,24 +306,12 @@ export class AgentMarkers {
     floats[offset + 9] = pixels;
     floats[offset + 10] = isSelected ? 1 : 0;
     floats[offset + 11] = 0;
+    this.#count += 1;
   }
 
   #upload(): void {
-    const count =
-      this.#layers.reduce((sum, layer) => {
-        return sum + layer.length;
-      }, 0) / FLOATS_PER_MARKER;
+    const count = this.#count;
 
-    this.#instances.ensureCapacity(count);
-
-    let offset = 0;
-
-    for (const layer of this.#layers) {
-      this.#instances.array.set(layer.floats.subarray(0, layer.length), offset);
-      offset += layer.length;
-    }
-
-    this.#count = count;
     this.#geometry.instanceCount = count;
     this.group.visible = count > 0 && !this.#isHidden;
 
