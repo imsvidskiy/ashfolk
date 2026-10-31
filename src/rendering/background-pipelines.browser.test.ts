@@ -8,11 +8,37 @@ import {
   Scene,
 } from "three/webgpu";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { BackgroundPipelines } from "./background-pipelines.ts";
+import { BackgroundPipelines, isSoftwareAdapter } from "./background-pipelines.ts";
 import { createGraphics, type Graphics, webGPUDevice } from "./create-graphics.ts";
 import { RENDER_QUALITY } from "./render-quality.ts";
 
 const SETTLE_MILLISECONDS = 10_000;
+
+const HARDWARE_ADAPTER: GPUAdapterInfo = {
+  architecture: "metal-3",
+  description: "",
+  device: "",
+  isFallbackAdapter: false,
+  subgroupMaxSize: 64,
+  subgroupMinSize: 4,
+  vendor: "apple",
+};
+
+const SOFTWARE_ADAPTER: GPUAdapterInfo = {
+  architecture: "swiftshader",
+  description: "",
+  device: "",
+  isFallbackAdapter: true,
+  subgroupMaxSize: 4,
+  subgroupMinSize: 4,
+  vendor: "google",
+};
+
+// The tests render with SwiftShader and pass it off as a GPU to reach the background path. SwiftShader on Linux, as in
+// CI, loses the device on a background compile, so those tests run only on other systems.
+const LOSES_DEVICE_ON_BACKGROUND_COMPILES =
+  navigator.userAgent.includes("Linux") && isSoftwareAdapter((await navigator.gpu.requestAdapter())?.info);
+const BACKGROUND_COMPILES_SKIPPED = "SwiftShader on Linux loses the device on background compiles";
 
 interface Stage {
   readonly camera: PerspectiveCamera;
@@ -25,7 +51,7 @@ interface Stage {
 
 let stage: Stage | null = null;
 
-async function createStage(): Promise<Stage> {
+async function createStage(adapter = HARDWARE_ADAPTER): Promise<Stage> {
   const graphics = await createGraphics(document.createElement("canvas"), RENDER_QUALITY.low);
   const device = webGPUDevice(graphics.renderer);
 
@@ -43,6 +69,7 @@ async function createStage(): Promise<Stage> {
 
   const emptyDrawCalls = graphics.renderer.info.render.drawCalls;
 
+  vi.spyOn(device, "adapterInfo", "get").mockReturnValue(adapter);
   stage = {
     camera,
     device,
@@ -79,7 +106,9 @@ afterEach(() => {
 });
 
 describe("background pipelines", () => {
-  it("compiles a new object in the background and draws it once its pipeline is ready", async () => {
+  it("compiles a new object in the background and draws it once its pipeline is ready", async ({ skip }) => {
+    skip(LOSES_DEVICE_ON_BACKGROUND_COMPILES, BACKGROUND_COMPILES_SKIPPED);
+
     const created = await createStage();
     const createRenderPipeline = vi.spyOn(created.device, "createRenderPipeline");
     const createRenderPipelineAsync = vi.spyOn(created.device, "createRenderPipelineAsync");
@@ -97,7 +126,9 @@ describe("background pipelines", () => {
     expect(drawnObjects(created)).toBe(1);
   });
 
-  it("draws an object at once when another object already compiled its pipeline", async () => {
+  it("draws an object at once when another object already compiled its pipeline", async ({ skip }) => {
+    skip(LOSES_DEVICE_ON_BACKGROUND_COMPILES, BACKGROUND_COMPILES_SKIPPED);
+
     const created = await createStage();
     const box = addBox(created.scene);
 
@@ -128,11 +159,28 @@ describe("background pipelines", () => {
   it("stops waiting at the limit", async () => {
     const created = await createStage();
 
-    addBox(created.scene);
-    drawnObjects(created);
     vi.spyOn(Promise, "allSettled").mockReturnValueOnce(new Promise(vi.fn()));
 
     await expect(created.pipelines.settle(10)).resolves.toBeUndefined();
+  });
+
+  it("compiles synchronously on a software adapter", async () => {
+    const created = await createStage(SOFTWARE_ADAPTER);
+    const createRenderPipelineAsync = vi.spyOn(created.device, "createRenderPipelineAsync");
+
+    addBox(created.scene);
+
+    expect(drawnObjects(created)).toBe(1);
+    expect(createRenderPipelineAsync).not.toHaveBeenCalled();
+  });
+
+  it("tells SwiftShader from a hardware adapter", () => {
+    expect(isSoftwareAdapter(SOFTWARE_ADAPTER)).toBe(true);
+    expect(isSoftwareAdapter({ ...SOFTWARE_ADAPTER, isFallbackAdapter: false })).toBe(true);
+    expect(
+      isSoftwareAdapter({ ...SOFTWARE_ADAPTER, architecture: "metal-3", isFallbackAdapter: false, vendor: "apple" })
+    ).toBe(false);
+    expect(isSoftwareAdapter(undefined)).toBe(false);
   });
 
   it("draws new objects synchronously again once disposed", async () => {
