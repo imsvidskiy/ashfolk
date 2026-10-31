@@ -15,6 +15,8 @@ const BREACH_FLANK_CELLS = 2;
 const CRATER_WALL_SLOPE = 0.6;
 const DESERT_DRYNESS = 0.5;
 const QUAKE_BLUR_CELLS = 2;
+const QUAKE_SINKING_SHARE = 0.45;
+const QUAKE_JOLT = 5;
 const QUAKE_SWELL = 3;
 const CONE_FLANK_CURVE = 1.5;
 const CRATER_DEPTH_SHARE = 0.3;
@@ -317,7 +319,7 @@ export function shakeTerrain(world: WorldState, area: CircleArea, magnitude: num
     const closeness = 1 - areaCell.distance / area.radius;
 
     jolts[(areaCell.row - region.firstRow) * width + areaCell.column - region.firstColumn] =
-      closeness * (random.next() - 0.45) * 5 * magnitude;
+      closeness * (random.next() - QUAKE_SINKING_SHARE) * QUAKE_JOLT * magnitude;
   }
 
   for (const areaCell of cells) {

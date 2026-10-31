@@ -37,12 +37,13 @@ export const SPRING_GROUND = -3;
 export const PLOT_GROUND = -4;
 export const CROSSING_GROUND = -5;
 export const SNOW_CAPACITY = 1.2;
+export const CROP_GROWTH_STEP = 0.02;
+export const TRODDEN_LEVELS = 32;
 
 const TRODDEN_GROUND = 0.35;
 const MAXIMUM_TERRAIN_HEIGHT = 3200;
 const CROSSING_TOLERANCE = 0.01;
 const LOWEST_EDIT_BELOW_ORIGINAL = 60;
-const TRODDEN_LEVELS = 32;
 
 const SPARSE_FIELDS = ["crop", "fire", "heat", "scorch", "trodden"] as const;
 const DENSE_FIELDS = ["snow", "wetness"] as const;
@@ -421,8 +422,10 @@ export class WorldState {
   }
 
   markSurfaceCell(cell: number): void {
-    this.surfaceChanges.markRow(this.grid.rowOf(cell));
-    this.surfaceEdits.markRow(this.grid.rowOf(cell));
+    const row = this.grid.rowOf(cell);
+
+    this.surfaceChanges.markRow(row);
+    this.surfaceEdits.markRow(row);
   }
 
   setGround(cell: number, ground: number): void {
@@ -430,14 +433,16 @@ export class WorldState {
       return;
     }
 
+    const row = this.grid.rowOf(cell);
+
     this.terrain.ground[cell] = ground;
     this.fields.fuel[cell] = groundDefinition(ground).fuel;
-    this.groundChanges.markRow(this.grid.rowOf(cell));
-    this.surfaceEdits.markRow(this.grid.rowOf(cell));
+    this.groundChanges.markRow(row);
+    this.surfaceEdits.markRow(row);
   }
 
   setCrop(cell: number, growth: number): void {
-    if (Math.abs(this.fields.crop[cell] - growth) < 0.02) {
+    if (Math.abs(this.fields.crop[cell] - growth) < CROP_GROWTH_STEP) {
       return;
     }
 
@@ -509,40 +514,26 @@ export class WorldState {
     const cell = this.vegetation.cell[index];
 
     this.vegetation.remove(index);
-
-    if (cell >= 0) {
-      this.refreshCanopy(cell);
-    }
+    this.refreshCanopy(cell);
   }
 
   liftPlant(index: number): void {
     const cell = this.vegetation.cell[index];
 
     this.vegetation.detach(index);
-
-    if (cell >= 0) {
-      this.refreshCanopy(cell);
-    }
+    this.refreshCanopy(cell);
   }
 
   setPlantDown(index: number, x: number, z: number): void {
     this.vegetation.attach(index, x, z);
-
-    const cell = this.vegetation.cell[index];
-
-    if (cell >= 0) {
-      this.refreshCanopy(cell);
-    }
+    this.refreshCanopy(this.vegetation.cell[index]);
   }
 
   fellPlant(index: number, day: number, rotation: number): void {
     const cell = this.vegetation.cell[index];
 
     this.vegetation.fell(index, day, rotation);
-
-    if (cell >= 0) {
-      this.refreshCanopy(cell);
-    }
+    this.refreshCanopy(cell);
   }
 
   clearPlants(cell: number, includesStones: boolean): void {
@@ -555,6 +546,10 @@ export class WorldState {
   }
 
   refreshCanopy(cell: number): void {
+    if (cell < 0) {
+      return;
+    }
+
     const fuel = this.vegetation.canopyFuelInCell(cell);
 
     this.canopyFuel[cell] = fuel;

@@ -4,13 +4,16 @@ import { Ground } from "../../content/grounds.ts";
 import { isTreeSpecies, PlantSpecies, plantSpeciesDefinition } from "../../content/plants.ts";
 import { PlantState } from "../../world/vegetation-store.ts";
 import { WorldGrid } from "../../world/world-grid.ts";
+import { isDryLand, type Waypoint } from "../agents/navigation.ts";
 import { Simulation } from "../simulation.ts";
 import { createVegetatedWorld, floodCells, monumentAround, plantInCell } from "../testing/test-world.ts";
 import { raiseTerrain } from "../world/terrain-editing.ts";
+import { naturalStrikeSite } from "./catastrophes.ts";
 
 const VALLEY_SIDES = 0.25;
 const VALLEY_FALL = 0.02;
 const METEOR_Z = -200;
+const STORMS = 200;
 
 function valleyHeight(x: number, z: number): number {
   return 200 + Math.abs(x - 5) * VALLEY_SIDES + z * VALLEY_FALL;
@@ -387,6 +390,110 @@ describe("earthquakes", () => {
     expect(simulation.advance(0).inspection).toMatchObject({
       plants: expect.arrayContaining([expect.objectContaining({ name: expect.stringContaining("(fallen)") })]),
     });
+  });
+
+  it("leave the cells they throw trees in to regrow and no bare ones", () => {
+    const simulation = createForest();
+    const { world } = simulation;
+    const { vegetation } = world;
+
+    const clearing = world.grid.cellsInRadius(0, 0, 150);
+
+    for (const cell of clearing) {
+      world.clearPlants(cell, true);
+    }
+
+    simulation.usePower("earthquake", 0, 0, { magnitude: 100, radius: 300 });
+
+    const day = Math.fround(simulation.environment.day);
+    const thrownCells = Array.from({ length: vegetation.count }, (_, plant) => {
+      return plant;
+    })
+      .filter((plant) => {
+        return vegetation.state[plant] === PlantState.Fallen;
+      })
+      .map((plant) => {
+        return vegetation.cell[plant];
+      });
+
+    expect(thrownCells.length).toBeGreaterThan(20);
+    expect(
+      thrownCells.filter((cell) => {
+        return !world.recovering.has(cell) || world.disturbedDay[cell] !== day;
+      })
+    ).toEqual([]);
+    expect(
+      clearing.filter((cell) => {
+        return world.recovering.has(cell);
+      })
+    ).toEqual([]);
+  });
+});
+
+function createStormyMeadow(): Simulation {
+  const simulation = new Simulation(createVegetatedWorld({ dimensions: { cellSize: 10, cellsPerSide: 96 } }));
+  const { world } = simulation;
+  const { grid } = world;
+
+  const cells = grid.cellsInRadius(0, 0, grid.worldSize);
+  const north = cells.filter((cell) => {
+    return grid.cellCenterZ(cell) > 0;
+  });
+
+  for (const cell of cells) {
+    world.clearPlants(cell, true);
+  }
+
+  floodCells(
+    world,
+    north.filter((cell) => {
+      return grid.cellCenterX(cell) < 0;
+    }),
+    2
+  );
+
+  for (const cell of north) {
+    if (grid.cellCenterX(cell) >= 0) {
+      world.terrain.coastDistance[cell] = -5;
+    }
+  }
+
+  return simulation;
+}
+
+function naturalStrikeSites(simulation: Simulation): Waypoint[] {
+  const sites: Waypoint[] = [];
+
+  for (let storm = 0; storm < STORMS; storm += 1) {
+    const site = naturalStrikeSite({ x: 0, z: 0 }, simulation.services);
+
+    if (site !== null) {
+      sites.push(site);
+    }
+  }
+
+  return sites;
+}
+
+describe("natural lightning", () => {
+  it("strikes only dry land on the island", () => {
+    const simulation = createStormyMeadow();
+    const { world } = simulation;
+
+    const sites = naturalStrikeSites(simulation);
+
+    expect(sites.length).toBeGreaterThan(0);
+    expect(
+      sites.filter((site) => {
+        return !isDryLand(world, world.grid.cellAt(site.x, site.z));
+      })
+    ).toEqual([]);
+  });
+
+  it("falls back to low dry land when no high ground or forest turns up", () => {
+    const simulation = createStormyMeadow();
+
+    expect(naturalStrikeSites(simulation).length).toBeGreaterThan(STORMS * 0.6);
   });
 });
 

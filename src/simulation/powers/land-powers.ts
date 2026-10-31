@@ -6,6 +6,7 @@ import { plantHeight } from "../../generation/vegetation.ts";
 import { FULL_TURN } from "../../shared/math.ts";
 import type { RandomSource } from "../../shared/random.ts";
 import { NO_PLANT } from "../../world/vegetation-store.ts";
+import { isDryLand } from "../agents/navigation.ts";
 import { brushFalloff, cellsInArea, flattenTerrain, raiseTerrain, smoothTerrain } from "../world/terrain-editing.ts";
 import { NO_BUILDING, type WorldState } from "../world/world-state.ts";
 import {
@@ -25,7 +26,10 @@ const SMOOTH_PER_SECOND = 4;
 const PLANTING_PER_SECOND = 4;
 const DEFAULT_DENSITY = 0.5;
 const CROWDED_CELL = 2;
+const PLANTING_SCATTER = 0.4;
 const SNOWY_PAINT = 0.6;
+const COLD_CLIMATE = 4;
+const COOL_CLIMATE = 7.5;
 const HOT_CLIMATE = 14;
 
 type ForestSpecies = PowerParameters<"forest">["species"];
@@ -99,11 +103,11 @@ export function smoothPower(
 }
 
 function climateSpecies(temperature: number, random: RandomSource): PlantSpeciesIndex {
-  if (temperature < 4) {
+  if (temperature < COLD_CLIMATE) {
     return PlantSpecies.Spruce;
   }
 
-  if (temperature < 7.5) {
+  if (temperature < COOL_CLIMATE) {
     return random.chance(0.7) ? PlantSpecies.Spruce : PlantSpecies.Pine;
   }
 
@@ -144,8 +148,8 @@ function plantTree(cell: number, species: PlantSpeciesIndex, services: PowerServ
     rotation: random.next() * FULL_TURN,
     seed: random.next(),
     species,
-    x: grid.cellCenterX(cell) + random.between(-0.4, 0.4) * grid.cellSize,
-    z: grid.cellCenterZ(cell) + random.between(-0.4, 0.4) * grid.cellSize,
+    x: grid.cellCenterX(cell) + random.between(-PLANTING_SCATTER, PLANTING_SCATTER) * grid.cellSize,
+    z: grid.cellCenterZ(cell) + random.between(-PLANTING_SCATTER, PLANTING_SCATTER) * grid.cellSize,
   });
 
   if (plant === NO_PLANT) {
@@ -193,7 +197,7 @@ export function forestPower(
 }
 
 function paintCell(world: WorldState, cell: number, ground: GroundIndex): void {
-  if (!world.isOnIsland(cell) || world.isWater(cell) || world.terrain.ground[cell] === ground) {
+  if (!isDryLand(world, cell) || world.terrain.ground[cell] === ground) {
     return;
   }
 
@@ -216,10 +220,12 @@ export function paintPower(
   parameters: PowerParameters<"paint">,
   services: PowerServices
 ): PowerOutcome {
+  const { world } = services;
+
   const ground = PAINT_GROUNDS[parameters.material];
 
-  for (const { cell } of cellsInArea(services.world, { ...target, radius: parameters.radius })) {
-    paintCell(services.world, cell, ground);
+  for (const { cell } of cellsInArea(world, { ...target, radius: parameters.radius })) {
+    paintCell(world, cell, ground);
   }
 
   return APPLIED;

@@ -228,7 +228,7 @@ export class WaterRecomputation {
     for (const lake of lakes) {
       const cells = cellsOfLakes[lake.id];
 
-      if (cells !== undefined && isNewWater(cells, lake.level, previousLevels)) {
+      if (isNewWater(cells, lake.level, previousLevels)) {
         rising.push(this.#risingLake(cells, lake.level, previousLevels));
       }
     }
@@ -368,11 +368,15 @@ export class WaterRecomputation {
     const world = this.#world;
 
     for (let cell = 0; cell < world.grid.cellCount; cell += 1) {
-      if (world.touchesWater(cell)) {
-        world.clearPlants(cell, world.isWater(cell));
+      if (!world.touchesWater(cell)) {
+        continue;
       }
 
-      if (world.isWater(cell)) {
+      const isWater = world.isWater(cell);
+
+      world.clearPlants(cell, isWater);
+
+      if (isWater) {
         this.#calmCell(cell);
       }
     }
@@ -391,15 +395,14 @@ export class WaterRecomputation {
         this.#calmCell(cell);
         world.clearPlants(cell, true);
 
-        const cellColumn = grid.columnOf(cell);
-        const cellRow = grid.rowOf(cell);
+        const column = grid.columnOf(cell);
+        const row = grid.rowOf(cell);
 
         for (const offset of NEIGHBOR_OFFSETS) {
-          const column = cellColumn + offset.column;
-          const row = cellRow + offset.row;
+          const neighbor = grid.neighborIndex(column, row, offset);
 
-          if (grid.contains(column, row)) {
-            world.clearPlants(grid.index(column, row), false);
+          if (neighbor >= 0) {
+            world.clearPlants(neighbor, false);
           }
         }
       }
