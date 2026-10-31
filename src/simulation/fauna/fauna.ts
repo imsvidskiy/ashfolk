@@ -30,6 +30,8 @@ import { CALM_FEAR, startleAnimal } from "./fear.ts";
 import { canStand, escapeRoute, findNewHome, findPasture, herdKindAt, smallGameAt } from "./habitat.ts";
 
 const HERD_SPREAD = 30;
+const SCATTER_ATTEMPTS_PER_HERD = 60;
+const SCATTER_REACH = 0.9;
 const BURNING_GROUND = 0.25;
 const FIRE_DAMAGE_PER_SECOND = 0.5;
 const FEAR_DECAY_PER_SECOND = 0.12;
@@ -239,56 +241,15 @@ export class FaunaSystem {
   }
 
   populate(herdCount: number, random: RandomSource): number {
-    const { halfSize } = this.#world.grid;
-
-    let created = 0;
-
-    for (let attempt = 0; attempt < herdCount * 60 && created < herdCount; attempt += 1) {
-      const x = random.signed() * halfSize * 0.9;
-      const z = random.signed() * halfSize * 0.9;
-
-      const kind = herdKindAt(this.#world, x, z, random);
-
-      if (kind === null) {
-        continue;
-      }
-
-      const [smallest, largest] = ANIMALS[kind].herdSizeRange;
-
-      this.spawnHerd(kind, x, z, random.integer(smallest, largest + 1), random);
-      created += 1;
-    }
-
-    return created;
+    return this.#scatterHerds(herdCount, random, (x, z) => {
+      return herdKindAt(this.#world, x, z, random);
+    });
   }
 
   populateSmallGame(groupCount: number): number {
-    const random = this.#smallGameRandom;
-    const { halfSize } = this.#world.grid;
-
-    let created = 0;
-
-    for (let attempt = 0; attempt < groupCount * 60 && created < groupCount; attempt += 1) {
-      const x = random.signed() * halfSize * 0.9;
-      const z = random.signed() * halfSize * 0.9;
-
-      const kind = smallGameAt(this.#world, x, z);
-
-      if (kind === null) {
-        continue;
-      }
-
-      const [smallest, largest] = ANIMALS[kind].herdSizeRange;
-
-      const herd = this.spawnHerd(kind, x, z, random.integer(smallest, largest + 1), random);
-
-      if (herd !== null) {
-        this.#ageFounders(herd, random);
-        created += 1;
-      }
-    }
-
-    return created;
+    return this.#scatterHerds(groupCount, this.#smallGameRandom, (x, z) => {
+      return smallGameAt(this.#world, x, z);
+    });
   }
 
   nearestAnimal(x: number, z: number, maximumDistance: number, accepts: (animal: Animal) => boolean): Animal | null {
@@ -487,13 +448,42 @@ export class FaunaSystem {
     return { x: herd.goalX, z: herd.goalZ };
   }
 
-  #ageFounders(herd: Herd, random: RandomSource): void {
-    for (const id of herd.memberIds) {
-      const founder = this.findAnimal(id);
+  #scatterHerds(herdCount: number, random: RandomSource, kindAt: (x: number, z: number) => AnimalKind | null): number {
+    const { halfSize } = this.#world.grid;
 
-      if (founder !== null) {
-        founder.lifeDays *= 1 - random.between(LIVED_SHARE[0], LIVED_SHARE[1]);
+    let created = 0;
+
+    for (let attempt = 0; attempt < herdCount * SCATTER_ATTEMPTS_PER_HERD && created < herdCount; attempt += 1) {
+      const x = random.signed() * halfSize * SCATTER_REACH;
+      const z = random.signed() * halfSize * SCATTER_REACH;
+
+      const kind = kindAt(x, z);
+
+      if (kind === null) {
+        continue;
       }
+
+      const [smallest, largest] = ANIMALS[kind].herdSizeRange;
+
+      const herd = this.spawnHerd(kind, x, z, random.integer(smallest, largest + 1), random);
+
+      if (herd === null) {
+        continue;
+      }
+
+      if (ANIMALS[kind].isSmallGame) {
+        this.#ageFounders(herd, random);
+      }
+
+      created += 1;
+    }
+
+    return created;
+  }
+
+  #ageFounders(herd: Herd, random: RandomSource): void {
+    for (const founder of this.#membersOf(herd)) {
+      founder.lifeDays *= 1 - random.between(LIVED_SHARE[0], LIVED_SHARE[1]);
     }
   }
 
