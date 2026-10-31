@@ -12,11 +12,26 @@ import { describe, expect, it } from "vitest";
 import type { CellRegion } from "../../world/change-tracking.ts";
 import { WorldGrid } from "../../world/world-grid.ts";
 import { type PatchContent, PatchGrid } from "./patch-grid.ts";
-import { PATCH_STEPS } from "./terrain-patches.ts";
+import { PATCH_CELLS, PATCH_LEVEL_DISTANCES, PATCH_STEPS } from "./terrain-patches.ts";
 
 const grid = new WorldGrid({ cellSize: 40, cellsPerSide: 128 });
+const EYE_HEIGHT = 50;
+const PATCH_TOP = 10;
 const NEAR_CORNER = -1280;
 const SKY = 5000;
+const RISE = EYE_HEIGHT - PATCH_TOP;
+const GAP = grid.centerX(PATCH_CELLS) - NEAR_CORNER;
+const NEAR_LEVEL = levelAt(RISE);
+const SIDE_LEVEL = levelAt(Math.hypot(GAP, RISE));
+const FAR_LEVEL = levelAt(Math.hypot(GAP, GAP, RISE));
+
+function levelAt(distance: number): number {
+  const level = PATCH_LEVEL_DISTANCES.findIndex((limit) => {
+    return distance < limit;
+  });
+
+  return level === -1 ? PATCH_STEPS.length - 1 : level;
+}
 
 function frustumOver(left: number, right: number): Frustum {
   const camera = new OrthographicCamera(left, right, grid.halfSize, -grid.halfSize, 1, SKY * 2);
@@ -34,14 +49,14 @@ function frustumOver(left: number, right: number): Frustum {
 function cameraAt(x: number, z: number): PerspectiveCamera {
   const camera = new PerspectiveCamera();
 
-  camera.position.set(x, 50, z);
+  camera.position.set(x, EYE_HEIGHT, z);
 
   return camera;
 }
 
 function wholePatch(region: CellRegion): PatchContent {
   return {
-    highest: 10,
+    highest: PATCH_TOP,
     lowest: 0,
     pieces: [{ firstColumn: region.firstColumn, firstRow: region.firstRow, material: 0 }],
   };
@@ -71,24 +86,37 @@ function originVersions(patches: PatchGrid): number[] {
   });
 }
 
+function firstOrigin(patches: PatchGrid, level: number): number[] {
+  const origins = geometries(patches)[level].getAttribute("origin");
+
+  return [origins.getX(0), origins.getY(0)];
+}
+
 describe("patch grid", () => {
   const everything = frustumOver(-grid.halfSize, grid.halfSize);
 
   it("draws nearer patches finer and leaves out patches beyond the view", () => {
     const patches = createPatches();
+    const levels = [NEAR_LEVEL, SIDE_LEVEL, SIDE_LEVEL, FAR_LEVEL];
 
     patches.update(cameraAt(NEAR_CORNER, NEAR_CORNER), everything, 1);
 
-    expect(Array.from(patches.chosenLevels)).toEqual([0, 1, 1, 2]);
+    expect(Array.from(patches.chosenLevels)).toEqual(levels);
     expect(
       geometries(patches).map((geometry) => {
         return geometry.instanceCount;
       })
-    ).toEqual([1, 2, 1, 0]);
+    ).toEqual(
+      PATCH_STEPS.map((_step, level) => {
+        return levels.filter((chosen) => {
+          return chosen === level;
+        }).length;
+      })
+    );
 
     patches.update(cameraAt(NEAR_CORNER, NEAR_CORNER), frustumOver(-grid.halfSize, -grid.halfSize / 2), 1);
 
-    expect(Array.from(patches.chosenLevels)).toEqual([0, -1, 1, -1]);
+    expect(Array.from(patches.chosenLevels)).toEqual([NEAR_LEVEL, -1, SIDE_LEVEL, -1]);
   });
 
   it("takes the shared level of a patch where one is given and draws the coarsest beyond the last distance", () => {
@@ -108,7 +136,7 @@ describe("patch grid", () => {
 
     patches.update(cameraAt(NEAR_CORNER, NEAR_CORNER), everything, 1);
 
-    expect(Array.from(patches.chosenLevels)).toEqual([-1, 1, 1, 2]);
+    expect(Array.from(patches.chosenLevels)).toEqual([-1, SIDE_LEVEL, SIDE_LEVEL, FAR_LEVEL]);
   });
 
   it("uploads the patch origins again only once the levels or the pieces change", () => {
@@ -133,5 +161,16 @@ describe("patch grid", () => {
     patches.update(cameraAt(-NEAR_CORNER, -NEAR_CORNER), everything, 1);
 
     expect(originVersions(patches)).not.toEqual(remeasured);
+
+    patches.update(camera, everything, 1);
+
+    const returned = originVersions(patches);
+
+    expect(firstOrigin(patches, SIDE_LEVEL)).toEqual([PATCH_CELLS, 0]);
+
+    patches.update(camera, frustumOver(-grid.halfSize, -grid.halfSize / 2), 1);
+
+    expect(originVersions(patches)).not.toEqual(returned);
+    expect(firstOrigin(patches, SIDE_LEVEL)).toEqual([0, PATCH_CELLS]);
   });
 });
