@@ -7,10 +7,9 @@ import type { MotionStyle } from "./appearance.ts";
 import { FIGHT_CLIPS } from "./fight-clips.ts";
 import { bendAnkle, bendElbow, bendKnee, bendTrunk, bendWrist, moveBody, swingArm, swingLeg } from "./human-joints.ts";
 import { HumanBone, otherSide } from "./human-skeleton.ts";
-import { bounceBody, cycleLegs, RUNNING, WALKING } from "./leg-cycles.ts";
+import { bounceBody, cycleLegs, RUNNING, strideScale, WALKING } from "./leg-cycles.ts";
 import { plantFeet } from "./planted-feet.ts";
 
-const ELDER_STRIDE = 0.78;
 const CARRYING_STRIDE = 0.9;
 const CARRYING_ARM_SWING = 0.6;
 const LEAP_STRIDE = 1.45;
@@ -187,14 +186,6 @@ export const HUMAN_CLIPS: Readonly<Record<PersonPose, HumanClip>> = {
   walk: { apply: walk, timing: STRIDE_TIMING, tool: null },
   ...FIGHT_CLIPS,
 };
-
-function strideScale(context: HumanClipContext, stride: number): number {
-  if (context.ageGroup === "elder") {
-    return stride * ELDER_STRIDE;
-  }
-
-  return stride;
-}
 
 function stoop(pose: Pose, context: HumanClipContext): void {
   const { posture } = context.motion;

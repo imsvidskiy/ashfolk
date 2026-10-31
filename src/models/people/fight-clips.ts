@@ -6,7 +6,7 @@ import { once, type Pose, STRIDE_TIMING, seconds } from "../rig/pose.ts";
 import type { HumanClip, HumanClipContext } from "./human-clips.ts";
 import { bendAnkle, bendElbow, bendKnee, bendTrunk, bendWrist, moveBody, swingArm, swingLeg } from "./human-joints.ts";
 import { HumanBone } from "./human-skeleton.ts";
-import { bounceBody, CHARGING, cycleLegs, MARCHING } from "./leg-cycles.ts";
+import { bounceBody, CHARGING, cycleLegs, MARCHING, strideScale } from "./leg-cycles.ts";
 import { plantFeet } from "./planted-feet.ts";
 
 export const FIGHT_CLIPS: Readonly<Record<FightPose, HumanClip>> = {
@@ -21,7 +21,6 @@ export const FIGHT_CLIPS: Readonly<Record<FightPose, HumanClip>> = {
 
 const WEAPON_SIDE: Side = -1;
 const GUARD_SIDE: Side = 1;
-const ELDER_STRIDE = 0.8;
 const HELD_PHASE = 0.99;
 
 const THRUST_REACH: readonly Keyframe[] = [
@@ -175,12 +174,6 @@ function poseUpperBody(pose: Pose, stance: Stance): void {
   poseArm(pose, WEAPON_SIDE, stance.weaponArm);
 }
 
-function strideOf(context: HumanClipContext): number {
-  const ageFactor = context.ageGroup === "elder" ? ELDER_STRIDE : 1;
-
-  return context.motion.stride * ageFactor;
-}
-
 function fightingLegs(pose: Pose, crouch: number, lunge: number): void {
   swingLeg(pose, GUARD_SIDE, { forward: degrees(26) + degrees(18) * lunge, outward: degrees(10) });
   bendKnee(pose, GUARD_SIDE, degrees(22) + degrees(26) * crouch + degrees(22) * lunge);
@@ -194,7 +187,7 @@ function march(pose: Pose, phase: number, context: HumanClipContext): void {
   const swing = cosineWave(phase);
   const { armSwing } = context.motion;
 
-  cycleLegs(pose, phase, strideOf(context), MARCHING);
+  cycleLegs(pose, phase, strideScale(context, context.motion.stride), MARCHING);
   moveBody(pose, { forward: degrees(3), toLeft: degrees(2) * wave(phase), turnLeft: -degrees(4) * swing });
   bendTrunk(pose, HumanBone.Spine, { forward: degrees(2), turnLeft: degrees(4) * swing });
   bendTrunk(pose, HumanBone.Chest, { forward: -degrees(3), turnLeft: degrees(3) * swing });
@@ -206,7 +199,7 @@ function march(pose: Pose, phase: number, context: HumanClipContext): void {
 function charge(pose: Pose, phase: number, context: HumanClipContext): void {
   const swing = cosineWave(phase);
 
-  cycleLegs(pose, phase, strideOf(context), CHARGING);
+  cycleLegs(pose, phase, strideScale(context, context.motion.stride), CHARGING);
   poseUpperBody(pose, SPEAR_LEVELED);
   moveBody(pose, { turnLeft: -degrees(5) * swing });
   bendTrunk(pose, HumanBone.Spine, { forward: degrees(4), turnLeft: degrees(4) * swing });

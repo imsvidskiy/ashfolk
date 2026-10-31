@@ -1,10 +1,12 @@
 import { SIDES } from "../mesh/transforms.ts";
 import { cosineWave, degrees, pulse, wave } from "../rig/curves.ts";
 import type { Pose } from "../rig/pose.ts";
+import type { HumanClipContext } from "./human-clips.ts";
 import { bendAnkle, bendKnee, swingLeg } from "./human-joints.ts";
 
 const BOUNCE_HEIGHT = 0.05;
 const BOUNCE_LAG = 0.05;
+const ELDER_STRIDE = 0.78;
 
 interface StepTiming {
   readonly heelToes: number;
@@ -53,6 +55,14 @@ export const WALKING: LegCycle = { knee: 5, lean: 5, lift: 15, outward: 2, reach
 export const MARCHING: LegCycle = { knee: 8, lean: 6, lift: 18, outward: 3, reach: 66, swing: 27, timing: WALK_STEP };
 export const RUNNING: LegCycle = { knee: 18, lean: 14, lift: 22, outward: 2, reach: 92, swing: 44, timing: RUN_STEP };
 export const CHARGING: LegCycle = { knee: 20, lean: 16, lift: 22, outward: 3, reach: 92, swing: 44, timing: RUN_STEP };
+
+export function strideScale(context: HumanClipContext, stride: number): number {
+  if (context.ageGroup === "elder") {
+    return stride * ELDER_STRIDE;
+  }
+
+  return stride;
+}
 
 export function cycleLegs(pose: Pose, phase: number, stride: number, cycle: LegCycle): void {
   const { knee, lean, lift, outward, reach, swing, timing } = cycle;
