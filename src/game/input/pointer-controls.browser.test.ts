@@ -2,7 +2,7 @@ import { PerspectiveCamera, type Vector3 } from "three/webgpu";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { GodCamera } from "../camera/god-camera.ts";
 import { GroundPicker } from "./ground-picker.ts";
-import { PointerControls, type TapHandler, type ToolGestures } from "./pointer-controls.ts";
+import { PointerControls, type TapListener, type ToolGestures } from "./pointer-controls.ts";
 
 const WORLD_HALF_SIZE = 4000;
 const CANVAS_WIDTH = 390;
@@ -45,7 +45,7 @@ function createTool(canBegin: () => boolean, isActive: () => boolean) {
     hover: vi.fn<ToolGestures["hover"]>(),
     isActive,
     move: vi.fn<ToolGestures["move"]>(),
-    tap: vi.fn<TapHandler["tap"]>(),
+    tap: vi.fn<TapListener>(),
   };
 }
 
@@ -81,7 +81,7 @@ function createRig(
     },
     WORLD_HALF_SIZE
   );
-  const rig = { camera, canvas, controls: new PointerControls(canvas, camera, picker, tools, tool), tool };
+  const rig = { camera, canvas, controls: new PointerControls(canvas, camera, picker, tools, tool.tap), tool };
 
   rigs.push(rig);
 
