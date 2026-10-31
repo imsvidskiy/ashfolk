@@ -17,7 +17,7 @@ export function hasRoomFromCoast(
   return sampleHeight(coastDistance, grid, x, z) > clearance;
 }
 
-export function touchesOffIsland(grid: WorldGrid, coastDistance: Float32Array, cell: number): boolean {
+export function touchesOffIsland(coastDistance: Float32Array, grid: WorldGrid, cell: number): boolean {
   const column = grid.columnOf(cell);
   const row = grid.rowOf(cell);
 
