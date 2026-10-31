@@ -2,8 +2,13 @@ import { z } from "zod";
 import { QUALITY_LEVELS, type QualityLevel } from "../rendering/render-quality.ts";
 
 const QUALITY_KEY = "ashfolk.quality";
-const LABELS_KEY = "ashfolk.labels";
-const OUTLINES_KEY = "ashfolk.outlines";
+
+export type ShownSetting = "labels" | "outlines";
+
+const SHOWN_SETTINGS: Readonly<Record<ShownSetting, { readonly key: string; readonly subject: string }>> = {
+  labels: { key: "ashfolk.labels", subject: "label setting" },
+  outlines: { key: "ashfolk.outlines", subject: "outline setting" },
+};
 
 const qualitySchema = z.enum(QUALITY_LEVELS);
 const visibilitySchema = z.enum(["hidden", "shown"]);
@@ -65,18 +70,14 @@ export function storeQuality(quality: QualityLevel): void {
   writePreference(QUALITY_KEY, quality, "graphics quality");
 }
 
-export function storedLabelsShown(): boolean {
-  return readPreference(LABELS_KEY, visibilitySchema, "label setting") !== "hidden";
+export function storedShown(setting: ShownSetting): boolean {
+  const { key, subject } = SHOWN_SETTINGS[setting];
+
+  return readPreference(key, visibilitySchema, subject) !== "hidden";
 }
 
-export function storeLabelsShown(isShown: boolean): void {
-  writePreference(LABELS_KEY, isShown ? "shown" : "hidden", "label setting");
-}
+export function storeShown(setting: ShownSetting, isShown: boolean): void {
+  const { key, subject } = SHOWN_SETTINGS[setting];
 
-export function storedOutlinesShown(): boolean {
-  return readPreference(OUTLINES_KEY, visibilitySchema, "outline setting") !== "hidden";
-}
-
-export function storeOutlinesShown(areShown: boolean): void {
-  writePreference(OUTLINES_KEY, areShown ? "shown" : "hidden", "outline setting");
+  writePreference(key, isShown ? "shown" : "hidden", subject);
 }
