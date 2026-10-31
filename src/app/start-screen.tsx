@@ -7,7 +7,6 @@ import { NameField, SeedField, ShapeChoice, SizeChoice } from "../features/new-w
 import { ProjectLinks } from "../features/project/project-links.tsx";
 import { SavedWorldList, SavesUnavailableNote } from "../features/saves/saved-world-list.tsx";
 import { useSavesStore } from "../features/saves/saves-store.ts";
-import { ignore } from "../shared/ignore.ts";
 import { preloadGame } from "./engine-launcher.ts";
 import { useLaunchStore } from "./launch-store.ts";
 import { StartBackdrop } from "./start-backdrop.tsx";
@@ -155,41 +154,63 @@ function TitleCard() {
   );
 }
 
-export function StartScreen() {
+function useHasListedWorlds(): boolean {
   const refresh = useSavesStore((state) => {
     return state.refresh;
   });
+  const [hasListedWorlds, setHasListedWorlds] = useState(() => {
+    return useSavesStore.getState().worlds.length > 0;
+  });
 
   useEffect(() => {
-    refresh().catch(ignore);
+    function showWorlds(): void {
+      setHasListedWorlds(true);
+    }
+
+    refresh().then(showWorlds, showWorlds);
+  }, [refresh]);
+
+  return hasListedWorlds;
+}
+
+function StartCard() {
+  return (
+    <div className="relative flex min-h-full flex-col items-center justify-end gap-3 px-4 pt-[max(1rem,env(safe-area-inset-top))] pb-[max(1rem,env(safe-area-inset-bottom))] sm:justify-center sm:p-8">
+      <Island className="flex w-full max-w-md flex-col gap-6 p-7">
+        <header className="flex flex-col items-center gap-2 text-center">
+          <img alt="" className="h-16 w-auto" height="64" src="/mark.svg" width="47" />
+
+          <h1 className="text-ink text-4xl font-extrabold tracking-tight">Ashfolk</h1>
+
+          <p className="text-ink-soft">Guide the first tribes on a floating island.</p>
+        </header>
+
+        <hr className="border-line" />
+
+        <TitleCard />
+      </Island>
+
+      <Island className="px-2 py-1.5">
+        <ProjectLinks />
+      </Island>
+    </div>
+  );
+}
+
+export function StartScreen() {
+  const hasListedWorlds = useHasListedWorlds();
+
+  useEffect(() => {
     preloadGame().catch((error: unknown) => {
       console.warn("The game could not be loaded ahead", error);
     });
-  }, [refresh]);
+  }, []);
 
   return (
     <div className="absolute inset-0 overflow-y-auto">
       <StartBackdrop />
 
-      <div className="relative flex min-h-full flex-col items-center justify-end gap-3 px-4 pt-[max(1rem,env(safe-area-inset-top))] pb-[max(1rem,env(safe-area-inset-bottom))] sm:justify-center sm:p-8">
-        <Island className="flex w-full max-w-md flex-col gap-6 p-7">
-          <header className="flex flex-col items-center gap-2 text-center">
-            <img alt="" className="h-16 w-auto" height="64" src="/mark.svg" width="47" />
-
-            <h1 className="text-ink text-4xl font-extrabold tracking-tight">Ashfolk</h1>
-
-            <p className="text-ink-soft">Guide the first tribes on a floating island.</p>
-          </header>
-
-          <hr className="border-line" />
-
-          <TitleCard />
-        </Island>
-
-        <Island className="px-2 py-1.5">
-          <ProjectLinks />
-        </Island>
-      </div>
+      {hasListedWorlds ? <StartCard /> : null}
     </div>
   );
 }

@@ -1,10 +1,21 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, onTestFinished } from "vitest";
 import { render } from "vitest-browser-react";
-import { blockSavedWorlds } from "../features/testing/save-fixtures.ts";
+import { useSavesStore } from "../features/saves/saves-store.ts";
+import { WorldSaver } from "../features/saves/world-saver.ts";
+import { createTestSession } from "../features/testing/engine-fixtures.ts";
+import { blockSavedWorlds, deleteAllSavedWorlds } from "../features/testing/save-fixtures.ts";
+import { ignore } from "../shared/ignore.ts";
 import { useLaunchStore } from "./launch-store.ts";
 import { StartScreen } from "./start-screen.tsx";
 
 const initialLaunch = useLaunchStore.getState();
+
+async function saveOldFord(): Promise<void> {
+  const session = await createTestSession();
+
+  onTestFinished(deleteAllSavedWorlds);
+  await new WorldSaver(session, { id: "old-ford", name: "Old Ford" }, { onSaved: ignore, onSaving: ignore }).save();
+}
 
 describe("start screen", () => {
   it("offers a named round world from a random seed", async () => {
@@ -52,6 +63,24 @@ describe("start screen", () => {
 
     expect(isChoosingWorld).toBe(false);
     expect(launch).toMatchObject({ name: "Old Ford", seed: 42, shape: "square" });
+  });
+
+  it("offers the saved world without showing the new-world form first", async () => {
+    await saveOldFord();
+
+    const screen = await render(<StartScreen />);
+
+    expect(screen.getByRole("button", { name: "Grow the island" }).query()).toBeNull();
+    await expect.element(screen.getByRole("button", { name: "Continue Old Ford" })).toBeVisible();
+  });
+
+  it("offers the saved worlds it already knows at once when the player comes back", async () => {
+    await saveOldFord();
+    await useSavesStore.getState().refresh();
+
+    const screen = await render(<StartScreen />);
+
+    expect(screen.getByRole("button", { name: "Continue Old Ford" }).query()).not.toBeNull();
   });
 
   it("says saved worlds are unavailable when the browser blocks them", async () => {
