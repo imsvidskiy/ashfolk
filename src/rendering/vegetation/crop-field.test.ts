@@ -1,10 +1,10 @@
-import { Frustum, Matrix4, PerspectiveCamera } from "three/webgpu";
 import { describe, expect, it } from "vitest";
 import { cropCode, FENCED_CROP_OFFSET } from "../../content/crops.ts";
 import { Ground } from "../../content/grounds.ts";
 import type { WorldMirror } from "../../game/world-mirror.ts";
 import { GROUND_CHANNELS, GroundChannel } from "../../world/agent-buffers.ts";
 import { FieldPlan } from "../terrain/field-plan.ts";
+import { cameraAbove } from "../testing/camera-above.ts";
 import { drawnInstances, drawnMeshes } from "../testing/drawn-meshes.ts";
 import { createVegetatedMirror } from "../testing/vegetated-mirror.ts";
 import { CropField } from "./crop-field.ts";
@@ -47,20 +47,9 @@ function createFarm(code: number): Farm {
 function updateFromAbove({ field, mirror }: Farm): void {
   const { grid } = mirror;
 
-  const x = grid.centerX(FIELD_COLUMNS[0]);
-  const z = grid.centerZ(FIELD_ROW);
-  const camera = new PerspectiveCamera(60, 1.5, 0.5, 40_000);
+  const { camera, frustum } = cameraAbove(mirror, grid.centerX(FIELD_COLUMNS[0]), grid.centerZ(FIELD_ROW), 30);
 
-  camera.position.set(x, mirror.heightAt(x, z) + 30, z + 1);
-  camera.lookAt(x, mirror.heightAt(x, z), z);
-  camera.updateMatrixWorld();
-  field.update(
-    camera,
-    new Frustum().setFromProjectionMatrix(
-      new Matrix4().multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse)
-    ),
-    1
-  );
+  field.update(camera, frustum, 1);
 }
 
 function drawnCount(farm: Farm, attribute: string): number {
