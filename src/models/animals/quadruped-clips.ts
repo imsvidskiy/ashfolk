@@ -1,6 +1,6 @@
 import type { AnimalPose } from "../../world/agent-poses.ts";
 import { SIDES } from "../mesh/transforms.ts";
-import { cosineWave, degrees, keyframes, wave } from "../rig/curves.ts";
+import { cosineWave, degrees, type Keyframe, keyframes, wave } from "../rig/curves.ts";
 import { type ClipTiming, type Pose, STRIDE_TIMING, seconds } from "../rig/pose.ts";
 import { QUADRUPED_FIGHT_CLIPS } from "./quadruped-fight-clips.ts";
 import {
@@ -23,6 +23,14 @@ const HOP_PHASES: LegPhases = {
 const WALKING_HOP = 0.45;
 const HOP_HEIGHT = 0.1;
 const GRAZING_STANCE: Readonly<Record<LegEnd, number>> = { front: degrees(4), hind: -degrees(3) };
+
+const GRAZING_ALERT: readonly Keyframe[] = [
+  [0, 0],
+  [0.55, 0],
+  [0.62, 1],
+  [0.78, 1],
+  [0.85, 0],
+];
 
 type RunKind = "amble" | "gallop" | "hop";
 
@@ -130,14 +138,7 @@ function run(pose: Pose, phase: number, context: AnimalClipContext): void {
 function graze(pose: Pose, phase: number, context: AnimalClipContext): void {
   const { gait, variation } = context;
 
-  const alert = keyframes(phase + variation, [
-    [0, 0],
-    [0.55, 0],
-    [0.62, 1],
-    [0.78, 1],
-    [0.85, 0],
-  ]);
-
+  const alert = keyframes(phase + variation, GRAZING_ALERT);
   const chew = wave(phase * 9) * (1 - alert);
 
   bendBone(pose, QuadrupedBone.Neck, gait.grazeReach * (1 - alert) - degrees(8) * alert, 0, degrees(18) * alert);
