@@ -1,4 +1,10 @@
-import { RESOURCE_GROUPS, RESOURCES, type ResourceGroup, resourcesInGroup } from "../../content/resources.ts";
+import {
+  RESOURCE_GROUPS,
+  RESOURCES,
+  type ResourceGroup,
+  type ResourceKind,
+  resourcesInGroup,
+} from "../../content/resources.ts";
 import { GameIcon } from "../../design/game-icon.tsx";
 import type { StockView } from "../../simulation/frame.ts";
 import { RESOURCE_ICONS } from "./tribe-icons.ts";
@@ -11,9 +17,13 @@ const GROUP_NAMES: Readonly<Record<ResourceGroup, string>> = {
   ore: "Ores",
 };
 
+function isInStock(stock: StockView, kind: ResourceKind): boolean {
+  return Math.round(stock[kind]) > 0;
+}
+
 function StockGroup({ group, stock }: { readonly group: ResourceGroup; readonly stock: StockView }) {
   const kinds = resourcesInGroup(group).filter((kind) => {
-    return Math.round(stock[kind]) > 0;
+    return isInStock(stock, kind);
   });
 
   if (kinds.length === 0) {
@@ -54,7 +64,7 @@ function StockGroup({ group, stock }: { readonly group: ResourceGroup; readonly 
 export function StockList({ stock }: { readonly stock: StockView }) {
   const hasAnything = RESOURCE_GROUPS.some((group) => {
     return resourcesInGroup(group).some((kind) => {
-      return Math.round(stock[kind]) > 0;
+      return isInStock(stock, kind);
     });
   });
 
