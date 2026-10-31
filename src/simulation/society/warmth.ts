@@ -84,16 +84,6 @@ function warmSeat(building: Building): number {
   return BUILDINGS[building.kind].footprint + HEARTH_SEAT;
 }
 
-function warmPlaces(tick: PersonTick): WarmPlace[] {
-  return tribeBuildings(tick.tribe, tick.context)
-    .filter((building) => {
-      return warmReach(building) > 0;
-    })
-    .map((building) => {
-      return { building, reach: warmReach(building), seat: warmSeat(building) };
-    });
-}
-
 function distanceTo(tick: PersonTick, building: Building): number {
   const { mover } = tick.person;
 
@@ -104,11 +94,12 @@ export function nearestWarmPlace(tick: PersonTick): WarmPlace | null {
   let nearest: WarmPlace | null = null;
   let nearestDistance = Number.POSITIVE_INFINITY;
 
-  for (const place of warmPlaces(tick)) {
-    const distance = distanceTo(tick, place.building);
+  for (const building of tribeBuildings(tick.tribe, tick.context)) {
+    const reach = warmReach(building);
+    const distance = distanceTo(tick, building);
 
-    if (distance < nearestDistance) {
-      nearest = place;
+    if (reach > 0 && distance < nearestDistance) {
+      nearest = { building, reach, seat: warmSeat(building) };
       nearestDistance = distance;
     }
   }
@@ -127,7 +118,7 @@ function isSleepingAtHome(tick: PersonTick, isAsleep: boolean): boolean {
     return false;
   }
 
-  return Math.hypot(tick.person.mover.x - home.x, tick.person.mover.z - home.z) < SLEEPING_RADIUS;
+  return distanceTo(tick, home) < SLEEPING_RADIUS;
 }
 
 function isWarmedBy(tick: PersonTick, id: number | null): boolean {
