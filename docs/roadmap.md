@@ -31,10 +31,12 @@ dead ones are deleted, and an item enters Now only when it is small or medium an
 
 - **Goal**: a new power, hazard or page is one folder and a few typed registry entries.
 - **Why**: everything below adds powers, systems and pages. Today each one touches many files by hand.
-- **Scope**: the [Migration](plan.md#migration) steps: the safety net, one power registry, saves with name tables,
-  per-system random streams, the first reactions. Out: renaming folders that work, a full rewrite.
-- **Done when**: the plan's checklists hold for a new power, saves from 0.8 still load, and generation stays identical
-  for a seed.
+- **Scope**: the [Migration](architecture/migration.md) phases, including determinism, a command-only simulation,
+  replays and translation; Phase L (lockstep) is tracked under [online play](#online-play-with-lockstep). Out: a full
+  rewrite (leaf code moves once, by script), and loading saves from before format 2 (beta,
+  [decision 1](architecture/decisions.md#owner-decisions)).
+- **Done when**: the [checklists](architecture/walkthroughs.md#checklists) hold for a new power, saves from format 2 on
+  keep loading, and a seed gives the same island and the same game in Chromium, Firefox and WebKit.
 - **Depends on**: nothing. Size: L, done in the plan's steps.
 
 ### Smoother, cleaner relief
@@ -49,6 +51,15 @@ dead ones are deleted, and an item enters Now only when it is small or medium an
   fingerprint changes once per phase.
 - **Depends on**: nothing. Size: M per phase.
 
+### Localization
+
+- **Goal**: the interface, powers and chronicle in more languages, starting with Russian.
+- **Scope**: Lingui catalogs per module and for built-in text ([I2](architecture/migration.md#phase-i-interface)), the
+  browser language by default, a language setting, Russian first. Out: translated release notes.
+- **Done when**: the whole interface, powers and chronicle show in Russian, and CI fails on a missing Russian line
+  (`lingui check missing`).
+- **Depends on**: the interface moves (M4) in the restructure. Size: M.
+
 ### Supporter membership on Whop
 
 - **Goal**: players who want to support the game can join a membership and get recognition and early builds.
@@ -61,6 +72,24 @@ dead ones are deleted, and an item enters Now only when it is small or medium an
 
 ## Next
 
+### Online play with lockstep
+
+- **Goal**: two to four players share one island. Later each player can be the god of their own tribe, and gods can
+  rival and wage war.
+- **How**: deterministic [lockstep](architecture/determinism.md#replays-and-lockstep). Players send only commands, every
+  browser runs the same simulation, and a hash every turn catches a desync. A Cloudflare Durable Object per room orders
+  the commands, keeps the log and the latest snapshot, and runs no simulation. Joiners load the host's save instead of
+  generating. A delay of a few hundred milliseconds is fine for a god game.
+- **Steps**:
+  1. A command-only simulation and replays (K3, D6 in the restructure).
+  2. The same results in Chromium, Firefox and WebKit (D2, D5).
+  3. Lockstep turns and versioned builds (L1, L2).
+  4. Rooms on a relay, a desync check and a resync (L3, L4).
+  5. Rival gods (L5).
+  6. Late join, reconnect, speed limits per room (L6).
+- **Risks**: hidden nondeterminism, players on different builds, slow phones holding back a fast room.
+- **Size**: L, split into the [L steps](architecture/migration.md#phase-l-lockstep) before it enters Now.
+
 ### Deeper tribes
 
 - **Goal**: tribes live through more than food and raids: sickness, diplomacy and beliefs shape their history.
@@ -69,7 +98,9 @@ dead ones are deleted, and an item enters Now only when it is small or medium an
   marriages between tribes, tribute. Beliefs: what a tribe worships shapes its choices and how it answers your powers.
   Out: player-written rules.
 - **Done when**: each system has its own tests, shows in the journal and the chronicle, and a save keeps it.
-- **Depends on**: the restructure (systems and saves). Size: M each.
+- **Depends on**: the restructure (systems and saves) and [online play](#online-play-with-lockstep), which comes first
+  ([decision 6](architecture/decisions.md#owner-decisions)); diplomacy builds on the built-in rivalry system. Size: M
+  each.
 
 ### Better models and animation
 
@@ -85,24 +116,7 @@ dead ones are deleted, and an item enters Now only when it is small or medium an
   through a volcano, settle an archipelago.
 - **Scope**: a scenario is data: a start, rules and goals, with progress in the interface. Out: a campaign story.
 - **Done when**: three scenarios ship, each with a test that plays it to its goal.
-- **Depends on**: the restructure. Size: M.
-
-### Replays and a command-only simulation
-
-- **Goal**: every change to a world comes from a command on a tick, so a game can be replayed exactly.
-- **Why**: online play needs it. It also gives replays, exact bug reports and verified scenario results.
-- **Scope**: strokes, brushes and water settling become tick commands. A state hash per tick. A replay of a recorded
-  game reaches the same hash. Out: networking.
-- **Done when**: a recorded game replays to the same hash in Chromium.
-- **Depends on**: determinism in the restructure. Size: M.
-
-### Localization
-
-- **Goal**: the interface, powers and chronicle in more languages, starting with Russian.
-- **Scope**: strings moved into language files, the browser language by default, a language setting. Out: translated
-  release notes.
-- **Done when**: the whole interface shows in a second language, and a test fails on a missing string.
-- **Size**: M.
+- **Depends on**: the restructure (G1). Size: M.
 
 ### Tribe-built bridges
 
@@ -111,25 +125,6 @@ dead ones are deleted, and an item enters Now only when it is small or medium an
 - **Depends on**: the restructure. Size: M.
 
 ## Later
-
-### Online play with lockstep
-
-- **Goal**: two to four players share one island. Later each player can be the god of their own tribe, and gods can
-  rival and wage war.
-- **How**: deterministic lockstep. Players send only commands, every browser runs the same simulation, and a hash every
-  few ticks catches a desync. A Cloudflare Durable Object per room orders the commands, keeps the log and the latest
-  snapshot, and runs no simulation. Joiners load the host's save instead of generating. A delay of a few hundred
-  milliseconds is fine for a god game.
-- **Steps**:
-  1. Replays and a command-only simulation (Next).
-  2. The same results in Chromium, Firefox and WebKit: `Math.sin`, `cos`, `atan2`, `exp`, `log`, `pow` and `hypot`
-     differ between engines, so the simulation uses its own exact versions, and a lint rule keeps the others out.
-     Replay hashes are compared in all three browsers in CI.
-  3. Rooms: a link to join, two to four players, a desync check, a resync from a snapshot.
-  4. Rival gods: each player has a tribe and powers of their own.
-  5. Late join, reconnect, speed limits per room.
-- **Risks**: hidden nondeterminism, players on different builds, slow phones holding back a fast room.
-- **Size**: L.
 
 ### Mobile app
 
@@ -140,13 +135,9 @@ dead ones are deleted, and an item enters Now only when it is small or medium an
 ### Cloud saves and shared worlds
 
 - **Goal**: worlds follow a player between devices, and an island can be shared by a link.
-- **Scope**: saves stored on Cloudflare per account, a link that opens a shared world, a small gallery.
+- **Scope**: full worlds (the [`WorldBase`](architecture/saves.md#the-world-base) and the save sections) stored in
+  Cloudflare R2 per account, a link that opens a shared world, a small gallery.
 - **Depends on**: sign-in through Whop. Size: M.
-
-### Mods
-
-- **Goal**: players add powers, species and rules as data packs.
-- **Depends on**: the module registries of the restructure. Size: L.
 
 ## Paid content
 
@@ -189,7 +180,8 @@ Rules:
 - **Pay to win, ads or locking today's free powers.**
 - **Rollback netcode.** Lockstep with a delay suits a god game; rollback would re-simulate a large world.
 - **Peer-to-peer rooms first.** A relay on Cloudflare avoids NAT trouble and keeps the log for resyncs.
-- What [plan.md](plan.md#what-we-deliberately-dont-do) rules out for the code.
+- **Mods from outside players.** New content is written in this repository as modules and catalog rows.
+- What [the plan](architecture/decisions.md#what-we-deliberately-dont-do) rules out for the code.
 
 ## Recently done
 

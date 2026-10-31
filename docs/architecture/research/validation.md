@@ -1,6 +1,6 @@
 # Validation
 
-The chief architect merged the proposals into [plan-draft.md](plan-draft.md). Four validators attacked the draft, and an editor applied the findings that held to produce [the final plan](../plan.md).
+The chief architect merged the proposals into a draft plan. Four validators attacked the draft, and an editor applied the findings that held to produce [the final plan](../../plan.md).
 
 ## Synthesis summary
 
