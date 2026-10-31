@@ -90,6 +90,7 @@ function WeatherSettings({ weather }: { readonly weather: WeatherView }) {
 
   const choice = weather.isAutomatic ? AUTOMATIC : weather.kind;
   const temperatureOffset = Math.round(weather.userTemperatureOffset);
+  const windDirection = Math.round(wind.direction);
 
   return (
     <>
@@ -117,8 +118,8 @@ function WeatherSettings({ weather }: { readonly weather: WeatherView }) {
             minimum={0}
             onChange={handleDirectionChange}
             step={1}
-            value={Math.round(wind.direction)}
-            valueText={`${compassName(wind.direction)} · ${Math.round(wind.direction)}°`}
+            value={windDirection}
+            valueText={`${compassName(wind.direction)} · ${windDirection}°`}
           />
 
           <RangeField
