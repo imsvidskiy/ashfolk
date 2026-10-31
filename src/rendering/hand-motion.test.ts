@@ -1,6 +1,15 @@
 import { describe, expect, it } from "vitest";
 import type { HeldView } from "../simulation/hand/grab-target.ts";
-import { BOUNCE_HEIGHT, FALL_SHARE, HandMotion, HELD_LIFT, LIFT_SECONDS, landing, liftPop } from "./hand-motion.ts";
+import {
+  BOUNCE_HEIGHT,
+  FALL_SHARE,
+  HandMotion,
+  type HandPose,
+  HELD_LIFT,
+  LIFT_SECONDS,
+  landing,
+  liftPop,
+} from "./hand-motion.ts";
 
 const FRAME = 1 / 60;
 const DEER: HeldView = { id: 4, isPlaceable: true, kind: "animal", x: 0, z: 0 };
@@ -11,8 +20,8 @@ function run(motion: HandMotion, held: HeldView | null, seconds: number): void {
   }
 }
 
-function poseOf(motion: HandMotion, restX = 0, restZ = 0) {
-  const pose = motion.poseOf("animal", DEER.id, restX, restZ);
+function poseOf(motion: HandMotion): HandPose {
+  const pose = motion.poseOf("animal", DEER.id, 0, 0);
 
   if (pose === null) {
     throw new Error("The deer should be in the hand");
