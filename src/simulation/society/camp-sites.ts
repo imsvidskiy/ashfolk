@@ -13,8 +13,12 @@ const UNSUITABLE = Number.NEGATIVE_INFINITY;
 const CAMP_SLOPE = 0.22;
 const RIM_MARGIN = 120;
 const WATER_SAMPLES = 24;
+const WATER_SAMPLE_RINGS = 4;
+const NEAREST_WATER_SAMPLE = 40;
+const WATER_SAMPLE_GAP = 60;
 const NEAR_WATER = 300;
 const TOO_CLOSE_TO_WATER = 35;
+const BANK_PENALTY = 3;
 const FORAGE_REACH_CELLS = 14;
 const OPEN_REACH = 80;
 const GENTLE_SLOPE = 0.3;
@@ -22,8 +26,15 @@ const STEEPEST_MEAN_SLOPE = 0.24;
 const SMALLEST_OPEN_SHARE = 0.5;
 const CLOSED_CANOPY_SHARE = 0.25;
 const ROUGH_GROUND_PENALTY = 6;
+const SLOPE_AVERSION = 6;
+const WARM_CAMP_TEMPERATURE = 6;
+const MILD_CAMP_TEMPERATURE = 3;
+const HOSTILE_BIOME_PENALTY = 5;
 const SITE_ATTEMPTS = 90;
 const ACCEPTABLE_SCORE = -5;
+const INNER_SEARCH_SHARE = 0.35;
+const NEAR_ORIGIN_INNER_SEARCH_SHARE = 0.15;
+const NEAR_ORIGIN_WEIGHT = 2;
 const DEFAULT_NEIGHBOR_DISTANCE = 500;
 const MIGRANT_PACE = 2;
 const MARSH_AVERSION = 6;
@@ -86,7 +97,7 @@ export function scoreSite(
     roughnessScore(shares) +
     climateScore(world, cell) +
     neighborScore(point, search, tribes) -
-    world.slope(cell) * 6 -
+    world.slope(cell) * SLOPE_AVERSION -
     (isOpen ? 0 : ROUGH_GROUND_PENALTY)
   );
 }
@@ -112,7 +123,7 @@ function waterScore(world: WorldState, point: Waypoint): number {
 
   for (let sample = 0; sample < WATER_SAMPLES; sample += 1) {
     const angle = (sample / WATER_SAMPLES) * FULL_TURN;
-    const distance = 40 + (sample % 4) * 60;
+    const distance = NEAREST_WATER_SAMPLE + (sample % WATER_SAMPLE_RINGS) * WATER_SAMPLE_GAP;
 
     if (world.isWaterAt(point.x + Math.cos(angle) * distance, point.z + Math.sin(angle) * distance)) {
       nearestWater = Math.min(nearestWater, distance);
@@ -126,7 +137,7 @@ function waterScore(world: WorldState, point: Waypoint): number {
   const closeness = 3 - nearestWater / 120;
 
   if (nearestWater < TOO_CLOSE_TO_WATER) {
-    return closeness - 3;
+    return closeness - BANK_PENALTY;
   }
 
   return closeness;
@@ -236,13 +247,13 @@ function climateScore(world: WorldState, cell: number): number {
   const biome = world.terrain.biome[cell];
   const temperature = world.terrain.baseTemperature[cell];
 
-  const hostility = biome === Biome.Desert || biome === Biome.Glacier ? 5 : 0;
+  const hostility = biome === Biome.Desert || biome === Biome.Glacier ? HOSTILE_BIOME_PENALTY : 0;
 
-  if (temperature > 6) {
+  if (temperature > WARM_CAMP_TEMPERATURE) {
     return 2 - hostility;
   }
 
-  if (temperature > 3) {
+  if (temperature > MILD_CAMP_TEMPERATURE) {
     return -hostility;
   }
 
@@ -266,8 +277,8 @@ function neighborScore(point: Waypoint, search: SiteSearch, tribes: readonly Tri
 export function findCampSite(search: SiteSearch, context: SocietyContext, tribes: readonly Tribe[]): Waypoint | null {
   const { random } = context;
 
-  const innerShare = search.isNearOrigin ? 0.15 : 0.35;
-  const nearnessWeight = search.isNearOrigin ? 2 : 0;
+  const innerShare = search.isNearOrigin ? NEAR_ORIGIN_INNER_SEARCH_SHARE : INNER_SEARCH_SHARE;
+  const nearnessWeight = search.isNearOrigin ? NEAR_ORIGIN_WEIGHT : 0;
 
   let best: Waypoint | null = null;
   let bestScore = ACCEPTABLE_SCORE;
