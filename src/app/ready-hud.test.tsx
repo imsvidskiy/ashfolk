@@ -8,17 +8,6 @@ import { useEngineStore } from "./engine-store.ts";
 import { ReadyHud } from "./ready-hud.tsx";
 
 describe("ready hud", () => {
-  it("waits for the engine", async () => {
-    showWorld();
-
-    const screen = await render(<ReadyHud />);
-
-    await loadHud();
-    await nextFrame();
-
-    expect(screen.container.childElementCount).toBe(0);
-  });
-
   it("shows the hud in the frame the engine becomes ready", async () => {
     await page.viewport(1440, 900);
 
@@ -36,5 +25,16 @@ describe("ready hud", () => {
     await nextFrame();
 
     expect(screen.getByRole("navigation", { name: "Panels" }).query()).not.toBeNull();
+  });
+
+  it("waits for the engine", async () => {
+    showWorld();
+
+    const screen = await render(<ReadyHud />);
+
+    await loadHud();
+    await nextFrame();
+
+    expect(screen.container.childElementCount).toBe(0);
   });
 });

@@ -2,12 +2,15 @@ import { loadedHud } from "./engine-launcher.ts";
 import { useEngineStore } from "./engine-store.ts";
 
 export function ReadyHud() {
-  const isReady = useEngineStore((state) => {
-    return state.status.kind === "ready";
-  });
-  const Hud = loadedHud();
+  const Hud = useEngineStore((state) => {
+    if (state.status.kind !== "ready") {
+      return null;
+    }
 
-  if (!isReady || Hud === null) {
+    return loadedHud();
+  });
+
+  if (Hud === null) {
     return null;
   }
 
