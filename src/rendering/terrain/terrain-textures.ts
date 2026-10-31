@@ -51,6 +51,7 @@ export class TerrainTextures {
   readonly #patchStepData: Float32Array;
   readonly #pondDepths: Float32Array;
   readonly #shoreData: Float32Array;
+  readonly #shoreSource: ShoreSource;
   readonly #wetlandData: Uint8Array;
   #albedoSeason = Number.NEGATIVE_INFINITY;
 
@@ -69,6 +70,13 @@ export class TerrainTextures {
     this.water = floatDataTexture(mirror.terrain.waterSurface, size, size, RedFormat);
     this.#shoreData = new Float32Array(size * size * SHORE_CHANNELS);
     this.#pondDepths = new Float32Array(size * size);
+    this.#shoreSource = {
+      cellSize: mirror.grid.cellSize,
+      heights: mirror.terrain.height,
+      levels: mirror.terrain.waterSurface,
+      pondDepths: this.#pondDepths,
+      size,
+    };
     this.shore = floatDataTexture(this.#shoreData, size, size, RGBAFormat);
     this.#buildShore();
     this.surface = byteTexture(mirror.surface, size, RGBAFormat);
@@ -173,18 +181,6 @@ export class TerrainTextures {
     }
   }
 
-  #shoreSource(): ShoreSource {
-    const { grid, terrain } = this.#mirror;
-
-    return {
-      cellSize: grid.cellSize,
-      heights: terrain.height,
-      levels: terrain.waterSurface,
-      pondDepths: this.#pondDepths,
-      size: grid.cellsPerSide,
-    };
-  }
-
   #measurePondShores(): void {
     const { grid, water } = this.#mirror;
 
@@ -209,24 +205,18 @@ export class TerrainTextures {
 
   #buildShore(): void {
     this.#measurePondShores();
-    buildShoreField(this.#shoreSource(), this.#shoreData);
+    buildShoreField(this.#shoreSource, this.#shoreData);
     this.shore.needsUpdate = true;
   }
 
   #updateShore(levelRegion: CellRegion | null, heightRegion: CellRegion | null): void {
-    if (levelRegion === null && heightRegion === null) {
-      return;
-    }
-
-    const source = this.#shoreSource();
-
     if (levelRegion !== null) {
-      updateShoreField(source, levelRegion, this.#shoreData);
+      updateShoreField(this.#shoreSource, levelRegion, this.#shoreData);
       this.shore.needsUpdate = true;
     }
 
     if (heightRegion !== null) {
-      updateShoreDepths(source, heightRegion, this.#shoreData);
+      updateShoreDepths(this.#shoreSource, heightRegion, this.#shoreData);
       this.shore.needsUpdate = true;
     }
   }
