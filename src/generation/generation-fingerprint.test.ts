@@ -1,6 +1,7 @@
 import { beforeAll, describe, expect, it } from "vitest";
 import { generationFingerprint } from "./generation-fingerprint.ts";
 import type { GenerationOptions } from "./generation-options.ts";
+import { FULL_SIZE_TIMEOUT, fullSizeWorld } from "./testing/generated-worlds.ts";
 import { type GeneratedWorld, generateWorld } from "./world-generator.ts";
 
 const OPTIONS: GenerationOptions = {
@@ -32,6 +33,16 @@ describe("generation fingerprints", () => {
     expect(generationFingerprint(generateWorld(7, OPTIONS))).toBe(fingerprint);
     expect(generationFingerprint(generateWorld(8, OPTIONS))).not.toBe(fingerprint);
   }, 60_000);
+
+  it(
+    "keeps the fingerprints of known islands until generation is meant to change",
+    () => {
+      expect(generationFingerprint(world)).toBe(36_597_070);
+      expect(generationFingerprint(generateWorld(7, { ...OPTIONS, shape: "square" }))).toBe(1_737_157_781);
+      expect(generationFingerprint(fullSizeWorld(7))).toBe(4_002_047_637);
+    },
+    FULL_SIZE_TIMEOUT
+  );
 
   it("changes when one river point moves", () => {
     const rivers = replacedFirst(world.water.rivers, (river) => {
