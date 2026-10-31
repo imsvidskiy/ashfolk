@@ -1,11 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { createTribe, type Tribe } from "../tribe.ts";
+import { bareTribe } from "../../testing/test-rivalry.ts";
+import type { Tribe } from "../tribe.ts";
 import { aggrieve, areKin, isTruce, RelationBook, restingStanding, settle, sideOf, stanceFor } from "./relations.ts";
 
-const IDENTITY = { color: "#c8553d", furColor: "#6b4a33", name: "Bear Clan" };
-
 function tribeFrom(id: number, originId: number | null): Tribe {
-  const tribe = createTribe({ campX: 0, campZ: 0, day: 0, id, identity: IDENTITY });
+  const tribe = bareTribe(id);
 
   tribe.originId = originId;
 

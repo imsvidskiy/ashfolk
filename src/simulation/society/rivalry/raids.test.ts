@@ -1,20 +1,14 @@
 import { describe, expect, it } from "vitest";
-import { enclosure, foundNeighboringTribes, foundTribe, SPRING_HARNESS } from "../../testing/test-rivalry.ts";
+import {
+  enclosure,
+  foundNeighboringTribes,
+  foundTribe,
+  SPRING_HARNESS,
+  steadyJob,
+} from "../../testing/test-rivalry.ts";
 import { SocietyHarness } from "../../testing/test-society.ts";
-import type { Job, JobKind } from "../jobs/job.ts";
 import { burnableBuilding, chooseAim, chooseWarriors } from "./raids.ts";
 import { RelationBook } from "./relations.ts";
-
-function steadyJob(kind: JobKind): Job {
-  const job: Job = {
-    kind,
-    update: () => {
-      return job;
-    },
-  };
-
-  return job;
-}
 
 describe("a raid", () => {
   it("sets fire only to what can burn", () => {

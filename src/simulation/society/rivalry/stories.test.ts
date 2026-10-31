@@ -1,17 +1,13 @@
 import { describe, expect, it } from "vitest";
+import { bareTribe } from "../../testing/test-rivalry.ts";
 import { emptyStock } from "../stock.ts";
-import { createTribe, type Tribe } from "../tribe.ts";
 import type { Raid } from "./raids.ts";
 import { mourningText, raidSummary } from "./stories.ts";
 
-const RAIDERS = tribeNamed(1, "Bear Clan");
-const VICTIMS = tribeNamed(2, "Wolf Clan");
+const RAIDERS = bareTribe(1);
+const VICTIMS = bareTribe(2);
 
 type RaidOutcome = Partial<Pick<Raid, "burned" | "fallenDefenders" | "fallenRaiders" | "loot">>;
-
-function tribeNamed(id: number, name: string): Tribe {
-  return createTribe({ campX: 0, campZ: 0, day: 0, id, identity: { color: "#c8553d", furColor: "#6b4a33", name } });
-}
 
 function raidEnding(outcome: RaidOutcome): Raid {
   return {

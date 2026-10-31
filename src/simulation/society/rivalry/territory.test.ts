@@ -1,9 +1,7 @@
 import { describe, expect, it } from "vitest";
+import { bareTribe } from "../../testing/test-rivalry.ts";
 import type { Building } from "../buildings.ts";
-import { createTribe } from "../tribe.ts";
 import { type Claim, claimOf, claimOverlap, claimRadius, isInsideClaim, rangeOverlap } from "./territory.ts";
-
-const IDENTITY = { color: "#c8553d", furColor: "#6b4a33", name: "Bear Clan" };
 
 function claimAt(x: number, radius: number): Claim {
   return { radius, range: radius * 2, tribeId: x, x, z: 0 };
@@ -21,7 +19,7 @@ describe("territory", () => {
   });
 
   it("reaches past the farthest building of the camp", () => {
-    const tribe = createTribe({ campX: 0, campZ: 0, day: 0, id: 1, identity: IDENTITY });
+    const tribe = bareTribe(1);
 
     const outpost: Building = {
       burningSeconds: 0,

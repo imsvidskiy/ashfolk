@@ -1,9 +1,10 @@
+import { tribeIdentity } from "../../content/names.ts";
 import { FOOD_KINDS } from "../../content/resources.ts";
 import type { Building } from "../society/buildings.ts";
-import type { Job } from "../society/jobs/job.ts";
+import type { Job, JobKind } from "../society/jobs/job.ts";
 import { createPerson, type Person } from "../society/person.ts";
 import { type Relation, sideOf } from "../society/rivalry/relations.ts";
-import type { Tribe } from "../society/tribe.ts";
+import { createTribe, type Tribe } from "../society/tribe.ts";
 import { TICK_SECONDS } from "../tick.ts";
 import { MORNING, type SocietyHarness } from "./test-society.ts";
 
@@ -100,9 +101,13 @@ export function longFeud(harness: SocietyHarness, first: Tribe, second: Tribe): 
   return relation;
 }
 
-export function idleJob(): Job {
+export function bareTribe(id: number): Tribe {
+  return createTribe({ campX: 0, campZ: 0, day: 0, id, identity: tribeIdentity(id - 1) });
+}
+
+export function steadyJob(kind: JobKind): Job {
   const job: Job = {
-    kind: "idle",
+    kind,
     update: () => {
       return job;
     },
@@ -117,7 +122,7 @@ export function standOff(harness: SocietyHarness, gap: number): Duel {
   const [far] = harness.society.membersOf(second);
 
   for (const person of harness.society.people) {
-    person.job = idleJob();
+    person.job = steadyJob("idle");
   }
 
   far.mover.x = near.mover.x + gap;
