@@ -12,7 +12,7 @@ import { discover, isReadyToDiscover } from "./progress.ts";
 import { considerMoving, considerSplit, updateMigration } from "./settlement.ts";
 import type { SocietyContext } from "./society-context.ts";
 import { type Storage, spoilFood, totalFood } from "./stock.ts";
-import { knows, learn, type Tribe, upcomingTechnology } from "./tribe.ts";
+import { FAITH_BASELINE, knows, learn, type Tribe, upcomingTechnology } from "./tribe.ts";
 
 const BASE_LEARNING_PER_DAY = 24;
 const ADULT_LEARNING = 4.5;
@@ -26,13 +26,14 @@ const DAILY_CHECK_DAYS = 0.5;
 const CROP_DISPLAY_DAYS = 0.08;
 const WORKSHOP_LEARNING = 4;
 const TOTEM_LEARNING = 2;
-const FAITH_BASELINE = 30;
 const FAITH_DRIFT = 0.05;
 const MOTHER_YOUNGEST = 15;
 const MOTHER_OLDEST = 45;
 const FATHER_YOUNGEST = 16;
 const DAYS_BETWEEN_CHILDREN = 2;
 const FOOD_PER_PERSON_FOR_BIRTHS = 2.5;
+const BIRTH_ODDS_PER_DAY = 0.4;
+const BIRTH_ODDS_PER_FAITH = 0.004;
 const MAXIMUM_MOTHERS_COUNTED = 4;
 const BIRTHPLACE_SEARCH_RADIUS = 30;
 
@@ -211,7 +212,7 @@ function chooseMother(tick: TribeTick, elapsedDays: number): Person | null {
 
   const odds =
     elapsedDays *
-    (0.4 + tribe.faith * 0.004) *
+    (BIRTH_ODDS_PER_DAY + tribe.faith * BIRTH_ODDS_PER_FAITH) *
     Math.min(MAXIMUM_MOTHERS_COUNTED, mothers.length) *
     context.rules.life.birthRate;
 

@@ -7,9 +7,12 @@ import type { WorldRules } from "../../content/world-rules.ts";
 import { emptyStock, type Stock } from "./stock.ts";
 
 export const BASE_HOUSING = 4;
+export const FAITH_BASELINE = 30;
 export const MAXIMUM_FAITH = 100;
 
 const NEVER = Number.NEGATIVE_INFINITY;
+const FOUNDING_BERRIES = 10;
+const FOUNDING_WOOD = 4;
 
 export type ScarceResource = "berries" | "clay" | "fish" | "game" | "stone" | "wood";
 
@@ -105,8 +108,8 @@ interface TribeFounding {
 function foundingStock(): Stock {
   const stock = emptyStock();
 
-  stock.berries = 10;
-  stock.wood = 4;
+  stock.berries = FOUNDING_BERRIES;
+  stock.wood = FOUNDING_WOOD;
 
   return stock;
 }
@@ -129,7 +132,7 @@ export function createTribe(founding: TribeFounding): Tribe {
     color: founding.identity.color,
     deaths: 0,
     eraIndex: 0,
-    faith: 30,
+    faith: FAITH_BASELINE,
     fields: [],
     furColor: founding.identity.furColor,
     id: founding.id,

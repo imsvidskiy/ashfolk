@@ -22,12 +22,17 @@ import { completedBuilding } from "./tribe-places.ts";
 import { hasWeaponsToHunt } from "./weapons.ts";
 import { foodNeed, isWorthIt, type WorkOption } from "./work-needs.ts";
 
+const BUILD_WEIGHT = 6;
 const LOW_CAMPFIRE_FUEL = 0.45;
 const ELDER_HEAVY_WORK = 0.25;
 const HEAVY_WORK: ReadonlySet<JobKind> = new Set(["chop", "hunt", "mine", "quarry"]);
+const BASE_WOOD = 6;
 const CRAFTING_WOOD = 8;
+const SMALLEST_WOOD_NEED = 0.1;
 const FIELD_TASK_WEIGHTS: Readonly<Record<FieldTask, number>> = { harvest: 3.6, sow: 2.6, tend: 1 };
+const BASE_STONE = 4;
 const MASONRY_STONE = 24;
+const SPARE_STONE = 2;
 const FIRE_WOOD = 4;
 const LARGEST_BUILDING_PARTY = 4;
 const EXPEDITION_MEALS_PER_PERSON = 2;
@@ -54,7 +59,7 @@ const WORK_OPTIONS: readonly WorkOption[] = [
       }
 
       if (!isFarSite(tick.tribe, site)) {
-        return 6;
+        return BUILD_WEIGHT;
       }
 
       const isUnprovisioned = totalFood(tick.tribe.stock) < tick.tribe.memberCount * EXPEDITION_MEALS_PER_PERSON;
@@ -67,7 +72,7 @@ const WORK_OPTIONS: readonly WorkOption[] = [
         return 0;
       }
 
-      return 6;
+      return BUILD_WEIGHT;
     },
   },
   {
@@ -216,17 +221,17 @@ function woodNeed(tick: PersonTick, construction: ResourceAmounts): number {
   const fireWood = knows(tribe, "fire") ? fireWoodReserve(tick.context.environment.season) : 0;
   const craftWood = knows(tribe, "pottery") ? CRAFTING_WOOD : 0;
 
-  const wanted = 6 + amountOf(construction, "wood") + fireWood + craftWood;
+  const wanted = BASE_WOOD + amountOf(construction, "wood") + fireWood + craftWood;
 
-  return Math.max(0.1, 1 - tribe.stock.wood / wanted);
+  return Math.max(SMALLEST_WOOD_NEED, 1 - tribe.stock.wood / wanted);
 }
 
 function stoneWanted(tick: PersonTick, construction: ResourceAmounts): number {
   const { tribe } = tick;
 
-  const reserve = knows(tribe, "masonry") ? MASONRY_STONE : 4;
+  const reserve = knows(tribe, "masonry") ? MASONRY_STONE : BASE_STONE;
 
-  return amountOf(construction, "stone") + reserve + 2;
+  return amountOf(construction, "stone") + reserve + SPARE_STONE;
 }
 
 function adjustedWeight(option: WorkOption, tick: PersonTick, construction: ResourceAmounts): number {
