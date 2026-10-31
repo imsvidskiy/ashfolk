@@ -48,6 +48,7 @@ const DOME: readonly (readonly [reach: number, radius: number])[] = [
 const LOW_STEM_TAPER = 0.6;
 const LOW_CONE_TRUNK = 0.5;
 const MAXIMUM_BRANCH_DEPTHS: Readonly<Record<PlantDetailLevel, number>> = { far: 0, high: 2, low: 0, medium: 1 };
+const DEEPEST_SEAMED_BRANCH = 1;
 const SHOULDER_HEIGHT = 0.38;
 const SHOULDER_RADIUS = 0.62;
 const TIP_HEIGHT = 0.92;
@@ -262,8 +263,8 @@ function reachingCrown(points: readonly TubePoint[], crown: Vector3 | null): Tub
   return [...points, { radius: last.radius * LOW_STEM_TAPER, x: crown.x, y: crown.y, z: crown.z }];
 }
 
-function branchSeam(points: readonly TubePoint[], level: PlantDetailLevel): { seam?: number } {
-  if (isDistantLevel(level)) {
+function branchSeam(branch: Branch, points: readonly TubePoint[], level: PlantDetailLevel): { seam?: number } {
+  if (isDistantLevel(level) || branch.depth > DEEPEST_SEAMED_BRANCH) {
     return {};
   }
 
@@ -281,20 +282,19 @@ function addBranches(builder: MeshBuilder, structure: TreeStructure, look: TreeL
     const points = branchPoints(branch, structure, level);
     const [root] = points;
     const top = points.at(-1);
+    const style = woodStyle(structure.height, look, branch.depth);
 
     if (level === "far") {
       if (top !== undefined) {
-        builder.add(spike(root, farTrunkTop(structure, top)), {
-          style: woodStyle(structure.height, look, branch.depth),
-        });
+        builder.add(spike(root, farTrunkTop(structure, top)), { style });
       }
 
       continue;
     }
 
     builder.add(tube(points, { hasStartCap: branch.depth > 0, radialSegments: BRANCH_SIDES[level][branch.depth] }), {
-      ...(branch.depth < 2 ? branchSeam(points, level) : {}),
-      style: woodStyle(structure.height, look, branch.depth),
+      ...branchSeam(branch, points, level),
+      style,
     });
   }
 }
