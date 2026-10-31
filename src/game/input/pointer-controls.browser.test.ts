@@ -420,13 +420,19 @@ describe("pointer controls", () => {
     expect(rig.tool.tap).not.toHaveBeenCalled();
   });
 
-  it("taps to select when no tool is selected", () => {
+  it("taps to select the ground under the release when no tool is selected", () => {
     const rig = createRig(isNeverTrue, null, isNeverTrue);
+    const picker = new GroundPicker(rig.camera.camera, flatGround, WORLD_HALF_SIZE);
 
     mouse(rig, "pointerdown", 195, 420);
-    mouse(rig, "pointerup", 195, 420);
+    mouse(rig, "pointermove", 198, 422);
+    mouse(rig, "pointerup", 198, 422);
 
+    const released = picker.pick({ x: 198, y: 422 }, { height: CANVAS_HEIGHT, width: CANVAS_WIDTH });
+
+    expect(released).toMatchObject({ y: 0 });
     expect(rig.tool.tap).toHaveBeenCalledTimes(1);
+    expect(rig.tool.tap).toHaveBeenCalledWith(released, { x: 198, y: 422 });
   });
 
   it("hovers once a frame with the screen point, and again when the camera moves", () => {
