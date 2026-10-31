@@ -26,19 +26,20 @@ and pre-push runs `bun run typecheck`, `bun run knip` and `bun run test`.
 | `bun run test` | Runs unit tests in Node and browser tests in Chromium; `bun run test:watch` reruns them on change |
 | `bun run build` | Builds for production; `bun run preview` serves the build |
 | `bun run test:e2e` | Runs Playwright smoke tests of the wide and phone layouts against the production build |
-| `bun run shots` | Screenshots scenes from `tests/scenes.ts` in headless system Chrome on the GPU, for comparing a change by eye |
+| `bun run shots <url> <folder>` | Screenshots the scenes in `tests/scenes.ts` from a dev server in headless system Chrome on the GPU, for comparing a change by eye |
 | `bun run sounds <folder>` | Trims, levels and encodes the masters in `<folder>/masters`, listed in `<folder>/cues.json`, into `src/audio/sounds` with `ffmpeg` |
 | `bun run deploy` | Builds and deploys to Cloudflare Workers: the static build and `worker/`, which redirects other hosts and serves films in ranges |
 
-CI runs `check`, `typecheck`, `knip`, `test` and `build` on every pull request and
+CI runs `check`, `typecheck`, `knip`, `build` and `test` on every pull request and
 every push to `main`, and deploys `main`; run them before you push. Fix the
 code rather than the rule. `test:e2e` runs only locally: run it when you change
 the launch or the HUD layout.
 
 `src/**/*.test.ts` and `worker/**/*.test.ts` run in Node;
 `src/**/*.browser.test.ts` and `src/**/*.test.tsx` run in Chromium. Browser
-tests and Playwright need Chromium; without Playwright's own browser, point
-them at a system one:
+tests and Playwright need Chromium. Install Playwright's headless shell with
+`bunx playwright install --only-shell chromium`, or point them at a system
+Chrome:
 `CHROMIUM_EXECUTABLE_PATH="/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"`.
 
 ## Code
@@ -102,6 +103,7 @@ Commits follow
 | `simulation` | The simulation worker: nature, agents, society, powers |
 | `models` | Procedural people, animals, plants, and buildings |
 | `rendering` | The WebGPU renderer: terrain, water, sky, effects |
+| `audio` | The sound engine, ambience, cues and music |
 | `world` | The world grid, water and terrain sampling shared by the simulation and the renderer |
 | `game` | The main thread: worker connection, camera, input, tools |
 | `ui` | The HUD, its features, and the design system |

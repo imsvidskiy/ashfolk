@@ -141,15 +141,15 @@ function portsFor(branch) {
 }
 
 function gatePrompt(path, base) {
-  const fetch = base === BASE ? '\`git fetch -q origin\`, then ' : ''
+  const fetch = base === BASE ? '`git fetch -q origin`, then ' : ''
 
   return `Run the Ashfolk checks in the worktree at ${path} (cd there first) and measure its change against ${base}. Don't edit, commit or push.
 
-1. Run ${fetch} \`bun run check\`, \`bun run typecheck\`, \`bun run test\`, \`bun run build\` and \`bun run knip\`. If Playwright's own Chromium is missing, set CHROMIUM_EXECUTABLE_PATH to system Chrome as CONTRIBUTING.md describes. When a browser test fails, run its file once more alone; if it passes then, list it under flaky instead of failures.
+1. Run ${fetch}\`bun run check\`, \`bun run typecheck\`, \`bun run test\`, \`bun run build\` and \`bun run knip\`. If Playwright's own Chromium is missing, set CHROMIUM_EXECUTABLE_PATH to system Chrome as CONTRIBUTING.md describes. When a browser test fails, run its file once more alone; if it passes then, list it under flaky instead of failures.
 2. passed is true only when every command succeeds apart from flaky tests. Put each failure as one line with the command and the first error.
 3. Report root as the absolute path from \`git rev-parse --show-toplevel\`, base as the commit of \`git merge-base ${base} HEAD\`, and from \`git diff --numstat ${base}...HEAD\` and \`git diff --name-only ${base}...HEAD\` the branch, the HEAD commit, changedLines (added plus removed), and files.
 4. touchesCore: true when the change touches src/world, src/simulation, src/generation or src/game, anything saves store, or shader code (files importing three/tsl).
-5. hasRuntimeCode: true when any changed file under src is not a test, story or asset.
+5. hasRuntimeCode: true when any changed file under src is not a test (*.test.*), a helper in a testing folder or an asset such as an icon or a sound.
 6. touchesLook: true when the change touches src/rendering, src/models, src/design, src/features, src/app or styles.`
 }
 
@@ -320,7 +320,7 @@ if (confirmed.length > 0) {
 phase('Style')
 
 const style = await agent(
-  `Review the branch in the worktree at ${path} (cd there and work only there) against ${base}. Commit your fixes on its current branch as style(...) or refactor(...); don't create a branch, don't push and don't open a pull request. Run bun run check, bun run typecheck and bun run test before you commit.`,
+  `Review the branch in the worktree at ${path} (cd there and work only there) against ${base}. Commit your fixes on its current branch as style(...) or refactor(...); don't create a branch, don't push and don't open a pull request. Run bun run check, bun run typecheck, bun run knip and bun run test before you commit.`,
   { agentType: 'code-style', label: 'code-style', phase: 'Style', schema: STYLE_SCHEMA }
 )
 

@@ -50,7 +50,7 @@ The source is 469 files and about 81 000 lines, with 249 test files next to them
 1. **Every feature is wired by hand in many places.** The volcano merge (`24c94d3`) touched 35 files, the hand tool
    (`ea1a434`) 41, the hand polish (#243) 23, including a new `src/rendering/hand-motion.ts`. A power is
    registered in four places: `src/content/powers.ts`, the handler and schema maps in
-   `src/simulation/powers/power-registry.ts`, `src/features/powers/power-icons.tsx` and
+   `src/simulation/powers/power-registry.ts`, `src/features/powers/power-icons.ts` and
    `src/design/game-icon-sources.ts`. A grabbable kind needs `GRABBABLE_KINDS` in
    `src/simulation/hand/grab-target.ts`, a handler in `grab-handlers.ts`, picking in
    `src/game/input/entity-picker.ts`, lifting in `hand-motion.ts` and drawing in each view.
@@ -629,7 +629,7 @@ steps below are the main ones; splits and power moves add the rest.
 ### Then: one power registry, saves, systems, first reactions
 
 4. **One power registry without moving files.** M. `POWERS` spread from per-family `as const` records, with icon
-   names and handlers keyed the same way; `power-icons.tsx` and the separate schema map go away. Verify: the dock
+   names and handlers keyed the same way; `power-icons.ts` and the separate schema map go away. Verify: the dock
    tests; hashes unchanged.
 5. **Save sections.** M. Systems return `SaveSection`s; `snapshot()` and `restore()` loop in the explicit order;
    invalid sections reset. Verify: fixtures load; the unique-key test.

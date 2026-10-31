@@ -67,7 +67,8 @@ Ashfolk is a free god simulator in your browser. Shape a floating island, call r
 - **Graphics:** three.js with WebGPU and TSL
 - **Interface:** Base UI, Tailwind CSS, Zustand
 - **Data:** Zod, Comlink
-- **Tooling:** Biome, Vitest, Playwright, Lefthook
+- **Tooling:** Biome, Knip, Vitest, Playwright, Lefthook
+- **Hosting:** Cloudflare Workers
 
 ## Getting started
 
@@ -99,6 +100,9 @@ src/
   design/      design system
   features/    interface features
   app/         app shell, start and loading screens
+worker/        Cloudflare Worker: redirects to ashfolk.com, films in ranges
+tests/         Playwright smoke tests and screenshot scenes
+scripts/       sound encoding
 ```
 
 The simulation runs in a Web Worker. The renderer and the HUD read its frames and send commands back.
