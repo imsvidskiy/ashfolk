@@ -130,7 +130,7 @@ describe("background pipelines", () => {
 
     addBox(created.scene);
     drawnObjects(created);
-    vi.spyOn(Promise, "all").mockReturnValueOnce(new Promise(vi.fn()));
+    vi.spyOn(Promise, "allSettled").mockReturnValueOnce(new Promise(vi.fn()));
 
     await expect(created.pipelines.settle(10)).resolves.toBeUndefined();
   });

@@ -70,7 +70,7 @@ export class BackgroundPipelines {
     });
 
     try {
-      await Promise.race([Promise.all(this.#pending), limit]);
+      await Promise.race([Promise.allSettled(this.#pending), limit]);
     } finally {
       window.clearTimeout(timer);
     }
