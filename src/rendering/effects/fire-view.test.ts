@@ -1,7 +1,8 @@
-import { PerspectiveCamera } from "three/webgpu";
+import { PerspectiveCamera, PointLight } from "three/webgpu";
 import { describe, expect, it } from "vitest";
 import { isTreeSpecies } from "../../content/plants.ts";
 import type { WorldMirror } from "../../game/world-mirror.ts";
+import type { BuildingView } from "../../simulation/frame.ts";
 import { SURFACE_CHANNELS, SurfaceChannel } from "../../world/agent-buffers.ts";
 import { PlantState } from "../../world/vegetation-store.ts";
 import { createVegetatedMirror } from "../testing/vegetated-mirror.ts";
@@ -12,6 +13,21 @@ import { FireView } from "./fire-view.ts";
 const BYTE = 255;
 const LIGHT_SMOKE_PUFFS = 16;
 const SPARKS_PER_CELL = 2;
+const CAMPFIRE: BuildingView = {
+  extent: 2,
+  fuel: 1,
+  health: 1,
+  id: 1,
+  kind: "campfire",
+  progress: 1,
+  rotation: 0,
+  seed: 0,
+  style: 0,
+  tribeId: 1,
+  variant: 0,
+  x: 0,
+  z: 300,
+};
 
 interface Scene {
   readonly camera: PerspectiveCamera;
@@ -42,6 +58,26 @@ function setBurning(mirror: WorldMirror, burning: ReadonlyMap<number, number>): 
     ),
     tick: mirror.frame.tick + 1,
   };
+}
+
+function setCampfires(mirror: WorldMirror, campfires: readonly BuildingView[]): void {
+  mirror.frame = {
+    ...mirror.frame,
+    buildings: [...campfires],
+    burningCells: new Int32Array(0),
+    burningIntensity: new Uint8Array(0),
+    tick: mirror.frame.tick + 1,
+  };
+}
+
+function litSpots(fire: FireView): number[][] {
+  return fire.group.children
+    .filter((child) => {
+      return child instanceof PointLight && child.intensity > 0;
+    })
+    .map((light) => {
+      return [light.position.x, light.position.z];
+    });
 }
 
 function burnTreesIn(mirror: WorldMirror, cell: number): void {
@@ -251,5 +287,27 @@ describe("fire view", () => {
     fire.update(mirror, camera, 0);
 
     expect(fire.flameCount).toBe(0);
+  });
+
+  it("burns lit campfires and lights the three nearest once it gets dark", () => {
+    const { camera, fire, mirror } = createScene();
+
+    const campfires = [400, 0, -300, 120, 50].map((x, id) => {
+      return { ...CAMPFIRE, id, x };
+    });
+
+    setCampfires(mirror, [...campfires, { ...CAMPFIRE, fuel: 0, id: 9, x: 10 }]);
+    fire.update(mirror, camera, 0);
+
+    expect(fire.flameCount).toBe(2 * campfires.length);
+    expect(litSpots(fire)).toEqual([]);
+
+    fire.update(mirror, camera, 1);
+
+    expect(litSpots(fire)).toEqual([
+      [0, 300],
+      [50, 300],
+      [120, 300],
+    ]);
   });
 });
