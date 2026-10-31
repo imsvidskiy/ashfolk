@@ -85,14 +85,50 @@ describe("engine launcher", () => {
     expect(startEngine).not.toHaveBeenCalled();
 
     grow({ island: null, stage: "relief" });
+
+    await vi.waitFor(() => {
+      expect(startEngine).toHaveBeenCalledOnce();
+    });
+
     open(session);
 
     await vi.waitFor(() => {
       expect(statuses.map(stageOf)).toEqual(["waking", "relief", "lighting"]);
     });
+  });
+
+  it("stops opening the world when the launch is canceled", async () => {
+    const logError = vi.spyOn(console, "error").mockImplementation(ignore);
+    let grow: (progress: GenerationProgress) => void = ignore;
+
+    openSession.mockImplementation(
+      (_world: unknown, onProgress: (progress: GenerationProgress) => void, signal: AbortSignal) => {
+        grow = onProgress;
+
+        return new Promise((_resolve, reject) => {
+          signal.addEventListener("abort", () => {
+            reject(new Error("Opening the world was canceled"));
+          });
+        });
+      }
+    );
+    startEngine.mockReturnValue(new Promise(ignore));
+
+    const launcher = new EngineLauncher(document.body, LAUNCH, createWorldId(), ignore);
+
     await vi.waitFor(() => {
-      expect(startEngine).toHaveBeenCalledOnce();
+      expect(openSession).toHaveBeenCalledOnce();
     });
+
+    launcher.cancel();
+    grow({ island: null, stage: "relief" });
+
+    await vi.waitFor(() => {
+      expect(logError).toHaveBeenCalledOnce();
+    });
+
+    expect(openSession.mock.calls[0]?.[2]).toHaveProperty("aborted", true);
+    expect(startEngine).not.toHaveBeenCalled();
   });
 
   it("closes the opened world when the engine cannot start", async () => {
