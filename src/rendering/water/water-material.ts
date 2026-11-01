@@ -4,6 +4,8 @@ import {
   cameraPosition,
   clamp,
   cos,
+  dFdx,
+  dFdy,
   distance,
   dot,
   Fn,
@@ -36,6 +38,7 @@ import {
 } from "three/tsl";
 import { Color, MeshPhysicalNodeMaterial, type MeshStandardNodeMaterial, type Node, Vector2 } from "three/webgpu";
 import type { WorldGrid } from "../../world/world-grid.ts";
+import { unitNoise3 } from "../node-helpers.ts";
 import { mapCoordinatesNode, sampleCellsNode } from "../terrain/height-sampling.ts";
 import type { TerrainTextures } from "../terrain/terrain-textures.ts";
 import { rainDimples } from "./rain-dimples.ts";
@@ -91,18 +94,18 @@ const LINE_TINT = 0.1;
 const RAPIDS_LINE_TINT = 0.45;
 const RAPIDS_TINT = 0.05;
 const FOAM_COLOR = vec3(0.84, 0.9, 0.9);
-const FOAM_BAND_DEPTH = 0.3;
-const FOAM_BAND_SOFTNESS = 0.12;
-const FOAM_OPACITY = 0.9;
-const SWASH_DEPTH = 0.7;
-const SWASH_REACH = 0.25;
-const SWASH_SECONDS = 8;
-const SWASH_WIDTH = 0.04;
-const SWASH_STRENGTH = 0.5;
+const RIM_WIDTH = 0.9;
+const RIM_SOFTNESS = 0.6;
+const RIM_PIXELS = 2;
+const RIM_WOBBLE_FREQUENCY = 0.12;
+const RIM_WOBBLE_SPEED = 0.08;
+const RIM_STRENGTH = 0.75;
+const FLATTEST_BANK = 0.01;
+const FOAM_OPACITY = 0.6;
 const SHORE_FOAM_FAR = 1300;
 const SHORE_FOAM_NEAR = 500;
 const FORD_FOAM = 0.4;
-const SHALLOW_WATER = vec3(0.12, 0.42, 0.44);
+const SHALLOW_WATER = vec3(0.14, 0.38, 0.4);
 const MIDDLE_WATER = vec3(0.05, 0.27, 0.36);
 const DEEP_WATER = vec3(0.025, 0.12, 0.23);
 const RAPIDS_START = 0.1;
@@ -115,6 +118,8 @@ const ICE_ROUGHNESS = 0.4;
 const WATER_SPECULAR = 0.45;
 const FRESNEL_WAVE_SHARE = 0.3;
 const BRIGHTEST_SKY = 0.6;
+const SHALLOW_OPACITY = 0.45;
+const DEEP_OPACITY = 0.96;
 const ICE_COLOR = vec3(0.78, 0.86, 0.9);
 const THIN_ICE = 0.15;
 const SOLID_ICE = 0.5;
@@ -284,22 +289,35 @@ function surfaceWaves(flow: Node<"vec2">, slope: Node<"float">, viewDistance: No
   };
 }
 
+function bankSlope(depth: Node<"float">): Node<"float"> {
+  const acrossX = dFdx(positionWorld.xz);
+  const acrossY = dFdy(positionWorld.xz);
+  const riseX = dFdx(depth);
+  const riseY = dFdy(depth);
+
+  const determinant = acrossX.x.mul(acrossY.y).sub(acrossX.y.mul(acrossY.x));
+  const safeDeterminant = select(abs(determinant).greaterThan(1e-8), determinant, float(1e-8));
+  const gradient = vec2(
+    acrossY.y.mul(riseX).sub(acrossX.y.mul(riseY)),
+    acrossX.x.mul(riseY).sub(acrossY.x.mul(riseX))
+  ).div(safeDeterminant);
+
+  return max(length(gradient), FLATTEST_BANK);
+}
+
 function foamAt(surface: WaterSurface): Node<"float"> {
-  const { depth, flowSpeed, fordBed, ice, viewDistance } = surface;
-  const blur = max(fwidth(depth), 0.001);
+  const { depth, fordBed, ice, viewDistance } = surface;
+  const point = positionWorld.xz;
+  const pixel = max(length(fwidth(point)), 0.001);
 
-  const stillness = smoothstep(STILL_FLOW, 0, flowSpeed);
-  const swashDepth = sin(time.mul((2 * Math.PI) / SWASH_SECONDS))
-    .mul(SWASH_REACH)
-    .add(SWASH_DEPTH);
+  const fromShore = depth.div(bankSlope(depth));
+  const wobble = unitNoise3(vec3(point.mul(RIM_WOBBLE_FREQUENCY), time.mul(RIM_WOBBLE_SPEED)));
+  const width = max(wobble.mul(0.8).add(0.6).mul(RIM_WIDTH), pixel.mul(RIM_PIXELS));
 
-  const band = smoothstep(FOAM_BAND_DEPTH, FOAM_BAND_DEPTH - FOAM_BAND_SOFTNESS, depth.sub(blur));
-  const swash = smoothstep(SWASH_WIDTH, 0, abs(depth.sub(swashDepth)).sub(blur))
-    .mul(stillness)
-    .mul(SWASH_STRENGTH);
+  const rim = smoothstep(width, width.mul(1 - RIM_SOFTNESS), fromShore).mul(RIM_STRENGTH);
   const ford = fordBed.mul(smoothstep(0.3, 0.6, fordBed)).mul(FORD_FOAM);
 
-  return clamp(band.add(swash).add(ford), 0, 1)
+  return clamp(rim.add(ford), 0, 1)
     .mul(smoothstep(SHORE_FOAM_FAR, SHORE_FOAM_NEAR, viewDistance))
     .mul(float(1).sub(ice));
 }
@@ -339,7 +357,7 @@ function shadeWater(look: WaterLook, surface: WaterSurface): WaterShading {
       vec3(BRIGHTEST_SKY)
     ),
     opacity: clamp(
-      mix(float(0.62), float(0.96), smoothstep(0, 2.2, depth))
+      mix(float(SHALLOW_OPACITY), float(DEEP_OPACITY), smoothstep(0, 2.2, depth))
         .add(foam.mul(FOAM_OPACITY))
         .add(streaks.mul(0.6))
         .add(fresnel.mul(0.2))
