@@ -60,6 +60,9 @@ const STRATA_THRESHOLD = 0.001;
 const VEGETATED_ROCK_LIFT = 0.1;
 const STEEP_FACE_SHADE = 0.82;
 const EMBER_THRESHOLD = 0.004;
+const EMBER_PATCH_FREQUENCY = 0.15;
+const EMBER_PATCH_START = 0.45;
+const EMBER_PATCH_END = 0.85;
 const TRODDEN_EARTH = vec3(0.3, 0.22, 0.14);
 const FORD_BED_DEPTH = 0.6;
 const POOL_WATER = vec3(0.034, 0.038, 0.022);
@@ -112,11 +115,11 @@ function poolGlint(textures: TerrainTextures, pool: Node<"float">): Node<"vec3">
   return textures.skyColor.mul(fresnel).mul(textures.daylight.mul(0.5).add(0.03)).mul(pool);
 }
 
-function burningGlow(fire: Node<"float">, point: Node<"vec2">, grain: Node<"float">): Node<"vec3"> {
+function burningGlow(fire: Node<"float">, point: Node<"vec2">): Node<"vec3"> {
   const flicker = unitNoise(point.mul(0.35).add(vec2(time.mul(1.3), time.mul(-0.9))))
     .mul(0.4)
     .add(0.6);
-  const embers = smoothstep(0.35, 0.8, unitNoise(point.mul(0.6)).mul(0.6).add(grain.mul(0.4)));
+  const embers = smoothstep(EMBER_PATCH_START, EMBER_PATCH_END, unitNoise(point.mul(EMBER_PATCH_FREQUENCY)));
 
   const smolder = smoothstep(0.02, 0.35, fire).mul(embers.mul(1.1).add(0.08)).mul(flicker);
   const blaze = fire.mul(fire).mul(embers.mul(0.8).add(0.2));
@@ -124,12 +127,12 @@ function burningGlow(fire: Node<"float">, point: Node<"vec2">, grain: Node<"floa
   return EMBER_DEEP.mul(smolder).add(EMBER_BRIGHT.mul(blaze));
 }
 
-function emberGlow(fire: Node<"float">, point: Node<"vec2">, grain: Node<"float">): Node<"vec3"> {
+function emberGlow(fire: Node<"float">, point: Node<"vec2">): Node<"vec3"> {
   return Fn(() => {
     const glow = vec3(0).toVar();
 
     If(fire.greaterThan(EMBER_THRESHOLD), () => {
-      glow.assign(burningGlow(fire, point, grain));
+      glow.assign(burningGlow(fire, point));
     });
 
     return glow;
@@ -347,7 +350,7 @@ export function createTerrainMaterial({
   material.colorNode = lava.color;
   material.roughnessNode = mix(roughness, float(POOL_ROUGHNESS), openPool);
   material.normalNode = normalize(mix(field.normal, transformNormalToView(vec3(0, 1, 0)), openPool));
-  material.emissiveNode = emberGlow(surface.a, positionWorld.xz, fine.mul(0.5).add(0.5))
+  material.emissiveNode = emberGlow(surface.a, positionWorld.xz)
     .add(lava.glow)
     .add(lava.color.mul(fireLight).mul(GROUND_FIRE_LIGHT))
     .add(poolGlint(textures, openPool));
