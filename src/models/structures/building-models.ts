@@ -282,24 +282,22 @@ function wallRadiusAt(height: number): number {
   return HUT_RADIUS - 0.04 * saturate((height - 0.55) / 1.2);
 }
 
-function onWall(x: number, height: number, sink: number): number {
-  const radius = wallRadiusAt(height);
-
-  return Math.sqrt(radius * radius - x * x) + sink;
+function onWall(context: StructureContext, height: number, sink: number): number {
+  return wallRadiusAt(height) * Math.cos(Math.PI / hutSegments(context)) + sink;
 }
 
 function addHutDoor(context: StructureContext): void {
-  const halfAngle = Math.asin(HUT_DOOR_HALF_WIDTH / HUT_RADIUS);
+  const halfAngle = Math.atan(HUT_DOOR_HALF_WIDTH / onWall(context, HUT_SILL, 0.012));
 
   function section(height: number): LoftSection {
-    const radius = wallRadiusAt(height) + 0.012;
+    const radius = onWall(context, height, 0.012) / Math.cos(halfAngle);
 
     return { radiusX: radius, radiusZ: radius, y: height };
   }
 
   context.builder.add(
     panel({
-      angularSegments: detail(context, 4, 2),
+      angularSegments: 1,
       endAngle: Math.PI / 2 + halfAngle,
       sections: [section(HUT_SILL), section(HUT_DOOR_TOP)],
       startAngle: Math.PI / 2 - halfAngle,
@@ -313,8 +311,8 @@ function addHutDoor(context: StructureContext): void {
 
     addTaperedLog(
       context,
-      [x, 0, onWall(x, HUT_SILL, HUT_POST_SINK + 0.06)],
-      [x, HUT_DOOR_TOP + 0.08, onWall(x, HUT_DOOR_TOP, HUT_POST_SINK)],
+      [x, 0, onWall(context, HUT_SILL, HUT_POST_SINK + 0.06)],
+      [x, HUT_DOOR_TOP + 0.08, onWall(context, HUT_DOOR_TOP, HUT_POST_SINK)],
       HUT_POST_RADIUS,
       0.3
     );
@@ -324,8 +322,8 @@ function addHutDoor(context: StructureContext): void {
 
   addTaperedLog(
     context,
-    [-lintelEnd, HUT_DOOR_TOP + 0.02, onWall(0, HUT_DOOR_TOP, -0.02)],
-    [lintelEnd, HUT_DOOR_TOP + 0.02, onWall(0, HUT_DOOR_TOP, -0.02)],
+    [-lintelEnd, HUT_DOOR_TOP + 0.02, onWall(context, HUT_DOOR_TOP, -0.02)],
+    [lintelEnd, HUT_DOOR_TOP + 0.02, onWall(context, HUT_DOOR_TOP, -0.02)],
     HUT_POST_RADIUS,
     0.32
   );
@@ -336,6 +334,8 @@ function hutSegments(context: StructureContext): number {
 }
 
 function addHutWall(context: StructureContext): void {
+  const segments = hutSegments(context);
+
   context.builder.add(
     loft(
       [
@@ -354,7 +354,7 @@ function addHutWall(context: StructureContext): void {
         { radiusX: HUT_RADIUS - 0.04, radiusZ: HUT_RADIUS - 0.04, y: 1.75 },
         { radiusX: 0, radiusZ: 0, y: 1.8 },
       ],
-      hutSegments(context)
+      segments
     ),
     {
       style: {
@@ -364,6 +364,7 @@ function addHutWall(context: StructureContext): void {
           return point.position.y < 0.52 ? MaterialSlot.Stone : MaterialSlot.Daub;
         },
       },
+      transform: transformOf({ rotation: [0, Math.PI / segments - Math.PI / 2, 0] }),
     }
   );
 }
