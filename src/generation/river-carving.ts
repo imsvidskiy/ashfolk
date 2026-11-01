@@ -283,11 +283,43 @@ function createChannelSamples(cellCount: number): ChannelSamples {
   };
 }
 
+function sampleCell(samples: ChannelSamples, cell: number, distance: number, along: number, segment: number): void {
+  const { alongs, cells, distances, segments } = samples;
+
+  if (distance >= distances[cell]) {
+    return;
+  }
+
+  if (distances[cell] === Number.POSITIVE_INFINITY) {
+    cells.push(cell);
+  }
+
+  alongs[cell] = along;
+  distances[cell] = distance;
+  segments[cell] = segment;
+}
+
+function blendFoot(samples: ChannelSamples, cell: number, distance: number, surface: number): void {
+  const { distances, footSurfaces, footWeights } = samples;
+
+  const farther = distance - distances[cell];
+
+  if (farther > WALL_FOOT_CUTOFF) {
+    return;
+  }
+
+  const weight = Math.exp(-farther / WALL_FOOT_SOFTNESS);
+
+  footSurfaces[cell] += weight * surface;
+  footWeights[cell] += weight;
+}
+
 function visitSegment(
   grid: WorldGrid,
   points: readonly RiverPoint[],
   segment: number,
-  visit: (cell: number, distance: number, along: number) => void
+  samples: ChannelSamples,
+  shouldBlendFeet: boolean
 ): void {
   const start = points[segment];
   const end = points[segment + 1];
@@ -309,49 +341,18 @@ function visitSegment(
       const z = grid.centerZ(row);
 
       const along = saturate(((x - start.x) * segmentX + (z - start.z) * segmentZ) / lengthSquared);
-      const distance = Math.hypot(x - (start.x + segmentX * along), z - (start.z + segmentZ * along));
+      const awayX = x - (start.x + segmentX * along);
+      const awayZ = z - (start.z + segmentZ * along);
+      const distance = Math.sqrt(awayX * awayX + awayZ * awayZ);
+      const cell = grid.index(column, row);
 
-      visit(grid.index(column, row), distance, along);
+      if (shouldBlendFeet) {
+        blendFoot(samples, cell, distance, start.surface + (end.surface - start.surface) * along);
+      } else {
+        sampleCell(samples, cell, distance, along, segment);
+      }
     }
   }
-}
-
-function sampleSegment(grid: WorldGrid, points: readonly RiverPoint[], segment: number, samples: ChannelSamples): void {
-  const { alongs, cells, distances, segments } = samples;
-
-  visitSegment(grid, points, segment, (cell, distance, along) => {
-    if (distance >= distances[cell]) {
-      return;
-    }
-
-    if (distances[cell] === Number.POSITIVE_INFINITY) {
-      cells.push(cell);
-    }
-
-    alongs[cell] = along;
-    distances[cell] = distance;
-    segments[cell] = segment;
-  });
-}
-
-function blendFeet(grid: WorldGrid, points: readonly RiverPoint[], segment: number, samples: ChannelSamples): void {
-  const { distances, footSurfaces, footWeights } = samples;
-
-  const start = points[segment];
-  const end = points[segment + 1];
-
-  visitSegment(grid, points, segment, (cell, distance, along) => {
-    const farther = distance - distances[cell];
-
-    if (farther > WALL_FOOT_CUTOFF) {
-      return;
-    }
-
-    const weight = Math.exp(-farther / WALL_FOOT_SOFTNESS);
-
-    footSurfaces[cell] += weight * (start.surface + (end.surface - start.surface) * along);
-    footWeights[cell] += weight;
-  });
 }
 
 function settledOnGround(point: RiverPoint, ground: number): RiverPoint {
@@ -476,11 +477,11 @@ function carveChannel(
   const walls = channel.isRiver ? riverWalls(targets, points) : null;
 
   for (let segment = 0; segment < points.length - 1; segment += 1) {
-    sampleSegment(targets.grid, points, segment, samples);
+    visitSegment(targets.grid, points, segment, samples, false);
   }
 
   for (let segment = 0; segment < points.length - 1; segment += 1) {
-    blendFeet(targets.grid, points, segment, samples);
+    visitSegment(targets.grid, points, segment, samples, true);
   }
 
   for (const cell of cells) {
