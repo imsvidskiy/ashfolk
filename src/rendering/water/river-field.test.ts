@@ -14,6 +14,8 @@ const SOURCE_REACH = 7.5;
 const POND_START = 100;
 const RIVER_CELL_REACH = 15;
 const CELL_DEPTH = 1;
+const STREAM_WIDTH = 3;
+const JUNCTION_EDGE_SLACK = 1;
 
 function pointAt(x: number, z: number, width: number): RiverPoint {
   return { depth: 1, flow: 1, surface: 100, width, x, z };
@@ -22,6 +24,14 @@ function pointAt(x: number, z: number, width: number): RiverPoint {
 function straightRiver(id: number, x: number, width: number): River {
   const points = Array.from({ length: 121 }, (_, index) => {
     return pointAt(x, -150 + index * SPACING, width);
+  });
+
+  return { id, points, reachesEdge: false };
+}
+
+function joiningStream(id: number, x: number, endZ: number): River {
+  const points = Array.from({ length: 61 }, (_, index) => {
+    return pointAt(x, endZ + 150 - index * SPACING, STREAM_WIDTH);
   });
 
   return { id, points, reachesEdge: false };
@@ -76,6 +86,24 @@ describe("buildRiverField", () => {
         expect(sampleRiverField(grid, field, 3 + halfWidth - 0.3, z).edge).toBeGreaterThan(0);
         expect(sampleRiverField(grid, field, 3 - halfWidth - 0.3, z).edge).toBeLessThan(0);
         expect(Math.abs(sampleRiverField(grid, field, 3 + halfWidth, z).edge)).toBeLessThan(EDGE_SLACK);
+      }
+    }
+  });
+
+  it("keeps a wide river wet where a narrow stream ends on its centerline", () => {
+    const main = {
+      id: 0,
+      points: Array.from({ length: 121 }, (_, index) => {
+        return pointAt(-150 + index * SPACING, 0.3, WIDE_WIDTH);
+      }),
+      reachesEdge: false,
+    };
+    const field = fieldOf([main, joiningStream(1, 0.7, 0.3)]);
+    const reach = drawnRiverHalfWidth(WIDE_WIDTH / 2) - JUNCTION_EDGE_SLACK;
+
+    for (let x = -40; x <= 40; x += 0.5) {
+      for (let across = -reach; across <= reach; across += 0.5) {
+        expect(sampleRiverField(grid, field, x, 0.3 + across).edge).toBeGreaterThan(0);
       }
     }
   });

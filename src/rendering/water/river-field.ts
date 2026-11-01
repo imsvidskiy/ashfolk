@@ -139,11 +139,11 @@ function encodeAngle(directionX: number, directionZ: number): number {
   return Math.round((folded / Math.PI) * ANGLE_STEPS) % (ANGLE_STEPS + 1);
 }
 
-function writeNearest(
+function writeDeepest(
   grid: WorldGrid,
   lines: RiverLines,
   segment: Segment,
-  nearest: Float32Array,
+  deepestEdges: Float32Array,
   target: Uint8Array
 ): void {
   const { points } = lines;
@@ -181,16 +181,17 @@ function writeNearest(
       const nearestX = startX + segmentX * along;
       const nearestZ = startZ + segmentZ * along;
       const distance = Math.hypot(x - nearestX, z - nearestZ);
+      const halfWidth = startHalfWidth + (endHalfWidth - startHalfWidth) * along;
+      const edge = drawnRiverHalfWidth(halfWidth) - distance;
 
-      if (distance >= nearest[cell] || distance > RIVER_FIELD_REACH) {
+      if (edge <= deepestEdges[cell] || distance > RIVER_FIELD_REACH) {
         continue;
       }
 
       const isCap = (along <= 0 && startCap === 1) || (along >= 1 && endCap === 1);
-      const halfWidth = startHalfWidth + (endHalfWidth - startHalfWidth) * along;
       const offset = cell * CHANNELS;
 
-      nearest[cell] = distance;
+      deepestEdges[cell] = edge;
       target[offset] = encodeOffset(nearestX - x);
       target[offset + 1] = encodeOffset(nearestZ - z);
       target[offset + 2] = isCap ? END_CAP : angle;
@@ -285,7 +286,7 @@ export function buildRiverField(
   source: RiverWaterSource,
   target: Uint8Array
 ): void {
-  const nearest = new Float32Array(grid.cellCount).fill(Number.POSITIVE_INFINITY);
+  const deepestEdges = new Float32Array(grid.cellCount).fill(Number.NEGATIVE_INFINITY);
 
   target.fill(0);
 
@@ -295,7 +296,7 @@ export function buildRiverField(
     for (let from = first; from < end - 1; from += 1) {
       const segment = { endCap: from === end - 2 ? 1 : 0, from, startCap: from === first ? 1 : 0 };
 
-      writeNearest(grid, lines, segment, nearest, target);
+      writeDeepest(grid, lines, segment, deepestEdges, target);
     }
 
     first = end;
