@@ -369,7 +369,7 @@ function withEraDetails(appearance: PersonAppearance, era: number, seed: number)
   };
 }
 
-export function statureAt(age: number): number {
+function statureAt(age: number): number {
   const ageGroup = ageGroupOf(age);
 
   if (ageGroup === "child") {

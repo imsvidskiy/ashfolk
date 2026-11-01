@@ -2,10 +2,10 @@ import { Box3, Ray, Vector3 } from "three/webgpu";
 import { ANIMAL_KINDS, type AnimalKind } from "../../content/animals.ts";
 import { animalAppearance } from "../../models/animals/animal-appearance.ts";
 import { buildAnimalParts } from "../../models/animals/animal-models.ts";
-import { boundsOf, type MeshData, vertexCount } from "../../models/mesh/mesh-data.ts";
-import { type BodyShape, statureAt } from "../../models/people/appearance.ts";
+import { type MeshData, vertexCount } from "../../models/mesh/mesh-data.ts";
+import { personAppearance, type TribeLook } from "../../models/people/appearance.ts";
 import { HUMAN_DETAILS } from "../../models/people/human-detail.ts";
-import { buildHumanParts, humanPartIndex } from "../../models/people/human-model.ts";
+import { appearanceParts, buildHumanParts, humanPartIndex } from "../../models/people/human-model.ts";
 import { humanBoneScales } from "../../models/people/human-proportions.ts";
 import { HUMAN_SKELETON } from "../../models/people/human-skeleton.ts";
 import { Pose } from "../../models/rig/pose.ts";
@@ -27,10 +27,17 @@ export interface StandingBody extends AgentBody {
 }
 
 const UP = new Vector3(0, 1, 0);
-const AVERAGE_BODY: BodyShape = { build: 1, headSize: 1, height: 1, hipWidth: 1, legLength: 1, shoulderWidth: 1 };
-const measured = new Map<AnimalKind | "person", AgentBody>();
+const UNCOLORED_TRIBE: TribeLook = { accent: 0, fur: 0, id: 0 };
+const measured = new Map<AnimalKind, AgentBody>();
 const localRay = new Ray();
 const localBox = new Box3();
+const restPose = new Pose(HUMAN_SKELETON.bones.length);
+const poser = new SkeletonPoser(HUMAN_SKELETON);
+const restPoint = new Vector3();
+const firstPoint = new Vector3();
+const secondPoint = new Vector3();
+
+let humanParts: readonly MeshData[] | null = null;
 
 function bodyOf(mesh: MeshData): AgentBody {
   const { maximum, minimum } = mesh.bounds;
@@ -43,36 +50,45 @@ function bodyOf(mesh: MeshData): AgentBody {
   };
 }
 
-function posedPerson(): MeshData {
-  const mesh = buildHumanParts(HUMAN_DETAILS.far)[humanPartIndex("bodyMale")];
-  const poser = new SkeletonPoser(HUMAN_SKELETON);
-  const positions = new Float32Array(mesh.positions.length);
-  const rest = new Vector3();
-  const first = new Vector3();
-  const second = new Vector3();
-
-  poser.pose(new Pose(HUMAN_SKELETON.bones.length), humanBoneScales(AVERAGE_BODY));
-
-  for (let vertex = 0; vertex < vertexCount(mesh); vertex += 1) {
-    rest.fromArray(mesh.positions, vertex * 3);
-    poser.skinPoint(mesh.channels.boneA[vertex], rest, first);
-    poser.skinPoint(mesh.channels.boneB[vertex], rest, second);
-    first.lerp(second, mesh.channels.boneWeight[vertex]).toArray(positions, vertex * 3);
+function farHumanParts(): readonly MeshData[] {
+  if (humanParts === null) {
+    humanParts = buildHumanParts(HUMAN_DETAILS.far);
   }
 
-  return { ...mesh, bounds: boundsOf(positions), positions };
+  return humanParts;
 }
 
-function measuredBody(subject: AnimalKind | "person"): AgentBody {
-  const known = measured.get(subject);
+function posedBody(meshes: readonly MeshData[], scales: Float32Array): AgentBody {
+  localBox.makeEmpty();
+  poser.pose(restPose, scales);
+
+  for (const mesh of meshes) {
+    for (let vertex = 0; vertex < vertexCount(mesh); vertex += 1) {
+      restPoint.fromArray(mesh.positions, vertex * 3);
+      poser.skinPoint(mesh.channels.boneA[vertex], restPoint, firstPoint);
+      poser.skinPoint(mesh.channels.boneB[vertex], restPoint, secondPoint);
+      localBox.expandByPoint(firstPoint.lerp(secondPoint, mesh.channels.boneWeight[vertex]));
+    }
+  }
+
+  return {
+    back: localBox.min.z,
+    front: localBox.max.z,
+    halfWidth: Math.max(-localBox.min.x, localBox.max.x),
+    height: localBox.max.y,
+  };
+}
+
+function measuredBody(kind: AnimalKind): AgentBody {
+  const known = measured.get(kind);
 
   if (known !== undefined) {
     return known;
   }
 
-  const body = subject === "person" ? bodyOf(posedPerson()) : bodyOf(buildAnimalParts(subject, "low")[0]);
+  const body = bodyOf(buildAnimalParts(kind, "low")[0]);
 
-  measured.set(subject, body);
+  measured.set(kind, body);
 
   return body;
 }
@@ -98,11 +114,24 @@ export function animalBody(animals: Float32Array, offset: number): AgentBody {
 }
 
 export function personBody(people: Float32Array, offset: number): AgentBody {
-  return scaled(measuredBody("person"), statureAt(people[offset + PersonField.Age]));
+  const appearance = personAppearance({
+    age: people[offset + PersonField.Age],
+    era: people[offset + PersonField.Era],
+    isFemale: people[offset + PersonField.IsFemale] > 0.5,
+    seed: people[offset + PersonField.AppearanceSeed],
+    tribe: UNCOLORED_TRIBE,
+  });
+
+  const parts = farHumanParts();
+  const drawn = appearanceParts(appearance).map((part) => {
+    return parts[humanPartIndex(part)];
+  });
+
+  return posedBody(drawn, humanBoneScales(appearance.body));
 }
 
 export function measureAgentBodies(): void {
-  measuredBody("person");
+  farHumanParts();
 
   for (const kind of ANIMAL_KINDS) {
     measuredBody(kind);
