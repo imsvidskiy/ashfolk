@@ -8,6 +8,7 @@ import {
   LARGEST_STEP_GAP,
   layFord,
   SIDE_DEEPEST,
+  SLAB_LARGEST_SHARE,
   STONE_SINK,
   visibleWaterSpan,
 } from "./ford-layout.ts";
@@ -168,6 +169,32 @@ describe("layFord", () => {
     }
   });
 
+  it("keeps one slab on each bank no larger than the middle stepping stone", () => {
+    for (const deepest of [0.3, 1.2, 2.8]) {
+      const stones = footpath(layFord(FORD, river(deepest)).stones);
+
+      const steps = stones.filter((stone) => {
+        return stone.kind === "step";
+      });
+      const slabs = stones.filter((stone) => {
+        return stone.kind === "slab";
+      });
+      const middle = steps
+        .map((stone) => {
+          return stone.radius;
+        })
+        .toSorted((first, second) => {
+          return first - second;
+        })[Math.floor(steps.length / 2)];
+
+      expect(slabs.length, `deepest ${deepest}`).toBeLessThanOrEqual(2);
+
+      for (const slab of slabs) {
+        expect(slab.radius).toBeLessThanOrEqual(middle * SLAB_LARGEST_SHARE + 1e-9);
+      }
+    }
+  });
+
   it("keeps the gravel bar under the water and buries its edges in the ground", () => {
     const surroundings = river(2.8);
     const { bar } = layFord(FORD, surroundings);
@@ -183,6 +210,7 @@ describe("layFord", () => {
     for (const point of raised) {
       expect(point.y).toBeLessThanOrEqual(WATER_LEVEL - BAR_SHALLOWEST + 1e-6);
       expect(point.y).toBeGreaterThanOrEqual(surroundings.heightAt(point.x, point.z));
+      expect(surroundings.shoreDepthAt(point.x, point.z)).toBeGreaterThan(0);
     }
 
     for (const point of points.filter((candidate) => {
@@ -211,6 +239,7 @@ describe("layFord", () => {
 
     for (const stone of beside) {
       expect(stone.top - (stone.bottom + STONE_SINK)).toBeLessThanOrEqual(SIDE_DEEPEST);
+      expect(stone.top).toBeGreaterThan(surroundings.waterSurfaceAt(stone.x, stone.z));
     }
   });
 
@@ -229,9 +258,9 @@ describe("layFord", () => {
     }
   });
 
-  it("tilts the slabs on dry banks up the slope", () => {
+  it("tilts the slabs on the banks up the slope", () => {
     const slabs = layFord(FORD, hillsideStream()).stones.filter((stone) => {
-      return stone.kind === "slab" && stone.waterLevel === NO_WATER;
+      return stone.kind === "slab";
     });
 
     expect(slabs.length).toBeGreaterThan(1);

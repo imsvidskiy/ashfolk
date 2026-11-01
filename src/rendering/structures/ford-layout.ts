@@ -14,6 +14,7 @@ export const LARGEST_STEP_GAP = 0.5;
 export const STONE_SINK = 0.3;
 export const BAR_SHALLOWEST = 0.28;
 export const SIDE_DEEPEST = 0.7;
+export const SLAB_LARGEST_SHARE = 1.1;
 const BAR_DEEPEST = 0.5;
 const BAR_FOOT = 2.6;
 const BAR_ACROSS: readonly number[] = [-BAR_FOOT, -2, -1.4, -0.7, 0, 0.7, 1.4, 2, BAR_FOOT];
@@ -33,9 +34,8 @@ const COMPANION_CHANCE = 0.3;
 const COMPANION_SIZE = 0.55;
 const COMPANION_SINKING = 0.07;
 const SHORTEST_STEP = 0.14;
-const SLAB_RISE = 0.05;
+const SLAB_RISE = 0.12;
 const SLAB_RISE_SPREAD = 0.07;
-const SLAB_WIDENING = 1.15;
 const SLAB_STEEPEST = 0.6;
 const BAR_NARROWEST = 0.9;
 const BAR_WIDEST = 1.5;
@@ -48,8 +48,8 @@ const SIDE_NEAREST = 1.1;
 const SIDE_SPREAD = 1.1;
 const SIDE_SMALLEST = 0.24;
 const SIDE_LARGEST = 0.55;
-const SIDE_RISE = 0.1;
-const SIDE_DROWNING = 0.14;
+const SIDE_RISE = 0.12;
+const SIDE_EMERGING = 0.03;
 const SIDE_SHORTEST = 0.12;
 const STONE_SALT = 41.7;
 const SIDE_SALT = 57.3;
@@ -105,6 +105,12 @@ interface Bed {
 interface Tilt {
   readonly pitch: number;
   readonly rotation: number;
+}
+
+interface StoneSpot {
+  readonly across: number;
+  readonly bed: Bed;
+  readonly stone: Omit<FordStone, "kind" | "radius" | "top">;
 }
 
 interface LineStep {
@@ -240,61 +246,75 @@ function steppingLine(ford: Ford, span: WaterSpan): LineStep[] {
   return line;
 }
 
-function placeStep(ford: Ford, surroundings: FordSurroundings, span: WaterSpan, step: LineStep): FordStone[] {
-  function hash(item: number, channel: number): number {
-    return fordHash(ford, STONE_SALT, item, channel);
-  }
+function stoneHash(ford: Ford, index: number, channel: number): number {
+  return fordHash(ford, STONE_SALT, index, channel);
+}
 
-  const { along, index, radius } = step;
+function spotOf(ford: Ford, surroundings: FordSurroundings, step: LineStep): StoneSpot {
+  const { along, index } = step;
 
   const meander = MEANDER * Math.sin(along * 0.3 + ford.seed * 30);
-  const across = meander + (hash(index, 2) - 0.5) * 2 * ACROSS_JITTER;
+  const across = meander + (stoneHash(ford, index, 2) - 0.5) * 2 * ACROSS_JITTER;
   const point = pointOnCrossing(ford, along, across);
   const bed = bedAt(ford, surroundings, along, across);
   const isWet = surroundings.shoreDepthAt(point.x, point.z) > 0;
-  const waterLevel = isWet ? drawnLevelAt(surroundings, point) : NO_WATER;
-  const level = highestLevelAround(ford, surroundings, along, across, radius);
-  const lift = STONE_RISE + (hash(index, 5) - 0.5) * LIFT_JITTER;
 
-  const stone = {
-    along,
-    bottom: bed.height - STONE_SINK,
-    isGrounded: bed.height === bed.ground,
-    pitch: 0,
-    rotation: hash(index, 4) * FULL_TURN,
-    variant: variantOf(hash(index, 6)),
-    waterLevel,
-    ...point,
+  return {
+    across,
+    bed,
+    stone: {
+      along,
+      bottom: bed.height - STONE_SINK,
+      isGrounded: bed.height === bed.ground,
+      pitch: 0,
+      rotation: stoneHash(ford, index, 4) * FULL_TURN,
+      variant: variantOf(stoneHash(ford, index, 6)),
+      waterLevel: isWet ? drawnLevelAt(surroundings, point) : NO_WATER,
+      ...point,
+    },
   };
+}
 
-  if (waterLevel === NO_WATER || level + lift - bed.height < SHORTEST_STEP) {
-    const slabRadius = radius * SLAB_WIDENING;
-    const rise = SLAB_RISE + SLAB_RISE_SPREAD * hash(index, 7);
-    const slope = slopeUnder(ford, surroundings, along, across, slabRadius);
-    const isFlipped = hash(index, 4) < 0.5;
+function slabAt(ford: Ford, surroundings: FordSurroundings, step: LineStep, spot: StoneSpot): FordStone {
+  const { along, index, radius } = step;
+  const { across, bed, stone } = spot;
 
-    return [
-      {
-        ...stone,
-        kind: "slab",
-        pitch: isFlipped ? -slope.pitch : slope.pitch,
-        radius: slabRadius,
-        rotation: isFlipped ? slope.rotation + Math.PI : slope.rotation,
-        top: Math.max(bed.height, waterLevel) + rise,
-      },
-    ];
+  const rise = SLAB_RISE + SLAB_RISE_SPREAD * stoneHash(ford, index, 7);
+  const slope = slopeUnder(ford, surroundings, along, across, radius);
+  const isFlipped = stoneHash(ford, index, 4) < 0.5;
+
+  return {
+    ...stone,
+    kind: "slab",
+    pitch: isFlipped ? -slope.pitch : slope.pitch,
+    radius,
+    rotation: isFlipped ? slope.rotation + Math.PI : slope.rotation,
+    top: Math.max(bed.height, stone.waterLevel) + rise,
+  };
+}
+
+function placeStep(ford: Ford, surroundings: FordSurroundings, span: WaterSpan, step: LineStep): FordStone[] {
+  const { along, index, radius } = step;
+
+  const spot = spotOf(ford, surroundings, step);
+  const { across, bed, stone } = spot;
+  const level = highestLevelAround(ford, surroundings, along, across, radius);
+  const lift = STONE_RISE + (stoneHash(ford, index, 5) - 0.5) * LIFT_JITTER;
+
+  if (stone.waterLevel === NO_WATER || level + lift - bed.height < SHORTEST_STEP) {
+    return [slabAt(ford, surroundings, step, spot)];
   }
 
   const main: FordStone = { ...stone, kind: "step", radius, top: level + lift };
   const fromBank = Math.min(along - span.start, span.end - along);
 
-  if (fromBank < NEAR_BANK / 2 || hash(index, 8) > COMPANION_CHANCE) {
+  if (fromBank < NEAR_BANK / 2 || stoneHash(ford, index, 8) > COMPANION_CHANCE) {
     return [main];
   }
 
   const side = across < 0 ? 1 : -1;
   const companionAcross = across + side * radius * (1 + COMPANION_SIZE) * 0.9;
-  const companionPoint = pointOnCrossing(ford, along + (hash(index, 9) - 0.5) * radius, companionAcross);
+  const companionPoint = pointOnCrossing(ford, along + (stoneHash(ford, index, 9) - 0.5) * radius, companionAcross);
   const companionBed = bedAt(ford, surroundings, along, companionAcross);
 
   if (main.top - companionBed.height > SIDE_DEEPEST) {
@@ -335,7 +355,7 @@ function placeSideStone(ford: Ford, surroundings: FordSurroundings, span: WaterS
   const bed = bedAt(ford, surroundings, along, across);
   const waterLevel = drawnLevelAt(surroundings, point);
   const nearBank = 1 - smoothstep(0, NEAR_BANK, Math.min(along - span.start, span.end - along));
-  const top = waterLevel + lerp(-SIDE_DROWNING, SIDE_RISE, hash(index, 5));
+  const top = waterLevel + lerp(SIDE_EMERGING, SIDE_RISE, hash(index, 5));
   const isWet = surroundings.shoreDepthAt(point.x, point.z) > 0;
 
   if (!isWet || waterLevel === NO_WATER || top - bed.height < SIDE_SHORTEST || top - bed.height > SIDE_DEEPEST) {
@@ -355,6 +375,64 @@ function placeSideStone(ford: Ford, surroundings: FordSurroundings, span: WaterS
     waterLevel,
     ...point,
   };
+}
+
+function isStep(stone: FordStone): boolean {
+  return stone.kind === "step";
+}
+
+function middleRadius(stones: readonly FordStone[]): number {
+  const radii = stones
+    .map((stone) => {
+      return stone.radius;
+    })
+    .toSorted((first, second) => {
+      return first - second;
+    });
+
+  return radii[Math.floor(radii.length / 2)];
+}
+
+function bankSlab(
+  ford: Ford,
+  surroundings: FordSurroundings,
+  step: LineStep,
+  largest: number,
+  towardSteps: number
+): FordStone {
+  const radius = Math.min(step.radius, largest);
+  const settled = { ...step, along: step.along + (step.radius - radius) * towardSteps, radius };
+
+  return slabAt(ford, surroundings, settled, spotOf(ford, surroundings, settled));
+}
+
+function placeLine(
+  ford: Ford,
+  surroundings: FordSurroundings,
+  span: WaterSpan,
+  line: readonly LineStep[]
+): FordStone[] {
+  const placed = line.map((step) => {
+    return placeStep(ford, surroundings, span, step);
+  });
+
+  const first = placed.findIndex((stones) => {
+    return isStep(stones[0]);
+  });
+  const last = placed.findLastIndex((stones) => {
+    return isStep(stones[0]);
+  });
+
+  if (first < 0) {
+    return placed.flat();
+  }
+
+  const crossing = placed.slice(first, last + 1).flat();
+  const largest = middleRadius(crossing.filter(isStep)) * SLAB_LARGEST_SHARE;
+  const before = first > 0 ? [bankSlab(ford, surroundings, line[first - 1], largest, 1)] : [];
+  const after = last < line.length - 1 ? [bankSlab(ford, surroundings, line[last + 1], largest, -1)] : [];
+
+  return [...before, ...crossing, ...after];
 }
 
 function barRow(ford: Ford, surroundings: FordSurroundings, along: number, isEnd: boolean): BarPoint[] {
@@ -394,9 +472,7 @@ export function layFord(ford: Ford, surroundings: FordSurroundings): FordLayout 
 
   const line = steppingLine(ford, span);
 
-  const steps = line.flatMap((step) => {
-    return placeStep(ford, surroundings, span, step);
-  });
+  const steps = placeLine(ford, surroundings, span, line);
   const sides = line
     .map((step) => {
       return placeSideStone(ford, surroundings, span, step);
