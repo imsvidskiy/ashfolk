@@ -7,7 +7,6 @@ import {
   Fn,
   float,
   If,
-  ivec2,
   length,
   max,
   min,
@@ -38,6 +37,7 @@ import {
 } from "../../world/water.ts";
 import { NEIGHBOR_OFFSETS, type WorldGrid } from "../../world/world-grid.ts";
 import { cellByteTexture } from "../data-textures.ts";
+import { cornersAt, mapCoordinatesNode } from "../terrain/height-sampling.ts";
 import { BANK_SINK } from "./shore-field.ts";
 
 const RIVER_FIELD_REACH = 24;
@@ -516,28 +516,17 @@ export class RiverField {
 
   sampleNode(point: Node<"vec2">): RiverNode {
     const grid = this.#grid;
-    const last = grid.cellsPerSide - 1;
-    const cellCoordinate = point.add(grid.halfSize).div(grid.cellSize).sub(0.5);
-    const base = cellCoordinate.floor();
-    const fraction = cellCoordinate.sub(base);
 
-    const corners = [
-      [0, 0, float(1).sub(fraction.x).mul(float(1).sub(fraction.y))],
-      [1, 0, fraction.x.mul(float(1).sub(fraction.y))],
-      [0, 1, float(1).sub(fraction.x).mul(fraction.y)],
-      [1, 1, fraction.x.mul(fraction.y)],
-    ] as const;
-
-    const samples = corners.map(([column, row, share]) => {
-      const cell = base.add(vec2(column, row)).clamp(vec2(0, 0), vec2(last, last));
-      const texel = textureLoad(this.texture, ivec2(cell)).mul(BYTE).round();
-      const depth = textureLoad(this.#shore.texture, ivec2(cell)).x;
+    const samples = cornersAt(grid.cellsPerSide, mapCoordinatesNode(grid, point)).map((corner) => {
+      const share = corner.weight;
+      const texel = textureLoad(this.texture, corner.cell).mul(BYTE).round();
+      const depth = textureLoad(this.#shore.texture, corner.cell).x;
 
       const widthCode = texel.w.mod(NEAR_STANDING_FLAG);
       const isRiverCell = texel.z.greaterThanEqual(RIVER_CELL_FLAG);
       const hasRiver = widthCode.greaterThan(0.5);
 
-      const center = cell.add(0.5).mul(grid.cellSize).sub(grid.halfSize);
+      const center = vec2(corner.cell).add(0.5).mul(grid.cellSize).sub(grid.halfSize);
       const nearest = center.add(texel.xy.sub(127.5).div(OFFSET_SCALE));
       const toward = point.sub(nearest);
       const angleCode = texel.z.mod(RIVER_CELL_FLAG);

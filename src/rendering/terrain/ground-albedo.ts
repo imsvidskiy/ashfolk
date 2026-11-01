@@ -43,6 +43,7 @@ import { GROUNDS, Ground, seasonalGroundColor } from "../../content/grounds.ts";
 import type { WorldMirror } from "../../game/world-mirror.ts";
 import { lerp, saturate } from "../../shared/math.ts";
 import { cellByteTexture, floatDataTexture } from "../data-textures.ts";
+import { cornersAt } from "./height-sampling.ts";
 
 const BYTE = 255;
 const COVER_REACH = 2;
@@ -53,23 +54,12 @@ const LONE_CORNER_WEIGHT = 0.001;
 const SOFT_GROUNDS = DEPOSIT_KINDS.map((kind) => {
   return DEPOSITS[kind].ground;
 });
-const CORNERS = [
-  [0, 0],
-  [1, 0],
-  [0, 1],
-  [1, 1],
-] as const;
 
 interface AlbedoSources {
   readonly ground: DataTexture;
   readonly lushness: DataTexture;
   readonly palette: Vector4[];
   readonly size: number;
-}
-
-interface Corner {
-  readonly cell: Node<"ivec2">;
-  readonly weight: Node<"float">;
 }
 
 interface CellLook {
@@ -151,21 +141,6 @@ function isSoftNode(kind: Node<"float">): Node<"bool"> {
     return isGroundNode(kind, ground);
   }).reduce((either, other) => {
     return either.or(other);
-  });
-}
-
-function cornersAt(size: number, coordinates: Node<"vec2">): Corner[] {
-  const last = size - 1;
-  const cellCoordinate = coordinates.mul(size).sub(0.5);
-  const base = floor(cellCoordinate);
-  const fraction = cellCoordinate.sub(base);
-  const across = float(1).sub(fraction);
-
-  return CORNERS.map(([column, row]) => {
-    return {
-      cell: ivec2(clamp(base.add(vec2(column, row)), vec2(0, 0), vec2(last, last))),
-      weight: (column === 0 ? across.x : fraction.x).mul(row === 0 ? across.y : fraction.y),
-    };
   });
 }
 
