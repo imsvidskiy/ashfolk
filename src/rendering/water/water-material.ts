@@ -261,7 +261,7 @@ export function createWaterMaterial(
   const shoreDepth = mix(riverDepth, outlet.depth, outlet.share);
 
   const isWet = shoreDepth.greaterThan(0);
-  const fordBed = textures.fords.marksNode(positionWorld.xz).x;
+  const fordBed = textures.fords.marksNode(positionWorld.xz, shoreDepth).x;
   const depth = mix(max(shoreDepth, 0), min(max(shoreDepth, 0), FORD_WATER_DEPTH), fordBed.mul(FORD_SHALLOWING));
   const shoreEdge = max(fwidth(shoreDepth), SHORE_FADE);
   const flowSpeed = length(flow);

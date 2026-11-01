@@ -76,6 +76,7 @@ const SNOW_SLIDE_WOBBLE = 0.05;
 const EMBER_THRESHOLD = 0.004;
 const TRODDEN_EARTH = vec3(0.3, 0.22, 0.14);
 const FORD_BED_DEPTH = 0.6;
+const DRY_BED = -1;
 const POOL_WATER = vec3(0.034, 0.038, 0.022);
 const POOL_SCUM = vec3(0.11, 0.14, 0.04);
 const POOL_RIM = 0.45;
@@ -249,13 +250,12 @@ function riverBed(textures: TerrainTextures, grid: WorldGrid): Node<"vec2"> {
 
   return Fn(() => {
     const metersPerPixel = groundFootprintNode().toVar();
-    const bed = vec2(0, 0).toVar();
+    const bed = vec2(DRY_BED, 0).toVar();
 
     If(reach.lessThan(1.5), () => {
       const cellDepth = sampleCellsNode(textures.shore, grid, positionWorld.xz).x;
-      const river = textures.rivers.bedNode(positionWorld.xz, cellDepth, metersPerPixel);
 
-      bed.assign(vec2(max(river.x, 0), river.y));
+      bed.assign(textures.rivers.bedNode(positionWorld.xz, cellDepth, metersPerPixel));
     });
 
     return bed;
@@ -353,7 +353,7 @@ export function createTerrainMaterial({
   const openPool = marsh.pool.mul(float(1).sub(snowCover));
   const marshy = marshGround(ground, marsh, patches.mul(0.6).add(fine.mul(0.4)));
 
-  const fordMarks = textures.fords.marksNode(positionWorld.xz);
+  const fordMarks = textures.fords.marksNode(positionWorld.xz, depth);
   const forded = fordGround(marshy, fordMarks, rock);
 
   const snowSlide = steepness.add(broad.mul(SNOW_SLIDE_WOBBLE)).add(patches.mul(SNOW_SLIDE_WOBBLE * 0.5));

@@ -193,7 +193,7 @@ function createGrassMaterial(options: GrassFieldOptions, uniforms: GrassUniforms
   const nearestWater = max(max(waterAt(0, 0), waterAt(1, 0)), max(waterAt(0, 1), waterAt(1, 1)));
   const isDry = nearestWater.lessThan(height.add(DRY_MARGIN));
   const isOnIsland = textures.outline.insideNode(root);
-  const fordMarks = textures.fords.marksNode(root);
+  const fordPath = textures.fords.pathNode(root);
   const reach = length(root.sub(center)).div(perSide.mul(spacing).mul(0.5));
 
   const reed = smoothstep(0.45, 0.8, wetland.r);
@@ -205,7 +205,7 @@ function createGrassMaterial(options: GrassFieldOptions, uniforms: GrassUniforms
     .mul(understoryCover)
     .mul(float(1).sub(smoothstep(SNOW_START, SNOW_END, surface.r)))
     .mul(float(1).sub(surface.b))
-    .mul(float(1).sub(max(fordMarks.x, fordMarks.y)))
+    .mul(float(1).sub(fordPath))
     .mul(float(1).sub(fieldClearingNode(textures, grid, root)))
     .mul(float(1).sub(smoothstep(FADE_START_REACH, 1, reach)))
     .mul(select(isDry.and(isOnIsland), float(1), float(0)))
