@@ -38,6 +38,7 @@ const SHALLOW_CUT = 10;
 const DEEP_CUT = 40;
 const SHORE_CLEARANCE = 0.4;
 const RISE_TABLE_STEP = 1;
+const SHORE_RISES = shoreRises();
 
 export interface LakeSiting {
   readonly boundaryDistance: (cell: number) => number;
@@ -186,8 +187,6 @@ function shoreRises(): Float32Array {
   return rises;
 }
 
-const SHORE_RISES = shoreRises();
-
 function shoreRiseAt(distance: number): number {
   const position = distance / RISE_TABLE_STEP;
   const last = SHORE_RISES.length - 1;
@@ -327,11 +326,12 @@ function measureRimFloors(grid: WorldGrid, basins: DrainageBasins, ceilings: Flo
 
 function blurredCuts(grid: WorldGrid, cuts: Float32Array): Float32Array {
   const radius = Math.round(CUT_BLUR_RADIUS / grid.cellSize);
-  let blurred = cuts;
 
   if (radius < 1) {
-    return blurred;
+    return cuts;
   }
+
+  let blurred = cuts;
 
   for (let pass = 0; pass < CUT_BLUR_PASSES; pass += 1) {
     blurred = boxBlur(grid.cellsPerSide, blurred, radius);
@@ -349,9 +349,10 @@ export function easeLakeShores(
   const cut = measureShoreCut(heights, grid, basins);
   const floors = measureRimFloors(grid, basins, cut.ceilings);
 
-  const isEased = (cell: number): boolean => {
+  function isEased(cell: number): boolean {
     return basins.lakeIds[cell] === NO_CELL && isOnIsland(coastDistance, cell);
-  };
+  }
+
   const exactCuts = heights.map((height, cell) => {
     return isEased(cell) ? Math.max(0, height - cut.ceilings[cell]) : 0;
   });

@@ -288,12 +288,11 @@ function shadedFacing(
 
 function measureSlopes(profile: ClimateProfile, grid: WorldGrid, heights: Float32Array, slopes: Float64Array): Slopes {
   const warmth = Math.hypot(profile.warmthX, profile.warmthZ);
+  const blurRadius = Math.round(SHADE_BLUR_RADIUS / grid.cellSize);
 
   const shaded = Float32Array.from(slopes, (slope, cell) => {
     return shadedFacing(profile, warmth, gradientXAt(heights, grid, cell), gradientZAt(heights, grid, cell), slope);
   });
-
-  const blurRadius = Math.round(SHADE_BLUR_RADIUS / grid.cellSize);
 
   return {
     shaded: blurRadius < 1 ? shaded : boxBlur(grid.cellsPerSide, shaded, blurRadius),
@@ -543,8 +542,11 @@ function cellClimate(fields: ClimateFields, column: number, row: number, point: 
   };
 }
 
-function isNearStillWater(inputs: WetlandInputs, column: number, row: number): boolean {
+function isNearStillWater(inputs: WetlandInputs, cell: number): boolean {
   const { grid } = inputs;
+
+  const column = grid.columnOf(cell);
+  const row = grid.rowOf(cell);
 
   for (let rowOffset = -STILL_WATER_CLEARANCE; rowOffset <= STILL_WATER_CLEARANCE; rowOffset += 1) {
     for (let columnOffset = -STILL_WATER_CLEARANCE; columnOffset <= STILL_WATER_CLEARANCE; columnOffset += 1) {
@@ -561,11 +563,9 @@ function isNearStillWater(inputs: WetlandInputs, column: number, row: number): b
 }
 
 function isRiverBed(inputs: WetlandInputs, result: ClimateResult, riverBanks: Uint8Array, cell: number): boolean {
-  const { grid } = inputs;
-
   const isSandBank = riverBanks[cell] === 1 && result.biome[cell] === Biome.Beach;
 
-  return (isRiverWater(inputs, cell) || isSandBank) && !isNearStillWater(inputs, grid.columnOf(cell), grid.rowOf(cell));
+  return (isRiverWater(inputs, cell) || isSandBank) && !isNearStillWater(inputs, cell);
 }
 
 function commonGroundAround(grid: WorldGrid, ground: Uint8Array, isOpen: Uint8Array, cell: number): number {
@@ -583,7 +583,8 @@ function commonGroundAround(grid: WorldGrid, ground: Uint8Array, isOpen: Uint8Ar
       continue;
     }
 
-    const count = (counts.get(ground[neighbor]) ?? 0) + 1;
+    const known = counts.get(ground[neighbor]);
+    const count = known === undefined ? 1 : known + 1;
 
     counts.set(ground[neighbor], count);
 
@@ -602,7 +603,7 @@ function sandMouths(inputs: WetlandInputs, result: ClimateResult): void {
   for (let cell = 0; cell < grid.cellCount; cell += 1) {
     const isRockyRiverBed = isRiverWater(inputs, cell) && result.ground[cell] === Ground.Rock;
 
-    if (isRockyRiverBed && isNearStillWater(inputs, grid.columnOf(cell), grid.rowOf(cell))) {
+    if (isRockyRiverBed && isNearStillWater(inputs, cell)) {
       result.ground[cell] = Ground.Sand;
     }
   }

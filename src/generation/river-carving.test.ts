@@ -222,6 +222,7 @@ function rockMadeByCarving(generated: GeneratedWorld): { carved: number; rock: n
   const uncarved = terrain.height.map((height, cell) => {
     return height + terrain.carving[cell];
   });
+
   let carved = 0;
   let rock = 0;
 

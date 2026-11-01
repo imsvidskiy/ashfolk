@@ -180,7 +180,12 @@ export function smoothRiverPath(points: readonly RiverPoint[], shaping: RiverSha
     return { ...point, x: xs[index], z: zs[index] };
   });
   const alongs = distancesAlong(smoothed);
-  const length = alongs.at(-1) ?? 0;
+  const length = alongs.at(-1);
+
+  if (length === undefined) {
+    return smoothed;
+  }
+
   const acrosses = smoothed.map((_, index) => {
     return acrossAt(smoothed, index, 1);
   });

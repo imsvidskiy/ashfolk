@@ -167,7 +167,7 @@ function capSurfaces(land: RiverLand, points: RiverPoint[], raw: Float64Array): 
   for (const [index, point] of points.entries()) {
     const { left, right } = banksAcross(land, points, index, ACROSS_REACH);
 
-    const lowestBank = Number.isNaN(left) || Number.isNaN(right) ? Number.NaN : Math.min(left, right);
+    const lowestBank = Math.min(left, right);
     const cap = Number.isNaN(lowestBank) ? raw[index] : Math.max(raw[index], lowestBank - BANK_FREEBOARD);
 
     point.surface = Math.min(point.surface, cap);
@@ -191,7 +191,12 @@ function meanderRoom(land: RiverLand, point: RiverPoint, acrossX: number, across
   return 1 - smoothstep(ROOMY_SIDE_RISE, CRAMPED_SIDE_RISE, rise);
 }
 
-function shapeRiver(land: RiverLand, points: readonly RiverPoint[], seed: number, endSurface?: number): RiverPoint[] {
+function shapeRiver(
+  land: RiverLand,
+  points: readonly RiverPoint[],
+  seed: number,
+  endSurface: number | undefined
+): RiverPoint[] {
   const shaped = smoothRiverPath(points, {
     meanderRoom: (point, acrossX, acrossZ) => {
       return meanderRoom(land, point, acrossX, acrossZ);

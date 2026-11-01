@@ -75,14 +75,17 @@ function positionsAlong(river: River, crossings: readonly Crossing[]): number[] 
 }
 
 function fallAround(river: River, point: { x: number; z: number }): { distance: number; fall: number } {
-  const lengths = river.points.map((_, index) => {
-    return river.points.slice(1, index + 1).reduce((sum, current, step) => {
-      const previous = river.points[step];
+  const lengths = [0];
 
-      return sum + Math.hypot(current.x - previous.x, current.z - previous.z);
-    }, 0);
-  });
-  const length = lengths.at(-1) ?? 0;
+  let length = 0;
+
+  for (let index = 1; index < river.points.length; index += 1) {
+    const previous = river.points[index - 1];
+    const current = river.points[index];
+
+    length += Math.hypot(current.x - previous.x, current.z - previous.z);
+    lengths.push(length);
+  }
 
   function surfaceAt(along: number): number {
     const clamped = Math.min(Math.max(along, 0), length);
