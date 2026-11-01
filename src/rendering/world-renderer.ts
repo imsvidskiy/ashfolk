@@ -414,6 +414,7 @@ export class WorldRenderer {
     look.daylight.value = this.#atmosphere.daylight;
     look.precipitation.value = precipitation;
     look.rainfall.value = rainfall;
+    look.wind.value.set(windX, windZ);
     look.windTravel.value.x += windX * WATER_DRIFT * realSeconds;
     look.windTravel.value.y += windZ * WATER_DRIFT * realSeconds;
   }
