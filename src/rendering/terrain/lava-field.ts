@@ -11,31 +11,26 @@ import {
   length,
   min,
   mix,
-  mx_worley_noise_vec2,
   normalWorldGeometry,
   positionWorld,
   smoothstep,
-  sqrt,
   texture,
   time,
-  vec2,
   vec3,
 } from "three/tsl";
 import { type DataTexture, type Node, RedFormat } from "three/webgpu";
 import type { LavaView } from "../../simulation/frame.ts";
 import { byteTexture } from "../data-textures.ts";
 import { unitNoise } from "../node-helpers.ts";
+import { type LavaPlates, PLATE_FREQUENCY } from "./lava-plates.ts";
 
 const HOT_CRUST = vec3(0.04, 0.03, 0.026);
 const GLOW_DEEP = vec3(0.75, 0.09, 0.015);
 const GLOW_HOT = vec3(1.6, 0.6, 0.1);
 const LAVA_THRESHOLD = 0.004;
-const PLATE_FREQUENCY = 0.07;
 const THINNEST_CRACK = 0.03;
 const WIDEST_CRACK = 0.25;
 const CORE_SHARE = 0.4;
-const PLATE_BEND = 12;
-const PLATE_BEND_FREQUENCY = 0.04;
 const CRACK_BLUR = 2;
 const GLOW_FREQUENCY = 0.05;
 const GLOW_CYCLE_SECONDS = 8;
@@ -89,7 +84,7 @@ export class LavaField {
     this.texture.needsUpdate = true;
   }
 
-  look(ground: Node<"vec3">, mapCoordinates: Node<"vec2">, point: Node<"vec2">): LavaLook {
+  look(plates: LavaPlates, ground: Node<"vec3">, mapCoordinates: Node<"vec2">, point: Node<"vec2">): LavaLook {
     const heat = texture(this.texture, mapCoordinates).r;
     const viewDistance = distance(positionWorld, cameraPosition);
     const detail = smoothstep(DETAIL_FAR, DETAIL_NEAR, viewDistance);
@@ -118,13 +113,7 @@ export class LavaField {
         const edge = float(1).toVar();
 
         If(detail.greaterThan(0), () => {
-          const bend = vec2(
-            unitNoise(point.mul(PLATE_BEND_FREQUENCY)),
-            unitNoise(point.mul(PLATE_BEND_FREQUENCY).add(5.1))
-          );
-          const plates = mx_worley_noise_vec2(point.add(bend.sub(0.5).mul(PLATE_BEND)).mul(PLATE_FREQUENCY));
-
-          edge.assign(sqrt(plates.y).sub(sqrt(plates.x)));
+          edge.assign(plates.edgeAt(point));
         });
 
         const crack = crackAt(edge, crackWidth, blur, detail);

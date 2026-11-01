@@ -11,6 +11,7 @@ import type { CellRegion } from "../../world/change-tracking.ts";
 import type { FireGlow } from "../effects/fire-glow.ts";
 import { GroundWarp } from "./ground-warp.ts";
 import type { GroundArea, IslandOutline } from "./island-outline.ts";
+import { LavaPlates } from "./lava-plates.ts";
 import { type HeightRange, type PatchContent, PatchGrid, type PatchPiece } from "./patch-grid.ts";
 import { createTerrainMaterial } from "./terrain-material.ts";
 import { PATCH_CELLS } from "./terrain-patches.ts";
@@ -32,6 +33,7 @@ export class TerrainView {
   readonly #materials: readonly MeshStandardNodeMaterial[];
   readonly #mirror: WorldMirror;
   readonly #outline: IslandOutline;
+  readonly #plates: LavaPlates;
   readonly #warp: GroundWarp;
 
   constructor(
@@ -45,11 +47,13 @@ export class TerrainView {
 
     this.#mirror = mirror;
     this.#outline = textures.outline;
+    this.#plates = new LavaPlates(renderer);
     this.#warp = new GroundWarp(grid, renderer);
 
     const options = {
       glow,
       grid,
+      plates: this.#plates,
       plinth,
       textures,
       warp: this.#warp,
@@ -114,6 +118,7 @@ export class TerrainView {
 
   dispose(): void {
     this.#inland.dispose();
+    this.#plates.dispose();
     this.#warp.dispose();
 
     if (this.#coast !== null) {

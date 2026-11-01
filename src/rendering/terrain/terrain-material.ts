@@ -38,6 +38,7 @@ import { fieldGroundNode } from "./field-ground.ts";
 import { FIREWEED, fireweedNode } from "./fireweed.ts";
 import type { GroundWarp } from "./ground-warp.ts";
 import { cellAtNode, mapCoordinatesNode, sampleCellsNode } from "./height-sampling.ts";
+import type { LavaPlates } from "./lava-plates.ts";
 import { PATCH_CELLS } from "./terrain-patches.ts";
 import type { TerrainTextures } from "./terrain-textures.ts";
 
@@ -82,6 +83,7 @@ interface Marsh {
 interface TerrainMaterialOptions {
   readonly glow: FireGlow;
   readonly grid: WorldGrid;
+  readonly plates: LavaPlates;
   readonly plinth: number;
   readonly shouldCutAtCoast: boolean;
   readonly textures: TerrainTextures;
@@ -274,6 +276,7 @@ function rockStrata(layer: Node<"float">, strataFade: Node<"float">, rock: Node<
 export function createTerrainMaterial({
   glow,
   grid,
+  plates,
   plinth,
   shouldCutAtCoast,
   textures,
@@ -343,7 +346,7 @@ export function createTerrainMaterial({
   const petals = smoothstep(0.55, 0.85, fine.mul(0.65).add(patches.mul(0.35)).add(0.5));
   const flowering = mix(scorched, FIREWEED, fireweedNode(surface.b, textures.bloom).mul(petals).mul(0.42));
 
-  const lava = textures.lava.look(flowering, mapCoordinates, positionWorld.xz);
+  const lava = textures.lava.look(plates, flowering, mapCoordinates, positionWorld.xz);
   const fireLight = fireLightAt(glow, grid, positionWorld.xz);
   const roughness = mix(mix(float(0.95), float(MARSH_ROUGHNESS), marsh.soak), float(0.5), wetness);
 
