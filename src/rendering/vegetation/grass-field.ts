@@ -38,7 +38,7 @@ import {
 } from "three/webgpu";
 import { clamp as clampNumber, FULL_TURN, inverseLerp, saturate } from "../../shared/math.ts";
 import type { WorldGrid } from "../../world/world-grid.ts";
-import { unitNoise } from "../node-helpers.ts";
+import { cellKey, unitNoise } from "../node-helpers.ts";
 import { POOL_BANK, poolReachNode } from "../terrain/bog-pools.ts";
 import { fieldClearingNode } from "../terrain/field-ground.ts";
 import { FIREWEED, fireweedNode } from "../terrain/fireweed.ts";
@@ -54,8 +54,6 @@ const BLADE_OUTLINE: readonly (readonly [side: number, along: number])[] = [
 ];
 const BLADE_TRIANGLES: readonly number[] = [0, 1, 2];
 
-const LATTICE_OFFSET = 32_768;
-const LATTICE_ROW = 65_536;
 const SALT_JITTER_X = 0x68_e3_1d_a4;
 const SALT_JITTER_Z = 0xb5_29_7a_4d;
 const SALT_PRESENCE = 0x1b_56_c4_e9;
@@ -162,9 +160,7 @@ function createGrassMaterial(options: GrassFieldOptions, uniforms: GrassUniforms
     .sub(Math.floor(clumpsPerSide / 2))
     .add(vec2(instance.mod(perSide), floor(instance.div(perSide))));
 
-  const key = uint(lattice.x.add(LATTICE_OFFSET))
-    .mul(LATTICE_ROW)
-    .add(uint(lattice.y.add(LATTICE_OFFSET)));
+  const key = cellKey(lattice);
 
   function random(salt: number): Node<"float"> {
     return hash(key.bitXor(salt));

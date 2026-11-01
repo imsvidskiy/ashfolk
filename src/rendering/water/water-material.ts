@@ -13,7 +13,6 @@ import {
   floor,
   fract,
   fwidth,
-  hash,
   If,
   ivec2,
   length,
@@ -31,7 +30,6 @@ import {
   textureLoad,
   time,
   transformNormalToView,
-  uint,
   uniform,
   vec2,
   vec3,
@@ -46,7 +44,7 @@ import {
   Vector2,
 } from "three/webgpu";
 import type { WorldGrid } from "../../world/world-grid.ts";
-import { unitNoise3 } from "../node-helpers.ts";
+import { cellKey, unitHash, unitNoise3 } from "../node-helpers.ts";
 import { mapCoordinatesNode, sampleCellsNode } from "../terrain/height-sampling.ts";
 import type { TerrainTextures } from "../terrain/terrain-textures.ts";
 import { rainDimples } from "./rain-dimples.ts";
@@ -89,8 +87,6 @@ const MARK_SECONDS = 9;
 const MARK_TRAVEL = 1.5;
 const MARK_FAR = 450;
 const MARK_NEAR = 200;
-const MARK_CELL_OFFSET = 32_768;
-const MARK_CELL_ROW = 65_536;
 const MARK_SALT_ACROSS = 0x5b_d1_e9_95;
 const MARK_SALT_ALONG = 0x27_d4_eb_2f;
 const MARK_SALT_PHASE = 0x16_56_67_b1;
@@ -218,16 +214,12 @@ function windMark(point: Node<"vec2">, wind: Node<"vec2">, pixel: Node<"float">)
   const spot = point.div(MARK_SPACING);
   const cell = floor(spot);
 
-  const key = uint(cell.x.add(MARK_CELL_OFFSET))
-    .mul(MARK_CELL_ROW)
-    .add(uint(cell.y.add(MARK_CELL_OFFSET)));
-  const tip = vec2(hash(key.bitXor(MARK_SALT_ACROSS)), hash(key.bitXor(MARK_SALT_ALONG)))
-    .mul(0.4)
-    .add(0.3);
-  const age = fract(time.div(MARK_SECONDS).add(hash(key.bitXor(MARK_SALT_PHASE))));
-  const isShown = hash(key.bitXor(MARK_SALT_SHOWN)).lessThan(MARK_SHARE);
-  const radius = hash(key.bitXor(MARK_SALT_SIZE)).mul(0.6).add(0.7).mul(MARK_RADIUS);
-  const turn = hash(key.bitXor(MARK_SALT_TURN)).sub(0.5).mul(MARK_TURN);
+  const key = cellKey(cell);
+  const tip = vec2(unitHash(key, MARK_SALT_ACROSS), unitHash(key, MARK_SALT_ALONG)).mul(0.4).add(0.3);
+  const age = fract(time.div(MARK_SECONDS).add(unitHash(key, MARK_SALT_PHASE)));
+  const isShown = unitHash(key, MARK_SALT_SHOWN).lessThan(MARK_SHARE);
+  const radius = unitHash(key, MARK_SALT_SIZE).mul(0.6).add(0.7).mul(MARK_RADIUS);
+  const turn = unitHash(key, MARK_SALT_TURN).sub(0.5).mul(MARK_TURN);
 
   const heading = vec2(
     wind.x.mul(cos(turn)).sub(wind.y.mul(sin(turn))),

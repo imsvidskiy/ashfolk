@@ -25,10 +25,11 @@ import { Color, Group, Mesh, MeshBasicNodeMaterial, type PerspectiveCamera, Vect
 import { fallsAsSnow, type WeatherKind } from "../../content/weather.ts";
 import { fractionalPart, saturate } from "../../shared/math.ts";
 import type { WorldGrid } from "../../world/world-grid.ts";
+import { unitHash } from "../node-helpers.ts";
 import { cellAtNode, sampleHeightNode } from "../terrain/height-sampling.ts";
 import type { TerrainTextures } from "../terrain/terrain-textures.ts";
 import { billboardNodes, type CameraAxes, createQuadGeometry, distanceFromBillboardCenter } from "./billboards.ts";
-import { CYCLES, cycleOf, type LatticeArea, LatticeCover, latticeElement, unitHash } from "./precipitation-lattice.ts";
+import { CYCLES, cycleOf, type LatticeArea, LatticeCover, latticeElement } from "./precipitation-lattice.ts";
 
 const NEAREST_SPAN = 70;
 const SPAN_PER_DISTANCE = 1.6;
