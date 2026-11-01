@@ -340,16 +340,8 @@ function addHutWall(context: StructureContext): void {
     loft(
       [
         { radiusX: 0, radiusZ: 0, y: 0.6 },
-        {
-          radiusX: HUT_RADIUS + 0.12,
-          radiusZ: HUT_RADIUS + 0.12,
-          y: 0,
-        },
-        {
-          radiusX: HUT_RADIUS + 0.06,
-          radiusZ: HUT_RADIUS + 0.06,
-          y: 0.5,
-        },
+        { radiusX: HUT_RADIUS + 0.12, radiusZ: HUT_RADIUS + 0.12, y: 0 },
+        { radiusX: HUT_RADIUS + 0.06, radiusZ: HUT_RADIUS + 0.06, y: 0.5 },
         { radiusX: HUT_RADIUS, radiusZ: HUT_RADIUS, y: 0.55 },
         { radiusX: HUT_RADIUS - 0.04, radiusZ: HUT_RADIUS - 0.04, y: 1.75 },
         { radiusX: 0, radiusZ: 0, y: 1.8 },

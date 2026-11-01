@@ -22,10 +22,10 @@ import {
 } from "./tree-structure.ts";
 
 export const FOLIAGE_FLUTTER = 1;
+export const CROWN_ROUGHNESS = 0.1;
 
 const MESH_NOISE = createVolumeNoise(createRandom(5150));
 const BLOB_LIMITS: Readonly<Record<NearLevel, number>> = { high: 6, medium: 4 };
-export const CROWN_ROUGHNESS = 0.1;
 const GROUNDED_CROWN_LIFT = 0.8;
 const LOW_CROWN_FILL = 0.53;
 const LOW_FROND_CROWN_FILL = 0.4;

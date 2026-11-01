@@ -122,7 +122,6 @@ export class MeshBuilder {
 
   add(shape: Shape, placement: Placement = {}): void {
     const style: VertexStyle = { ...this.#baseStyle, ...placement.style };
-
     const faces = faceCenters(shape, placement.transform);
 
     this.#place(shape, placement, (vertex, normal, position) => {

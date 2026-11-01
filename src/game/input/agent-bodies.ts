@@ -121,7 +121,6 @@ export function personBody(people: Float32Array, offset: number): AgentBody {
     seed: people[offset + PersonField.AppearanceSeed],
     tribe: UNCOLORED_TRIBE,
   });
-
   const parts = farHumanParts();
   const drawn = appearanceParts(appearance).map((part) => {
     return parts[humanPartIndex(part)];
