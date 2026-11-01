@@ -1,6 +1,6 @@
 import { DEPOSIT_KINDS, DEPOSITS, type DepositKind } from "../content/deposits.ts";
 import { Ground } from "../content/grounds.ts";
-import { FULL_TURN, hashToUnit } from "../shared/math.ts";
+import { FULL_TURN } from "../shared/math.ts";
 import { createRandom, type RandomSource } from "../shared/random.ts";
 import type { Deposit } from "../world/deposits.ts";
 import { slopeAt } from "../world/footing.ts";
@@ -19,9 +19,9 @@ const ORE_SPACING = 140;
 const CLAY_SPACING = 110;
 const ATTEMPTS_PER_DEPOSIT = 60;
 const SMALLEST_VEIN = 4;
-const VEIN_WIDTH = 0.5;
+const VEIN_WIDTH = 0.375;
 const VEIN_WAVINESS = 0.16;
-const VEIN_SALT = 61.7;
+const CLAY_BANK_REACH = 0.65;
 const FOREST_VEIN_CELLS = 6;
 const SMALLEST_OPEN_SHARE = 0.15;
 const BARREN_GROUNDS: ReadonlySet<number> = new Set([Ground.Snow, Ground.Sand]);
@@ -132,17 +132,14 @@ function isInVein(planner: DepositPlanner, center: number, cell: number, angle: 
   const across = -offsetX * Math.sin(angle) + offsetZ * Math.cos(angle);
 
   const wave = Math.sin(along * Math.PI * 1.6) * VEIN_WAVINESS;
-  const speckle = hashToUnit(grid.columnOf(cell), grid.rowOf(cell), VEIN_SALT) * 0.25;
 
-  return Math.abs(across - wave) + speckle < VEIN_WIDTH && Math.abs(along) <= 1;
+  return Math.abs(across - wave) < VEIN_WIDTH && Math.abs(along) <= 1;
 }
 
 function isInClayBank(planner: DepositPlanner, center: number, cell: number, radius: number): boolean {
   const { grid } = planner;
 
-  const distance = grid.distanceBetween(center, cell);
-
-  return hashToUnit(grid.columnOf(cell), grid.rowOf(cell), VEIN_SALT) < 1.15 - distance / radius;
+  return grid.distanceBetween(center, cell) < CLAY_BANK_REACH * radius;
 }
 
 function veinCells(planner: DepositPlanner, kind: DepositKind, center: number): number[] {
