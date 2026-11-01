@@ -65,6 +65,8 @@ const NARROWEST_SCREEN_MARGIN = 2.5;
 const FAR_DEPTH_GAIN = 2;
 const FAR_DEPTH_START = 0.2;
 const FAR_DEPTH_FULL = 1.2;
+const FAR_GAIN_NARROW = 3;
+const FAR_GAIN_WIDE = 8;
 const EDGE_WOBBLE_SCALE = 0.11;
 const MARGIN_AT_NARROWEST = 1.4;
 const MARGIN_PER_HALF_WIDTH = 0.12;
@@ -449,7 +451,11 @@ function depthFrom(
   const widening = wideningFarAway(river, metersPerPixel);
   const wobble = mx_noise_float(vec3(point.mul(EDGE_WOBBLE_SCALE), 6.3)).mul(DRAWN_RIVER_EDGE_WOBBLE);
   const deepest = river.halfWidth.mul(DEPTH_PER_HALF_WIDTH).add(widening.mul(EDGE_DEPTH_SLOPE)).add(DEPTH_AT_CENTER);
-  const deepening = smoothstep(FAR_DEPTH_START, FAR_DEPTH_FULL, metersPerPixel).mul(FAR_DEPTH_GAIN).add(1);
+  const narrowness = float(1).sub(smoothstep(FAR_GAIN_NARROW, FAR_GAIN_WIDE, river.halfWidth));
+  const deepening = smoothstep(FAR_DEPTH_START, FAR_DEPTH_FULL, metersPerPixel)
+    .mul(narrowness)
+    .mul(FAR_DEPTH_GAIN)
+    .add(1);
   const riverDepth = min(river.edge.add(widening).add(wobble).mul(EDGE_DEPTH_SLOPE), deepest).mul(deepening);
 
   const shoreWobble = cellDepth.sub(river.shoreDepth);
