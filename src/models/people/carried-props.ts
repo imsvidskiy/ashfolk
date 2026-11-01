@@ -3,9 +3,9 @@ import { createVolumeNoise } from "../../shared/noise.ts";
 import { createRandom } from "../../shared/random.ts";
 import { MaterialSlot, type MaterialSlotIndex } from "../materials.ts";
 import type { MeshBuilder } from "../mesh/mesh-builder.ts";
-import { blob, sphere } from "../mesh/shapes.ts";
+import { blob, icosphere } from "../mesh/shapes.ts";
 import { type Triple, transformOf } from "../mesh/transforms.ts";
-import { type HumanDetail, trimSegments } from "./human-detail.ts";
+import type { HumanDetail } from "./human-detail.ts";
 import { addBasket, type Basket, CRADLE, inLeftHand, LEFT_FIST, onChest } from "./prop-placement.ts";
 
 const LOAD_NOISE = createVolumeNoise(createRandom(5151));
@@ -92,7 +92,7 @@ export function addCarriedFruit(builder: MeshBuilder, detail: HumanDetail): void
     const angle = (apple / apples) * FULL_TURN;
     const reach = apple === 0 ? 0 : 0.058;
 
-    builder.add(sphere(0.034, trimSegments(detail, 7), 4), {
+    builder.add(icosphere(0.036, 0), {
       style: inLeftHand(MaterialSlot.Apple),
       transform: transformOf({
         position: [x + Math.cos(angle) * reach, bottom + 0.118 + (apple % 2) * 0.014, z + Math.sin(angle) * reach],
