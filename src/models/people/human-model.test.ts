@@ -4,6 +4,7 @@ import { WEAPON_KINDS } from "../../content/weapons.ts";
 import { CARRIED_ITEMS, type CarriedItem, PERSON_POSES, type PersonPose } from "../../world/agent-poses.ts";
 import { MaterialSlot } from "../materials.ts";
 import { type MeshData, mergeMeshes, triangleCount, VERTEX_CHANNELS } from "../mesh/mesh-data.ts";
+import { outermostHit } from "../mesh/surface-probe.ts";
 import { Pose } from "../rig/pose.ts";
 import { SkeletonPoser } from "../rig/skeleton-poser.ts";
 import { meshProblems, openEdgeCount, thinnestPiece, verticesWhere } from "../testing/mesh-checks.ts";
@@ -44,6 +45,10 @@ const ARM_BONES: ReadonlySet<number> = new Set([
   HumanBone.UpperArmLeft,
   HumanBone.UpperArmRight,
 ]);
+
+const THIGH_BONES: ReadonlySet<number> = new Set([HumanBone.ThighLeft, HumanBone.ThighRight]);
+const HAND_BONES: ReadonlySet<number> = new Set([HumanBone.HandLeft, HumanBone.HandRight]);
+const SKIRTS = ["dress", "tunic"] as const satisfies readonly HumanPart[];
 
 const TOOLS: ReadonlySet<HumanPart> = new Set(
   PERSON_POSES.flatMap((clip) => {
@@ -105,6 +110,32 @@ function holdsBodyPart(mesh: MeshData, body: readonly HumanPart[]): (piece: Mesh
       return bodyParts.has(mesh.channels.part[vertex]);
     });
   };
+}
+
+function mainBone(mesh: MeshData, vertex: number): number {
+  return mesh.channels.boneWeight[vertex] < 0.5 ? mesh.channels.boneA[vertex] : mesh.channels.boneB[vertex];
+}
+
+function depthsUnder(garment: MeshData, body: MeshData, bones: ReadonlySet<number>, pelvis: Vector3): number[] {
+  const [, hem] = garment.bounds.minimum;
+
+  const vertices = verticesWhere(body, (vertex) => {
+    const height = body.positions[vertex * 3 + 1];
+
+    return bones.has(mainBone(body, vertex)) && height > hem && height < pelvis.y;
+  });
+
+  return vertices.flatMap((vertex) => {
+    const point = new Vector3().fromArray(body.positions, vertex * 3);
+    const outward = new Vector3(point.x - pelvis.x, 0, point.z - pelvis.z);
+    const hit = outermostHit(garment, new Vector3(pelvis.x, point.y, pelvis.z), outward);
+
+    if (hit === null) {
+      return [];
+    }
+
+    return [hit.distance - outward.length()];
+  });
 }
 
 function carriedTo(clip: PersonPose): CarriedItem {
@@ -282,6 +313,47 @@ describe("moving parts", () => {
 
             expect(loosePieces(mesh, TOUCHING, body), `${appearance.ageGroup} ${phase} ${garment}`).toEqual([]);
           }
+        }
+      }
+    });
+  });
+
+  describe("under skirts and tunics", () => {
+    const poser = new SkeletonPoser(HUMAN_SKELETON);
+
+    function depthsOf(
+      appearance: PersonAppearance,
+      clip: PersonPose,
+      phase: number,
+      garment: HumanPart,
+      bones: ReadonlySet<number>
+    ): number[] {
+      poseAs(poser, appearance, clip, phase, "nothing");
+
+      const body = posedPartsOf(highParts, bodyPartsOf(appearance), poser);
+      const worn = posedPartsOf(highParts, [garment], poser);
+
+      return depthsUnder(worn, body, bones, poser.jointPosition(HumanBone.Pelvis, new Vector3()));
+    }
+
+    it.each(SKIRTS)("keeps the thighs of a standing person inside the %s", (garment) => {
+      for (const appearance of people) {
+        for (const phase of [0.15, 0.4, 0.7]) {
+          const depths = depthsOf(appearance, "idle", phase, garment, THIGH_BONES);
+
+          expect(depths.length, `${appearance.ageGroup} ${phase}`).toBeGreaterThan(0);
+          expect(Math.min(...depths), `${appearance.ageGroup} ${phase}`).toBeGreaterThanOrEqual(0);
+        }
+      }
+    });
+
+    it.each(["idle", "walk"] as const)("keeps the hanging hands outside the dress to %s", (clip) => {
+      for (const appearance of people) {
+        for (const phase of [0.15, 0.4, 0.7]) {
+          const depths = depthsOf(appearance, clip, phase, "dress", HAND_BONES);
+
+          expect(depths.length, `${appearance.ageGroup} ${phase}`).toBeGreaterThan(0);
+          expect(Math.max(...depths), `${appearance.ageGroup} ${phase}`).toBeLessThan(0);
         }
       }
     });
