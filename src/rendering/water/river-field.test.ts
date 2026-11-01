@@ -1,6 +1,8 @@
+import { RedFormat } from "three/webgpu";
 import { describe, expect, it } from "vitest";
 import { drawnRiverHalfWidth, NO_WATER, packRiverLines, type River, type RiverPoint } from "../../world/water.ts";
 import { WorldGrid } from "../../world/world-grid.ts";
+import { floatDataTexture } from "../data-textures.ts";
 import { buildRiverField, RiverField, sampleRiverField } from "./river-field.ts";
 
 const grid = new WorldGrid({ cellSize: 10, cellsPerSide: 64 });
@@ -143,12 +145,21 @@ describe("buildRiverField", () => {
         return isPond(cell) || isRiverCell(cell) ? 1 : NO_WATER;
       }),
     };
-    const field = new RiverField(grid, packRiverLines([straightRiver(0, 3, NARROW_WIDTH)]), source);
+    const shoreDepths = Float32Array.from({ length: grid.cellCount }, (_, cell) => {
+      return isPond(cell) || isRiverCell(cell) ? CELL_DEPTH : -CELL_DEPTH;
+    });
+    const shore = {
+      data: shoreDepths,
+      stride: 1,
+      texture: floatDataTexture(shoreDepths, grid.cellsPerSide, grid.cellsPerSide, RedFormat),
+    };
+    const field = new RiverField(grid, packRiverLines([straightRiver(0, 3, NARROW_WIDTH)]), source, shore);
 
     expect(field.depthAt(15, 95, CELL_DEPTH)).toBeLessThan(0);
     expect(field.depthAt(3, 95, CELL_DEPTH)).toBeGreaterThan(0);
     expect(field.depthAt(15, 125, CELL_DEPTH)).toBe(CELL_DEPTH);
 
     field.dispose();
+    shore.texture.dispose();
   });
 });

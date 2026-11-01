@@ -81,7 +81,11 @@ export class TerrainTextures {
     };
     this.shore = floatDataTexture(this.#shoreData, size, size, RGBAFormat);
     this.#buildShore();
-    this.rivers = new RiverField(mirror.grid, mirror.water.riverLines, mirror.terrain);
+    this.rivers = new RiverField(mirror.grid, mirror.water.riverLines, mirror.terrain, {
+      data: this.#shoreData,
+      stride: SHORE_CHANNELS,
+      texture: this.shore,
+    });
     this.surface = byteTexture(mirror.surface, size, RGBAFormat);
     this.#wetlandData = new Uint8Array(size * size * WETLAND_CHANNELS);
     this.#paintWetland({ firstRow: 0, rowCount: size });

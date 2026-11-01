@@ -43,8 +43,9 @@ const OFFSET_SCALE = 127.5 / RIVER_FIELD_REACH;
 const ANGLE_STEPS = 126;
 const END_CAP = 127;
 const RIVER_CELL_FLAG = 128;
-const HALF_WIDTH_STEP = 0.125;
-const WIDEST_HALF_WIDTH_CODE = 127;
+const HALF_WIDTH_STEP = 0.25;
+const WIDEST_HALF_WIDTH_CODE = 63;
+const NEAR_STANDING_FLAG = 64;
 const STANDING_FLAG = 128;
 const BLEND_SOFTNESS = 1.5;
 const TANGENT_REACH = 7.5;
@@ -52,6 +53,7 @@ const DRIED_REACH_CELLS = 2;
 const EDGE_DEPTH_SLOPE = 0.35;
 const DEPTH_AT_CENTER = 0.4;
 const DEPTH_PER_HALF_WIDTH = 0.25;
+const MOUTH_DEPTH = 0.7;
 const NARROWEST_SCREEN_HALF_WIDTH = 4;
 const NARROWEST_SCREEN_MARGIN = 2.5;
 const FAR_DEPTH_GAIN = 2;
@@ -70,20 +72,35 @@ export interface RiverWaterSource {
   readonly waterSurface: Float32Array;
 }
 
+export interface ShoreDepths {
+  readonly data: Float32Array;
+  readonly stride: number;
+  readonly texture: DataTexture;
+}
+
 export interface RiverSample {
   readonly edge: number;
   readonly halfWidth: number;
   readonly hasRiver: boolean;
-  readonly isNearStanding: boolean;
-  readonly riverCellShare: number;
+}
+
+interface StandingSample {
+  readonly lakeBank: number;
+  readonly lakeWet: number;
+  readonly nearShare: number;
+  readonly shoreDepth: number;
+  readonly standingShare: number;
 }
 
 export interface RiverNode {
   readonly edge: Node<"float">;
   readonly halfWidth: Node<"float">;
   readonly hasRiver: Node<"bool">;
-  readonly isNearStanding: Node<"bool">;
-  readonly riverCellShare: Node<"float">;
+  readonly lakeBank: Node<"float">;
+  readonly lakeWet: Node<"float">;
+  readonly nearShare: Node<"float">;
+  readonly shoreDepth: Node<"float">;
+  readonly standingShare: Node<"float">;
 }
 
 interface Segment {
@@ -177,9 +194,9 @@ function isStandingWater(source: RiverWaterSource, cell: number): boolean {
   return source.riverStrength[cell] === 0 && hasWater(source.waterSurface[cell], source.height[cell]);
 }
 
-function flagStanding(target: Uint8Array, cell: number): void {
-  if (target[cell * CHANNELS + 3] < STANDING_FLAG) {
-    target[cell * CHANNELS + 3] += STANDING_FLAG;
+function flagCell(target: Uint8Array, cell: number, flag: number): void {
+  if (Math.floor(target[cell * CHANNELS + 3] / flag) % 2 === 0) {
+    target[cell * CHANNELS + 3] += flag;
   }
 }
 
@@ -192,13 +209,14 @@ function markStandingWater(grid: WorldGrid, source: RiverWaterSource, target: Ui
     const column = grid.columnOf(cell);
     const row = grid.rowOf(cell);
 
-    flagStanding(target, cell);
+    flagCell(target, cell, STANDING_FLAG);
+    flagCell(target, cell, NEAR_STANDING_FLAG);
 
     for (const offset of NEIGHBOR_OFFSETS) {
       const neighbor = grid.neighborIndex(column, row, offset);
 
       if (neighbor >= 0) {
-        flagStanding(target, neighbor);
+        flagCell(target, neighbor, NEAR_STANDING_FLAG);
       }
     }
   }
@@ -288,7 +306,7 @@ function cornerSample(
   const [column, row, share] = corner;
 
   const offset = grid.index(column, row) * CHANNELS;
-  const widthCode = field[offset + 3] % STANDING_FLAG;
+  const widthCode = field[offset + 3] % NEAR_STANDING_FLAG;
 
   if (widthCode === 0) {
     return null;
@@ -309,22 +327,42 @@ function cornerSample(
   return { edge: drawnRiverHalfWidth(halfWidth) - distance, halfWidth, weight: share };
 }
 
-export function sampleRiverField(grid: WorldGrid, field: Uint8Array, x: number, z: number): RiverSample {
+function cornersAround(grid: WorldGrid, x: number, z: number): (readonly [number, number, number])[] {
   const { amountX, amountZ, column, row } = lookUpCell(grid, x, z);
 
-  const corners = [
+  return [
     [column, row, (1 - amountX) * (1 - amountZ)],
     [column + 1, row, amountX * (1 - amountZ)],
     [column, row + 1, (1 - amountX) * amountZ],
     [column + 1, row + 1, amountX * amountZ],
-  ] as const;
+  ];
+}
 
-  const isNearStanding = corners.some(([cornerColumn, cornerRow]) => {
-    return field[grid.index(cornerColumn, cornerRow) * CHANNELS + 3] >= STANDING_FLAG;
-  });
-  const riverCellShare = corners.reduce((sum, [cornerColumn, cornerRow, share]) => {
-    return field[grid.index(cornerColumn, cornerRow) * CHANNELS + 2] >= RIVER_CELL_FLAG ? sum + share : sum;
-  }, 0);
+function standingAt(grid: WorldGrid, field: Uint8Array, shore: ShoreDepths, x: number, z: number): StandingSample {
+  let lakeBank = 0;
+  let lakeWet = 0;
+  let nearShare = 0;
+  let shoreDepth = 0;
+  let standingShare = 0;
+
+  for (const [column, row, share] of cornersAround(grid, x, z)) {
+    const cell = grid.index(column, row);
+    const flags = field[cell * CHANNELS + 3];
+    const depth = shore.data[cell * shore.stride];
+    const isRiverCell = field[cell * CHANNELS + 2] >= RIVER_CELL_FLAG;
+
+    lakeBank += share * (isRiverCell ? Math.min(depth, 0) - BANK_SINK : depth);
+    lakeWet += share * (isRiverCell ? Math.min(depth, MOUTH_DEPTH) : depth);
+    nearShare += flags % STANDING_FLAG >= NEAR_STANDING_FLAG ? share : 0;
+    shoreDepth += share * depth;
+    standingShare += flags >= STANDING_FLAG ? share : 0;
+  }
+
+  return { lakeBank, lakeWet, nearShare, shoreDepth, standingShare };
+}
+
+export function sampleRiverField(grid: WorldGrid, field: Uint8Array, x: number, z: number): RiverSample {
+  const corners = cornersAround(grid, x, z);
   const samples = corners.flatMap((corner) => {
     const sample = cornerSample(grid, field, corner, { x, z });
 
@@ -332,7 +370,7 @@ export function sampleRiverField(grid: WorldGrid, field: Uint8Array, x: number, 
   });
 
   if (samples.length === 0) {
-    return { edge: NO_RIVER_EDGE, halfWidth: 0, hasRiver: false, isNearStanding, riverCellShare };
+    return { edge: NO_RIVER_EDGE, halfWidth: 0, hasRiver: false };
   }
 
   const deepest = Math.max(
@@ -354,20 +392,22 @@ export function sampleRiverField(grid: WorldGrid, field: Uint8Array, x: number, 
   }
 
   if (total === 0) {
-    return { edge: NO_RIVER_EDGE, halfWidth: 0, hasRiver: true, isNearStanding, riverCellShare };
+    return { edge: NO_RIVER_EDGE, halfWidth: 0, hasRiver: true };
   }
 
-  return { edge: edge / total, halfWidth: halfWidth / total, hasRiver: true, isNearStanding, riverCellShare };
+  return { edge: edge / total, halfWidth: halfWidth / total, hasRiver: true };
 }
 
-function waterDepthWith(sample: RiverSample, cellDepth: number): number {
+function waterDepthWith(sample: RiverSample, standing: StandingSample, cellDepth: number): number {
   const deepest = sample.halfWidth * DEPTH_PER_HALF_WIDTH + DEPTH_AT_CENTER;
   const riverDepth = Math.min(sample.edge * EDGE_DEPTH_SLOPE, deepest);
 
-  if (sample.isNearStanding) {
-    const standingDepth = cellDepth + (Math.min(cellDepth, 0) - BANK_SINK - cellDepth) * sample.riverCellShare;
+  if (standing.nearShare > 0) {
+    const wobble = cellDepth - standing.shoreDepth;
+    const nearRiver = riverDepth + (Math.min(riverDepth, MOUTH_DEPTH) - riverDepth) * standing.nearShare;
+    const lakeWet = standing.lakeWet + wobble;
 
-    return Math.max(standingDepth, riverDepth);
+    return Math.max(standing.lakeBank + wobble, nearRiver + (lakeWet - nearRiver) * standing.standingShare);
   }
 
   return sample.hasRiver ? riverDepth : cellDepth;
@@ -395,18 +435,25 @@ function depthFrom(
   const deepening = smoothstep(FAR_DEPTH_START, FAR_DEPTH_FULL, metersPerPixel).mul(FAR_DEPTH_GAIN).add(1);
   const riverDepth = min(river.edge.add(widening).add(wobble).mul(EDGE_DEPTH_SLOPE), deepest).mul(deepening);
 
-  const standingDepth = mix(cellDepth, min(cellDepth, 0).sub(BANK_SINK), river.riverCellShare);
+  const shoreWobble = cellDepth.sub(river.shoreDepth);
+  const nearRiver = mix(riverDepth, min(riverDepth, MOUTH_DEPTH), river.nearShare);
+  const nearDepth = max(
+    river.lakeBank.add(shoreWobble),
+    mix(nearRiver, river.lakeWet.add(shoreWobble), river.standingShare)
+  );
 
-  return select(river.isNearStanding, max(standingDepth, riverDepth), select(river.hasRiver, riverDepth, cellDepth));
+  return select(river.nearShare.greaterThan(0), nearDepth, select(river.hasRiver, riverDepth, cellDepth));
 }
 
 export class RiverField {
   readonly texture: DataTexture;
   readonly #data: Uint8Array;
   readonly #grid: WorldGrid;
+  readonly #shore: ShoreDepths;
 
-  constructor(grid: WorldGrid, lines: RiverLines, source: RiverWaterSource) {
+  constructor(grid: WorldGrid, lines: RiverLines, source: RiverWaterSource, shore: ShoreDepths) {
     this.#grid = grid;
+    this.#shore = shore;
     this.#data = new Uint8Array(grid.cellCount * CHANNELS);
     this.texture = cellByteTexture(this.#data, grid.cellsPerSide, RGBAFormat);
     this.rebuild(lines, source);
@@ -418,13 +465,17 @@ export class RiverField {
   }
 
   depthAt(x: number, z: number, cellDepth: number): number {
-    return waterDepthWith(sampleRiverField(this.#grid, this.#data, x, z), cellDepth);
+    const sample = sampleRiverField(this.#grid, this.#data, x, z);
+
+    return waterDepthWith(sample, standingAt(this.#grid, this.#data, this.#shore, x, z), cellDepth);
   }
 
   isNearStandingNode(cell: Node<"ivec2">): Node<"bool"> {
     return textureLoad(this.texture, cell)
       .w.mul(BYTE)
-      .greaterThan(STANDING_FLAG - 0.5);
+      .round()
+      .mod(STANDING_FLAG)
+      .greaterThan(NEAR_STANDING_FLAG - 0.5);
   }
 
   sampleNode(point: Node<"vec2">): RiverNode {
@@ -444,9 +495,10 @@ export class RiverField {
     const samples = corners.map(([column, row, share]) => {
       const cell = base.add(vec2(column, row)).clamp(vec2(0, 0), vec2(last, last));
       const texel = textureLoad(this.texture, ivec2(cell)).mul(BYTE).round();
+      const depth = textureLoad(this.#shore.texture, ivec2(cell)).x;
 
-      const widthCode = texel.w.mod(STANDING_FLAG);
-      const isStanding = texel.w.greaterThanEqual(STANDING_FLAG);
+      const widthCode = texel.w.mod(NEAR_STANDING_FLAG);
+      const isRiverCell = texel.z.greaterThanEqual(RIVER_CELL_FLAG);
       const hasRiver = widthCode.greaterThan(0.5);
 
       const center = cell.add(0.5).mul(grid.cellSize).sub(grid.halfSize);
@@ -465,9 +517,12 @@ export class RiverField {
         edge,
         halfWidth,
         hasRiver,
-        isStanding,
-        riverCellShare: select(texel.z.greaterThanEqual(RIVER_CELL_FLAG), share, float(0)),
+        lakeBank: share.mul(select(isRiverCell, min(depth, 0).sub(BANK_SINK), depth)),
+        lakeWet: share.mul(select(isRiverCell, min(depth, MOUTH_DEPTH), depth)),
+        nearShare: select(texel.w.mod(STANDING_FLAG).greaterThanEqual(NEAR_STANDING_FLAG), share, float(0)),
         share: select(hasRiver, share, float(0)),
+        shoreDepth: share.mul(depth),
+        standingShare: select(texel.w.greaterThanEqual(STANDING_FLAG), share, float(0)),
       };
     });
 
@@ -502,18 +557,26 @@ export class RiverField {
 
     const [first, ...others] = samples;
 
-    const isNearStanding = others.reduce<Node<"bool">>((any, sample) => {
-      return any.or(sample.isStanding);
-    }, first.isStanding);
     const hasRiver = others.reduce<Node<"bool">>((any, sample) => {
       return any.or(sample.hasRiver);
     }, first.hasRiver);
 
-    const riverCellShare = others.reduce<Node<"float">>((total, sample) => {
-      return total.add(sample.riverCellShare);
-    }, first.riverCellShare);
+    function summed(key: "lakeBank" | "lakeWet" | "nearShare" | "shoreDepth" | "standingShare"): Node<"float"> {
+      return others.reduce<Node<"float">>((sum, sample) => {
+        return sum.add(sample[key]);
+      }, first[key]);
+    }
 
-    return { edge: blended.x, halfWidth: blended.y, hasRiver, isNearStanding, riverCellShare };
+    return {
+      edge: blended.x,
+      halfWidth: blended.y,
+      hasRiver,
+      lakeBank: summed("lakeBank"),
+      lakeWet: summed("lakeWet"),
+      nearShare: summed("nearShare"),
+      shoreDepth: summed("shoreDepth"),
+      standingShare: summed("standingShare"),
+    };
   }
 
   depthNode(point: Node<"vec2">, cellDepth: Node<"float">, metersPerPixel: Node<"float">): Node<"float"> {
