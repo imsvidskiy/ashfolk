@@ -67,9 +67,7 @@ interface AlbedoSources {
 }
 
 interface Corner {
-  readonly color: Node<"vec3">;
-  readonly isSoft: Node<"bool">;
-  readonly kind: Node<"float">;
+  readonly cell: Node<"ivec2">;
   readonly weight: Node<"float">;
 }
 
@@ -155,6 +153,21 @@ function isSoftNode(kind: Node<"float">): Node<"bool"> {
   });
 }
 
+function cornersAt(size: number, coordinates: Node<"vec2">): Corner[] {
+  const last = size - 1;
+  const cellCoordinate = coordinates.mul(size).sub(0.5);
+  const base = floor(cellCoordinate);
+  const fraction = cellCoordinate.sub(base);
+  const across = float(1).sub(fraction);
+
+  return CORNERS.map(([column, row]) => {
+    return {
+      cell: ivec2(clamp(base.add(vec2(column, row)), vec2(0, 0), vec2(last, last))),
+      weight: (column === 0 ? across.x : fraction.x).mul(row === 0 ? across.y : fraction.y),
+    };
+  });
+}
+
 function crispGroundNode(
   cells: DataTexture,
   albedo: Texture,
@@ -162,29 +175,17 @@ function crispGroundNode(
   blended: Node<"vec3">
 ): Node<"vec3"> {
   const size = cells.image.width;
-  const last = size - 1;
-  const cellCoordinate = coordinates.mul(size).sub(0.5);
+  const cellCoordinate = coordinates.mul(size);
   const border = max(fwidth(cellCoordinate.x).add(fwidth(cellCoordinate.y)).mul(0.5), SHARPEST_BORDER);
 
   return Fn(() => {
     const color = blended.toVar();
 
     If(border.lessThan(SOFT_BORDER), () => {
-      const base = floor(cellCoordinate);
-      const fraction = cellCoordinate.sub(base);
-      const across = float(1).sub(fraction);
+      const corners = cornersAt(size, coordinates).map((corner) => {
+        const kind = textureLoad(cells, corner.cell).r;
 
-      const corners: Corner[] = CORNERS.map(([column, row]) => {
-        const cell = ivec2(clamp(base.add(vec2(column, row)), vec2(0, 0), vec2(last, last)));
-
-        const kind = textureLoad(cells, cell).r;
-
-        return {
-          color: textureLoad(albedo, cell).rgb,
-          isSoft: isSoftNode(kind),
-          kind,
-          weight: (column === 0 ? across.x : fraction.x).mul(row === 0 ? across.y : fraction.y),
-        };
+        return { ...corner, color: textureLoad(albedo, corner.cell).rgb, isSoft: isSoftNode(kind), kind };
       });
 
       let sum: Node<"vec3"> = vec3(0);
@@ -215,6 +216,16 @@ function crispGroundNode(
 
     return color;
   })();
+}
+
+function groundShareNode(cells: DataTexture, coordinates: Node<"vec2">, ground: number): Node<"float"> {
+  return cornersAt(cells.image.width, coordinates)
+    .map((corner) => {
+      return select(isGroundNode(textureLoad(cells, corner.cell).r, ground), corner.weight, float(0));
+    })
+    .reduce((sum, share) => {
+      return sum.add(share);
+    });
 }
 
 export class GroundAlbedo {
@@ -262,6 +273,10 @@ export class GroundAlbedo {
     return crispGroundNode(this.#ground, this.#target.texture, coordinates, blended);
   }
 
+  eternalSnowNode(coordinates: Node<"vec2">): Node<"float"> {
+    return groundShareNode(this.#ground, coordinates, Ground.Snow);
+  }
+
   groundChanged(): void {
     this.#ground.needsUpdate = true;
   }
@@ -270,7 +285,7 @@ export class GroundAlbedo {
     const previousTarget = renderer.getRenderTarget();
 
     for (const [index, color] of this.#palette.entries()) {
-      const [red, green, blue] = seasonalGroundColor(index, season);
+      const [red, green, blue] = seasonalGroundColor(index === Ground.Snow ? Ground.Rock : index, season);
 
       color.set(red, green, blue, GROUNDS[index].grass);
     }

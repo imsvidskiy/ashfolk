@@ -63,6 +63,15 @@ const ROCK_TONE = 0.06;
 const GROUND_MOTTLE = 0.05;
 const GROUND_GRAIN = 0.02;
 const STEEP_FACE_SHADE = 0.82;
+const SNOW = vec3(0.9, 0.93, 0.97);
+const ETERNAL_SNOW = 0.375;
+const SNOW_DRIFT = 14;
+const SNOW_EDGE_LOW = 0.07;
+const SNOW_EDGE_HIGH = 0.28;
+const SNOW_EDGE_BAND = 0.02;
+const SNOW_SLIDE = 0.29;
+const SNOW_SLIDE_BAND = 0.008;
+const SNOW_SLIDE_WOBBLE = 0.05;
 const EMBER_THRESHOLD = 0.004;
 const TRODDEN_EARTH = vec3(0.3, 0.22, 0.14);
 const FORD_BED_DEPTH = 0.6;
@@ -87,6 +96,21 @@ interface TerrainMaterialOptions {
   readonly shouldCutAtCoast: boolean;
   readonly textures: TerrainTextures;
   readonly warp: GroundWarp;
+}
+
+function snowCoverAt(
+  textures: TerrainTextures,
+  grid: WorldGrid,
+  mapCoordinates: Node<"vec2">,
+  shape: Node<"vec2">
+): Node<"float"> {
+  const coordinates = mapCoordinates.add(shape.mul(SNOW_DRIFT / grid.worldSize));
+  const eternal = textures.groundAlbedo.eternalSnowNode(coordinates).mul(ETERNAL_SNOW);
+  const lying = max(texture(textures.surface, coordinates).r, eternal);
+  const edge = mix(float(SNOW_EDGE_LOW), float(SNOW_EDGE_HIGH), smoothstep(-0.7, 0.7, shape.x.add(shape.y)));
+  const band = max(fwidth(lying), SNOW_EDGE_BAND);
+
+  return smoothstep(edge.sub(band), edge.add(band), lying);
 }
 
 function marshAt(textures: TerrainTextures, grid: WorldGrid, wobble: Node<"float">): Marsh {
@@ -294,7 +318,7 @@ export function createTerrainMaterial({
   const layer = positionWorld.y.mul(STRATA_FREQUENCY).add(broad.mul(STRATA_BEND)).add(patches.mul(STRATA_WOBBLE));
 
   const depth = underwaterDepth(textures, grid);
-  const snowCover = smoothstep(0.08, 0.42, surface.r);
+  const snowCover = snowCoverAt(textures, grid, mapCoordinates, vec2(broad, patches));
   const field = fieldGroundNode(
     textures,
     grid,
@@ -325,7 +349,10 @@ export function createTerrainMaterial({
   const fordMarks = textures.fords.marksNode(positionWorld.xz);
   const forded = fordGround(marshy, fordMarks, rock);
 
-  const snowy = mix(forded, vec3(0.9, 0.93, 0.97), snowCover.mul(float(1).sub(rock.mul(0.6))));
+  const snowSlide = steepness.add(broad.mul(SNOW_SLIDE_WOBBLE)).add(patches.mul(SNOW_SLIDE_WOBBLE * 0.5));
+  const slideBand = max(fwidth(snowSlide), SNOW_SLIDE_BAND);
+  const snowHold = smoothstep(float(SNOW_SLIDE).add(slideBand), float(SNOW_SLIDE).sub(slideBand), snowSlide);
+  const snowy = mix(forded, SNOW, snowCover.mul(snowHold));
   const wetness = max(surface.g, smoothstep(0, 0.6, depth));
   const damp = snowy.mul(float(1).sub(wetness.mul(0.32)));
   const shallowDepth = mix(depth, min(depth, FORD_BED_DEPTH), fordMarks.x);
