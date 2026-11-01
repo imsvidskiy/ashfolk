@@ -7,6 +7,7 @@ import { type PowerCast, SCENES, type Scene } from "./scenes.ts";
 const SYSTEM_CHROME = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome";
 const GPU_ARGUMENTS = ["--use-angle=metal", "--enable-gpu"];
 const SETTLE_FRAMES = 60;
+const TICKS_PER_SECOND = 10;
 const SCENE_NAME = /^[a-z0-9-]+$/u;
 
 interface Device {
@@ -81,6 +82,34 @@ async function castPower(page: Page, cast: PowerCast): Promise<void> {
   }, cast);
 }
 
+async function runGameSeconds(page: Page, seconds: number): Promise<void> {
+  await page.evaluate(
+    (ticks) => {
+      const { session } = Reflect.get(window, "ashfolk");
+      const lastTick = session.frame.tick + ticks;
+
+      session.send({ isFrozen: true, type: "setTimeFrozen" });
+      session.send({ isPaused: false, type: "setPaused" });
+
+      return new Promise<void>((resolve) => {
+        function waitForLastTick(): void {
+          if (session.frame.tick >= lastTick) {
+            session.send({ isPaused: true, type: "setPaused" });
+            resolve();
+
+            return;
+          }
+
+          requestAnimationFrame(waitForLastTick);
+        }
+
+        requestAnimationFrame(waitForLastTick);
+      });
+    },
+    Math.round(seconds * TICKS_PER_SECOND)
+  );
+}
+
 async function adapterName(browser: Browser, baseUrl: string): Promise<string> {
   const page = await browser.newPage();
 
@@ -126,7 +155,7 @@ async function shoot(browser: Browser, address: string, scene: Scene, device: De
     }
 
     if (scene.seconds !== undefined) {
-      await page.waitForTimeout(scene.seconds * 1000);
+      await runGameSeconds(page, scene.seconds);
     }
 
     await waitForFrames(page, SETTLE_FRAMES);

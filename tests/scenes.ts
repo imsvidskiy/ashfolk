@@ -79,19 +79,19 @@ export const SCENES: readonly Scene[] = [
   {
     cast: { parameters: { radius: 120, strength: 60 }, powerId: "volcano", x: 2265, z: -525 },
     name: "volcano-flow",
-    query: "seed=7&shape=round&quality=high&hours=11&camera=2265,-525,520,0.8,0",
+    query: "seed=7&shape=round&quality=high&paused=1&hours=11&camera=2265,-525,520,0.8,0",
     seconds: 35,
   },
   {
     cast: { parameters: { radius: 120, strength: 60 }, powerId: "volcano", x: 2265, z: -525 },
     name: "volcano-far",
-    query: "seed=7&shape=round&quality=high&hours=11&camera=2265,-525,1400,0.8,0",
+    query: "seed=7&shape=round&quality=high&paused=1&hours=11&camera=2265,-525,1400,0.8,0",
     seconds: 35,
   },
   {
     cast: { parameters: { radius: 120, strength: 60 }, powerId: "volcano", x: 2265, z: -525 },
     name: "volcano-cooling",
-    query: "seed=7&shape=round&quality=high&hours=7&camera=2265,-525,520,0.8,0",
+    query: "seed=7&shape=round&quality=high&paused=1&hours=11&camera=2265,-525,520,0.8,0",
     seconds: 85,
   },
 ];
