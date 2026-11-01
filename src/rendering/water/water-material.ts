@@ -85,6 +85,7 @@ const MARK_SECONDS = 9;
 const MARK_TRAVEL = 1.5;
 const MARK_FAR = 450;
 const MARK_NEAR = 200;
+const MARK_FULL_WIND = 1;
 const MARK_SALT_ACROSS = 0x5b_d1_e9_95;
 const MARK_SALT_ALONG = 0x27_d4_eb_2f;
 const MARK_SALT_PHASE = 0x16_56_67_b1;
@@ -258,6 +259,9 @@ function surfaceWaves(flow: Node<"vec2">, slope: Node<"float">, viewDistance: No
     .mul(calming)
     .mul(float(1).sub(rapids.mul(RAPIDS_CALMING)));
   const stillness = smoothstep(STILL_FLOW, 0, slope);
+  const markStrength = smoothstep(MARK_FAR, MARK_NEAR, viewDistance).mul(
+    smoothstep(0, MARK_FULL_WIND, length(look.wind))
+  );
   const pixel = max(length(fwidth(positionWorld.xz)), 0.001);
   const lineWidth = min(
     mix(float(RIVER_LINE_WIDTH), float(RAPIDS_LINE_WIDTH), smoothstep(RAPIDS_START, 0.3, slope)),
@@ -277,7 +281,7 @@ function surfaceWaves(flow: Node<"vec2">, slope: Node<"float">, viewDistance: No
     blend
   ).mul(smoothstep(LINE_FAR, LINE_NEAR, viewDistance));
   const marks = windMark(positionWorld.xz.sub(drift), normalize(look.wind.add(vec2(0.0001, 0))), pixel).mul(
-    smoothstep(MARK_FAR, MARK_NEAR, viewDistance)
+    markStrength
   );
 
   return {
