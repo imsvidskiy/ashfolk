@@ -5,7 +5,7 @@ import { lerp } from "../../shared/math.ts";
 
 const BARE_BRANCHES = 0x7a_6a_44;
 const BUDS = 0x8e_9a_4c;
-const FRESH_LEAVES = 0x86_ac_4a;
+const FRESH_LEAVES = 0x92_b8_4e;
 
 interface FoliageLook {
   readonly color: number;
@@ -55,7 +55,7 @@ function deciduous(summer: number, autumn: number): readonly FoliageKey[] {
   return [
     { color: BUDS, coverage: 0.4, season: 0 },
     { color: FRESH_LEAVES, coverage: 0.85, season: 0.2 },
-    { color: 0x74_a0_42, coverage: 1, season: 0.45 },
+    { color: 0x7c_ad_44, coverage: 1, season: 0.45 },
     { color: summer, coverage: 1, season: 1.2 },
     { color: summer, coverage: 1, season: 2 },
     { color: autumn, coverage: 1, season: 2.45 },

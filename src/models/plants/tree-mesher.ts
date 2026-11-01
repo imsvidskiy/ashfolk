@@ -190,7 +190,7 @@ export function foliageStyle(
       const facing = outward.dot(point.normal) * 0.5 + 0.5;
       const lift = smoothstep(0, structure.height, point.position.y) * 0.15;
 
-      return clamp(0.62 + 0.3 * facing + lift * 0.6 + tint, 0.5, 1);
+      return clamp(0.64 + 0.34 * facing + lift * 0.6 + tint, 0.56, 1.08);
     },
     slot: look.foliage,
     sway: (point) => {
