@@ -1,4 +1,4 @@
-import { Matrix4 } from "three";
+import { Matrix4, Vector3 } from "three";
 import { describe, expect, it } from "vitest";
 import { signedVolume } from "../testing/mesh-checks.ts";
 import { MeshBuilder } from "./mesh-builder.ts";
@@ -79,6 +79,41 @@ describe("mesh builder", () => {
         expect(channels.slot[vertex]).toBe(centerX > 0.3 ? 2 : 1);
       }
     }
+  });
+
+  it("gives each face of a turned faceted shape the slot of its turned normal", () => {
+    const builder = new MeshBuilder();
+
+    builder.add(facetShape(icosphere(1, 1)), {
+      style: {
+        slot: (point) => {
+          return point.normal.y > 0.6 ? 2 : 1;
+        },
+      },
+      transform: transformOf({ rotation: [Math.PI / 2, 0, 0] }),
+    });
+
+    const { channels, indices, positions } = builder.build();
+    const corners = [new Vector3(), new Vector3(), new Vector3()] as const;
+
+    for (let corner = 0; corner < indices.length; corner += 3) {
+      const face = [indices[corner], indices[corner + 1], indices[corner + 2]];
+
+      for (const [index, vertex] of face.entries()) {
+        corners[index].fromArray(positions, vertex * 3);
+      }
+
+      const normal = new Vector3()
+        .subVectors(corners[1], corners[0])
+        .cross(new Vector3().subVectors(corners[2], corners[0]))
+        .normalize();
+
+      for (const vertex of face) {
+        expect(channels.slot[vertex]).toBe(normal.y > 0.6 ? 2 : 1);
+      }
+    }
+
+    expect(channels.slot).toContain(2);
   });
 
   it("reads the slot at each vertex of a smooth shape", () => {
