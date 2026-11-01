@@ -39,6 +39,7 @@ import { fieldGroundNode } from "./field-ground.ts";
 import { FIREWEED, fireweedNode } from "./fireweed.ts";
 import type { GroundWarp } from "./ground-warp.ts";
 import { cellAtNode, mapCoordinatesNode, sampleCellsNode } from "./height-sampling.ts";
+import type { LavaPlates } from "./lava-plates.ts";
 import { PATCH_CELLS } from "./terrain-patches.ts";
 import type { TerrainTextures } from "./terrain-textures.ts";
 
@@ -74,6 +75,9 @@ const SNOW_SLIDE = 0.29;
 const SNOW_SLIDE_BAND = 0.008;
 const SNOW_SLIDE_WOBBLE = 0.05;
 const EMBER_THRESHOLD = 0.004;
+const EMBER_PATCH_FREQUENCY = 0.15;
+const EMBER_PATCH_START = 0.45;
+const EMBER_PATCH_END = 0.85;
 const TRODDEN_EARTH = vec3(0.3, 0.22, 0.14);
 const FORD_BED_DEPTH = 0.6;
 const DRY_BED = -1;
@@ -95,6 +99,7 @@ interface Marsh {
 interface TerrainMaterialOptions {
   readonly glow: FireGlow;
   readonly grid: WorldGrid;
+  readonly plates: LavaPlates;
   readonly plinth: number;
   readonly shouldCutAtCoast: boolean;
   readonly textures: TerrainTextures;
@@ -143,11 +148,11 @@ function poolGlint(textures: TerrainTextures, pool: Node<"float">): Node<"vec3">
   return textures.skyColor.mul(fresnel).mul(textures.daylight.mul(0.5).add(0.03)).mul(pool);
 }
 
-function burningGlow(fire: Node<"float">, point: Node<"vec2">, grain: Node<"float">): Node<"vec3"> {
+function burningGlow(fire: Node<"float">, point: Node<"vec2">): Node<"vec3"> {
   const flicker = unitNoise(point.mul(0.35).add(vec2(time.mul(1.3), time.mul(-0.9))))
     .mul(0.4)
     .add(0.6);
-  const embers = smoothstep(0.35, 0.8, unitNoise(point.mul(0.6)).mul(0.6).add(grain.mul(0.4)));
+  const embers = smoothstep(EMBER_PATCH_START, EMBER_PATCH_END, unitNoise(point.mul(EMBER_PATCH_FREQUENCY)));
 
   const smolder = smoothstep(0.02, 0.35, fire).mul(embers.mul(1.1).add(0.08)).mul(flicker);
   const blaze = fire.mul(fire).mul(embers.mul(0.8).add(0.2));
@@ -155,12 +160,12 @@ function burningGlow(fire: Node<"float">, point: Node<"vec2">, grain: Node<"floa
   return EMBER_DEEP.mul(smolder).add(EMBER_BRIGHT.mul(blaze));
 }
 
-function emberGlow(fire: Node<"float">, point: Node<"vec2">, grain: Node<"float">): Node<"vec3"> {
+function emberGlow(fire: Node<"float">, point: Node<"vec2">): Node<"vec3"> {
   return Fn(() => {
     const glow = vec3(0).toVar();
 
     If(fire.greaterThan(EMBER_THRESHOLD), () => {
-      glow.assign(burningGlow(fire, point, grain));
+      glow.assign(burningGlow(fire, point));
     });
 
     return glow;
@@ -300,6 +305,7 @@ function rockStrata(layer: Node<"float">, strataFade: Node<"float">, rock: Node<
 export function createTerrainMaterial({
   glow,
   grid,
+  plates,
   plinth,
   shouldCutAtCoast,
   textures,
@@ -373,14 +379,14 @@ export function createTerrainMaterial({
   const petals = smoothstep(0.55, 0.85, fine.mul(0.65).add(patches.mul(0.35)).add(0.5));
   const flowering = mix(scorched, FIREWEED, fireweedNode(surface.b, textures.bloom).mul(petals).mul(0.42));
 
-  const lava = textures.lava.look(flowering, mapCoordinates, positionWorld.xz);
+  const lava = textures.lava.look(plates, flowering, mapCoordinates, positionWorld.xz);
   const fireLight = fireLightAt(glow, grid, positionWorld.xz);
   const roughness = mix(mix(float(0.95), float(MARSH_ROUGHNESS), marsh.soak), float(0.5), wetness);
 
   material.colorNode = lava.color;
   material.roughnessNode = mix(roughness, float(POOL_ROUGHNESS), openPool);
   material.normalNode = normalize(mix(field.normal, transformNormalToView(vec3(0, 1, 0)), openPool));
-  material.emissiveNode = emberGlow(surface.a, positionWorld.xz, fine.mul(0.5).add(0.5))
+  material.emissiveNode = emberGlow(surface.a, positionWorld.xz)
     .add(lava.glow)
     .add(lava.color.mul(fireLight).mul(GROUND_FIRE_LIGHT))
     .add(poolGlint(textures, openPool));

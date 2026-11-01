@@ -166,4 +166,36 @@ export const SCENES: readonly Scene[] = [
     query: "seed=7&shape=round&quality=high&hours=11&camera=-1545,1457,160,0.5,-2.45",
     seconds: 25,
   },
+  { name: "lake-shore", query: "seed=7&shape=round&quality=high&paused=1&hours=11&camera=480,-560,220,0.75,0" },
+  {
+    name: "lake-evening",
+    query: "seed=7&shape=round&quality=high&paused=1&hours=17.5&camera=300,-400,300,0.35,1.6",
+  },
+  { name: "river-rapids", query: "seed=7&shape=round&quality=high&paused=1&hours=11&camera=155,1695,140,0.7,0" },
+  { name: "river-close", query: "seed=7&shape=round&quality=high&paused=1&hours=11&camera=155,1695,45,0.6,0" },
+  { name: "lake-fade-band", query: "seed=7&shape=round&quality=high&paused=1&hours=11&camera=0,-300,550,0.45,0" },
+  {
+    cast: { parameters: { radius: 120, strength: 60 }, powerId: "volcano", x: 2265, z: -525 },
+    name: "volcano-flow",
+    query: "seed=7&shape=round&quality=high&paused=1&hours=11&camera=2265,-525,520,0.8,0",
+    seconds: 35,
+  },
+  {
+    cast: { parameters: { radius: 120, strength: 60 }, powerId: "volcano", x: 2265, z: -525 },
+    name: "volcano-far",
+    query: "seed=7&shape=round&quality=high&paused=1&hours=11&camera=2265,-525,1400,0.8,0",
+    seconds: 35,
+  },
+  {
+    cast: { parameters: { radius: 120, strength: 60 }, powerId: "volcano", x: 2265, z: -525 },
+    name: "volcano-overview",
+    query: "seed=7&shape=round&quality=high&paused=1&hours=11&camera=2265,-525,2200,0.8,0",
+    seconds: 35,
+  },
+  {
+    cast: { parameters: { radius: 120, strength: 60 }, powerId: "volcano", x: 2265, z: -525 },
+    name: "volcano-cooling",
+    query: "seed=7&shape=round&quality=high&paused=1&hours=11&camera=2265,-525,520,0.8,0",
+    seconds: 85,
+  },
 ];

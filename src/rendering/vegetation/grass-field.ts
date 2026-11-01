@@ -38,7 +38,7 @@ import {
 } from "three/webgpu";
 import { clamp as clampNumber, FULL_TURN, inverseLerp, saturate } from "../../shared/math.ts";
 import type { WorldGrid } from "../../world/world-grid.ts";
-import { unitNoise } from "../node-helpers.ts";
+import { cellKey, unitHash, unitNoise } from "../node-helpers.ts";
 import { POOL_BANK, poolReachNode } from "../terrain/bog-pools.ts";
 import { fieldClearingNode } from "../terrain/field-ground.ts";
 import { FIREWEED, fireweedNode } from "../terrain/fireweed.ts";
@@ -54,8 +54,6 @@ const BLADE_OUTLINE: readonly (readonly [side: number, along: number])[] = [
 ];
 const BLADE_TRIANGLES: readonly number[] = [0, 1, 2];
 
-const LATTICE_OFFSET = 32_768;
-const LATTICE_ROW = 65_536;
 const SALT_JITTER_X = 0x68_e3_1d_a4;
 const SALT_JITTER_Z = 0xb5_29_7a_4d;
 const SALT_PRESENCE = 0x1b_56_c4_e9;
@@ -162,19 +160,13 @@ function createGrassMaterial(options: GrassFieldOptions, uniforms: GrassUniforms
     .sub(Math.floor(clumpsPerSide / 2))
     .add(vec2(instance.mod(perSide), floor(instance.div(perSide))));
 
-  const key = uint(lattice.x.add(LATTICE_OFFSET))
-    .mul(LATTICE_ROW)
-    .add(uint(lattice.y.add(LATTICE_OFFSET)));
-
-  function random(salt: number): Node<"float"> {
-    return hash(key.bitXor(salt));
-  }
+  const key = cellKey(lattice);
 
   function bladeRandom(salt: number): Node<"float"> {
     return hash(key.bitXor(SALT_BLADE).add(uint(blade.mul(SALTS_PER_BLADE).add(salt))));
   }
 
-  const root = lattice.add(vec2(random(SALT_JITTER_X), random(SALT_JITTER_Z))).mul(spacing);
+  const root = lattice.add(vec2(unitHash(key, SALT_JITTER_X), unitHash(key, SALT_JITTER_Z))).mul(spacing);
 
   const rootUv = mapCoordinatesNode(grid, root);
   const ground = texture(textures.groundAlbedo.texture, rootUv).level(float(0));
@@ -211,7 +203,7 @@ function createGrassMaterial(options: GrassFieldOptions, uniforms: GrassUniforms
     .mul(select(isDry.and(isOnIsland), float(1), float(0)))
     .mul(presence);
 
-  const growth = clamp(cover.sub(random(SALT_PRESENCE)).mul(5), 0, 1);
+  const growth = clamp(cover.sub(unitHash(key, SALT_PRESENCE)).mul(5), 0, 1);
 
   const grassHeight = mix(float(SHORTEST_BLADE), float(TALLEST_BLADE), bladeRandom(3)).mul(
     mix(float(0.65), float(1), ground.a)
@@ -222,7 +214,7 @@ function createGrassMaterial(options: GrassFieldOptions, uniforms: GrassUniforms
     .mul(mix(float(1), float(REED_NARROWING), reed))
     .mul(growth);
   const facingAngle = bladeRandom(7).mul(FULL_TURN);
-  const spreadAngle = blade.mul(FULL_TURN / BLADES_PER_CLUMP).add(random(SALT_SPREAD).mul(FULL_TURN));
+  const spreadAngle = blade.mul(FULL_TURN / BLADES_PER_CLUMP).add(unitHash(key, SALT_SPREAD).mul(FULL_TURN));
   const leanAngle = bladeRandom(11).mul(FULL_TURN);
 
   const facing = vec2(cos(facingAngle), sin(facingAngle));
