@@ -94,7 +94,6 @@ export class LavaField {
     const viewDistance = distance(positionWorld, cameraPosition);
     const detail = smoothstep(DETAIL_FAR, DETAIL_NEAR, viewDistance);
     const widening = smoothstep(WIDENING_NEAR, WIDENING_FAR, viewDistance).mul(FARTHEST_WIDENING).add(1);
-    const crust = mix(ground, HOT_CRUST, smoothstep(0.1, 0.5, heat));
 
     const glow = Fn(() => {
       const blur = length(fwidth(point))
@@ -143,7 +142,7 @@ export class LavaField {
       return light;
     })();
 
-    return { color: mix(ground, crust, smoothstep(0.02, 0.15, heat)), glow };
+    return { color: mix(ground, HOT_CRUST, smoothstep(0.1, 0.5, heat).mul(smoothstep(0.02, 0.15, heat))), glow };
   }
 
   dispose(): void {
