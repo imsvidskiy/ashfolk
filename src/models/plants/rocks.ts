@@ -18,7 +18,7 @@ export const ROCK_HEIGHTS = {
 
 const BOULDER_NOISE = createVolumeNoise(createRandom(8080));
 const STONE_DETAIL: Readonly<Record<PlantDetailLevel, number>> = { far: 0, high: 1, low: 0, medium: 1 };
-const STRATA_SEGMENTS: Readonly<Record<PlantDetailLevel, number>> = { far: 4, high: 14, low: 6, medium: 9 };
+const STRATA_SEGMENTS: Readonly<Record<PlantDetailLevel, number>> = { far: 4, high: 10, low: 6, medium: 8 };
 const UP: Triple = [0, 1, 0];
 const DOWN: Triple = [0, -1, 0];
 const BOULDER_COMPANIONS: readonly (readonly number[])[] = [[], [0.62], [], [0.58, 0.46]];

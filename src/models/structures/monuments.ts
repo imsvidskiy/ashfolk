@@ -28,10 +28,9 @@ export const MONUMENT_HEIGHTS = {
   [PlantSpecies.Pillar]: 4.4,
 } as const satisfies Readonly<Record<MonumentPiece, number>>;
 
-const STONE_SEGMENTS: Readonly<Record<PlantDetailLevel, number>> = { far: 4, high: 12, low: 5, medium: 8 };
-const HEAD_SEGMENTS: Readonly<Record<PlantDetailLevel, number>> = { far: 6, high: 14, low: 6, medium: 9 };
-const DRUM_SEGMENTS: Readonly<Record<PlantDetailLevel, number>> = { far: 5, high: 24, low: 6, medium: 12 };
-const DRESSED_DETAIL = 2;
+const STONE_SEGMENTS: Readonly<Record<PlantDetailLevel, number>> = { far: 4, high: 8, low: 5, medium: 6 };
+const HEAD_SEGMENTS: Readonly<Record<PlantDetailLevel, number>> = { far: 6, high: 10, low: 6, medium: 9 };
+const DRUM_SEGMENTS: Readonly<Record<PlantDetailLevel, number>> = { far: 5, high: 12, low: 6, medium: 9 };
 const FLUTES = 12;
 const QUARTER_TURN = Math.PI / 2;
 const WEATHERED_STONE: StoneLook = { lichen: 0.24, moss: 0.3, slot: MaterialSlot.Stone };
@@ -491,34 +490,7 @@ function hewnBox(random: RandomSource, block: Block): Shape {
 }
 
 function blockShape(context: MonumentContext, block: Block): Shape {
-  const { depth, height, width } = block;
-
-  const random = createRandom(context.random.integer(1, 1_000_000));
-
-  if (context.level !== "high") {
-    return hewnBox(random, block);
-  }
-
-  const radius = Math.hypot(width, height, depth) / 2;
-
-  return chiseledStone(
-    random,
-    {
-      cuts: 2,
-      depth: 0.06,
-      flats: [
-        { distance: width / 2 / radius, normal: [1, 0, 0] },
-        { distance: width / 2 / radius, normal: [-1, 0, 0] },
-        { distance: height / 2 / radius, normal: [0, 1, 0] },
-        { distance: height / 2 / radius, normal: [0, -1, 0] },
-        { distance: depth / 2 / radius, normal: [0, 0, 1] },
-        { distance: depth / 2 / radius, normal: [0, 0, -1] },
-      ],
-      radius: radius * 1.03,
-      roughness: 0.02,
-    },
-    DRESSED_DETAIL
-  );
+  return hewnBox(createRandom(context.random.integer(1, 1_000_000)), block);
 }
 
 function addPier(context: MonumentContext, shape: Shape, x: number, blocks: number): void {
@@ -632,9 +604,7 @@ function addArch(context: MonumentContext, form: PieceForm<typeof PlantSpecies.A
   }
 }
 
-function cairnStone(context: MonumentContext, radius: number, isCore: boolean): Shape {
-  const detail = isCore || context.level !== "high" ? 0 : 1;
-
+function cairnStone(context: MonumentContext, radius: number): Shape {
   return chiseledStone(
     context.random,
     {
@@ -647,7 +617,7 @@ function cairnStone(context: MonumentContext, radius: number, isCore: boolean): 
       radius,
       roughness: 0.1,
     },
-    detail
+    0
   );
 }
 
@@ -656,7 +626,7 @@ function addCairn(context: MonumentContext, form: PieceForm<typeof PlantSpecies.
 
   const rings = form === "tall" ? TALL_CAIRN : LOW_CAIRN;
   const pebbles = Array.from({ length: CAIRN_PEBBLE_SHAPES }, () => {
-    return cairnStone(context, CAIRN_PEBBLE, false);
+    return cairnStone(context, CAIRN_PEBBLE);
   });
 
   for (const ring of rings) {
@@ -665,7 +635,7 @@ function addCairn(context: MonumentContext, form: PieceForm<typeof PlantSpecies.
     if (!isPeak) {
       addStone(
         context,
-        cairnStone(context, ring.radius * 0.85 + 0.15, true),
+        cairnStone(context, ring.radius * 0.85 + 0.15),
         { position: [0, ring.y + 0.04, 0], rotation: [0, random.next() * FULL_TURN, 0], scale: [1, 0.8, 1] },
         CAIRN_STONE
       );
