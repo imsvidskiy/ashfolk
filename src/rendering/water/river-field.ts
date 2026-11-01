@@ -24,12 +24,11 @@ import {
   vec4,
 } from "three/tsl";
 import { type DataTexture, type Node, RGBAFormat } from "three/webgpu";
-import { lookUpCell } from "../../world/terrain-sampling.ts";
+import { isRiverWater, isStandingWater, lookUpCell, type RiverTerrain } from "../../world/terrain-sampling.ts";
 import {
   DRAWN_RIVER_EDGE_WOBBLE,
   DRAWN_RIVER_WIDTH_SCALE,
   drawnRiverHalfWidth,
-  hasWater,
   NARROWEST_DRAWN_RIVER_HALF_WIDTH,
   RIVER_LINE_STRIDE,
   type RiverLines,
@@ -74,12 +73,6 @@ const MARGIN_WOBBLE = 0.45;
 const MARGIN_WOBBLE_SCALE = 0.06;
 const MARGIN_SOFTNESS = 0.45;
 const FLATTEST_VIEW = 0.15;
-
-export interface RiverWaterSource {
-  readonly height: Float32Array;
-  readonly riverStrength: Uint8Array;
-  readonly waterSurface: Float32Array;
-}
 
 export interface ShoreDepths {
   readonly data: Float32Array;
@@ -200,10 +193,6 @@ function writeDeepest(
   }
 }
 
-function isStandingWater(source: RiverWaterSource, cell: number): boolean {
-  return source.riverStrength[cell] === 0 && hasWater(source.waterSurface[cell], source.height[cell]);
-}
-
 function flagCell(target: Uint8Array, cell: number, flag: number): void {
   if (Math.floor(target[cell * CHANNELS + 3] / flag) % 2 === 0) {
     target[cell * CHANNELS + 3] += flag;
@@ -216,7 +205,7 @@ function clearStandingWater(target: Uint8Array): void {
   }
 }
 
-function markStandingWater(grid: WorldGrid, source: RiverWaterSource, target: Uint8Array): void {
+function markStandingWater(grid: WorldGrid, source: RiverTerrain, target: Uint8Array): void {
   for (let cell = 0; cell < grid.cellCount; cell += 1) {
     if (!isStandingWater(source, cell)) {
       continue;
@@ -236,10 +225,6 @@ function markStandingWater(grid: WorldGrid, source: RiverWaterSource, target: Ui
       }
     }
   }
-}
-
-function isRiverWater(source: RiverWaterSource, cell: number): boolean {
-  return source.riverStrength[cell] > 0 && hasWater(source.waterSurface[cell], source.height[cell]);
 }
 
 function widenedOnce(grid: WorldGrid, cells: Uint8Array): Uint8Array {
@@ -262,7 +247,7 @@ function widenedOnce(grid: WorldGrid, cells: Uint8Array): Uint8Array {
   return widened;
 }
 
-function dropDriedRivers(grid: WorldGrid, source: RiverWaterSource, target: Uint8Array): void {
+function dropDriedRivers(grid: WorldGrid, source: RiverTerrain, target: Uint8Array): void {
   let near: Uint8Array = Uint8Array.from({ length: grid.cellCount }, (_, cell) => {
     return isRiverWater(source, cell) ? 1 : 0;
   });
@@ -278,7 +263,7 @@ function dropDriedRivers(grid: WorldGrid, source: RiverWaterSource, target: Uint
   }
 }
 
-function markRiverCells(grid: WorldGrid, source: RiverWaterSource, target: Uint8Array): void {
+function markRiverCells(grid: WorldGrid, source: RiverTerrain, target: Uint8Array): void {
   for (let cell = 0; cell < grid.cellCount; cell += 1) {
     if (isRiverWater(source, cell)) {
       target[cell * CHANNELS + 2] += RIVER_CELL_FLAG;
@@ -286,12 +271,7 @@ function markRiverCells(grid: WorldGrid, source: RiverWaterSource, target: Uint8
   }
 }
 
-export function buildRiverField(
-  grid: WorldGrid,
-  lines: RiverLines,
-  source: RiverWaterSource,
-  target: Uint8Array
-): void {
+export function buildRiverField(grid: WorldGrid, lines: RiverLines, source: RiverTerrain, target: Uint8Array): void {
   const deepestEdges = new Float32Array(grid.cellCount).fill(Number.NEGATIVE_INFINITY);
 
   target.fill(0);
@@ -481,7 +461,7 @@ export class RiverField {
   readonly #grid: WorldGrid;
   readonly #shore: ShoreDepths;
 
-  constructor(grid: WorldGrid, lines: RiverLines, source: RiverWaterSource, shore: ShoreDepths) {
+  constructor(grid: WorldGrid, lines: RiverLines, source: RiverTerrain, shore: ShoreDepths) {
     this.#grid = grid;
     this.#shore = shore;
     this.#data = new Uint8Array(grid.cellCount * CHANNELS);
@@ -489,12 +469,12 @@ export class RiverField {
     this.rebuild(lines, source);
   }
 
-  rebuild(lines: RiverLines, source: RiverWaterSource): void {
+  rebuild(lines: RiverLines, source: RiverTerrain): void {
     buildRiverField(this.#grid, lines, source, this.#data);
     this.texture.needsUpdate = true;
   }
 
-  updateStandingWater(source: RiverWaterSource): void {
+  updateStandingWater(source: RiverTerrain): void {
     clearStandingWater(this.#data);
     markStandingWater(this.#grid, source, this.#data);
     this.texture.needsUpdate = true;

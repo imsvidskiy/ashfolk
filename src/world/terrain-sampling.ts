@@ -7,6 +7,10 @@ export interface SampledTerrain {
   readonly waterSurface: Float32Array;
 }
 
+export interface RiverTerrain extends SampledTerrain {
+  readonly riverStrength: Uint8Array;
+}
+
 interface CellLookup {
   amountX: number;
   amountZ: number;
@@ -72,6 +76,14 @@ export function sampleSurface(terrain: SampledTerrain, grid: WorldGrid, x: numbe
 
 export function isWaterCell(terrain: SampledTerrain, cell: number): boolean {
   return hasWater(terrain.waterSurface[cell], terrain.height[cell]);
+}
+
+export function isRiverWater(terrain: RiverTerrain, cell: number): boolean {
+  return terrain.riverStrength[cell] > 0 && isWaterCell(terrain, cell);
+}
+
+export function isStandingWater(terrain: RiverTerrain, cell: number): boolean {
+  return terrain.riverStrength[cell] === 0 && isWaterCell(terrain, cell);
 }
 
 export function isWaterAtPoint(terrain: SampledTerrain, grid: WorldGrid, x: number, z: number): boolean {

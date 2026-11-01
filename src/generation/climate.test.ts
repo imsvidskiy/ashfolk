@@ -3,6 +3,7 @@ import { Biome } from "../content/biomes.ts";
 import { Ground } from "../content/grounds.ts";
 import { isOnIsland } from "../world/coast.ts";
 import { slopeAt } from "../world/footing.ts";
+import { isRiverWater, isStandingWater } from "../world/terrain-sampling.ts";
 import { landEverywhere } from "../world/testing/terrain-fixtures.ts";
 import { hasWater, NO_WATER } from "../world/water.ts";
 import { WorldGrid } from "../world/world-grid.ts";
@@ -12,7 +13,6 @@ import { cellsAround, labelPatches, NO_PATCH } from "./testing/cell-patches.ts";
 import { coarseWorld, FULL_SIZE_TIMEOUT, fullSizeWorld, islandsAcrossSeeds } from "./testing/generated-worlds.ts";
 import { type IslandSurvey, surveyIsland } from "./testing/island-survey.ts";
 import { meanOf } from "./testing/statistics.ts";
-import { isLakeWater, isRiverWater } from "./testing/water-checks.ts";
 import type { WetlandInputs } from "./wetlands.ts";
 import type { GeneratedWorld } from "./world-generator.ts";
 
@@ -131,7 +131,7 @@ function isNearLakeWater(generated: GeneratedWorld, islandGrid: WorldGrid, cell:
     for (let columnOffset = -STILL_WATER_CLEARANCE; columnOffset <= STILL_WATER_CLEARANCE; columnOffset += 1) {
       if (
         islandGrid.contains(column + columnOffset, row + rowOffset) &&
-        isLakeWater(generated.terrain, islandGrid.index(column + columnOffset, row + rowOffset))
+        isStandingWater(generated.terrain, islandGrid.index(column + columnOffset, row + rowOffset))
       ) {
         return true;
       }

@@ -1,5 +1,5 @@
 import { beforeAll, describe, expect, it } from "vitest";
-import { sampleHeight } from "../world/terrain-sampling.ts";
+import { isRiverWater, isStandingWater, sampleHeight } from "../world/terrain-sampling.ts";
 import {
   hasWater,
   pondEdgeReach,
@@ -17,7 +17,6 @@ import { SOURCE_REACH } from "./river-spacing.ts";
 import { placeSprings } from "./springs.ts";
 import { coarseWorld, FULL_SIZE_TIMEOUT, fullSizeWorld } from "./testing/generated-worlds.ts";
 import { meanOf, median, quantile } from "./testing/statistics.ts";
-import { isLakeWater, isRiverWater } from "./testing/water-checks.ts";
 import type { GeneratedWorld } from "./world-generator.ts";
 
 const GRID = new WorldGrid({ cellSize: 5, cellsPerSide: 96 });
@@ -119,7 +118,7 @@ function isFedByLake(generated: GeneratedWorld, grid: WorldGrid, river: River): 
   const [head] = river.points;
 
   return grid.cellsInRadius(head.x, head.z, grid.cellSize * 2.5).some((cell) => {
-    return isLakeWater(generated.terrain, cell);
+    return isStandingWater(generated.terrain, cell);
   });
 }
 
@@ -222,7 +221,7 @@ function pondShoreFaults(generated: GeneratedWorld, grid: WorldGrid, pond: Sprin
   }
 
   const isNearLake = grid.cellsInRadius(pond.x, pond.z, pondOutlineExtent(pond)).some((cell) => {
-    return isLakeWater(terrain, cell) && Math.abs(terrain.waterSurface[cell] - pond.level) >= 0.05;
+    return isStandingWater(terrain, cell) && Math.abs(terrain.waterSurface[cell] - pond.level) >= 0.05;
   });
 
   if (isNearLake) {

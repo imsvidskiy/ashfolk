@@ -1,20 +1,13 @@
 import { isOnIsland } from "../../world/coast.ts";
 import type { TerrainData } from "../../world/terrain-data.ts";
-import { hasWater, NO_WATER, type River, type RiverPoint } from "../../world/water.ts";
+import { isRiverWater, isStandingWater } from "../../world/terrain-sampling.ts";
+import { NO_WATER, type River, type RiverPoint } from "../../world/water.ts";
 import { WorldGrid } from "../../world/world-grid.ts";
 import type { GeneratedWorld } from "../world-generator.ts";
 
 export const JUNCTION_CELLS = 1.5;
 
 const LAKE_REACH = 20;
-
-export function isRiverWater(terrain: TerrainData, cell: number): boolean {
-  return terrain.riverStrength[cell] > 0 && hasWater(terrain.waterSurface[cell], terrain.height[cell]);
-}
-
-export function isLakeWater(terrain: TerrainData, cell: number): boolean {
-  return terrain.riverStrength[cell] === 0 && hasWater(terrain.waterSurface[cell], terrain.height[cell]);
-}
 
 export function riverPathCells(grid: WorldGrid, river: River): number[] {
   const cells: number[] = [];
@@ -56,7 +49,7 @@ export function lakeCellsNear(generated: GeneratedWorld, point: RiverPoint): num
   const grid = new WorldGrid(generated.dimensions);
 
   return grid.cellsInRadius(point.x, point.z, LAKE_REACH).filter((cell) => {
-    return isLakeWater(generated.terrain, cell);
+    return isStandingWater(generated.terrain, cell);
   });
 }
 
@@ -97,7 +90,7 @@ export function riverFaults(generated: GeneratedWorld): string[] {
     for (const cell of riverPathCells(grid, river)) {
       const where = `river ${river.id} at ${grid.cellCenterX(cell)}, ${grid.cellCenterZ(cell)}`;
 
-      if (isLakeWater(terrain, cell)) {
+      if (isStandingWater(terrain, cell)) {
         continue;
       }
 

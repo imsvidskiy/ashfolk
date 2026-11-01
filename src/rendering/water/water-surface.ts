@@ -1,6 +1,6 @@
 import { clamp } from "../../shared/math.ts";
-import { lookUpCell, type SampledTerrain } from "../../world/terrain-sampling.ts";
-import { hasWater, NO_WATER } from "../../world/water.ts";
+import { isStandingWater, lookUpCell, type RiverTerrain, type SampledTerrain } from "../../world/terrain-sampling.ts";
+import { NO_WATER } from "../../world/water.ts";
 import type { WorldGrid } from "../../world/world-grid.ts";
 import { BANK_SINK, PRESENT_LEVEL, RIVER_BANK_LIFT } from "./shore-field.ts";
 
@@ -17,10 +17,6 @@ const DIAGONAL = [
   [1, -1],
   [-1, 1],
 ] as const;
-
-export interface BankTerrain extends SampledTerrain {
-  readonly riverStrength: Uint8Array;
-}
 
 function levelAt(terrain: SampledTerrain, grid: WorldGrid, column: number, row: number): number {
   const last = grid.cellsPerSide - 1;
@@ -54,7 +50,7 @@ function bankLevel(
   );
 }
 
-function isNearStandingWater(terrain: BankTerrain, grid: WorldGrid, column: number, row: number): boolean {
+function isNearStandingWater(terrain: RiverTerrain, grid: WorldGrid, column: number, row: number): boolean {
   for (let rowOffset = -1; rowOffset <= 1; rowOffset += 1) {
     for (let columnOffset = -1; columnOffset <= 1; columnOffset += 1) {
       if (!grid.contains(column + columnOffset, row + rowOffset)) {
@@ -63,7 +59,7 @@ function isNearStandingWater(terrain: BankTerrain, grid: WorldGrid, column: numb
 
       const cell = grid.index(column + columnOffset, row + rowOffset);
 
-      if (terrain.riverStrength[cell] === 0 && hasWater(terrain.waterSurface[cell], terrain.height[cell])) {
+      if (isStandingWater(terrain, cell)) {
         return true;
       }
     }
@@ -72,7 +68,7 @@ function isNearStandingWater(terrain: BankTerrain, grid: WorldGrid, column: numb
   return false;
 }
 
-export function waterVertexLevel(terrain: BankTerrain, grid: WorldGrid, column: number, row: number): number {
+export function waterVertexLevel(terrain: RiverTerrain, grid: WorldGrid, column: number, row: number): number {
   const own = levelAt(terrain, grid, column, row);
 
   if (own > PRESENT_LEVEL) {
@@ -95,7 +91,7 @@ export function waterVertexLevel(terrain: BankTerrain, grid: WorldGrid, column: 
   return Math.max(nearest, ground + RIVER_BANK_LIFT);
 }
 
-export function sampleWaterSurface(terrain: BankTerrain, grid: WorldGrid, x: number, z: number): number {
+export function sampleWaterSurface(terrain: RiverTerrain, grid: WorldGrid, x: number, z: number): number {
   const { amountX, amountZ, column, row } = lookUpCell(grid, x, z);
 
   const corners = [

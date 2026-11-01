@@ -1,10 +1,10 @@
 import { Biome } from "../../content/biomes.ts";
 import { isOnIsland } from "../../world/coast.ts";
 import { slopeAt } from "../../world/footing.ts";
+import { isStandingWater } from "../../world/terrain-sampling.ts";
 import { hasWater } from "../../world/water.ts";
 import { WorldGrid } from "../../world/world-grid.ts";
 import type { GeneratedWorld } from "../world-generator.ts";
-import { isLakeWater } from "./water-checks.ts";
 
 const CAMP_SLOPE = 0.22;
 const CAMP_COAST_MARGIN = 120;
@@ -43,7 +43,7 @@ function highestLakeShore(generated: GeneratedWorld): number {
   const nearestLevels = new Float32Array(grid.cellCount).fill(Number.NEGATIVE_INFINITY);
 
   for (let cell = 0; cell < grid.cellCount; cell += 1) {
-    if (!(isLakeWater(terrain, cell) && levels.has(terrain.waterSurface[cell]))) {
+    if (!(isStandingWater(terrain, cell) && levels.has(terrain.waterSurface[cell]))) {
       continue;
     }
 

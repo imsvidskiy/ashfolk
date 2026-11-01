@@ -3,12 +3,13 @@ import { isOnIsland } from "../world/coast.ts";
 import { slopeAt } from "../world/footing.ts";
 import { ISLAND_SHAPES } from "../world/island-shape.ts";
 import type { TerrainData } from "../world/terrain-data.ts";
+import { isRiverWater, isStandingWater } from "../world/terrain-sampling.ts";
 import { drawnRiverHalfWidth, hasWater, type River } from "../world/water.ts";
 import { WorldGrid } from "../world/world-grid.ts";
 import { cellsAround } from "./testing/cell-patches.ts";
 import { coarseWorld, FULL_SIZE_TIMEOUT, fullSizeWorld } from "./testing/generated-worlds.ts";
 import { median, quantile, shareAbove } from "./testing/statistics.ts";
-import { isLakeWater, isRiverWater, riverFaults } from "./testing/water-checks.ts";
+import { riverFaults } from "./testing/water-checks.ts";
 import type { GeneratedWorld } from "./world-generator.ts";
 
 const INLAND_REACH = 60;
@@ -113,7 +114,7 @@ function hangingRiverEdges(generated: GeneratedWorld): { edges: number; hanging:
     const neighbors = cellsAround(grid, cell, 1, grid.cellSize * NEIGHBOR_CELLS);
 
     const touchesLake = neighbors.some((near) => {
-      return isLakeWater(terrain, near);
+      return isStandingWater(terrain, near);
     });
     const touchesRiver = neighbors.some((near) => {
       return isRiverWater(terrain, near);

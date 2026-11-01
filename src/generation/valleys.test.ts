@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { isRiverWater } from "../world/terrain-sampling.ts";
 import { landEverywhere, shapeTerrain, trough, troughWithBasin } from "../world/testing/terrain-fixtures.ts";
 import { hasWater } from "../world/water.ts";
 import { WorldGrid } from "../world/world-grid.ts";
@@ -6,7 +7,6 @@ import { analyzeDrainage } from "./drainage.ts";
 import { cellsAround } from "./testing/cell-patches.ts";
 import { coarseWorld } from "./testing/generated-worlds.ts";
 import { meanOf, median } from "./testing/statistics.ts";
-import { isRiverWater } from "./testing/water-checks.ts";
 import { carveValleys } from "./valleys.ts";
 
 function lakeLevels(heights: Float32Array, grid: WorldGrid): number[] {
