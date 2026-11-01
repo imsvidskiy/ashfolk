@@ -75,6 +75,10 @@ export const SCENES: readonly Scene[] = [
     query: "seed=7&shape=round&quality=high&paused=1&hours=11&camera=2184,-1526,300,0.6,0.6",
   },
   {
+    name: "river-pond-mouth",
+    query: "seed=10&shape=round&quality=high&paused=1&hours=11&camera=-215,2250,250,0.8,0",
+  },
+  {
     name: "far-rivers",
     query: "seed=10&shape=round&quality=high&paused=1&hours=11&camera=35,2332,1500,0.8,0",
   },
