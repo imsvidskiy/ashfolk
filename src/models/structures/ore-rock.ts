@@ -21,22 +21,6 @@ interface OreChunk {
   readonly squash: Triple;
 }
 
-function centroidAt(shape: Shape, triangle: number): Triple {
-  let x = 0;
-  let y = 0;
-  let z = 0;
-
-  for (let corner = 0; corner < 3; corner += 1) {
-    const vertex = shape.indices[triangle * 3 + corner];
-
-    x += shape.positions[vertex * 3];
-    y += shape.positions[vertex * 3 + 1];
-    z += shape.positions[vertex * 3 + 2];
-  }
-
-  return [x / 3, y / 3, z / 3];
-}
-
 function isStreak(point: Triple, richness: number): boolean {
   const [x, y, z] = point;
 
@@ -49,53 +33,15 @@ function isStreak(point: Triple, richness: number): boolean {
   return Math.abs(band) < richness;
 }
 
-function facetsWhere(faceted: Shape, keep: (triangle: number) => boolean): Shape {
-  const triangles = Array.from({ length: faceted.indices.length / 3 }, (_, triangle) => {
-    return triangle;
-  }).filter(keep);
-  const corners = triangles.length * 3;
-
-  const positions = new Float32Array(corners * 3);
-  const normals = new Float32Array(corners * 3);
-  const along = new Float32Array(corners);
-  const around = new Float32Array(corners);
-  const indices = Uint32Array.from({ length: corners }, (_, corner) => {
-    return corner;
-  });
-
-  for (const [index, triangle] of triangles.entries()) {
-    for (let corner = 0; corner < 3; corner += 1) {
-      const source = faceted.indices[triangle * 3 + corner];
-      const target = index * 3 + corner;
-
-      positions.set(faceted.positions.subarray(source * 3, source * 3 + 3), target * 3);
-      normals.set(faceted.normals.subarray(source * 3, source * 3 + 3), target * 3);
-      along[target] = faceted.along[source];
-      around[target] = faceted.around[source];
-    }
-  }
-
-  return { along, around, indices, normals, positions };
-}
-
 export function addStreakedRock(context: StructureContext, shape: Shape, look: OreLook, style: VertexStyle): void {
-  const faceted = facetShape(shape);
-  const streaks = Array.from({ length: faceted.indices.length / 3 }, (_, triangle) => {
-    return isStreak(centroidAt(faceted, triangle), look.richness);
+  context.builder.add(facetShape(shape), {
+    style: {
+      ...style,
+      slot: (point) => {
+        return isStreak(point.position.toArray(), look.richness) ? look.ore : MaterialSlot.Stone;
+      },
+    },
   });
-
-  context.builder.add(
-    facetsWhere(faceted, (triangle) => {
-      return streaks[triangle];
-    }),
-    { style: { ...style, slot: look.ore } }
-  );
-  context.builder.add(
-    facetsWhere(faceted, (triangle) => {
-      return !streaks[triangle];
-    }),
-    { style: { ...style, slot: MaterialSlot.Stone } }
-  );
 }
 
 export function addOreChunk(context: StructureContext, chunk: OreChunk, look: OreLook, style: VertexStyle): void {
