@@ -28,7 +28,7 @@ export const SCENES: readonly Scene[] = [
   { name: "cave-mouth", query: "seed=7&shape=round&quality=high&paused=1&hours=11&camera=-1573,1583,40,0.6,-0.79" },
   {
     name: "cave-wide-river",
-    query: "seed=7&shape=round&quality=high&paused=1&hours=11&camera=-2182.1,-425.7,55,0.7,-1.34",
+    query: "seed=7&shape=round&quality=high&paused=1&hours=11&camera=-2210,-338,70,0.6,-1.34",
   },
   {
     name: "spring-pond",
@@ -44,11 +44,19 @@ export const SCENES: readonly Scene[] = [
   },
   {
     name: "river-across-hillside",
-    query: "seed=7&shape=round&quality=high&paused=1&hours=11&camera=-2308.7,-135,180,0.7,2.84",
+    query: "seed=7&shape=round&quality=high&paused=1&hours=11&camera=-2490,-950,180,0.6,-1.6",
   },
   {
     name: "river-cascade",
     query: "seed=21&shape=round&quality=high&paused=1&hours=11&camera=-375,-1676,140,0.5,2.4",
+  },
+  {
+    name: "river-cascade-up",
+    query: "seed=21&shape=round&quality=high&paused=1&hours=11&camera=-375,-1676,120,0.4,3.14",
+  },
+  {
+    name: "cascade-low",
+    query: "seed=21&shape=round&quality=high&paused=1&hours=11&camera=-375,-1676,60,0.22,2.4",
   },
   {
     name: "river-cascade-far",
@@ -71,8 +79,24 @@ export const SCENES: readonly Scene[] = [
     query: "seed=7&shape=round&quality=high&paused=1&hours=11&camera=-1676,-2136,110,0.5,2.36",
   },
   {
+    name: "river-pool-step",
+    query: "seed=7&shape=round&quality=high&paused=1&hours=11&camera=-416,-2716,140,0.5,2.2",
+  },
+  {
     name: "river-junction",
     query: "seed=7&shape=round&quality=high&paused=1&hours=11&camera=2184,-1526,300,0.6,0.6",
+  },
+  {
+    name: "junction-close",
+    query: "seed=7&shape=round&quality=high&paused=1&hours=11&camera=2120,-1600,110,0.5,0.6",
+  },
+  {
+    name: "lake-link-mid",
+    query: "seed=7&shape=round&quality=high&paused=1&hours=11&camera=-190,1000,600,0.8,0.6",
+  },
+  {
+    name: "wolf-mouth-close",
+    query: "seed=7&shape=round&quality=high&paused=1&hours=11&camera=235,1398,35,0.85,0.6",
   },
   {
     name: "river-pond-mouth",
