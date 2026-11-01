@@ -77,6 +77,7 @@ const EMBER_THRESHOLD = 0.004;
 const TRODDEN_EARTH = vec3(0.3, 0.22, 0.14);
 const FORD_BED_DEPTH = 0.6;
 const DRY_BED = -1;
+const RIVER_BED_REACH = 2;
 const POOL_WATER = vec3(0.034, 0.038, 0.022);
 const POOL_SCUM = vec3(0.11, 0.14, 0.04);
 const POOL_RIM = 0.45;
@@ -252,10 +253,12 @@ function riverBed(textures: TerrainTextures, grid: WorldGrid): Node<"vec2"> {
     const metersPerPixel = groundFootprintNode().toVar();
     const bed = vec2(DRY_BED, 0).toVar();
 
-    If(reach.lessThan(1.5), () => {
-      const cellDepth = sampleCellsNode(textures.shore, grid, positionWorld.xz).x;
+    If(reach.lessThan(RIVER_BED_REACH + 0.5), () => {
+      const shore = sampleCellsNode(textures.shore, grid, positionWorld.xz);
+      const river = textures.rivers.bedNode(positionWorld.xz, shore.x, metersPerPixel);
+      const fade = smoothstep(RIVER_BED_REACH + 0.25, RIVER_BED_REACH - 0.75, shore.w);
 
-      bed.assign(textures.rivers.bedNode(positionWorld.xz, cellDepth, metersPerPixel));
+      bed.assign(vec2(mix(float(DRY_BED), river.x, fade), river.y.mul(fade)));
     });
 
     return bed;
