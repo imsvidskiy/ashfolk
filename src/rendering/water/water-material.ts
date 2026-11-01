@@ -3,7 +3,6 @@ import {
   attribute,
   cameraPosition,
   clamp,
-  cos,
   dFdx,
   dFdy,
   distance,
@@ -24,7 +23,6 @@ import {
   positionWorld,
   pow,
   select,
-  sin,
   smoothstep,
   texture,
   textureLoad,
@@ -44,7 +42,7 @@ import {
   Vector2,
 } from "three/webgpu";
 import type { WorldGrid } from "../../world/world-grid.ts";
-import { cellKey, unitHash, unitNoise3 } from "../node-helpers.ts";
+import { cellKey, rotateAroundUp, unitHash, unitNoise3 } from "../node-helpers.ts";
 import { mapCoordinatesNode, sampleCellsNode } from "../terrain/height-sampling.ts";
 import type { TerrainTextures } from "../terrain/terrain-textures.ts";
 import { rainDimples } from "./rain-dimples.ts";
@@ -221,10 +219,7 @@ function windMark(point: Node<"vec2">, wind: Node<"vec2">, pixel: Node<"float">)
   const radius = unitHash(key, MARK_SALT_SIZE).mul(0.6).add(0.7).mul(MARK_RADIUS);
   const turn = unitHash(key, MARK_SALT_TURN).sub(0.5).mul(MARK_TURN);
 
-  const heading = vec2(
-    wind.x.mul(cos(turn)).sub(wind.y.mul(sin(turn))),
-    wind.x.mul(sin(turn)).add(wind.y.mul(cos(turn)))
-  );
+  const heading = rotateAroundUp(vec3(wind.x, 0, wind.y), turn.negate()).xz;
   const offset = spot
     .sub(cell)
     .sub(tip)
@@ -323,15 +318,13 @@ function foamAt(surface: WaterSurface): Node<"float"> {
     .mul(float(1).sub(ice));
 }
 
-function shadowFadedAtEdge(look: WaterLook): (...shadows: Node<"float">[]) => Node<"float"> {
+function shadowFadedAtEdge(look: WaterLook): (shadow?: Node<"float">) => Node<"float"> {
   const coordinate = look.shadowMatrix.mul(vec4(positionWorld, 1)).xy;
   const offCenter = max(abs(coordinate.x.sub(0.5)), abs(coordinate.y.sub(0.5)));
   const inside = smoothstep(0.5, SHADOW_EDGE_START, offCenter);
 
-  return (...shadows) => {
-    const [shadow = float(1)] = shadows;
-
-    return shadow.mul(inside).add(float(1).sub(inside));
+  return (shadow: Node<"float"> = float(1)) => {
+    return mix(float(1), shadow, inside);
   };
 }
 
