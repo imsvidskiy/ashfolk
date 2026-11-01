@@ -14,7 +14,6 @@ import { smoothstep } from "../../shared/math.ts";
 import { isTarget } from "../../simulation/hand/grab-target.ts";
 import { PERSON_STRIDE, PersonField, restPositionOf } from "../../world/agent-buffers.ts";
 import { CARRIED_ITEMS, type CarriedItem, PERSON_POSES } from "../../world/agent-poses.ts";
-import { PEOPLE_SHADING } from "../model-style.ts";
 import type { TribeLooks } from "../tribe-looks.ts";
 import { HIDDEN_LEVEL } from "../view-input.ts";
 import { AgentMotion } from "./agent-motion.ts";
@@ -129,7 +128,7 @@ export class PeopleView {
   constructor(tribes: TribeLooks) {
     this.#tribes = tribes;
 
-    const material = createSkinnedMaterial(this.#palette, PERSON_LAYOUT, PEOPLE_SHADING);
+    const material = createSkinnedMaterial(this.#palette, PERSON_LAYOUT, false);
     const farParts = buildHumanParts(HUMAN_DETAILS.far);
 
     this.#batches = new PartBatches(
