@@ -29,7 +29,7 @@ import type { WorldGrid } from "../../world/world-grid.ts";
 import { columnVisibilityNode, fadeNearCamera, type ObjectExtent } from "../camera-fade.ts";
 import { type FireGlow, fireLightAt } from "../effects/fire-glow.ts";
 import { brightenHighlighted } from "../highlight.ts";
-import { styleModel } from "../model-style.ts";
+import { modelColor, styleModel } from "../model-style.ts";
 import { rotateAroundUp, SNOW_COLOR, slotColorTable, snowCoverNode } from "../node-helpers.ts";
 import { markOutlined } from "../outlines.ts";
 import { cellAtNode, coarseGroundOffsetNode } from "../terrain/height-sampling.ts";
@@ -207,7 +207,7 @@ export function createPlantMaterial({
   const baseColor = mix(slotColors.element(int(slot.add(0.5))), look.foliageColor.rgb, foliage);
   const shaded = baseColor.mul(shade).mul(variation);
 
-  const vertexColor = varying(charredColor(shaded, charring), "plantColor");
+  const vertexColor = modelColor(charredColor(shaded, charring), "plantColor");
   const snowOnTop = snow.mul(smoothstep(0.25, 0.75, normalWorld.y));
   const fireLight = varying(fireLightAt(glow, grid, placement.xz), "plantFireLight");
   const burning = burnGlow({ detailFade, embers, flames, phase: placement.x.mul(0.37).fract().mul(6), smolder });

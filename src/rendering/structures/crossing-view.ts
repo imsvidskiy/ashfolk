@@ -56,7 +56,7 @@ import {
 import { NO_WATER } from "../../world/water.ts";
 import type { WorldGrid } from "../../world/world-grid.ts";
 import { geometryFromMeshData, InstanceBatch, toInstancedGeometry } from "../instancing.ts";
-import { MODEL_ROUGHNESS, styleModel } from "../model-style.ts";
+import { MODEL_ROUGHNESS, modelColor, styleModel } from "../model-style.ts";
 import { rotateAroundUp, SNOW_COLOR, slotColorTable, snowCoverNode } from "../node-helpers.ts";
 import { markOutlined } from "../outlines.ts";
 import { cellAtNode, coarseGroundOffsetNode } from "../terrain/height-sampling.ts";
@@ -136,7 +136,7 @@ function createCrossingMaterial(textures: TerrainTextures, grid: WorldGrid): Mes
   const cell = cellAtNode(grid, placement.xz);
 
   const snow = varying(snowCoverNode(textureLoad(textures.surface, cell)), "crossingSnow");
-  const base = varying(slotColorTable().element(slot).mul(shade).mul(look.y), "crossingColor");
+  const base = modelColor(slotColorTable().element(slot).mul(shade).mul(look.y), "crossingColor");
 
   const belowWater = look.x.sub(positionWorld.y);
   const wetness = smoothstep(-0.08, 0.2, belowWater);
