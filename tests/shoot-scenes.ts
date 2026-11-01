@@ -2,13 +2,12 @@ import { mkdir } from "node:fs/promises";
 import { join } from "node:path";
 import { type Browser, type BrowserContextOptions, chromium, expect, type Page } from "@playwright/test";
 import { WORLD_RISING_TIMEOUT } from "./launch.ts";
-import { type PowerCast, SCENES, type Scene } from "./scenes.ts";
+import { type PowerCast, SCENES, type Scene, sceneFromQuery } from "./scenes.ts";
 
 const SYSTEM_CHROME = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome";
 const GPU_ARGUMENTS = ["--use-angle=metal", "--enable-gpu"];
 const SETTLE_FRAMES = 60;
 const SCENE_NAME = /^[a-z0-9-]+$/u;
-const SCENE_OPTIONS = ["season", "seconds", "speed"] as const;
 
 interface Device {
   readonly name: string;
@@ -26,22 +25,6 @@ const DEVICES: readonly Device[] = [
     options: { deviceScaleFactor: 3, hasTouch: true, isMobile: true, viewport: { height: 844, width: 390 } },
   },
 ];
-
-function sceneFromQuery(name: string, query: string): Scene {
-  const parameters = new URLSearchParams(query);
-  const options: Partial<Record<(typeof SCENE_OPTIONS)[number], number>> = {};
-
-  for (const option of SCENE_OPTIONS) {
-    const value = parameters.get(option);
-
-    if (value !== null) {
-      options[option] = Number(value);
-      parameters.delete(option);
-    }
-  }
-
-  return { ...options, name, query: parameters.toString() };
-}
 
 function sceneOf(argument: string): Scene {
   const split = argument.indexOf("=");

@@ -1,3 +1,5 @@
+const SCENE_OPTIONS = ["season", "seconds", "speed"] as const;
+
 export interface PowerCast {
   readonly parameters: Readonly<Record<string, number>>;
   readonly powerId: string;
@@ -118,3 +120,29 @@ export const SCENES: readonly Scene[] = [
     seconds: 3,
   },
 ];
+
+function optionNumber(option: string, value: string): number {
+  const number = Number(value);
+
+  if (value.trim() === "" || !Number.isFinite(number)) {
+    throw new Error(`The scene option ${option} takes a number, got "${value}"`);
+  }
+
+  return number;
+}
+
+export function sceneFromQuery(name: string, query: string): Scene {
+  const parameters = new URLSearchParams(query);
+  const options: Partial<Record<(typeof SCENE_OPTIONS)[number], number>> = {};
+
+  for (const option of SCENE_OPTIONS) {
+    const value = parameters.get(option);
+
+    if (value !== null) {
+      options[option] = optionNumber(option, value);
+      parameters.delete(option);
+    }
+  }
+
+  return { ...options, name, query: parameters.toString() };
+}

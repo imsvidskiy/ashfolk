@@ -12,6 +12,7 @@ export default defineConfig({
     { name: "phone", testIgnore: ["desktop.spec.ts", "start.spec.ts"], use: { ...devices["Pixel 7"], launchOptions } },
   ],
   testDir: "tests",
+  testMatch: "*.spec.ts",
   timeout: 180_000,
   use: {
     baseURL: `http://localhost:${PREVIEW_PORT}`,
