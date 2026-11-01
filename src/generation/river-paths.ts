@@ -4,6 +4,7 @@ import type { RiverPoint } from "../world/water.ts";
 const MEANDER_PER_WIDTH = 0.6;
 const LEAST_MEANDER = 2;
 const MOST_MEANDER = 5;
+const CRAMPED_MEANDER = 1.2;
 const MEANDER_FADE = 25;
 const LONG_MEANDER = 90;
 const SHORT_MEANDER = 37;
@@ -125,10 +126,10 @@ function distancesAlong(points: readonly RiverPoint[]): Float64Array {
   return alongs;
 }
 
-function meanderAt(shaping: RiverShaping, along: number, length: number, width: number): number {
+function meanderAt(shaping: RiverShaping, along: number, length: number, width: number, room: number): number {
   const { seed } = shaping;
 
-  const amplitude = clamp(MEANDER_PER_WIDTH * width, LEAST_MEANDER, MOST_MEANDER);
+  const amplitude = lerp(CRAMPED_MEANDER, clamp(MEANDER_PER_WIDTH * width, LEAST_MEANDER, MOST_MEANDER), room);
   const fade = smoothstep(0, MEANDER_FADE, along) * smoothstep(0, MEANDER_FADE, length - along);
   const longPhase = hashToUnit(seed, 1, MEANDER_SALT) * 2 * Math.PI;
   const shortPhase = hashToUnit(seed, 2, MEANDER_SALT) * 2 * Math.PI;
@@ -181,7 +182,7 @@ export function smoothRiverPath(points: readonly RiverPoint[], shaping: RiverSha
   );
 
   return smoothed.map((point, index) => {
-    const offset = meanderAt(shaping, alongs[index], length, point.width) * rooms[index];
+    const offset = meanderAt(shaping, alongs[index], length, point.width, rooms[index]);
 
     return { ...point, x: point.x + acrosses[index].x * offset, z: point.z + acrosses[index].z * offset };
   });
