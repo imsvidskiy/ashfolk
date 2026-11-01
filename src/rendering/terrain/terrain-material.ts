@@ -62,7 +62,7 @@ const ROCK_BAND = 0.03;
 const ROCK_TONE = 0.06;
 const GROUND_MOTTLE = 0.05;
 const GROUND_GRAIN = 0.02;
-const STEEP_FACE_SHADE = 0.82;
+const STEEP_FACE_SHADE = 0.78;
 const SNOW = vec3(0.9, 0.93, 0.97);
 const ETERNAL_SNOW = 0.375;
 const SNOW_DRIFT = 14;
@@ -330,7 +330,7 @@ export function createTerrainMaterial({
   const darkStone = smoothstep(DARK_STONE, DARK_STONE * 0.5, albedo.r).mul(
     smoothstep(GRAY_STONE - 0.1, GRAY_STONE, albedo.b.div(max(albedo.g, 0.001)))
   );
-  const faceShade = mix(float(1), float(STEEP_FACE_SHADE), smoothstep(0.3, 0.7, steepness));
+  const faceShade = mix(float(1), float(STEEP_FACE_SHADE), smoothstep(0.2, 0.5, steepness));
 
   const vegetated = smoothstep(0.08, 0.3, groundSample.a);
   const rockStart = mix(float(ROCK_START), float(0.16), snowCover).add(vegetated.mul(VEGETATED_ROCK_LIFT));

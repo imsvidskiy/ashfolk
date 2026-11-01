@@ -48,6 +48,7 @@ const BYTE = 255;
 const COVER_REACH = 2;
 const SHARPEST_BORDER = 0.06;
 const SOFT_BORDER = 0.5;
+const SOFT_GROUND_BORDER = 0.2;
 const LONE_CORNER_WEIGHT = 0.001;
 const SOFT_GROUNDS = DEPOSIT_KINDS.map((kind) => {
   return DEPOSITS[kind].ground;
@@ -187,6 +188,14 @@ function crispGroundNode(
 
         return { ...corner, color: textureLoad(albedo, corner.cell).rgb, isSoft: isSoftNode(kind), kind };
       });
+      const hasSoft = corners
+        .map((corner) => {
+          return corner.isSoft;
+        })
+        .reduce((either, other) => {
+          return either.or(other);
+        });
+      const edge = select(hasSoft, max(border, SOFT_GROUND_BORDER), border);
 
       let sum: Node<"vec3"> = vec3(0);
       let total: Node<"float"> = float(0);
@@ -195,16 +204,13 @@ function crispGroundNode(
         let share: Node<"float"> = float(0);
 
         for (const other of corners) {
-          const isAlike = abs(other.kind.sub(corner.kind))
-            .lessThan(0.5 / BYTE)
-            .or(corner.isSoft)
-            .or(other.isSoft);
+          const isAlike = abs(other.kind.sub(corner.kind)).lessThan(0.5 / BYTE);
 
           share = share.add(select(isAlike, other.weight, float(0)));
         }
 
         const focus = corner.weight.mul(
-          smoothstep(float(0.5).sub(border), float(0.5).add(border), share).add(LONE_CORNER_WEIGHT)
+          smoothstep(float(0.5).sub(edge), float(0.5).add(edge), share).add(LONE_CORNER_WEIGHT)
         );
 
         sum = sum.add(corner.color.mul(focus));
