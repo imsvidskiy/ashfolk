@@ -242,18 +242,23 @@ function warpedMapCoordinates(warp: GroundWarp, grid: WorldGrid): Node<"vec2"> {
   return mapCoordinatesNode(grid, point.add(warp.offsetAt(point)));
 }
 
-function underwaterDepth(textures: TerrainTextures, grid: WorldGrid): Node<"float"> {
+function riverBed(textures: TerrainTextures, grid: WorldGrid): Node<"vec2"> {
   const cell = cellAtNode(grid, positionWorld.xz);
   const reach = textureLoad(textures.shore, cell).w;
 
   return Fn(() => {
-    const depth = float(0).toVar();
+    const footprint = fwidth(positionWorld.xz);
+    const metersPerPixel = max(footprint.x, footprint.y).toVar();
+    const bed = vec2(0, 0).toVar();
 
     If(reach.lessThan(1.5), () => {
-      depth.assign(max(sampleCellsNode(textures.shore, grid, positionWorld.xz).x, 0));
+      const cellDepth = sampleCellsNode(textures.shore, grid, positionWorld.xz).x;
+      const river = textures.rivers.bedNode(positionWorld.xz, cellDepth, metersPerPixel);
+
+      bed.assign(vec2(max(river.x, 0), river.y));
     });
 
-    return depth;
+    return bed;
   })();
 }
 
@@ -317,7 +322,8 @@ export function createTerrainMaterial({
   const albedo = textures.groundAlbedo.crispColorNode(mapCoordinates, groundSample.rgb);
   const layer = positionWorld.y.mul(STRATA_FREQUENCY).add(broad.mul(STRATA_BEND)).add(patches.mul(STRATA_WOBBLE));
 
-  const depth = underwaterDepth(textures, grid);
+  const bed = riverBed(textures, grid);
+  const depth = bed.x;
   const snowCover = snowCoverAt(textures, grid, mapCoordinates, vec2(broad, patches));
   const field = fieldGroundNode(
     textures,
@@ -340,7 +346,8 @@ export function createTerrainMaterial({
     .mul(rockStrata(layer, strataFade, rock))
     .mul(broad.mul(ROCK_TONE).add(1))
     .mul(faceShade);
-  const ground = mix(mottled, rockColor, rock);
+  const sand = textures.groundAlbedo.sand.mul(broad.mul(GROUND_MOTTLE).add(fine.mul(GROUND_GRAIN)).add(1));
+  const ground = mix(mix(mottled, sand, bed.y), rockColor, rock);
 
   const marsh = marshAt(textures, grid, patches.mul(0.35).add(fine.mul(0.15)).add(0.5));
   const openPool = marsh.pool.mul(float(1).sub(snowCover));

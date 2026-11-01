@@ -237,6 +237,7 @@ function groundShareNode(cells: DataTexture, coordinates: Node<"vec2">, ground: 
 export class GroundAlbedo {
   readonly earth = uniform(new Color());
   readonly rock = uniform(new Color());
+  readonly sand = uniform(new Color());
   readonly soil = uniform(new Color());
   readonly #ground: DataTexture;
   readonly #lushness: DataTexture;
@@ -299,6 +300,7 @@ export class GroundAlbedo {
     this.soil.value.setRGB(...seasonalGroundColor(Ground.Farm, season), SRGBColorSpace);
     this.earth.value.setRGB(...seasonalGroundColor(Ground.Dirt, season), SRGBColorSpace);
     this.rock.value.setRGB(...seasonalGroundColor(Ground.Rock, season), SRGBColorSpace);
+    this.sand.value.setRGB(...seasonalGroundColor(Ground.Sand, season), SRGBColorSpace);
 
     renderer.setRenderTarget(this.#target);
     this.#quad.render(renderer);

@@ -35,7 +35,7 @@ import { unitNoise3 } from "../node-helpers.ts";
 import { mapCoordinatesNode, sampleCellsNode } from "../terrain/height-sampling.ts";
 import type { TerrainTextures } from "../terrain/terrain-textures.ts";
 import { rainDimples } from "./rain-dimples.ts";
-import { BANK_SINK, BANK_STEP, PRESENT_LEVEL } from "./shore-field.ts";
+import { BANK_SINK, PRESENT_LEVEL, RIVER_BANK_LIFT } from "./shore-field.ts";
 import { perlinWithSteps } from "./wave-noise.ts";
 
 const HIDDEN_DEPTH = 40;
@@ -170,14 +170,14 @@ function waterPosition(textures: TerrainTextures, grid: WorldGrid): Node<"vec3">
       return levelAt(base, offset);
     });
 
-    const highest = levels.reduce<Node<"float">>((top, level) => {
-      return max(top, select(level.lessThan(NO_LOWER_WATER), level, float(-NO_LOWER_WATER)));
-    }, float(-NO_LOWER_WATER));
-    const lowest = levels.reduce<Node<"float">>((bottom, level) => {
-      return min(bottom, level);
-    }, float(NO_LOWER_WATER));
+    const total = levels.reduce<Node<"float">>((sum, level) => {
+      return sum.add(select(level.lessThan(NO_LOWER_WATER), level, float(0)));
+    }, float(0));
+    const count = levels.reduce<Node<"float">>((sum, level) => {
+      return sum.add(select(level.lessThan(NO_LOWER_WATER), float(1), float(0)));
+    }, float(0));
 
-    return select(lowest.lessThan(NO_LOWER_WATER), min(highest, lowest.add(BANK_STEP)), float(NO_LOWER_WATER));
+    return select(count.greaterThan(0), total.div(max(count, 1)), float(NO_LOWER_WATER));
   }
 
   function vertexLevel(vertex: Node<"vec2">): Node<"float"> {
@@ -202,7 +202,13 @@ function waterPosition(textures: TerrainTextures, grid: WorldGrid): Node<"vec3">
         const nearest = select(beside.lessThan(NO_LOWER_WATER), beside, bankAround(vertex, DIAGONAL_OFFSETS));
 
         If(nearest.lessThan(NO_LOWER_WATER), () => {
-          level.assign(min(nearest, ground.sub(BANK_SINK)));
+          level.assign(
+            select(
+              textures.rivers.isNearStandingNode(ownCell),
+              min(nearest, ground.sub(BANK_SINK)),
+              max(nearest, ground.add(RIVER_BANK_LIFT))
+            )
+          );
         });
       });
 
@@ -249,7 +255,8 @@ export function createWaterMaterial(
   const outlet = textures.caveOutlets.outletAt(positionWorld.xz);
   const flow = mix(shore.yz, outlet.direction.mul(max(length(shore.yz), OUTLET_FLOW)), outlet.share);
   const ice = smoothstep(THIN_ICE, SOLID_ICE, texture(textures.surface, mapCoordinates).r);
-  const shoreDepth = mix(shore.x.add(shoreWobble(shore.x, viewDistance)), outlet.depth, outlet.share);
+  const cellDepth = shore.x.add(shoreWobble(shore.x, viewDistance));
+  const shoreDepth = mix(textures.rivers.depthNode(positionWorld.xz, cellDepth, true), outlet.depth, outlet.share);
 
   const isWet = shoreDepth.greaterThan(0);
   const fordBed = textures.fords.marksNode(positionWorld.xz).x;

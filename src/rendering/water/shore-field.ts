@@ -11,7 +11,7 @@ export const ShoreChannel = {
 
 export const PRESENT_LEVEL = NO_WATER / 2;
 export const BANK_SINK = 0.3;
-export const BANK_STEP = 1.5;
+export const RIVER_BANK_LIFT = 0.1;
 export const DRY_DEPTH = -1;
 export const MAXIMUM_REACH = 12;
 export const SHORE_CHANNELS = 4;

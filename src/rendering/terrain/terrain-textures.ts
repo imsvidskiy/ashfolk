@@ -8,6 +8,7 @@ import { POND_SHORE_SLOPE, pondEdgeReach, pondOutlineExtent } from "../../world/
 import { byteTexture, floatDataTexture } from "../data-textures.ts";
 import { CaveOutlets } from "../water/cave-outlets.ts";
 import { FordField } from "../water/ford-field.ts";
+import { RiverField } from "../water/river-field.ts";
 import {
   buildShoreField,
   NOT_POND,
@@ -42,6 +43,7 @@ export class TerrainTextures {
   readonly outline: IslandOutline;
   readonly patchSteps: DataTexture;
   readonly patchesPerSide: number;
+  readonly rivers: RiverField;
   readonly shore: DataTexture;
   readonly skyColor = uniform(new Color(0x9c_c0_e0));
   readonly surface: DataTexture;
@@ -79,6 +81,7 @@ export class TerrainTextures {
     };
     this.shore = floatDataTexture(this.#shoreData, size, size, RGBAFormat);
     this.#buildShore();
+    this.rivers = new RiverField(mirror.grid, mirror.water.riverLines, mirror.terrain);
     this.surface = byteTexture(mirror.surface, size, RGBAFormat);
     this.#wetlandData = new Uint8Array(size * size * WETLAND_CHANNELS);
     this.#paintWetland({ firstRow: 0, rowCount: size });
@@ -88,7 +91,9 @@ export class TerrainTextures {
   }
 
   shoreDepthAt(x: number, z: number): number {
-    return sampleCells(this.#shoreData, this.#mirror.grid, x, z, SHORE_CHANNELS, ShoreChannel.Depth);
+    const cellDepth = sampleCells(this.#shoreData, this.#mirror.grid, x, z, SHORE_CHANNELS, ShoreChannel.Depth);
+
+    return this.rivers.depthAt(x, z, cellDepth);
   }
 
   followPatchLevels(levels: Readonly<Int8Array>): void {
@@ -122,6 +127,7 @@ export class TerrainTextures {
 
     if (changes.hasWaterChanged) {
       this.#buildShore();
+      this.rivers.rebuild(this.#mirror.water.riverLines, this.#mirror.terrain);
       this.caveOutlets.rebuild(this.#mirror.water.springs);
       this.fords.rebuild(this.#mirror.crossings);
     } else {
@@ -160,6 +166,7 @@ export class TerrainTextures {
     this.height.dispose();
     this.lava.dispose();
     this.patchSteps.dispose();
+    this.rivers.dispose();
     this.surface.dispose();
     this.water.dispose();
     this.shore.dispose();
