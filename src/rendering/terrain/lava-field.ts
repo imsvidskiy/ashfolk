@@ -2,6 +2,7 @@ import {
   abs,
   cameraPosition,
   distance,
+  exp,
   Fn,
   float,
   fract,
@@ -39,8 +40,13 @@ const CRACK_BLUR = 2;
 const GLOW_FREQUENCY = 0.05;
 const GLOW_CYCLE_SECONDS = 8;
 const GLOW_TRAVEL = 10;
-const DETAIL_FAR = 900;
-const DETAIL_NEAR = 500;
+const DETAIL_FAR = 1700;
+const DETAIL_NEAR = 1100;
+const CRACK_COVERAGE = 3;
+const FAR_GLOW = 1.2;
+const WIDENING_NEAR = 500;
+const WIDENING_FAR = 1500;
+const FARTHEST_WIDENING = 0.6;
 
 interface LavaLook {
   readonly color: Node<"vec3">;
@@ -48,7 +54,9 @@ interface LavaLook {
 }
 
 function crackAt(edge: Node<"float">, width: Node<"float">, blur: Node<"float">, detail: Node<"float">): Node<"float"> {
-  return mix(min(width.mul(1.2), 1), float(1).sub(smoothstep(width, width.add(blur), edge)), detail);
+  const coverage = float(1).sub(exp(width.add(blur.mul(0.5)).mul(-CRACK_COVERAGE)));
+
+  return mix(min(coverage.mul(FAR_GLOW), 1), float(1).sub(smoothstep(width, width.add(blur), edge)), detail);
 }
 
 export class LavaField {
@@ -83,7 +91,9 @@ export class LavaField {
 
   look(ground: Node<"vec3">, mapCoordinates: Node<"vec2">, point: Node<"vec2">): LavaLook {
     const heat = texture(this.texture, mapCoordinates).r;
-    const detail = smoothstep(DETAIL_FAR, DETAIL_NEAR, distance(positionWorld, cameraPosition));
+    const viewDistance = distance(positionWorld, cameraPosition);
+    const detail = smoothstep(DETAIL_FAR, DETAIL_NEAR, viewDistance);
+    const widening = smoothstep(WIDENING_NEAR, WIDENING_FAR, viewDistance).mul(FARTHEST_WIDENING).add(1);
     const crust = mix(ground, HOT_CRUST, smoothstep(0.1, 0.5, heat));
 
     const glow = Fn(() => {
@@ -103,7 +113,9 @@ export class LavaField {
           unitNoise(point.sub(travel.mul(otherPhase)).mul(GLOW_FREQUENCY).add(7.3)),
           abs(phase.mul(2).sub(1))
         );
-        const crackWidth = mix(float(THINNEST_CRACK), float(WIDEST_CRACK), heat.mul(heat)).mul(pulse.add(0.5));
+        const crackWidth = mix(float(THINNEST_CRACK), float(WIDEST_CRACK), heat.mul(heat))
+          .mul(pulse.add(0.5))
+          .mul(widening);
         const edge = float(1).toVar();
 
         If(detail.greaterThan(0), () => {
