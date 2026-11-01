@@ -47,6 +47,34 @@ export const SCENES: readonly Scene[] = [
     query: "seed=7&shape=round&quality=high&paused=1&hours=11&camera=-2308.7,-135,180,0.7,2.84",
   },
   {
+    name: "river-cascade",
+    query: "seed=21&shape=round&quality=high&paused=1&hours=11&camera=-375,-1676,140,0.5,2.4",
+  },
+  {
+    name: "river-cascade-far",
+    query: "seed=21&shape=round&quality=high&paused=1&hours=11&camera=-531,-1721,900,0.6,2.11",
+  },
+  {
+    name: "river-cascade-far-low",
+    query: "seed=21&shape=round&quality=low&paused=1&hours=11&camera=-531,-1721,900,0.6,2.11",
+  },
+  {
+    name: "river-wide-bends",
+    query: "seed=21&shape=round&quality=high&paused=1&hours=11&camera=1746,-625,160,0.55,1",
+  },
+  {
+    name: "river-steep-ford",
+    query: "seed=7&shape=round&quality=high&paused=1&hours=11&camera=-945,-2488,70,0.55,2.07",
+  },
+  {
+    name: "river-narrow-slope",
+    query: "seed=7&shape=round&quality=high&paused=1&hours=11&camera=-1676,-2136,110,0.5,2.36",
+  },
+  {
+    name: "river-junction",
+    query: "seed=7&shape=round&quality=high&paused=1&hours=11&camera=2184,-1526,300,0.6,0.6",
+  },
+  {
     name: "far-rivers",
     query: "seed=10&shape=round&quality=high&paused=1&hours=11&camera=35,2332,1500,0.8,0",
   },
