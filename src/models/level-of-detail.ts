@@ -1,9 +1,4 @@
-import { curveBodySections, curveSections, curveTube } from "./mesh/path-curves.ts";
-import type { BodySection, LoftSection } from "./mesh/shapes.ts";
-import type { TubePoint } from "./mesh/tubes.ts";
-
 export interface DetailSteps {
-  readonly curveSteps: number;
   readonly hasSmallParts: boolean;
 }
 
@@ -27,16 +22,4 @@ export function thinned<Point>(points: readonly Point[]): Point[] {
 
 export function alongPath<Point>(points: readonly Point[], detail: DetailSteps): Point[] {
   return detail.hasSmallParts ? [...points] : thinned(points);
-}
-
-export function alongTube(points: readonly TubePoint[], detail: DetailSteps): TubePoint[] {
-  return curveTube(alongPath(points, detail), detail.curveSteps);
-}
-
-export function alongSections(sections: readonly LoftSection[], detail: DetailSteps): LoftSection[] {
-  return curveSections(alongPath(sections, detail), detail.curveSteps);
-}
-
-export function alongBody(sections: readonly BodySection[], detail: DetailSteps): BodySection[] {
-  return curveBodySections(alongPath(sections, detail), detail.curveSteps);
 }
