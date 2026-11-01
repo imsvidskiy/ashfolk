@@ -1,6 +1,7 @@
 import { mkdir } from "node:fs/promises";
 import { join } from "node:path";
 import { type Browser, type BrowserContextOptions, chromium, expect, type Page } from "@playwright/test";
+import { TICK_SECONDS } from "../src/simulation/tick.ts";
 import { WORLD_RISING_TIMEOUT } from "./launch.ts";
 import { type PowerCast, SCENES, type Scene, sceneFromQuery } from "./scenes.ts";
 
@@ -8,6 +9,7 @@ const SYSTEM_CHROME = "/Applications/Google Chrome.app/Contents/MacOS/Google Chr
 const GPU_ARGUMENTS = ["--use-angle=metal", "--enable-gpu"];
 const SETTLE_FRAMES = 60;
 const SCENE_NAME = /^[a-z0-9-]+$/u;
+const RUN_TIMEOUT_FACTOR = 4;
 
 interface Device {
   readonly name: string;
@@ -85,6 +87,12 @@ async function castPower(page: Page, cast: PowerCast): Promise<void> {
   await send(page, { ...cast, type: "usePower" });
 }
 
+async function currentTick(page: Page): Promise<number> {
+  return await page.evaluate(() => {
+    return Reflect.get(window, "ashfolk").session.frame.tick;
+  });
+}
+
 async function runFor(page: Page, scene: Scene, seconds: number): Promise<void> {
   if (scene.speed === undefined) {
     await page.waitForTimeout(seconds * 1000);
@@ -93,10 +101,17 @@ async function runFor(page: Page, scene: Scene, seconds: number): Promise<void> 
   }
 
   const hours = new URLSearchParams(scene.query).get("hours");
+  const target = (await currentTick(page)) + Math.round((seconds * scene.speed) / TICK_SECONDS);
 
   await send(page, { speed: scene.speed, type: "setSpeed" });
   await send(page, { isPaused: false, type: "setPaused" });
-  await page.waitForTimeout(seconds * 1000);
+  await page.waitForFunction(
+    (tick) => {
+      return Reflect.get(window, "ashfolk").session.frame.tick >= tick;
+    },
+    target,
+    { timeout: seconds * 1000 * RUN_TIMEOUT_FACTOR }
+  );
   await send(page, { isPaused: true, type: "setPaused" });
 
   if (hours !== null) {
