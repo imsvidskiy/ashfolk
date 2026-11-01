@@ -38,6 +38,8 @@ interface PlacedSurface {
 
 type ChannelWriter = (vertex: number, normal: Vector3, position: Vector3) => void;
 
+type FaceCenter = Omit<SurfacePoint, "normal">;
+
 export function resolveChannel(value: ChannelValue | undefined, fallback: number, point: SurfacePoint): number {
   if (value === undefined) {
     return fallback;
@@ -68,13 +70,12 @@ function isFaceted(shape: Shape): boolean {
   return true;
 }
 
-function faceCenters(shape: Shape, transform = IDENTITY): SurfacePoint[] | null {
+function faceCenters(shape: Shape, transform = IDENTITY): FaceCenter[] | null {
   if (!isFaceted(shape)) {
     return null;
   }
 
-  const normalMatrix = new Matrix3().getNormalMatrix(transform);
-  const faces: SurfacePoint[] = [];
+  const faces: FaceCenter[] = [];
 
   for (let corner = 0; corner < shape.indices.length; corner += 3) {
     const corners = [shape.indices[corner], shape.indices[corner + 1], shape.indices[corner + 2]];
@@ -88,13 +89,9 @@ function faceCenters(shape: Shape, transform = IDENTITY): SurfacePoint[] | null 
       around += shape.around[vertex];
     }
 
-    const face: SurfacePoint = {
+    const face: FaceCenter = {
       along: along / 3,
       around: around / 3,
-      normal: new Vector3()
-        .fromArray(shape.normals, corners[0] * 3)
-        .applyMatrix3(normalMatrix)
-        .normalize(),
       position: position.divideScalar(3).applyMatrix4(transform),
     };
 
@@ -130,7 +127,7 @@ export class MeshBuilder {
 
     this.#place(shape, placement, (vertex, normal, position) => {
       const point = { along: shape.along[vertex], around: shape.around[vertex], normal, position };
-      const face = faces === null ? point : faces[vertex];
+      const face = faces === null ? point : { ...faces[vertex], normal };
 
       for (const channel of VERTEX_CHANNELS) {
         const at = channel === "slot" ? face : point;
