@@ -39,8 +39,13 @@ const BRANCH_SIDES: Readonly<Record<Exclude<PlantDetailLevel, "far">, readonly n
 
 const CONE_SEGMENTS: Readonly<Record<DistantLevel, number>> = { far: 5, low: 6 };
 const PAD_SIDES: Readonly<Record<NearLevel, number>> = { high: 8, medium: 6 };
-const PAD_TOP = 0.95;
-const PAD_UNDERSIDE = 0.8;
+const PAD_PROFILE: readonly (readonly [reach: number, height: number])[] = [
+  [0, -0.7],
+  [0.9, -0.5],
+  [1, 0.1],
+  [0.75, 0.7],
+  [0, 1.2],
+];
 const LOW_TIER_TOP = 0.62;
 const LOW_TIER_SPLIT = 0.45;
 const LOW_TIER_NARROWING = 0.62;
@@ -510,11 +515,9 @@ function padShape(foliage: FoliageBlob, sides: number): Shape {
   const { radius, squash } = foliage;
 
   return loft(
-    [
-      { radiusX: 0, radiusZ: 0, y: -radius * squash * PAD_UNDERSIDE },
-      { radiusX: radius, radiusZ: radius, y: 0 },
-      { radiusX: 0, radiusZ: 0, y: radius * squash * PAD_TOP },
-    ],
+    PAD_PROFILE.map(([reach, height]) => {
+      return { radiusX: radius * reach, radiusZ: radius * reach, y: radius * squash * height };
+    }),
     sides
   );
 }
