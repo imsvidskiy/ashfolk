@@ -203,7 +203,7 @@ export function createPlantMaterial({
   const charring = burn.charring.add(fallen.mul(surface.b).mul(FALLEN_CHARRING));
 
   const slotColors = slotColorTable();
-  const variation = tint.mul(0.3).add(0.85);
+  const variation = tint.mul(0.2).add(0.9);
   const baseColor = mix(slotColors.element(int(slot.add(0.5))), look.foliageColor.rgb, foliage);
   const shaded = baseColor.mul(shade).mul(variation);
 
