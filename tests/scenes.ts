@@ -9,7 +9,9 @@ export interface Scene {
   readonly cast?: PowerCast;
   readonly name: string;
   readonly query: string;
+  readonly season?: number;
   readonly seconds?: number;
+  readonly speed?: number;
 }
 
 export const SCENES: readonly Scene[] = [

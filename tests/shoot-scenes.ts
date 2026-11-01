@@ -8,6 +8,7 @@ const SYSTEM_CHROME = "/Applications/Google Chrome.app/Contents/MacOS/Google Chr
 const GPU_ARGUMENTS = ["--use-angle=metal", "--enable-gpu"];
 const SETTLE_FRAMES = 60;
 const SCENE_NAME = /^[a-z0-9-]+$/u;
+const SCENE_OPTIONS = ["season", "seconds", "speed"] as const;
 
 interface Device {
   readonly name: string;
@@ -26,6 +27,22 @@ const DEVICES: readonly Device[] = [
   },
 ];
 
+function sceneFromQuery(name: string, query: string): Scene {
+  const parameters = new URLSearchParams(query);
+  const options: Partial<Record<(typeof SCENE_OPTIONS)[number], number>> = {};
+
+  for (const option of SCENE_OPTIONS) {
+    const value = parameters.get(option);
+
+    if (value !== null) {
+      options[option] = Number(value);
+      parameters.delete(option);
+    }
+  }
+
+  return { ...options, name, query: parameters.toString() };
+}
+
 function sceneOf(argument: string): Scene {
   const split = argument.indexOf("=");
   const name = split < 0 ? argument : argument.slice(0, split);
@@ -35,7 +52,7 @@ function sceneOf(argument: string): Scene {
   }
 
   if (split >= 0) {
-    return { name, query: argument.slice(split + 1) };
+    return sceneFromQuery(name, argument.slice(split + 1));
   }
 
   const known = SCENES.find((scene) => {
@@ -75,10 +92,33 @@ async function waitForFrames(page: Page, count: number): Promise<void> {
   }, count);
 }
 
+async function send(page: Page, command: Record<string, unknown>): Promise<void> {
+  await page.evaluate((sent) => {
+    Reflect.get(window, "ashfolk").session.send(sent);
+  }, command);
+}
+
 async function castPower(page: Page, cast: PowerCast): Promise<void> {
-  await page.evaluate((command) => {
-    Reflect.get(window, "ashfolk").session.send({ ...command, type: "usePower" });
-  }, cast);
+  await send(page, { ...cast, type: "usePower" });
+}
+
+async function runFor(page: Page, scene: Scene, seconds: number): Promise<void> {
+  if (scene.speed === undefined) {
+    await page.waitForTimeout(seconds * 1000);
+
+    return;
+  }
+
+  const hours = new URLSearchParams(scene.query).get("hours");
+
+  await send(page, { speed: scene.speed, type: "setSpeed" });
+  await send(page, { isPaused: false, type: "setPaused" });
+  await page.waitForTimeout(seconds * 1000);
+  await send(page, { isPaused: true, type: "setPaused" });
+
+  if (hours !== null) {
+    await send(page, { hours: Number(hours), type: "setHours" });
+  }
 }
 
 async function adapterName(browser: Browser, baseUrl: string): Promise<string> {
@@ -126,7 +166,11 @@ async function shoot(browser: Browser, address: string, scene: Scene, device: De
     }
 
     if (scene.seconds !== undefined) {
-      await page.waitForTimeout(scene.seconds * 1000);
+      await runFor(page, scene, scene.seconds);
+    }
+
+    if (scene.season !== undefined) {
+      await send(page, { season: scene.season, type: "setSeason" });
     }
 
     await waitForFrames(page, SETTLE_FRAMES);
@@ -163,7 +207,7 @@ async function shootScenes(baseUrl: string, folder: string, scenes: readonly Sce
 const [serverUrl, shotsFolder, ...sceneArguments] = process.argv.slice(2);
 
 if (serverUrl === undefined || shotsFolder === undefined) {
-  throw new Error("Usage: bun run shots <base-url> <folder> [scene or name=query ...]");
+  throw new Error("Usage: bun run shots <base-url> <folder> [scene or name=query, with season, seconds and speed ...]");
 }
 
 await shootScenes(serverUrl, shotsFolder, sceneArguments.length === 0 ? SCENES : sceneArguments.map(sceneOf));
