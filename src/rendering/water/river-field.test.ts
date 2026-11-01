@@ -14,6 +14,7 @@ const SOURCE_REACH = 7.5;
 const POND_START = 100;
 const RIVER_CELL_REACH = 15;
 const CELL_DEPTH = 1;
+const MOUTH_DEPTH = 0.7;
 const STREAM_WIDTH = 3;
 const JUNCTION_EDGE_SLACK = 1;
 
@@ -184,7 +185,7 @@ describe("buildRiverField", () => {
     const field = new RiverField(grid, packRiverLines([straightRiver(0, 3, NARROW_WIDTH)]), source, shore);
 
     expect(field.depthAt(15, 95, CELL_DEPTH)).toBeLessThan(0);
-    expect(field.depthAt(3, 95, CELL_DEPTH)).toBeGreaterThan(0);
+    expect(field.depthAt(3, 95, CELL_DEPTH)).toBeCloseTo(MOUTH_DEPTH);
     expect(field.depthAt(15, 125, CELL_DEPTH)).toBe(CELL_DEPTH);
 
     field.dispose();
