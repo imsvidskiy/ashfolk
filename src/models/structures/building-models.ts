@@ -29,6 +29,7 @@ import {
   GLOW_PART,
   isDetailed,
   rising,
+  STONE_ROUGHNESS,
   type StructureContext,
   type StructureLevel,
   scaledMesh,
@@ -140,7 +141,7 @@ function addFlatStone(context: StructureContext, position: Triple, radius: numbe
       noise: STRUCTURE_NOISE,
       offset: [x * 3.1, y * 2.3, z * 2.7],
       radius,
-      roughness: 0.3,
+      roughness: STONE_ROUGHNESS,
     }),
     {
       style: { buildOrder: order, shade: 0.85, slot: MaterialSlot.Stone },
@@ -152,7 +153,7 @@ function addFlatStone(context: StructureContext, position: Triple, radius: numbe
 function addCampfire(context: StructureContext): void {
   const { builder, random } = context;
 
-  const stones = detail(context, 10, 6);
+  const stones = detail(context, 8, 6);
 
   for (let stone = 0; stone < stones; stone += 1) {
     const angle = (stone / stones) * FULL_TURN + random.signed() * 0.15;
@@ -331,7 +332,7 @@ function addHutDoor(context: StructureContext): void {
 }
 
 function hutSegments(context: StructureContext): number {
-  return detail(context, 18, 8);
+  return detail(context, 10, 7);
 }
 
 function addHutWall(context: StructureContext): void {
@@ -342,17 +343,11 @@ function addHutWall(context: StructureContext): void {
         {
           radiusX: HUT_RADIUS + 0.12,
           radiusZ: HUT_RADIUS + 0.12,
-          ripple: (around) => {
-            return 1 + 0.025 * Math.sin(around * 70);
-          },
           y: 0,
         },
         {
           radiusX: HUT_RADIUS + 0.06,
           radiusZ: HUT_RADIUS + 0.06,
-          ripple: (around) => {
-            return 1 + 0.02 * Math.sin(around * 55);
-          },
           y: 0.5,
         },
         { radiusX: HUT_RADIUS, radiusZ: HUT_RADIUS, y: 0.55 },
@@ -375,7 +370,7 @@ function addHutWall(context: StructureContext): void {
 
 function addHutThatch(context: StructureContext): void {
   const segments = hutSegments(context);
-  const tiers = detail(context, 3, 1);
+  const tiers = 2;
 
   for (let tier = 0; tier < tiers; tier += 1) {
     const bottom = 1.55 + tier * 0.55;

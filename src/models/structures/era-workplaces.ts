@@ -68,7 +68,7 @@ function addDrum(
   order: number
 ): void {
   context.builder.add(
-    cylinder({ height, radialSegments: detail(context, 9, 5), radiusBottom: radius, radiusTop: radius * 0.94 }),
+    cylinder({ height, radialSegments: detail(context, 7, 5), radiusBottom: radius, radiusTop: radius * 0.94 }),
     { style: { buildOrder: order, slot }, transform: transformOf({ position }) }
   );
 }
@@ -109,7 +109,7 @@ function addGranaryStilts(context: StructureContext): void {
 }
 
 function granarySegments(context: StructureContext): number {
-  return detail(context, 16, 8);
+  return detail(context, 10, 7);
 }
 
 function addGranaryStore(context: StructureContext): void {
@@ -242,7 +242,7 @@ function addKilnDome(context: StructureContext): void {
         { radius: 0.2, y: KILN_TOP },
         { radius: 0, y: KILN_TOP - 0.05 },
       ],
-      detail(context, 16, 8)
+      detail(context, 10, 7)
     ),
     {
       style: {
@@ -254,7 +254,7 @@ function addKilnDome(context: StructureContext): void {
   );
 
   context.builder.add(
-    cylinder({ height: 0.12, radialSegments: detail(context, 16, 8), radiusBottom: 1.172, radiusTop: 1.13 }),
+    cylinder({ height: 0.12, radialSegments: detail(context, 10, 7), radiusBottom: 1.172, radiusTop: 1.13 }),
     { style: { buildOrder: 0.82, slot: MaterialSlot.Accent }, transform: transformOf({ position: [0, 0.98, 0] }) }
   );
 
@@ -456,7 +456,7 @@ function addSmelterShaft(context: StructureContext): void {
         { radius: 0.34, y: SHAFT_TOP },
         { radius: 0, y: SHAFT_TOP - 0.1 },
       ],
-      detail(context, 14, 7)
+      detail(context, 10, 7)
     ),
     {
       style: {

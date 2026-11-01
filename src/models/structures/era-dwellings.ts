@@ -268,7 +268,7 @@ function addCladding(context: StructureContext, face: WallFace): void {
     let left = -face.halfLength + 0.06;
 
     for (let block = 0; left < face.halfLength - 0.2; block += 1) {
-      const length = 0.5 + 0.45 * hashToUnit(course, block, STONE_SALT + face.offset);
+      const length = 0.9 + 0.7 * hashToUnit(course, block, STONE_SALT + face.offset);
       const right = Math.min(face.halfLength - 0.06, left + length);
       const bottom = course * COURSE_HEIGHT;
 
