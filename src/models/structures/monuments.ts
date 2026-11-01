@@ -430,7 +430,7 @@ function drumShape(context: MonumentContext, isBroken: boolean): Shape {
 function addColumn(context: MonumentContext, drums: number): void {
   const { random } = context;
 
-  addStone(context, blockShape(context, { depth: 1.36, height: 0.52, width: 1.36 }), PLINTH, WORKED_STONE);
+  addStone(context, hewnBox(random, { depth: 1.36, height: 0.52, width: 1.36 }), PLINTH, WORKED_STONE);
 
   for (let drum = 0; drum < drums; drum += 1) {
     const isTop = drum === drums - 1;
@@ -488,10 +488,6 @@ function hewnBox(random: RandomSource, block: Block): Shape {
       STONE_NOISE.sample(vertex.x * 1.9, vertex.y * 1.9, vertex.z * 1.9 + offset) * wobble,
     ];
   });
-}
-
-function blockShape(context: MonumentContext, block: Block): Shape {
-  return hewnBox(createRandom(context.random.integer(1, 1_000_000)), block);
 }
 
 function addPier(context: MonumentContext, shape: Shape, x: number, blocks: number): void {
@@ -569,8 +565,8 @@ function addArch(context: MonumentContext, form: PieceForm<typeof PlantSpecies.A
     return;
   }
 
-  const pierBlock = blockShape(context, PIER_BLOCK);
-  const voussoir = blockShape(context, VOUSSOIR);
+  const pierBlock = hewnBox(random, PIER_BLOCK);
+  const voussoir = hewnBox(random, VOUSSOIR);
 
   addPier(context, pierBlock, -SPAN, 3);
 
