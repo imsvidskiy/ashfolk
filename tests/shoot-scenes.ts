@@ -8,6 +8,8 @@ const SYSTEM_CHROME = "/Applications/Google Chrome.app/Contents/MacOS/Google Chr
 const GPU_ARGUMENTS = ["--use-angle=metal", "--enable-gpu"];
 const SETTLE_FRAMES = 60;
 const TICKS_PER_SECOND = 10;
+const SLOWEST_TICKS_PER_SECOND = 2.5;
+const MILLISECONDS_PER_SECOND = 1000;
 const SCENE_NAME = /^[a-z0-9-]+$/u;
 
 interface Device {
@@ -83,19 +85,28 @@ async function castPower(page: Page, cast: PowerCast): Promise<void> {
 }
 
 async function runGameSeconds(page: Page, seconds: number): Promise<void> {
+  const ticks = Math.round(seconds * TICKS_PER_SECOND);
+
   await page.evaluate(
-    (ticks) => {
+    ({ count, timeout }) => {
       const { session } = Reflect.get(window, "ashfolk");
-      const lastTick = session.frame.tick + ticks;
+      const lastTick = session.frame.tick + count;
+      const deadline = performance.now() + timeout;
 
       session.send({ isFrozen: true, type: "setTimeFrozen" });
       session.send({ isPaused: false, type: "setPaused" });
 
-      return new Promise<void>((resolve) => {
+      return new Promise<void>((resolve, reject) => {
         function waitForLastTick(): void {
           if (session.frame.tick >= lastTick) {
             session.send({ isPaused: true, type: "setPaused" });
             resolve();
+
+            return;
+          }
+
+          if (performance.now() > deadline) {
+            reject(new Error(`The game stopped at tick ${session.frame.tick} of ${lastTick}: ${session.status.kind}`));
 
             return;
           }
@@ -106,7 +117,7 @@ async function runGameSeconds(page: Page, seconds: number): Promise<void> {
         requestAnimationFrame(waitForLastTick);
       });
     },
-    Math.round(seconds * TICKS_PER_SECOND)
+    { count: ticks, timeout: (ticks / SLOWEST_TICKS_PER_SECOND) * MILLISECONDS_PER_SECOND }
   );
 }
 
