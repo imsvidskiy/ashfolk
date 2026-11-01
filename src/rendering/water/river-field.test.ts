@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { drawnRiverHalfWidth, NO_WATER, packRiverLines, type River, type RiverPoint } from "../../world/water.ts";
 import { WorldGrid } from "../../world/world-grid.ts";
-import { buildRiverField, sampleRiverField } from "./river-field.ts";
+import { buildRiverField, RiverField, sampleRiverField } from "./river-field.ts";
 
 const grid = new WorldGrid({ cellSize: 10, cellsPerSide: 64 });
 const NARROW_WIDTH = 4;
@@ -9,6 +9,9 @@ const WIDE_WIDTH = 20;
 const SPACING = 2.5;
 const EDGE_SLACK = 0.05;
 const SOURCE_REACH = 7.5;
+const POND_START = 100;
+const RIVER_CELL_REACH = 15;
+const CELL_DEPTH = 1;
 
 function pointAt(x: number, z: number, width: number): RiverPoint {
   return { depth: 1, flow: 1, surface: 100, width, x, z };
@@ -122,5 +125,30 @@ describe("buildRiverField", () => {
         expect(sampleRiverField(grid, field, startX + halfWidth + 0.3, -150 + along).edge).toBeLessThan(0);
       }
     }
+  });
+
+  it("keeps a pond from filling the cells of the river that runs into it, but not its own cells", () => {
+    const isPond = (cell: number): boolean => {
+      return grid.cellCenterZ(cell) > POND_START;
+    };
+    const isRiverCell = (cell: number): boolean => {
+      return !isPond(cell) && Math.abs(grid.cellCenterX(cell) - 3) < RIVER_CELL_REACH;
+    };
+    const source = {
+      height: new Float32Array(grid.cellCount),
+      riverStrength: Uint8Array.from({ length: grid.cellCount }, (_, cell) => {
+        return isRiverCell(cell) ? 60 : 0;
+      }),
+      waterSurface: Float32Array.from({ length: grid.cellCount }, (_, cell) => {
+        return isPond(cell) || isRiverCell(cell) ? 1 : NO_WATER;
+      }),
+    };
+    const field = new RiverField(grid, packRiverLines([straightRiver(0, 3, NARROW_WIDTH)]), source);
+
+    expect(field.depthAt(15, 95, CELL_DEPTH)).toBeLessThan(0);
+    expect(field.depthAt(3, 95, CELL_DEPTH)).toBeGreaterThan(0);
+    expect(field.depthAt(15, 125, CELL_DEPTH)).toBe(CELL_DEPTH);
+
+    field.dispose();
   });
 });

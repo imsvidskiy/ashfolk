@@ -4,12 +4,12 @@ import {
   exp,
   Fn,
   float,
-  fwidth,
   If,
   ivec2,
   length,
   max,
   min,
+  mix,
   mx_noise_float,
   select,
   sin,
@@ -30,6 +30,7 @@ import {
 } from "../../world/water.ts";
 import { NEIGHBOR_OFFSETS, type WorldGrid } from "../../world/world-grid.ts";
 import { cellByteTexture } from "../data-textures.ts";
+import { BANK_SINK } from "./shore-field.ts";
 
 const RIVER_FIELD_REACH = 24;
 const NO_RIVER_EDGE = -RIVER_FIELD_REACH;
@@ -37,13 +38,13 @@ const NO_RIVER_EDGE = -RIVER_FIELD_REACH;
 const CHANNELS = 4;
 const BYTE = 255;
 const OFFSET_SCALE = 127.5 / RIVER_FIELD_REACH;
-const ANGLE_STEPS = 254;
-const END_CAP = 255;
+const ANGLE_STEPS = 126;
+const END_CAP = 127;
+const RIVER_CELL_FLAG = 128;
 const HALF_WIDTH_STEP = 0.125;
 const WIDEST_HALF_WIDTH_CODE = 127;
 const STANDING_FLAG = 128;
 const BLEND_SOFTNESS = 1.5;
-const CORNER_FLOOR = 1e-4;
 const TANGENT_REACH = 7.5;
 const DRIED_REACH_CELLS = 2;
 const EDGE_DEPTH_SLOPE = 0.35;
@@ -51,6 +52,9 @@ const DEPTH_AT_CENTER = 0.4;
 const DEPTH_PER_HALF_WIDTH = 0.25;
 const NARROWEST_SCREEN_HALF_WIDTH = 4;
 const NARROWEST_SCREEN_MARGIN = 2.5;
+const FAR_DEPTH_GAIN = 2;
+const FAR_DEPTH_START = 0.2;
+const FAR_DEPTH_FULL = 1.2;
 const EDGE_WOBBLE = 0.45;
 const EDGE_WOBBLE_SCALE = 0.11;
 const MARGIN_AT_NARROWEST = 1.4;
@@ -70,6 +74,7 @@ export interface RiverSample {
   readonly halfWidth: number;
   readonly hasRiver: boolean;
   readonly isNearStanding: boolean;
+  readonly riverCellShare: number;
 }
 
 export interface RiverNode {
@@ -77,6 +82,7 @@ export interface RiverNode {
   readonly halfWidth: Node<"float">;
   readonly hasRiver: Node<"bool">;
   readonly isNearStanding: Node<"bool">;
+  readonly riverCellShare: Node<"float">;
 }
 
 interface Segment {
@@ -237,6 +243,14 @@ function dropDriedRivers(grid: WorldGrid, source: RiverWaterSource, target: Uint
   }
 }
 
+function markRiverCells(grid: WorldGrid, source: RiverWaterSource, target: Uint8Array): void {
+  for (let cell = 0; cell < grid.cellCount; cell += 1) {
+    if (isRiverWater(source, cell)) {
+      target[cell * CHANNELS + 2] += RIVER_CELL_FLAG;
+    }
+  }
+}
+
 export function buildRiverField(
   grid: WorldGrid,
   lines: RiverLines,
@@ -260,6 +274,7 @@ export function buildRiverField(
   }
 
   dropDriedRivers(grid, source, target);
+  markRiverCells(grid, source, target);
   markStandingWater(grid, source, target);
 }
 
@@ -280,16 +295,17 @@ function cornerSample(
 
   const towardX = point.x - (grid.centerX(column) + decodeOffset(field[offset]));
   const towardZ = point.z - (grid.centerZ(row) + decodeOffset(field[offset + 1]));
-  const angle = (field[offset + 2] / ANGLE_STEPS) * Math.PI;
+  const angleCode = field[offset + 2] % RIVER_CELL_FLAG;
+  const angle = (angleCode / ANGLE_STEPS) * Math.PI;
   const across = towardX * Math.sin(angle) - towardZ * Math.cos(angle);
   const along = towardX * Math.cos(angle) + towardZ * Math.sin(angle);
   const distance =
-    field[offset + 2] === END_CAP
+    angleCode === END_CAP
       ? Math.hypot(towardX, towardZ)
       : Math.hypot(across, Math.max(Math.abs(along) - TANGENT_REACH, 0));
   const halfWidth = widthCode * HALF_WIDTH_STEP;
 
-  return { edge: drawnRiverHalfWidth(halfWidth) - distance, halfWidth, weight: share + CORNER_FLOOR };
+  return { edge: drawnRiverHalfWidth(halfWidth) - distance, halfWidth, weight: share };
 }
 
 export function sampleRiverField(grid: WorldGrid, field: Uint8Array, x: number, z: number): RiverSample {
@@ -305,6 +321,9 @@ export function sampleRiverField(grid: WorldGrid, field: Uint8Array, x: number, 
   const isNearStanding = corners.some(([cornerColumn, cornerRow]) => {
     return field[grid.index(cornerColumn, cornerRow) * CHANNELS + 3] >= STANDING_FLAG;
   });
+  const riverCellShare = corners.reduce((sum, [cornerColumn, cornerRow, share]) => {
+    return field[grid.index(cornerColumn, cornerRow) * CHANNELS + 2] >= RIVER_CELL_FLAG ? sum + share : sum;
+  }, 0);
   const samples = corners.flatMap((corner) => {
     const sample = cornerSample(grid, field, corner, { x, z });
 
@@ -312,7 +331,7 @@ export function sampleRiverField(grid: WorldGrid, field: Uint8Array, x: number, 
   });
 
   if (samples.length === 0) {
-    return { edge: NO_RIVER_EDGE, halfWidth: 0, hasRiver: false, isNearStanding };
+    return { edge: NO_RIVER_EDGE, halfWidth: 0, hasRiver: false, isNearStanding, riverCellShare };
   }
 
   const deepest = Math.max(
@@ -333,7 +352,11 @@ export function sampleRiverField(grid: WorldGrid, field: Uint8Array, x: number, 
     total += weight;
   }
 
-  return { edge: edge / total, halfWidth: halfWidth / total, hasRiver: true, isNearStanding };
+  if (total === 0) {
+    return { edge: NO_RIVER_EDGE, halfWidth: 0, hasRiver: true, isNearStanding, riverCellShare };
+  }
+
+  return { edge: edge / total, halfWidth: halfWidth / total, hasRiver: true, isNearStanding, riverCellShare };
 }
 
 function waterDepthWith(sample: RiverSample, cellDepth: number): number {
@@ -341,17 +364,15 @@ function waterDepthWith(sample: RiverSample, cellDepth: number): number {
   const riverDepth = Math.min(sample.edge * EDGE_DEPTH_SLOPE, deepest);
 
   if (sample.isNearStanding) {
-    return Math.max(cellDepth, riverDepth);
+    const standingDepth = cellDepth + (Math.min(cellDepth, 0) - BANK_SINK - cellDepth) * sample.riverCellShare;
+
+    return Math.max(standingDepth, riverDepth);
   }
 
   return sample.hasRiver ? riverDepth : cellDepth;
 }
 
-function wideningFarAway(river: RiverNode, metersPerPixel: Node<"float"> | null): Node<"float"> {
-  if (metersPerPixel === null) {
-    return float(0);
-  }
-
+function wideningFarAway(river: RiverNode, metersPerPixel: Node<"float">): Node<"float"> {
   const drawn = max(river.halfWidth.mul(DRAWN_RIVER_WIDTH_SCALE), NARROWEST_DRAWN_RIVER_HALF_WIDTH);
 
   return max(metersPerPixel.mul(NARROWEST_SCREEN_HALF_WIDTH).sub(drawn), 0);
@@ -361,13 +382,17 @@ function depthFrom(
   river: RiverNode,
   point: Node<"vec2">,
   cellDepth: Node<"float">,
-  widening: Node<"float">
+  metersPerPixel: Node<"float">
 ): Node<"float"> {
+  const widening = wideningFarAway(river, metersPerPixel);
   const wobble = mx_noise_float(vec3(point.mul(EDGE_WOBBLE_SCALE), 6.3)).mul(EDGE_WOBBLE);
   const deepest = river.halfWidth.mul(DEPTH_PER_HALF_WIDTH).add(widening.mul(EDGE_DEPTH_SLOPE)).add(DEPTH_AT_CENTER);
-  const riverDepth = min(river.edge.add(widening).add(wobble).mul(EDGE_DEPTH_SLOPE), deepest);
+  const deepening = smoothstep(FAR_DEPTH_START, FAR_DEPTH_FULL, metersPerPixel).mul(FAR_DEPTH_GAIN).add(1);
+  const riverDepth = min(river.edge.add(widening).add(wobble).mul(EDGE_DEPTH_SLOPE), deepest).mul(deepening);
 
-  return select(river.isNearStanding, max(cellDepth, riverDepth), select(river.hasRiver, riverDepth, cellDepth));
+  const standingDepth = mix(cellDepth, min(cellDepth, 0).sub(BANK_SINK), river.riverCellShare);
+
+  return select(river.isNearStanding, max(standingDepth, riverDepth), select(river.hasRiver, riverDepth, cellDepth));
 }
 
 export class RiverField {
@@ -422,15 +447,23 @@ export class RiverField {
       const center = cell.add(0.5).mul(grid.cellSize).sub(grid.halfSize);
       const nearest = center.add(texel.xy.sub(127.5).div(OFFSET_SCALE));
       const toward = point.sub(nearest);
-      const angle = texel.z.mul(Math.PI / ANGLE_STEPS);
+      const angleCode = texel.z.mod(RIVER_CELL_FLAG);
+      const angle = angleCode.mul(Math.PI / ANGLE_STEPS);
       const across = toward.x.mul(sin(angle)).sub(toward.y.mul(cos(angle)));
       const along = toward.x.mul(cos(angle)).add(toward.y.mul(sin(angle)));
       const lineDistance = length(vec2(across, max(abs(along).sub(TANGENT_REACH), 0)));
-      const distance = select(texel.z.greaterThan(END_CAP - 0.5), length(toward), lineDistance);
+      const distance = select(angleCode.greaterThan(END_CAP - 0.5), length(toward), lineDistance);
       const halfWidth = widthCode.mul(HALF_WIDTH_STEP);
       const edge = max(halfWidth.mul(DRAWN_RIVER_WIDTH_SCALE), NARROWEST_DRAWN_RIVER_HALF_WIDTH).sub(distance);
 
-      return { edge, halfWidth, hasRiver, isStanding, share: select(hasRiver, share.add(CORNER_FLOOR), float(0)) };
+      return {
+        edge,
+        halfWidth,
+        hasRiver,
+        isStanding,
+        riverCellShare: select(texel.z.greaterThanEqual(RIVER_CELL_FLAG), share, float(0)),
+        share: select(hasRiver, share, float(0)),
+      };
     });
 
     const deepest = samples.reduce<Node<"float">>(
@@ -471,13 +504,15 @@ export class RiverField {
       return any.or(sample.hasRiver);
     }, first.hasRiver);
 
-    return { edge: blended.x, halfWidth: blended.y, hasRiver, isNearStanding };
+    const riverCellShare = others.reduce<Node<"float">>((total, sample) => {
+      return total.add(sample.riverCellShare);
+    }, first.riverCellShare);
+
+    return { edge: blended.x, halfWidth: blended.y, hasRiver, isNearStanding, riverCellShare };
   }
 
-  depthNode(point: Node<"vec2">, cellDepth: Node<"float">, shouldWidenFarAway: boolean): Node<"float"> {
-    const river = this.sampleNode(point);
-
-    return depthFrom(river, point, cellDepth, wideningFarAway(river, shouldWidenFarAway ? fwidth(river.edge) : null));
+  depthNode(point: Node<"vec2">, cellDepth: Node<"float">, metersPerPixel: Node<"float">): Node<"float"> {
+    return depthFrom(this.sampleNode(point), point, cellDepth, metersPerPixel);
   }
 
   bedNode(point: Node<"vec2">, cellDepth: Node<"float">, metersPerPixel: Node<"float">): Node<"vec2"> {
@@ -494,7 +529,7 @@ export class RiverField {
     const edge = river.edge.add(widening);
     const sand = smoothstep(margin.negate().sub(MARGIN_SOFTNESS), margin.negate().add(MARGIN_SOFTNESS), edge);
 
-    return vec2(depthFrom(river, point, cellDepth, widening), select(river.hasRiver, sand, float(0)));
+    return vec2(depthFrom(river, point, cellDepth, metersPerPixel), select(river.hasRiver, sand, float(0)));
   }
 
   dispose(): void {

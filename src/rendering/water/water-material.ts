@@ -256,7 +256,9 @@ export function createWaterMaterial(
   const flow = mix(shore.yz, outlet.direction.mul(max(length(shore.yz), OUTLET_FLOW)), outlet.share);
   const ice = smoothstep(THIN_ICE, SOLID_ICE, texture(textures.surface, mapCoordinates).r);
   const cellDepth = shore.x.add(shoreWobble(shore.x, viewDistance));
-  const shoreDepth = mix(textures.rivers.depthNode(positionWorld.xz, cellDepth, true), outlet.depth, outlet.share);
+  const footprint = fwidth(positionWorld.xz);
+  const riverDepth = textures.rivers.depthNode(positionWorld.xz, cellDepth, max(footprint.x, footprint.y));
+  const shoreDepth = mix(riverDepth, outlet.depth, outlet.share);
 
   const isWet = shoreDepth.greaterThan(0);
   const fordBed = textures.fords.marksNode(positionWorld.xz).x;
