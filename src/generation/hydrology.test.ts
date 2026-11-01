@@ -44,6 +44,7 @@ const INLET_REACH = 100;
 const PARALLEL_REACH = 180;
 const SMOOTHED_SPLITS = 4;
 const STEP_TOLERANCE = 0.01;
+const JOIN_TOLERANCE = 0.01;
 const BANK_HEIGHT = 1.6;
 const LEVEE_CREST = 10;
 const LEVEE_RISE = 0.4;
@@ -631,6 +632,20 @@ describe("river network", () => {
           })
         )
       ).toBeLessThanOrEqual(grid.cellSize * Math.SQRT2);
+
+      const junction = rivers
+        .filter((other) => {
+          return other !== river;
+        })
+        .map((other) => {
+          return nearestOnRiver(other, end.x, end.z);
+        })
+        .reduce((nearest, spot) => {
+          return spot.distance < nearest.distance ? spot : nearest;
+        });
+
+      expect(junction.distance).toBeLessThan(JOIN_TOLERANCE);
+      expect(end.surface).toBeCloseTo(junction.point.surface, 4);
 
       for (let index = 1; index < river.points.length; index += 1) {
         const step = Math.hypot(
