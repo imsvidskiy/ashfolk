@@ -21,12 +21,14 @@ import {
 import { type DataTexture, type Node, RGBAFormat } from "three/webgpu";
 import { lookUpCell } from "../../world/terrain-sampling.ts";
 import {
+  DRAWN_RIVER_EDGE_WOBBLE,
   DRAWN_RIVER_WIDTH_SCALE,
   drawnRiverHalfWidth,
   hasWater,
   NARROWEST_DRAWN_RIVER_HALF_WIDTH,
   RIVER_LINE_STRIDE,
   type RiverLines,
+  WIDEST_DRAWN_RIVER_WIDENING,
 } from "../../world/water.ts";
 import { NEIGHBOR_OFFSETS, type WorldGrid } from "../../world/world-grid.ts";
 import { cellByteTexture } from "../data-textures.ts";
@@ -55,7 +57,6 @@ const NARROWEST_SCREEN_MARGIN = 2.5;
 const FAR_DEPTH_GAIN = 2;
 const FAR_DEPTH_START = 0.2;
 const FAR_DEPTH_FULL = 1.2;
-const EDGE_WOBBLE = 0.45;
 const EDGE_WOBBLE_SCALE = 0.11;
 const MARGIN_AT_NARROWEST = 1.4;
 const MARGIN_PER_HALF_WIDTH = 0.12;
@@ -372,10 +373,14 @@ function waterDepthWith(sample: RiverSample, cellDepth: number): number {
   return sample.hasRiver ? riverDepth : cellDepth;
 }
 
-function wideningFarAway(river: RiverNode, metersPerPixel: Node<"float">): Node<"float"> {
-  const drawn = max(river.halfWidth.mul(DRAWN_RIVER_WIDTH_SCALE), NARROWEST_DRAWN_RIVER_HALF_WIDTH);
+function drawnHalfWidthNode(halfWidth: Node<"float">): Node<"float"> {
+  const widening = min(halfWidth.mul(DRAWN_RIVER_WIDTH_SCALE - 1), WIDEST_DRAWN_RIVER_WIDENING);
 
-  return max(metersPerPixel.mul(NARROWEST_SCREEN_HALF_WIDTH).sub(drawn), 0);
+  return max(halfWidth.add(widening), NARROWEST_DRAWN_RIVER_HALF_WIDTH);
+}
+
+function wideningFarAway(river: RiverNode, metersPerPixel: Node<"float">): Node<"float"> {
+  return max(metersPerPixel.mul(NARROWEST_SCREEN_HALF_WIDTH).sub(drawnHalfWidthNode(river.halfWidth)), 0);
 }
 
 function depthFrom(
@@ -385,7 +390,7 @@ function depthFrom(
   metersPerPixel: Node<"float">
 ): Node<"float"> {
   const widening = wideningFarAway(river, metersPerPixel);
-  const wobble = mx_noise_float(vec3(point.mul(EDGE_WOBBLE_SCALE), 6.3)).mul(EDGE_WOBBLE);
+  const wobble = mx_noise_float(vec3(point.mul(EDGE_WOBBLE_SCALE), 6.3)).mul(DRAWN_RIVER_EDGE_WOBBLE);
   const deepest = river.halfWidth.mul(DEPTH_PER_HALF_WIDTH).add(widening.mul(EDGE_DEPTH_SLOPE)).add(DEPTH_AT_CENTER);
   const deepening = smoothstep(FAR_DEPTH_START, FAR_DEPTH_FULL, metersPerPixel).mul(FAR_DEPTH_GAIN).add(1);
   const riverDepth = min(river.edge.add(widening).add(wobble).mul(EDGE_DEPTH_SLOPE), deepest).mul(deepening);
@@ -454,7 +459,7 @@ export class RiverField {
       const lineDistance = length(vec2(across, max(abs(along).sub(TANGENT_REACH), 0)));
       const distance = select(angleCode.greaterThan(END_CAP - 0.5), length(toward), lineDistance);
       const halfWidth = widthCode.mul(HALF_WIDTH_STEP);
-      const edge = max(halfWidth.mul(DRAWN_RIVER_WIDTH_SCALE), NARROWEST_DRAWN_RIVER_HALF_WIDTH).sub(distance);
+      const edge = drawnHalfWidthNode(halfWidth).sub(distance);
 
       return {
         edge,

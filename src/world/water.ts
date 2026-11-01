@@ -6,7 +6,9 @@ export const POND_SHORE_SLOPE = 0.3;
 
 export const RIVER_LINE_STRIDE = 3;
 export const DRAWN_RIVER_WIDTH_SCALE = 1.2;
+export const WIDEST_DRAWN_RIVER_WIDENING = 1;
 export const NARROWEST_DRAWN_RIVER_HALF_WIDTH = 2.6;
+export const DRAWN_RIVER_EDGE_WOBBLE = 0.45;
 
 export const SPRING_KINDS = ["pond", "cave"] as const;
 
@@ -132,7 +134,9 @@ export interface MirroredWater extends Omit<WaterFeatures, "rivers"> {
 }
 
 export function drawnRiverHalfWidth(halfWidth: number): number {
-  return Math.max(halfWidth * DRAWN_RIVER_WIDTH_SCALE, NARROWEST_DRAWN_RIVER_HALF_WIDTH);
+  const widening = Math.min(halfWidth * (DRAWN_RIVER_WIDTH_SCALE - 1), WIDEST_DRAWN_RIVER_WIDENING);
+
+  return Math.max(halfWidth + widening, NARROWEST_DRAWN_RIVER_HALF_WIDTH);
 }
 
 export function packRiverLines(rivers: readonly River[]): RiverLines {

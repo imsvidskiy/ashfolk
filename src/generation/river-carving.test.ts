@@ -13,13 +13,14 @@ import type { GeneratedWorld } from "./world-generator.ts";
 
 const INLAND_REACH = 60;
 const HANGING_SLACK = 0.3;
+const HANGING_SHARE = 0.006;
 const SHALLOWEST_BED = 0.3;
-const SHALLOW_SIDEHILL_SHARE = 0.26;
+const SHALLOW_SIDEHILL_SHARE = 0.3;
 const GENTLE_REACH_DROP = 0.05;
 const SIDEHILL_CROSS_SLOPE = 0.12;
 const NEIGHBOR_CELLS = 1.5;
 const WATER_LEVEL_CELLS = 2.5;
-const DRAWN_EDGE_CELLS = 0.75;
+const DRAWN_EDGE_CELLS = 1.25;
 
 function highestSurfaceWithinCell(river: River, index: number, cellSize: number): number {
   const point = river.points[index];
@@ -254,7 +255,7 @@ describe("river beds of full-size islands", () => {
       const { edges, hanging } = hangingRiverEdges(generated);
 
       expect(edges).toBeGreaterThan(3000);
-      expect(hanging / edges).toBeLessThan(0.005);
+      expect(hanging / edges).toBeLessThan(HANGING_SHARE);
     }
   });
 

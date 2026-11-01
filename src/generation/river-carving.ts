@@ -1,6 +1,8 @@
-import { clamp, saturate } from "../shared/math.ts";
+import { clamp, lerp, saturate, smoothstep } from "../shared/math.ts";
 import { isOnIsland } from "../world/coast.ts";
+import { CELL_STAND_INSET } from "../world/footing.ts";
 import {
+  DRAWN_RIVER_EDGE_WOBBLE,
   drawnRiverHalfWidth,
   hasWater,
   NO_WATER,
@@ -25,7 +27,10 @@ const MINIMUM_BANK_WIDTH = 6;
 const SHALLOWEST_CHANNEL = 0.6;
 const DESCENT_PASSES = 8;
 const LIFT_ALLOWANCE = 0.3;
-const FLOOR_CELLS = 0.8;
+const FLOOR_CELLS = 1.2;
+const DRAWN_EDGE_SLACK = 0.75;
+const RIM_DEPTH = 0.12;
+const RIM_EASING = 4;
 const WALL_SLOPE_LIFT = 0.2;
 const GENTLEST_WALL = 0.35;
 const STEEPEST_WALL = 0.75;
@@ -77,6 +82,8 @@ interface ChannelKind {
 }
 
 interface CellShape {
+  readonly acrossX: number;
+  readonly acrossZ: number;
   readonly floorSurface: number;
   readonly isPastCoast: boolean;
   readonly isRiver: boolean;
@@ -92,6 +99,16 @@ export function bankWidthOf(point: RiverPoint): number {
   return Math.max(MINIMUM_BANK_WIDTH, point.width);
 }
 
+function drawnReach(halfWidth: number): number {
+  return drawnRiverHalfWidth(halfWidth) + DRAWN_RIVER_EDGE_WOBBLE + DRAWN_EDGE_SLACK;
+}
+
+function riverWetReach(grid: WorldGrid, halfWidth: number, shape: CellShape): number {
+  const standingReach = (grid.cellSize / 2 - CELL_STAND_INSET) * (Math.abs(shape.acrossX) + Math.abs(shape.acrossZ));
+
+  return drawnReach(halfWidth) + standingReach;
+}
+
 function channelBed(distanceFromCenter: number, point: RiverPoint): number {
   const halfWidth = point.width / 2;
 
@@ -102,6 +119,14 @@ function channelBed(distanceFromCenter: number, point: RiverPoint): number {
   const across = distanceFromCenter / halfWidth;
 
   return point.surface - point.depth * (1 - across * across * 0.7);
+}
+
+function riverBed(distanceFromCenter: number, point: RiverPoint): number {
+  const deep = channelBed(distanceFromCenter, point);
+  const drawnEdge = drawnRiverHalfWidth(point.width / 2);
+  const rim = smoothstep(drawnEdge, drawnEdge + RIM_EASING, distanceFromCenter);
+
+  return lerp(deep, Math.max(deep, point.surface - RIM_DEPTH), rim);
 }
 
 function easedCut(cut: number): number {
@@ -258,7 +283,9 @@ function carveCell(
   shape: CellShape
 ): void {
   const halfWidth = sampled.width / 2;
-  const wetReach = Math.max(halfWidth, targets.grid.cellSize * DIAGONAL_REACH);
+  const wetReach = shape.isRiver
+    ? riverWetReach(targets.grid, halfWidth, shape)
+    : Math.max(halfWidth, targets.grid.cellSize * DIAGONAL_REACH);
   const channelReach = Math.max(halfWidth + bankWidthOf(sampled), wetReach);
 
   if (distanceFromCenter > halfWidth + WALL_REACH + WALL_FADE) {
@@ -277,7 +304,7 @@ function carveCell(
     (distanceFromCenter <= channelReach && uncarvedHeight < point.surface - SHALLOWEST_WATER);
 
   if (!isUnderWater) {
-    const floorReach = drawnRiverHalfWidth(halfWidth) + targets.grid.cellSize * FLOOR_CELLS;
+    const floorReach = drawnReach(halfWidth) + targets.grid.cellSize * FLOOR_CELLS;
     const wall = wallHeight(distanceFromCenter, floorReach + WALL_FOOT, point, shape.wallSlope, uncarvedHeight);
     const floor = Math.max(point.surface, shape.floorSurface) + BANK_FREEBOARD;
 
@@ -291,7 +318,7 @@ function carveCell(
   }
 
   const bed = shape.isRiver
-    ? channelBed(distanceFromCenter, point)
+    ? riverBed(distanceFromCenter, point)
     : Math.min(channelBed(distanceFromCenter, point), point.surface - point.depth * BANK_DEPTH);
 
   targets.heights[cell] = Math.min(targets.heights[cell], bed);
@@ -366,8 +393,11 @@ function carveChannel(
         (end.z - start.z) * (targets.grid.cellCenterX(cell) - start.x) >
       0;
     const wallSlope = walls === null ? GENTLEST_WALL : wallSlopeAt(isLeft ? walls.left : walls.right, segment, along);
+    const distance = Math.max(distances[cell], 1e-6);
 
     carveCell(targets, cell, distances[cell], point, {
+      acrossX: (targets.grid.cellCenterX(cell) - point.x) / distance,
+      acrossZ: (targets.grid.cellCenterZ(cell) - point.z) / distance,
       floorSurface: highestSurfaceAlong(points, segment, point, targets.grid.cellSize / 2),
       isPastCoast: segment === channel.coastSegment,
       isRiver: channel.isRiver,

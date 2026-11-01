@@ -1,9 +1,18 @@
 import { beforeAll, describe, expect, it } from "vitest";
 import { lerp, saturate } from "../shared/math.ts";
 import { isOnIsland } from "../world/coast.ts";
+import { CELL_STAND_INSET } from "../world/footing.ts";
 import { sampleHeight } from "../world/terrain-sampling.ts";
 import { landEverywhere, shapeTerrain } from "../world/testing/terrain-fixtures.ts";
-import { drawnRiverHalfWidth, hasWater, type Lake, NO_WATER, type River, type RiverPoint } from "../world/water.ts";
+import {
+  DRAWN_RIVER_EDGE_WOBBLE,
+  drawnRiverHalfWidth,
+  hasWater,
+  type Lake,
+  NO_WATER,
+  type River,
+  type RiverPoint,
+} from "../world/water.ts";
 import { WorldGrid } from "../world/world-grid.ts";
 import { DEFAULT_HYDROLOGY, type HydrologyOptions, NO_CELL } from "./drainage.ts";
 import { computeHydrology } from "./hydrology.ts";
@@ -16,7 +25,8 @@ const VALLEY_FLOOR_HALF_WIDTH = 10;
 const GENTLE_WALLS = 0.6;
 const STEEP_WALLS = 2;
 const BANK_FREEBOARD = 0.2;
-const DRAWN_EDGE_CELLS = 0.75;
+const DRAWN_EDGE_CELLS = 1;
+const STANDING_SAMPLES = 5;
 const DROP_WITHIN_CELL = 0.35;
 const ALONG_SLOPE = 0.05;
 const DEEPEST_BANK_LOWERING = 10;
@@ -38,6 +48,7 @@ const BANK_HEIGHT = 1.6;
 const LEVEE_CREST = 10;
 const LEVEE_RISE = 0.4;
 const LEVEE_FALL = 0.25;
+const OUTER_BANK_CUT = 1.25;
 const SHELF_HEIGHT = 5;
 const SHELF_BASIN_OFFSET = 40;
 const SHELF_BASIN_DEPTH = 15;
@@ -219,6 +230,22 @@ function distanceToWaterfall(generated: GeneratedWorld, grid: WorldGrid, cell: n
   );
 }
 
+function isUnderDrawnRiver(grid: WorldGrid, rivers: readonly River[], cell: number): boolean {
+  const reach = grid.cellSize / 2 - CELL_STAND_INSET;
+
+  return Array.from({ length: STANDING_SAMPLES * STANDING_SAMPLES }, (_, sample) => {
+    const x = grid.cellCenterX(cell) + reach * ((2 * (sample % STANDING_SAMPLES)) / (STANDING_SAMPLES - 1) - 1);
+    const z =
+      grid.cellCenterZ(cell) + reach * ((2 * Math.floor(sample / STANDING_SAMPLES)) / (STANDING_SAMPLES - 1) - 1);
+
+    return rivers.some((river) => {
+      const spot = nearestOnRiver(river, x, z);
+
+      return spot.distance < drawnRiverHalfWidth(spot.point.width / 2) + DRAWN_RIVER_EDGE_WOBBLE;
+    });
+  }).some(Boolean);
+}
+
 function leavesLake(lake: Lake, point: RiverPoint): boolean {
   const reach = Math.sqrt(lake.cellCount) * OUTLET_REACH_PER_CELL;
 
@@ -259,6 +286,22 @@ describe("river carving", () => {
     expect(Math.max(...rises)).toBeLessThan(BANK_FREEBOARD + DROP_WITHIN_CELL);
   });
 
+  it("keeps the ground people stand on in every dry cell clear of the drawn river", () => {
+    for (const wallSlope of [GENTLE_WALLS, STEEP_WALLS]) {
+      const { carved, grid, result } = carveValley(wallSlope);
+
+      const crowded = Array.from({ length: grid.cellCount }, (_, cell) => {
+        return cell;
+      }).filter((cell) => {
+        return (
+          !hasWater(result.waterSurface[cell], carved[cell]) && isUnderDrawnRiver(grid, result.features.rivers, cell)
+        );
+      });
+
+      expect(crowded).toEqual([]);
+    }
+  });
+
   it("rises steadily from the river to the untouched valley walls", () => {
     const { carved, grid, uncarved } = carveValley(GENTLE_WALLS);
 
@@ -282,13 +325,17 @@ describe("river carving", () => {
     }
   });
 
-  it("lowers steep valley walls by at most ten meters beside the river and twelve at a pond, and never notches them", () => {
+  it("lowers dry valley walls by at most ten meters beside the river and twelve at a pond, and never notches them", () => {
     const { carved, grid, result, uncarved } = carveValley(STEEP_WALLS);
 
     let deepestWallCut = 0;
     let deepestShoreCut = 0;
 
     for (let cell = 0; cell < grid.cellCount; cell += 1) {
+      if (hasWater(result.waterSurface[cell], carved[cell])) {
+        continue;
+      }
+
       const isPondShore = result.features.springs.some((spring) => {
         return (
           spring.kind === "pond" &&
@@ -493,7 +540,7 @@ describe("river sidehills", () => {
     });
 
     expect(outerCuts.length).toBeGreaterThan(20);
-    expect(Math.max(...outerCuts)).toBeLessThan(1);
+    expect(Math.max(...outerCuts)).toBeLessThan(OUTER_BANK_CUT);
   });
 
   it("doesn't sink a river toward the bed of a lake beside it", () => {
