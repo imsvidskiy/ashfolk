@@ -8,6 +8,7 @@ import { hasWater } from "../world/water.ts";
 import { NEIGHBOR_OFFSETS, ORTHOGONAL_STEPS, type WorldGrid } from "../world/world-grid.ts";
 import { boxBlur } from "./box-blur.ts";
 import type { ClimateProfile } from "./island-layout.ts";
+import { isRiverWater } from "./ponds.ts";
 import { type IslandPoint, islandPointAt } from "./relief.ts";
 import {
   findPools,
@@ -560,12 +561,11 @@ function isNearStillWater(inputs: WetlandInputs, column: number, row: number): b
 }
 
 function isRiverBed(inputs: WetlandInputs, result: ClimateResult, riverBanks: Uint8Array, cell: number): boolean {
-  const { grid, heights, riverStrength, waterSurface } = inputs;
+  const { grid } = inputs;
 
-  const isRiverWater = riverStrength[cell] > 0 && hasWater(waterSurface[cell], heights[cell]);
   const isSandBank = riverBanks[cell] === 1 && result.biome[cell] === Biome.Beach;
 
-  return (isRiverWater || isSandBank) && !isNearStillWater(inputs, grid.columnOf(cell), grid.rowOf(cell));
+  return (isRiverWater(inputs, cell) || isSandBank) && !isNearStillWater(inputs, grid.columnOf(cell), grid.rowOf(cell));
 }
 
 function commonGroundAround(grid: WorldGrid, ground: Uint8Array, isOpen: Uint8Array, cell: number): number {
@@ -597,11 +597,10 @@ function commonGroundAround(grid: WorldGrid, ground: Uint8Array, isOpen: Uint8Ar
 }
 
 function sandMouths(inputs: WetlandInputs, result: ClimateResult): void {
-  const { grid, heights, riverStrength, waterSurface } = inputs;
+  const { grid } = inputs;
 
   for (let cell = 0; cell < grid.cellCount; cell += 1) {
-    const isRockyRiverBed =
-      riverStrength[cell] > 0 && hasWater(waterSurface[cell], heights[cell]) && result.ground[cell] === Ground.Rock;
+    const isRockyRiverBed = isRiverWater(inputs, cell) && result.ground[cell] === Ground.Rock;
 
     if (isRockyRiverBed && isNearStillWater(inputs, grid.columnOf(cell), grid.rowOf(cell))) {
       result.ground[cell] = Ground.Sand;

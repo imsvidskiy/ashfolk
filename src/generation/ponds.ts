@@ -72,7 +72,10 @@ export function pondCut(grid: WorldGrid, heights: Float32Array, pond: Spring): n
   return cut;
 }
 
-export function isRiverWater(targets: PondTargets, cell: number): boolean {
+export function isRiverWater(
+  targets: Pick<PondTargets, "heights" | "riverStrength" | "waterSurface">,
+  cell: number
+): boolean {
   return targets.riverStrength[cell] > 0 && hasWater(targets.waterSurface[cell], targets.heights[cell]);
 }
 
