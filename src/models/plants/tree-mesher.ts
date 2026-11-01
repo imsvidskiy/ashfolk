@@ -718,10 +718,11 @@ function addLowCrown(builder: MeshBuilder, structure: TreeStructure, look: TreeL
     const { bottom, center, radius, top } = crown;
 
     const sides = CONE_SEGMENTS[level];
-    const widening = silhouetteWidth(CONE_SEGMENTS.low) / silhouetteWidth(sides);
     const style = foliageStyle(structure, look, 0, new Vector3(0, (top + bottom) / 2, 0));
 
     if (level === "far") {
+      const widening = silhouetteWidth(CONE_SEGMENTS.low) / silhouetteWidth(sides);
+
       builder.add(cone(radius * widening, top - bottom, sides), {
         style,
         transform: transformOf({ position: [center[0], bottom, center[2]] }),
