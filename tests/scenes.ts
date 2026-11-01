@@ -88,6 +88,12 @@ export const SCENES: readonly Scene[] = [
     query: "seed=7&shape=round&quality=high&paused=1&hours=11&camera=185,1348,14,0.35,0.6",
   },
   {
+    name: "models-people-walk",
+    query: "seed=7&shape=round&quality=high&paused=1&hours=11&camera=1473,1315,16,0.45,0.3",
+    seconds: 90,
+    speed: 16,
+  },
+  {
     name: "models-camp-buildings",
     query: "seed=7&shape=round&quality=high&paused=1&hours=11&camera=1470,1320,30,0.55,0.3",
     season: 1.5,
@@ -96,4 +102,19 @@ export const SCENES: readonly Scene[] = [
   },
   { name: "models-mammoths", query: "seed=7&shape=round&quality=high&paused=1&hours=11&camera=2100,-45,22,0.3,0.4" },
   { name: "models-dolmen", query: "seed=7&shape=round&quality=high&paused=1&hours=11&camera=-271,1162,18,0.35,0.6" },
+  {
+    name: "models-stone-head",
+    query: "seed=7&shape=round&quality=high&paused=1&hours=11&camera=-132,2336,22,0.3,0.6",
+  },
+  {
+    name: "models-pines-side",
+    query: "seed=7&shape=round&quality=high&paused=1&hours=11&camera=-50,-1920,16,0.3,0.4",
+  },
+  { name: "models-wolves", query: "seed=7&shape=round&quality=high&paused=1&hours=11&camera=-2107,640,22,0.7,0.4" },
+  {
+    cast: { parameters: { herdSize: 6 }, powerId: "ibex", x: -768.8, z: -580 },
+    name: "models-ibex",
+    query: "seed=7&shape=round&quality=high&hours=11&camera=-768.8,-580,24,0.5,0.4",
+    seconds: 3,
+  },
 ];
