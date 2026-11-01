@@ -8,6 +8,6 @@ export interface AnimalDetail extends DetailSteps {
 
 export const ANIMAL_DETAILS: Readonly<Record<AnimalDetailLevel, AnimalDetail>> = {
   far: { curveSteps: 1, hasSmallParts: false, segments: 4 },
-  high: { curveSteps: 2, hasSmallParts: true, segments: 10 },
-  low: { curveSteps: 1, hasSmallParts: true, segments: 6 },
+  high: { curveSteps: 1, hasSmallParts: true, segments: 8 },
+  low: { curveSteps: 1, hasSmallParts: true, segments: 5 },
 };
