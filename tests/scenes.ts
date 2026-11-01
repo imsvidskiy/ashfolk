@@ -79,6 +79,22 @@ export const SCENES: readonly Scene[] = [
     query: "seed=7&shape=round&quality=high&paused=1&hours=11&camera=-1676,-2136,110,0.5,2.36",
   },
   {
+    name: "ford-steep-reach",
+    query: "seed=7&shape=round&quality=high&paused=1&hours=11&camera=-930,-2445,35,0.6,3.17",
+  },
+  {
+    name: "ford-calm-reach",
+    query: "seed=7&shape=round&quality=high&paused=1&hours=11&camera=-1280,2007,35,0.45,2.71",
+  },
+  {
+    name: "ford-stones-close",
+    query: "seed=7&shape=round&quality=high&paused=1&hours=11&camera=-1280,2007,12,0.6,2.71",
+  },
+  {
+    name: "ford-wide-shallows",
+    query: "seed=10&shape=round&quality=high&paused=1&hours=11&camera=-1355,-1496,45,0.45,0.64",
+  },
+  {
     name: "river-pool-step",
     query: "seed=7&shape=round&quality=high&paused=1&hours=11&camera=-416,-2716,140,0.5,2.2",
   },
