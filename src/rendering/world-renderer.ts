@@ -202,6 +202,7 @@ export class WorldRenderer {
       islandHalfSize: mirror.grid.halfSize,
       shadowMapSize: quality.shadowMapSize,
     });
+    this.#water.look.shadowMatrix.value = this.#atmosphere.sun.shadow.matrix;
 
     this.scene.add(
       this.#terrain.group,

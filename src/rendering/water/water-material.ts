@@ -35,8 +35,16 @@ import {
   uniform,
   vec2,
   vec3,
+  vec4,
 } from "three/tsl";
-import { Color, MeshPhysicalNodeMaterial, type MeshStandardNodeMaterial, type Node, Vector2 } from "three/webgpu";
+import {
+  Color,
+  Matrix4,
+  MeshPhysicalNodeMaterial,
+  type MeshStandardNodeMaterial,
+  type Node,
+  Vector2,
+} from "three/webgpu";
 import type { WorldGrid } from "../../world/world-grid.ts";
 import { unitNoise3 } from "../node-helpers.ts";
 import { mapCoordinatesNode, sampleCellsNode } from "../terrain/height-sampling.ts";
@@ -120,6 +128,7 @@ const FRESNEL_WAVE_SHARE = 0.3;
 const BRIGHTEST_SKY = 0.6;
 const SHALLOW_OPACITY = 0.45;
 const DEEP_OPACITY = 0.96;
+const SHADOW_EDGE_START = 0.36;
 const ICE_COLOR = vec3(0.78, 0.86, 0.9);
 const THIN_ICE = 0.15;
 const SOLID_ICE = 0.5;
@@ -322,6 +331,18 @@ function foamAt(surface: WaterSurface): Node<"float"> {
     .mul(float(1).sub(ice));
 }
 
+function shadowFadedAtEdge(look: WaterLook): (...shadows: Node<"float">[]) => Node<"float"> {
+  const coordinate = look.shadowMatrix.mul(vec4(positionWorld, 1)).xy;
+  const offCenter = max(abs(coordinate.x.sub(0.5)), abs(coordinate.y.sub(0.5)));
+  const inside = smoothstep(0.5, SHADOW_EDGE_START, offCenter);
+
+  return (...shadows) => {
+    const [shadow = float(1)] = shadows;
+
+    return shadow.mul(inside).add(float(1).sub(inside));
+  };
+}
+
 function shadeWater(look: WaterLook, surface: WaterSurface): WaterShading {
   const { depth, flowSpeed, ice, lines, normal, shelter, viewDirection } = surface;
 
@@ -510,6 +531,7 @@ export function createWaterMaterial(
   material.opacityNode = shading.opacity.mul(smoothstep(0, shoreEdge, shoreDepth));
   material.roughnessNode = shading.roughness;
   material.specularIntensityNode = shading.specularIntensity;
+  material.receivedShadowNode = shadowFadedAtEdge(look);
 
   return material;
 }
@@ -519,6 +541,7 @@ export class WaterLook {
   readonly horizonColor = uniform(new Color(0xcf_e2_f0));
   readonly precipitation = uniform(0);
   readonly rainfall = uniform(0);
+  readonly shadowMatrix = uniform(new Matrix4());
   readonly wind = uniform(new Vector2(1, 0));
   readonly windTravel = uniform(new Vector2());
   readonly zenithColor = uniform(new Color(0x4c_8c_d6));
