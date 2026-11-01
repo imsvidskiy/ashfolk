@@ -1,6 +1,6 @@
 import { FULL_TURN } from "../../shared/math.ts";
 import { MaterialSlot, type MaterialSlotIndex } from "../materials.ts";
-import type { VertexStyle } from "../mesh/mesh-builder.ts";
+import type { SurfacePoint, VertexStyle } from "../mesh/mesh-builder.ts";
 import { facetShape, type Shape, transformShape } from "../mesh/shape.ts";
 import { type Triple, transformOf } from "../mesh/transforms.ts";
 import { chiseledStone, STONE_NOISE } from "../stones.ts";
@@ -21,8 +21,8 @@ interface OreChunk {
   readonly squash: Triple;
 }
 
-function isStreak(point: Triple, richness: number): boolean {
-  const [x, y, z] = point;
+function isStreak(point: SurfacePoint, richness: number): boolean {
+  const { x, y, z } = point.position;
 
   const band = STONE_NOISE.sample(
     x * STREAK_FREQUENCY,
@@ -38,7 +38,7 @@ export function addStreakedRock(context: StructureContext, shape: Shape, look: O
     style: {
       ...style,
       slot: (point) => {
-        return isStreak(point.position.toArray(), look.richness) ? look.ore : MaterialSlot.Stone;
+        return isStreak(point, look.richness) ? look.ore : MaterialSlot.Stone;
       },
     },
   });

@@ -45,7 +45,9 @@ function sampledPeople(): Float32Array[] {
 
   for (const age of SAMPLED_AGES) {
     for (let index = 0; index < SAMPLED_SEEDS; index += 1) {
-      sampled.push(person(age, (index + 0.5) / SAMPLED_SEEDS, false), person(age, (index + 0.5) / SAMPLED_SEEDS, true));
+      const seed = (index + 0.5) / SAMPLED_SEEDS;
+
+      sampled.push(person(age, seed, false), person(age, seed, true));
     }
   }
 
@@ -83,6 +85,7 @@ describe("agent bodies", () => {
       const box = personBody(people, 0);
       const appearance = appearanceOf(people);
       const [body, ...worn] = appearanceParts(appearance);
+      const scales = humanBoneScales(appearance.body);
       const context: HumanClipContext = {
         ageGroup: appearance.ageGroup,
         carried: "nothing",
@@ -95,7 +98,7 @@ describe("agent bodies", () => {
           const label = `${people[PersonField.Age]} ${people[PersonField.AppearanceSeed]} ${clip} ${phase}`;
 
           applyHumanClip(pose, clip, phase, context);
-          poser.pose(pose, humanBoneScales(appearance.body));
+          poser.pose(pose, scales);
 
           expect(posedMesh(parts[humanPartIndex(body)], poser).bounds.maximum[1], label).toBeLessThan(
             box.height + HEAD_ROOM

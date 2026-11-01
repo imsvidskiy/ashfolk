@@ -94,14 +94,13 @@ export interface TreeLook {
 export const BROADLEAF_LOOK: TreeLook = { bark: MaterialSlot.Bark, foliage: MaterialSlot.Leaf, hasBarkMarks: false };
 
 interface SkirtDetail {
-  readonly hasRoundedUnderside: boolean;
   readonly segments: number;
   readonly teeth: number;
 }
 
 const SKIRT_DETAILS: Readonly<Record<NearLevel, SkirtDetail>> = {
-  high: { hasRoundedUnderside: false, segments: 10, teeth: 5 },
-  medium: { hasRoundedUnderside: false, segments: 8, teeth: 4 },
+  high: { segments: 10, teeth: 5 },
+  medium: { segments: 8, teeth: 4 },
 };
 
 interface MergedBlob {
@@ -369,11 +368,6 @@ function skirtShape(skirt: FoliageSkirt, detail: SkirtDetail, isCovered: boolean
   ];
 
   const rounded = toothedLoft([hollow, underside, ...upperSide], skirt, detail);
-
-  if (detail.hasRoundedUnderside) {
-    return rounded;
-  }
-
   const plain = toothedLoft([hollow, ...upperSide], skirt, detail);
   const normals = new Float32Array(plain.normals);
   const rimInRounded = (HOLLOW_VERTICES + detail.segments) * 3;
