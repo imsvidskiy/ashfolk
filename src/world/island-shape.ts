@@ -17,15 +17,15 @@ export interface IslandShape {
   readonly kind: IslandShapeKind;
 }
 
-function squareDistance(x: number, z: number): number {
-  return 1 - Math.max(Math.abs(x), Math.abs(z));
-}
-
 const SQUARE_SHAPE: IslandShape = {
   coastDistanceAt: squareDistance,
   inlandDistanceAt: squareDistance,
   kind: "square",
 };
+
+function squareDistance(x: number, z: number): number {
+  return 1 - Math.max(Math.abs(x), Math.abs(z));
+}
 
 function broadReach(noise: NoiseSampler, directionX: number, directionZ: number): number {
   const lobes = noise.fractal(directionX * 1.3 + 4.1, directionZ * 1.3 - 2.7, { octaves: 2 });
