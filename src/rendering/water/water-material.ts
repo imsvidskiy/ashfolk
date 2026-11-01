@@ -3,12 +3,15 @@ import {
   attribute,
   cameraPosition,
   clamp,
+  cos,
   distance,
   dot,
   Fn,
   float,
+  floor,
   fract,
   fwidth,
+  hash,
   If,
   ivec2,
   length,
@@ -26,6 +29,7 @@ import {
   textureLoad,
   time,
   transformNormalToView,
+  uint,
   uniform,
   vec2,
   vec3,
@@ -56,15 +60,33 @@ const FLOW_TRAVEL = 5;
 const COARSE_LIFT = 0.4;
 const COARSE_REACH_MARGIN = 2;
 const STILL_FLOW = 0.01;
-const STILL_LINE_WIDTH = 0.25;
 const RIVER_LINE_WIDTH = 0.4;
 const RAPIDS_LINE_WIDTH = 0.8;
+const LINE_PIXELS = 5;
+const LINE_FLATTEST = 0.012;
 const LINE_FAR = 800;
 const LINE_NEAR = 400;
 const LINE_SHALLOWEST = 0.35;
-const LINE_FRONT_START = 0;
 const LINE_FRONT_END = 0.6;
-const STILL_LINE_TINT = 0.07;
+const MARK_SPACING = 20;
+const MARK_SHARE = 0.5;
+const MARK_RADIUS = 5;
+const MARK_WIDTH = 0.25;
+const MARK_ARC = 0.7;
+const MARK_TURN = 0.5;
+const MARK_SECONDS = 9;
+const MARK_TRAVEL = 1.5;
+const MARK_FAR = 450;
+const MARK_NEAR = 200;
+const MARK_CELL_OFFSET = 32_768;
+const MARK_CELL_ROW = 65_536;
+const MARK_SALT_ACROSS = 0x5b_d1_e9_95;
+const MARK_SALT_ALONG = 0x27_d4_eb_2f;
+const MARK_SALT_PHASE = 0x16_56_67_b1;
+const MARK_SALT_SHOWN = 0x85_eb_ca_6b;
+const MARK_SALT_SIZE = 0xc2_b2_ae_35;
+const MARK_SALT_TURN = 0x9e_37_79_b9;
+const STILL_LINE_TINT = 0.08;
 const LINE_TINT = 0.1;
 const RAPIDS_LINE_TINT = 0.45;
 const RAPIDS_TINT = 0.05;
@@ -169,11 +191,50 @@ function rippleLine(
   const steepness = max(length(rise), 0.0001);
 
   const reach = abs(heights.x).div(steepness);
-  const front = smoothstep(LINE_FRONT_START, LINE_FRONT_END, dot(rise, facing).div(steepness));
+  const front = smoothstep(0, LINE_FRONT_END, dot(rise, facing).div(steepness));
+  const taperedWidth = width.mul(front);
 
   return float(1)
-    .sub(smoothstep(width, width.add(pixel), reach))
-    .mul(front);
+    .sub(smoothstep(taperedWidth, taperedWidth.add(pixel), reach))
+    .mul(front)
+    .mul(smoothstep(LINE_FLATTEST, LINE_FLATTEST * 2, steepness));
+}
+
+function windMark(point: Node<"vec2">, wind: Node<"vec2">, pixel: Node<"float">): Node<"float"> {
+  const spot = point.div(MARK_SPACING);
+  const cell = floor(spot);
+
+  const key = uint(cell.x.add(MARK_CELL_OFFSET))
+    .mul(MARK_CELL_ROW)
+    .add(uint(cell.y.add(MARK_CELL_OFFSET)));
+  const tip = vec2(hash(key.bitXor(MARK_SALT_ACROSS)), hash(key.bitXor(MARK_SALT_ALONG)))
+    .mul(0.4)
+    .add(0.3);
+  const age = fract(time.div(MARK_SECONDS).add(hash(key.bitXor(MARK_SALT_PHASE))));
+  const isShown = hash(key.bitXor(MARK_SALT_SHOWN)).lessThan(MARK_SHARE);
+  const radius = hash(key.bitXor(MARK_SALT_SIZE)).mul(0.6).add(0.7).mul(MARK_RADIUS);
+  const turn = hash(key.bitXor(MARK_SALT_TURN)).sub(0.5).mul(MARK_TURN);
+
+  const heading = vec2(
+    wind.x.mul(cos(turn)).sub(wind.y.mul(sin(turn))),
+    wind.x.mul(sin(turn)).add(wind.y.mul(cos(turn)))
+  );
+  const offset = spot
+    .sub(cell)
+    .sub(tip)
+    .mul(MARK_SPACING)
+    .sub(heading.mul(age.mul(MARK_TRAVEL)));
+  const fromCenter = offset.add(heading.mul(radius));
+  const reach = length(fromCenter);
+  const facing = smoothstep(MARK_ARC, 1, dot(fromCenter.div(max(reach, 0.001)), heading));
+  const width = min(float(MARK_WIDTH), pixel.mul(LINE_PIXELS)).mul(facing);
+  const life = smoothstep(0, 0.3, age).mul(smoothstep(1, 0.6, age));
+
+  return float(1)
+    .sub(smoothstep(width, width.add(pixel), abs(reach.sub(radius))))
+    .mul(facing)
+    .mul(life)
+    .mul(select(isShown, float(1), float(0)));
 }
 
 function surfaceWaves(flow: Node<"vec2">, slope: Node<"float">, viewDistance: Node<"float">, look: WaterLook): Waves {
@@ -194,10 +255,11 @@ function surfaceWaves(flow: Node<"vec2">, slope: Node<"float">, viewDistance: No
   const strength = float(WAVE_STRENGTH)
     .mul(calming)
     .mul(float(1).sub(rapids.mul(RAPIDS_CALMING)));
-  const lineWidth = mix(
-    mix(float(STILL_LINE_WIDTH), float(RIVER_LINE_WIDTH), smoothstep(0, STILL_FLOW, slope)),
-    float(RAPIDS_LINE_WIDTH),
-    smoothstep(RAPIDS_START, 0.3, slope)
+  const stillness = smoothstep(STILL_FLOW, 0, slope);
+  const pixel = max(length(fwidth(positionWorld.xz)), 0.001);
+  const lineWidth = min(
+    mix(float(RIVER_LINE_WIDTH), float(RAPIDS_LINE_WIDTH), smoothstep(RAPIDS_START, 0.3, slope)),
+    pixel.mul(LINE_PIXELS)
   );
 
   const pointA = positionWorld.xz.sub(drift).sub(travel.mul(phase));
@@ -206,12 +268,18 @@ function surfaceWaves(flow: Node<"vec2">, slope: Node<"float">, viewDistance: No
   const second = perlinWithSteps(pointB, WAVE_SAMPLE_STEP, WAVE_FREQUENCY, layer);
 
   const waves = normalize(mix(waveNormal(first, strength), waveNormal(second, strength), blend));
-  const pixel = max(length(fwidth(positionWorld.xz)), 0.001);
-  const facing = normalize(mix(look.wind, direction, smoothstep(0, STILL_FLOW, slope)).add(vec2(0.0001, 0)));
-  const lines = mix(rippleLine(first, facing, lineWidth, pixel), rippleLine(second, facing, lineWidth, pixel), blend);
+  const facing = normalize(direction.add(vec2(0.0001, 0)));
+  const riverLines = mix(
+    rippleLine(first, facing, lineWidth, pixel),
+    rippleLine(second, facing, lineWidth, pixel),
+    blend
+  ).mul(smoothstep(LINE_FAR, LINE_NEAR, viewDistance));
+  const marks = windMark(positionWorld.xz.sub(drift), normalize(look.wind.add(vec2(0.0001, 0))), pixel).mul(
+    smoothstep(MARK_FAR, MARK_NEAR, viewDistance)
+  );
 
   return {
-    lines: lines.mul(smoothstep(LINE_FAR, LINE_NEAR, viewDistance)),
+    lines: mix(riverLines, marks, stillness),
     normal: normalize(waves.add(vec3(flow.x, 0, flow.y))),
   };
 }
