@@ -163,14 +163,18 @@ describe("buildRiverField", () => {
       }
     }
   });
+});
 
+describe("RiverField", () => {
   it("keeps a pond from filling the cells of the river that runs into it, but not its own cells", () => {
-    const isPond = (cell: number): boolean => {
+    function isPond(cell: number): boolean {
       return grid.cellCenterZ(cell) > POND_START;
-    };
-    const isRiverCell = (cell: number): boolean => {
+    }
+
+    function isRiverCell(cell: number): boolean {
       return !isPond(cell) && Math.abs(grid.cellCenterX(cell) - 3) < RIVER_CELL_REACH;
-    };
+    }
+
     const source = {
       height: new Float32Array(grid.cellCount),
       riverStrength: Uint8Array.from({ length: grid.cellCount }, (_, cell) => {
@@ -199,9 +203,10 @@ describe("buildRiverField", () => {
   });
 
   it("follows a lake as it fills as if the field were built again", () => {
-    const isLake = (cell: number): boolean => {
+    function isLake(cell: number): boolean {
       return grid.cellCenterZ(cell) > POND_START;
-    };
+    }
+
     const lines = packRiverLines([straightRiver(0, 3, NARROW_WIDTH)]);
     const source = {
       height: new Float32Array(grid.cellCount),

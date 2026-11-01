@@ -123,6 +123,10 @@ function fordHash(ford: Ford, salt: number, index: number, channel: number): num
   return hashToUnit(ford.seed * 1000 + index, channel, salt);
 }
 
+function stoneHash(ford: Ford, index: number, channel: number): number {
+  return fordHash(ford, STONE_SALT, index, channel);
+}
+
 function variantOf(unit: number): number {
   return Math.floor(unit * STEPPING_STONE_VARIANTS) % STEPPING_STONE_VARIANTS;
 }
@@ -217,25 +221,21 @@ function slopeUnder(ford: Ford, surroundings: FordSurroundings, along: number, a
 }
 
 function steppingLine(ford: Ford, span: WaterSpan): LineStep[] {
-  function hash(item: number, channel: number): number {
-    return fordHash(ford, STONE_SALT, item, channel);
-  }
-
   const first = span.start - BANK_OVERLAP;
   const last = span.end + BANK_OVERLAP;
 
-  let previous: LineStep = { along: first, index: 0, radius: stepRadius(span, first, hash(0, 3)) };
+  let previous: LineStep = { along: first, index: 0, radius: stepRadius(span, first, stoneHash(ford, 0, 3)) };
 
   const line = [previous];
 
   for (let index = 1; previous.along < last; index += 1) {
-    const reach = previous.along + previous.radius + lerp(SMALLEST_GAP, LARGEST_STEP_GAP, hash(index, 1));
-    const radius = stepRadius(span, reach + MIDSTREAM_RADIUS, hash(index, 3));
+    const reach = previous.along + previous.radius + lerp(SMALLEST_GAP, LARGEST_STEP_GAP, stoneHash(ford, index, 1));
+    const radius = stepRadius(span, reach + MIDSTREAM_RADIUS, stoneHash(ford, index, 3));
 
     if (reach + radius < last) {
       previous = { along: reach + radius, index, radius };
     } else if (last - previous.along > previous.radius) {
-      previous = { along: last, index, radius: stepRadius(span, last, hash(index, 3)) };
+      previous = { along: last, index, radius: stepRadius(span, last, stoneHash(ford, index, 3)) };
     } else {
       return line;
     }
@@ -244,10 +244,6 @@ function steppingLine(ford: Ford, span: WaterSpan): LineStep[] {
   }
 
   return line;
-}
-
-function stoneHash(ford: Ford, index: number, channel: number): number {
-  return fordHash(ford, STONE_SALT, index, channel);
 }
 
 function spotOf(ford: Ford, surroundings: FordSurroundings, step: LineStep): StoneSpot {

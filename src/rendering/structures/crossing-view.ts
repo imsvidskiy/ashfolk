@@ -76,7 +76,7 @@ import {
 
 const LEVEL_DISTANCES: readonly number[] = [150, 650, 3600];
 const SHADOW_LEVEL_COUNT = 2;
-const FINE_LEVEL_COUNT = 2;
+const FOAM_LEVEL_COUNT = 2;
 const FOAM_BATCH = -1;
 const FOAM_WAKE = 3.2;
 const FOAM_ABOVE = 0.15;
@@ -101,7 +101,6 @@ const CROSSING_FIELDS = [
 interface PlacedPiece {
   readonly batch: number;
   readonly data: readonly number[];
-  readonly isFine: boolean;
 }
 
 interface FordFlow {
@@ -201,7 +200,6 @@ function logPiece(bridge: LogBridge): PlacedPiece {
       0,
       0,
     ],
-    isFine: false,
   };
 }
 
@@ -224,7 +222,6 @@ function stonePiece(stone: FordStone): PlacedPiece {
       stone.isGrounded ? 1 : 0,
       0,
     ],
-    isFine: false,
   };
 }
 
@@ -243,7 +240,6 @@ function foamPiece(stone: FordStone, flow: FordFlow): PlacedPiece {
       fractionalPart(stone.rotation * 3.1) * 40,
       0.35 + 0.65 * above,
     ],
-    isFine: true,
   };
 }
 
@@ -337,14 +333,16 @@ export class CrossingView {
         continue;
       }
 
-      const isNear = crossing.level < FINE_LEVEL_COUNT;
+      const isNear = crossing.level < FOAM_LEVEL_COUNT;
 
       for (const piece of crossing.pieces) {
-        if (piece.isFine && !isNear) {
+        const isFoam = piece.batch === FOAM_BATCH;
+
+        if (isFoam && !isNear) {
           continue;
         }
 
-        const batch = piece.batch === FOAM_BATCH ? this.#foam : this.#batches[crossing.level][piece.batch];
+        const batch = isFoam ? this.#foam : this.#batches[crossing.level][piece.batch];
 
         batch.add(piece.data);
       }

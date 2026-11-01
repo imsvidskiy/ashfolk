@@ -24,6 +24,7 @@ import {
   vec4,
 } from "three/tsl";
 import { type DataTexture, type Node, RGBAFormat } from "three/webgpu";
+import { clamp, saturate } from "../../shared/math.ts";
 import { isRiverWater, isStandingWater, lookUpCell, type RiverTerrain } from "../../world/terrain-sampling.ts";
 import {
   DRAWN_RIVER_EDGE_WOBBLE,
@@ -106,9 +107,9 @@ export interface RiverNode {
 }
 
 interface Segment {
-  readonly endCap: number;
   readonly from: number;
-  readonly startCap: number;
+  readonly hasEndCap: boolean;
+  readonly hasStartCap: boolean;
 }
 
 interface CornerSample {
@@ -118,7 +119,7 @@ interface CornerSample {
 }
 
 function encodeOffset(offset: number): number {
-  return Math.round(Math.min(Math.max(offset * OFFSET_SCALE + 127.5, 0), BYTE));
+  return Math.round(clamp(offset * OFFSET_SCALE + 127.5, 0, BYTE));
 }
 
 function decodeOffset(code: number): number {
@@ -140,7 +141,7 @@ function writeDeepest(
   target: Uint8Array
 ): void {
   const { points } = lines;
-  const { endCap, from, startCap } = segment;
+  const { from, hasEndCap, hasStartCap } = segment;
 
   const startX = points[from * RIVER_LINE_STRIDE];
   const startZ = points[from * RIVER_LINE_STRIDE + 1];
@@ -170,7 +171,7 @@ function writeDeepest(
       const z = grid.centerZ(row);
       const cell = grid.index(column, row);
 
-      const along = Math.min(Math.max(((x - startX) * segmentX + (z - startZ) * segmentZ) / lengthSquared, 0), 1);
+      const along = saturate(((x - startX) * segmentX + (z - startZ) * segmentZ) / lengthSquared);
       const nearestX = startX + segmentX * along;
       const nearestZ = startZ + segmentZ * along;
       const distance = Math.hypot(x - nearestX, z - nearestZ);
@@ -181,14 +182,14 @@ function writeDeepest(
         continue;
       }
 
-      const isCap = (along <= 0 && startCap === 1) || (along >= 1 && endCap === 1);
+      const isCap = (along <= 0 && hasStartCap) || (along >= 1 && hasEndCap);
       const offset = cell * CHANNELS;
 
       deepestEdges[cell] = edge;
       target[offset] = encodeOffset(nearestX - x);
       target[offset + 1] = encodeOffset(nearestZ - z);
       target[offset + 2] = isCap ? END_CAP : angle;
-      target[offset + 3] = Math.min(Math.max(1, Math.round(halfWidth / HALF_WIDTH_STEP)), WIDEST_HALF_WIDTH_CODE);
+      target[offset + 3] = clamp(Math.round(halfWidth / HALF_WIDTH_STEP), 1, WIDEST_HALF_WIDTH_CODE);
     }
   }
 }
@@ -235,8 +236,11 @@ function widenedOnce(grid: WorldGrid, cells: Uint8Array): Uint8Array {
       continue;
     }
 
+    const column = grid.columnOf(cell);
+    const row = grid.rowOf(cell);
+
     for (const offset of NEIGHBOR_OFFSETS) {
-      const neighbor = grid.neighborIndex(grid.columnOf(cell), grid.rowOf(cell), offset);
+      const neighbor = grid.neighborIndex(column, row, offset);
 
       if (neighbor >= 0) {
         widened[neighbor] = 1;
@@ -280,7 +284,7 @@ export function buildRiverField(grid: WorldGrid, lines: RiverLines, source: Rive
 
   for (const end of lines.ends) {
     for (let from = first; from < end - 1; from += 1) {
-      const segment = { endCap: from === end - 2 ? 1 : 0, from, startCap: from === first ? 1 : 0 };
+      const segment = { from, hasEndCap: from === end - 2, hasStartCap: from === first };
 
       writeDeepest(grid, lines, segment, deepestEdges, target);
     }
