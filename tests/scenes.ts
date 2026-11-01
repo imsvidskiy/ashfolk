@@ -90,6 +90,12 @@ export const SCENES: readonly Scene[] = [
   },
   {
     cast: { parameters: { radius: 120, strength: 60 }, powerId: "volcano", x: 2265, z: -525 },
+    name: "volcano-overview",
+    query: "seed=7&shape=round&quality=high&paused=1&hours=11&camera=2265,-525,2200,0.8,0",
+    seconds: 35,
+  },
+  {
+    cast: { parameters: { radius: 120, strength: 60 }, powerId: "volcano", x: 2265, z: -525 },
     name: "volcano-cooling",
     query: "seed=7&shape=round&quality=high&paused=1&hours=11&camera=2265,-525,520,0.8,0",
     seconds: 85,
