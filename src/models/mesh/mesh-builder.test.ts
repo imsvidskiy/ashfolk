@@ -3,7 +3,8 @@ import { describe, expect, it } from "vitest";
 import { signedVolume } from "../testing/mesh-checks.ts";
 import { MeshBuilder } from "./mesh-builder.ts";
 import { vertexCount } from "./mesh-data.ts";
-import { box, cylinder } from "./shapes.ts";
+import { facetShape } from "./shape.ts";
+import { box, cylinder, icosphere } from "./shapes.ts";
 import { MIRROR_X, segmentLength, segmentTransform, transformOf } from "./transforms.ts";
 
 describe("mesh builder", () => {
@@ -54,6 +55,48 @@ describe("mesh builder", () => {
     expect(new Set(mesh.channels.shade)).toEqual(new Set([1]));
     expect(Math.min(...mesh.channels.sway)).toBe(0);
     expect(Math.max(...mesh.channels.sway)).toBe(1);
+  });
+
+  it("gives each face of a faceted shape one slot, read at its center", () => {
+    const builder = new MeshBuilder();
+
+    builder.add(facetShape(icosphere(1, 1)), {
+      style: {
+        slot: (point) => {
+          return point.position.x > 0.3 ? 2 : 1;
+        },
+      },
+      transform: transformOf({ position: [0.5, 0, 0] }),
+    });
+
+    const { channels, indices, positions } = builder.build();
+
+    for (let corner = 0; corner < indices.length; corner += 3) {
+      const face = [indices[corner], indices[corner + 1], indices[corner + 2]];
+      const centerX = (positions[face[0] * 3] + positions[face[1] * 3] + positions[face[2] * 3]) / 3;
+
+      for (const vertex of face) {
+        expect(channels.slot[vertex]).toBe(centerX > 0.3 ? 2 : 1);
+      }
+    }
+  });
+
+  it("reads the slot at each vertex of a smooth shape", () => {
+    const builder = new MeshBuilder();
+
+    builder.add(icosphere(1, 1), {
+      style: {
+        slot: (point) => {
+          return point.position.x > 0 ? 2 : 1;
+        },
+      },
+    });
+
+    const { channels, positions } = builder.build();
+
+    for (let vertex = 0; vertex < channels.slot.length; vertex += 1) {
+      expect(channels.slot[vertex]).toBe(positions[vertex * 3] > 0 ? 2 : 1);
+    }
   });
 
   it("keeps mirrored shapes facing outwards", () => {
