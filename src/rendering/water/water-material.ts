@@ -100,9 +100,11 @@ const FOAM_COLOR = vec3(0.84, 0.9, 0.9);
 const RIM_WIDTH = 0.9;
 const RIM_SOFTNESS = 0.6;
 const RIM_PIXELS = 2;
+const RIM_WOBBLE = 0.8;
 const RIM_WOBBLE_FREQUENCY = 0.12;
 const RIM_WOBBLE_SPEED = 0.08;
 const RIM_STRENGTH = 0.75;
+const WIDEST_RIM = RIM_WIDTH * (1 + RIM_WOBBLE / 2);
 const FLATTEST_BANK = 0.01;
 const FOAM_OPACITY = 0.6;
 const SHORE_FOAM_FAR = 1300;
@@ -262,31 +264,44 @@ function surfaceWaves(flow: Node<"vec2">, slope: Node<"float">, viewDistance: No
   const markStrength = smoothstep(MARK_FAR, MARK_NEAR, viewDistance).mul(
     smoothstep(0, MARK_FULL_WIND, length(look.wind))
   );
-  const pixel = max(length(fwidth(positionWorld.xz)), 0.001);
-  const lineWidth = min(
-    mix(float(RIVER_LINE_WIDTH), float(RAPIDS_LINE_WIDTH), smoothstep(RAPIDS_START, 0.3, slope)),
-    pixel.mul(LINE_PIXELS)
-  );
-
-  const pointA = positionWorld.xz.sub(drift).sub(travel.mul(phase));
-  const pointB = positionWorld.xz.sub(drift).sub(travel.mul(otherPhase)).add(vec2(13.7, 4.1));
-  const first = perlinWithSteps(pointA, WAVE_SAMPLE_STEP, WAVE_FREQUENCY, layer);
-  const second = perlinWithSteps(pointB, WAVE_SAMPLE_STEP, WAVE_FREQUENCY, layer);
-
-  const waves = normalize(mix(waveNormal(first, strength), waveNormal(second, strength), blend));
   const facing = normalize(direction.add(vec2(0.0001, 0)));
-  const riverLines = mix(
-    rippleLine(first, facing, lineWidth, pixel),
-    rippleLine(second, facing, lineWidth, pixel),
-    blend
-  ).mul(smoothstep(LINE_FAR, LINE_NEAR, viewDistance));
-  const marks = windMark(positionWorld.xz.sub(drift), normalize(look.wind.add(vec2(0.0001, 0))), pixel).mul(
-    markStrength
-  );
+
+  const surface = Fn(() => {
+    const pixel = max(length(fwidth(positionWorld.xz)), 0.001).toVar();
+    const waves = vec3(0, 1, 0).toVar();
+    const riverLines = float(0).toVar();
+    const marks = float(0).toVar();
+
+    If(viewDistance.lessThan(WAVE_FAR), () => {
+      const lineWidth = min(
+        mix(float(RIVER_LINE_WIDTH), float(RAPIDS_LINE_WIDTH), smoothstep(RAPIDS_START, 0.3, slope)),
+        pixel.mul(LINE_PIXELS)
+      );
+      const pointA = positionWorld.xz.sub(drift).sub(travel.mul(phase));
+      const pointB = positionWorld.xz.sub(drift).sub(travel.mul(otherPhase)).add(vec2(13.7, 4.1));
+      const first = perlinWithSteps(pointA, WAVE_SAMPLE_STEP, WAVE_FREQUENCY, layer);
+      const second = perlinWithSteps(pointB, WAVE_SAMPLE_STEP, WAVE_FREQUENCY, layer);
+
+      waves.assign(normalize(mix(waveNormal(first, strength), waveNormal(second, strength), blend)));
+      riverLines.assign(
+        mix(rippleLine(first, facing, lineWidth, pixel), rippleLine(second, facing, lineWidth, pixel), blend).mul(
+          smoothstep(LINE_FAR, LINE_NEAR, viewDistance)
+        )
+      );
+    });
+
+    If(stillness.greaterThan(0).and(markStrength.greaterThan(0)), () => {
+      marks.assign(
+        windMark(positionWorld.xz.sub(drift), normalize(look.wind.add(vec2(0.0001, 0))), pixel).mul(markStrength)
+      );
+    });
+
+    return vec4(waves, mix(riverLines, marks, stillness));
+  })();
 
   return {
-    lines: mix(riverLines, marks, stillness),
-    normal: normalize(waves.add(vec3(flow.x, 0, flow.y))),
+    lines: surface.w,
+    normal: normalize(surface.xyz.add(vec3(flow.x, 0, flow.y))),
   };
 }
 
@@ -309,13 +324,29 @@ function bankSlope(depth: Node<"float">): Node<"float"> {
 function foamAt(surface: WaterSurface): Node<"float"> {
   const { depthBeforeFord, fordBed, ice, viewDistance } = surface;
   const point = positionWorld.xz;
-  const pixel = max(length(fwidth(point)), 0.001);
 
-  const fromShore = depthBeforeFord.div(bankSlope(depthBeforeFord));
-  const wobble = unitNoise3(vec3(point.mul(RIM_WOBBLE_FREQUENCY), time.mul(RIM_WOBBLE_SPEED)));
-  const width = max(wobble.mul(0.8).add(0.6).mul(RIM_WIDTH), pixel.mul(RIM_PIXELS));
+  const rim = Fn(() => {
+    const narrowest = max(length(fwidth(point)), 0.001)
+      .mul(RIM_PIXELS)
+      .toVar();
+    const fromShore = depthBeforeFord.div(bankSlope(depthBeforeFord)).toVar();
+    const strength = float(0).toVar();
 
-  const rim = smoothstep(width, width.mul(1 - RIM_SOFTNESS), fromShore).mul(RIM_STRENGTH);
+    If(fromShore.lessThan(max(narrowest, WIDEST_RIM)).and(viewDistance.lessThan(SHORE_FOAM_FAR)), () => {
+      const wobble = unitNoise3(vec3(point.mul(RIM_WOBBLE_FREQUENCY), time.mul(RIM_WOBBLE_SPEED)));
+      const width = max(
+        wobble
+          .mul(RIM_WOBBLE)
+          .add(1 - RIM_WOBBLE / 2)
+          .mul(RIM_WIDTH),
+        narrowest
+      );
+
+      strength.assign(smoothstep(width, width.mul(1 - RIM_SOFTNESS), fromShore).mul(RIM_STRENGTH));
+    });
+
+    return strength;
+  })();
   const ford = fordBed.mul(smoothstep(0.3, 0.6, fordBed)).mul(FORD_FOAM);
 
   return clamp(rim.add(ford), 0, 1)
