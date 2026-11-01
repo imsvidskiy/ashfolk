@@ -199,16 +199,6 @@ function crispGroundNode(
   })();
 }
 
-function groundShareNode(cells: DataTexture, coordinates: Node<"vec2">, ground: number): Node<"float"> {
-  return cornersAt(cells.image.width, coordinates)
-    .map((corner) => {
-      return select(isGroundNode(textureLoad(cells, corner.cell).r, ground), corner.weight, float(0));
-    })
-    .reduce((sum, share) => {
-      return sum.add(share);
-    });
-}
-
 export class GroundAlbedo {
   readonly earth = uniform(new Color());
   readonly rock = uniform(new Color());
@@ -253,10 +243,6 @@ export class GroundAlbedo {
 
   crispColorNode(coordinates: Node<"vec2">, blended: Node<"vec3">): Node<"vec3"> {
     return crispGroundNode(this.#ground, this.#target.texture, coordinates, blended);
-  }
-
-  eternalSnowNode(coordinates: Node<"vec2">): Node<"float"> {
-    return groundShareNode(this.#ground, coordinates, Ground.Snow);
   }
 
   groundChanged(): void {

@@ -107,7 +107,7 @@ function snowCoverAt(
   shape: Node<"vec2">
 ): Node<"float"> {
   const coordinates = mapCoordinates.add(shape.mul(SNOW_DRIFT / grid.worldSize));
-  const eternal = textures.groundAlbedo.eternalSnowNode(coordinates).mul(ETERNAL_SNOW);
+  const eternal = texture(textures.wetland, coordinates).b.mul(ETERNAL_SNOW);
   const lying = max(texture(textures.surface, coordinates).r, eternal);
   const edge = mix(float(SNOW_EDGE_LOW), float(SNOW_EDGE_HIGH), smoothstep(-0.7, 0.7, shape.x.add(shape.y)));
   const band = max(fwidth(lying), SNOW_EDGE_BAND);

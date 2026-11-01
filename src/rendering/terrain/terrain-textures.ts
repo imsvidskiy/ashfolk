@@ -1,5 +1,5 @@
 import { uniform } from "three/tsl";
-import { Color, type DataTexture, RedFormat, RGBAFormat, RGFormat, type WebGPURenderer } from "three/webgpu";
+import { Color, type DataTexture, RedFormat, RGBAFormat, type WebGPURenderer } from "three/webgpu";
 import { Ground, isPoolGround } from "../../content/grounds.ts";
 import type { WorldMirror } from "../../game/world-mirror.ts";
 import type { CellRegion, RowRun } from "../../world/change-tracking.ts";
@@ -29,7 +29,7 @@ import { PATCH_CELLS, PATCH_STEPS } from "./terrain-patches.ts";
 const SEASON_STEP = 0.01;
 const POND_SHORE_CELLS = 2;
 const BYTE = 255;
-const WETLAND_CHANNELS = 2;
+const WETLAND_CHANNELS = 4;
 
 export class TerrainTextures {
   readonly bloom = uniform(0);
@@ -89,7 +89,7 @@ export class TerrainTextures {
     this.surface = byteTexture(mirror.surface, size, RGBAFormat);
     this.#wetlandData = new Uint8Array(size * size * WETLAND_CHANNELS);
     this.#paintWetland({ firstRow: 0, rowCount: size });
-    this.wetland = byteTexture(this.#wetlandData, size, RGFormat);
+    this.wetland = byteTexture(this.#wetlandData, size, RGBAFormat);
     this.groundAlbedo = new GroundAlbedo(mirror);
     this.fields = new FieldPlan(mirror);
   }
@@ -189,6 +189,7 @@ export class TerrainTextures {
 
       this.#wetlandData[cell * WETLAND_CHANNELS] = isPool || ground === Ground.Swamp ? BYTE : 0;
       this.#wetlandData[cell * WETLAND_CHANNELS + 1] = isPool ? BYTE : 0;
+      this.#wetlandData[cell * WETLAND_CHANNELS + 2] = ground === Ground.Snow ? BYTE : 0;
     }
   }
 
