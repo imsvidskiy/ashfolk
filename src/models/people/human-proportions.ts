@@ -5,8 +5,9 @@ import { HUMAN_BONE_COUNT, HumanBone, sideBones } from "./human-skeleton.ts";
 export const FIGURE_SCALE = 1.18;
 
 const STYLIZED_HEAD = 1.35;
-const STYLIZED_LIMBS = 1.4;
 const STYLIZED_TRUNK = 1.1;
+const STYLIZED_ARMS = 1.25;
+const STYLIZED_LEGS = 1.05;
 
 function setScale(scales: Float32Array, bone: number, x: number, y: number, z: number): void {
   scales[bone * 3] = x * FIGURE_SCALE;
@@ -19,10 +20,10 @@ export function humanBoneScales(body: BodyShape): Float32Array {
 
   const scales = new Float32Array(HUMAN_BONE_COUNT * 3);
   const girth = build ** 0.6 * STYLIZED_TRUNK;
-  const limbGirth = build ** 0.5 * STYLIZED_LIMBS;
-  const forearmGirth = build ** 0.4 * STYLIZED_LIMBS;
-  const legGirth = build ** 0.6 * STYLIZED_LIMBS;
-  const shinGirth = build ** 0.45 * STYLIZED_LIMBS;
+  const limbGirth = build ** 0.5 * STYLIZED_ARMS;
+  const forearmGirth = build ** 0.4 * STYLIZED_ARMS;
+  const thighGirth = build ** 0.6 * STYLIZED_LEGS;
+  const shinGirth = build ** 0.45 * STYLIZED_LEGS;
   const head = height * headSize * STYLIZED_HEAD;
 
   setScale(scales, HumanBone.Pelvis, height * hipWidth * girth, height, height * build ** 0.8);
@@ -37,7 +38,7 @@ export function humanBoneScales(body: BodyShape): Float32Array {
     setScale(scales, bones.upperArm, height * limbGirth, height, height * limbGirth);
     setScale(scales, bones.forearm, height * forearmGirth, height, height * forearmGirth);
     setScale(scales, bones.hand, height * (0.92 + 0.08 * build), height, height * (0.92 + 0.08 * build));
-    setScale(scales, bones.thigh, height * legGirth, height * legLength, height * legGirth);
+    setScale(scales, bones.thigh, height * thighGirth, height * legLength, height * thighGirth);
     setScale(scales, bones.shin, height * shinGirth, height * legLength, height * shinGirth);
     setScale(scales, bones.foot, height * build ** 0.3, height, height * legLength ** 0.5);
   }
