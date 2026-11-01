@@ -210,6 +210,12 @@ function flagCell(target: Uint8Array, cell: number, flag: number): void {
   }
 }
 
+function clearStandingWater(target: Uint8Array): void {
+  for (let offset = 3; offset < target.length; offset += CHANNELS) {
+    target[offset] %= NEAR_STANDING_FLAG;
+  }
+}
+
 function markStandingWater(grid: WorldGrid, source: RiverWaterSource, target: Uint8Array): void {
   for (let cell = 0; cell < grid.cellCount; cell += 1) {
     if (!isStandingWater(source, cell)) {
@@ -485,6 +491,12 @@ export class RiverField {
 
   rebuild(lines: RiverLines, source: RiverWaterSource): void {
     buildRiverField(this.#grid, lines, source, this.#data);
+    this.texture.needsUpdate = true;
+  }
+
+  updateStandingWater(source: RiverWaterSource): void {
+    clearStandingWater(this.#data);
+    markStandingWater(this.#grid, source, this.#data);
     this.texture.needsUpdate = true;
   }
 

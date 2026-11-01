@@ -58,6 +58,12 @@ function bentRiver(width: number): River {
   return { id: 0, points, reachesEdge: false };
 }
 
+function fieldData(field: RiverField): number[] {
+  const { data } = field.texture.image;
+
+  return data instanceof Uint8Array ? Array.from(data) : [];
+}
+
 function isNeverDry(): boolean {
   return false;
 }
@@ -189,6 +195,47 @@ describe("buildRiverField", () => {
     expect(field.depthAt(15, 125, CELL_DEPTH)).toBe(CELL_DEPTH);
 
     field.dispose();
+    shore.texture.dispose();
+  });
+
+  it("follows a lake as it fills as if the field were built again", () => {
+    const isLake = (cell: number): boolean => {
+      return grid.cellCenterZ(cell) > POND_START;
+    };
+    const lines = packRiverLines([straightRiver(0, 3, NARROW_WIDTH)]);
+    const source = {
+      height: new Float32Array(grid.cellCount),
+      riverStrength: Uint8Array.from({ length: grid.cellCount }, (_, cell) => {
+        return isLake(cell) || Math.abs(grid.cellCenterX(cell) - 3) >= RIVER_CELL_REACH ? 0 : 60;
+      }),
+      waterSurface: Float32Array.from({ length: grid.cellCount }, (_, cell) => {
+        return isLake(cell) || Math.abs(grid.cellCenterX(cell) - 3) >= RIVER_CELL_REACH ? NO_WATER : 1;
+      }),
+    };
+    const shoreDepths = new Float32Array(grid.cellCount);
+    const shore = {
+      data: shoreDepths,
+      stride: 1,
+      texture: floatDataTexture(shoreDepths, grid.cellsPerSide, grid.cellsPerSide, RedFormat),
+    };
+    const filling = new RiverField(grid, lines, source, shore);
+
+    for (let cell = 0; cell < grid.cellCount; cell += 1) {
+      if (isLake(cell)) {
+        source.waterSurface[cell] = 1;
+      }
+    }
+
+    const filled = new RiverField(grid, lines, source, shore);
+
+    expect(fieldData(filling)).not.toEqual(fieldData(filled));
+
+    filling.updateStandingWater(source);
+
+    expect(fieldData(filling)).toEqual(fieldData(filled));
+
+    filling.dispose();
+    filled.dispose();
     shore.texture.dispose();
   });
 });

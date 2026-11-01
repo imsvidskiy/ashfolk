@@ -224,6 +224,7 @@ export class TerrainTextures {
     if (levelRegion !== null) {
       updateShoreField(this.#shoreSource, levelRegion, this.#shoreData);
       this.shore.needsUpdate = true;
+      this.rivers.updateStandingWater(this.#mirror.terrain);
     }
 
     if (heightRegion !== null) {
