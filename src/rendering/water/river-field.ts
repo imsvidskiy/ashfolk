@@ -1,5 +1,7 @@
 import {
   abs,
+  cameraPosition,
+  cameraProjectionMatrix,
   cos,
   exp,
   Fn,
@@ -11,12 +13,16 @@ import {
   min,
   mix,
   mx_noise_float,
+  normalize,
+  positionWorld,
+  screenSize,
   select,
   sin,
   smoothstep,
   textureLoad,
   vec2,
   vec3,
+  vec4,
 } from "three/tsl";
 import { type DataTexture, type Node, RGBAFormat } from "three/webgpu";
 import { lookUpCell } from "../../world/terrain-sampling.ts";
@@ -65,6 +71,7 @@ const MARGIN_PER_HALF_WIDTH = 0.12;
 const MARGIN_WOBBLE = 0.45;
 const MARGIN_WOBBLE_SCALE = 0.06;
 const MARGIN_SOFTNESS = 0.45;
+const FLATTEST_VIEW = 0.15;
 
 export interface RiverWaterSource {
   readonly height: Float32Array;
@@ -411,6 +418,16 @@ function waterDepthWith(sample: RiverSample, standing: StandingSample, cellDepth
   }
 
   return sample.hasRiver ? riverDepth : cellDepth;
+}
+
+export function groundFootprintNode(): Node<"float"> {
+  const toCamera = cameraPosition.sub(positionWorld);
+  const focal = cameraProjectionMatrix.mul(vec4(0, 1, 0, 0)).y;
+  const pixelAngle = float(2).div(focal.mul(screenSize.y));
+
+  return length(toCamera)
+    .mul(pixelAngle)
+    .div(max(abs(normalize(toCamera).y), FLATTEST_VIEW));
 }
 
 function drawnHalfWidthNode(halfWidth: Node<"float">): Node<"float"> {

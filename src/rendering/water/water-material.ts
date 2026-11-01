@@ -35,6 +35,7 @@ import { unitNoise3 } from "../node-helpers.ts";
 import { mapCoordinatesNode, sampleCellsNode } from "../terrain/height-sampling.ts";
 import type { TerrainTextures } from "../terrain/terrain-textures.ts";
 import { rainDimples } from "./rain-dimples.ts";
+import { groundFootprintNode } from "./river-field.ts";
 import { BANK_SINK, PRESENT_LEVEL, RIVER_BANK_LIFT } from "./shore-field.ts";
 import { perlinWithSteps } from "./wave-noise.ts";
 
@@ -256,8 +257,7 @@ export function createWaterMaterial(
   const flow = mix(shore.yz, outlet.direction.mul(max(length(shore.yz), OUTLET_FLOW)), outlet.share);
   const ice = smoothstep(THIN_ICE, SOLID_ICE, texture(textures.surface, mapCoordinates).r);
   const cellDepth = shore.x.add(shoreWobble(shore.x, viewDistance));
-  const footprint = fwidth(positionWorld.xz);
-  const riverDepth = textures.rivers.depthNode(positionWorld.xz, cellDepth, max(footprint.x, footprint.y));
+  const riverDepth = textures.rivers.depthNode(positionWorld.xz, cellDepth, groundFootprintNode());
   const shoreDepth = mix(riverDepth, outlet.depth, outlet.share);
 
   const isWet = shoreDepth.greaterThan(0);

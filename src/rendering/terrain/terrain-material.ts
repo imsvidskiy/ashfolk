@@ -33,6 +33,7 @@ import type { WorldGrid } from "../../world/world-grid.ts";
 import { type FireGlow, fireLightAt } from "../effects/fire-glow.ts";
 import { unitNoise } from "../node-helpers.ts";
 import { fordBedColorNode } from "../water/ford-field.ts";
+import { groundFootprintNode } from "../water/river-field.ts";
 import { POOL_BANK, poolReachNode } from "./bog-pools.ts";
 import { fieldGroundNode } from "./field-ground.ts";
 import { FIREWEED, fireweedNode } from "./fireweed.ts";
@@ -247,8 +248,7 @@ function riverBed(textures: TerrainTextures, grid: WorldGrid): Node<"vec2"> {
   const reach = textureLoad(textures.shore, cell).w;
 
   return Fn(() => {
-    const footprint = fwidth(positionWorld.xz);
-    const metersPerPixel = max(footprint.x, footprint.y).toVar();
+    const metersPerPixel = groundFootprintNode().toVar();
     const bed = vec2(0, 0).toVar();
 
     If(reach.lessThan(1.5), () => {
