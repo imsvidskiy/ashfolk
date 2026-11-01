@@ -202,7 +202,7 @@ function basinDepths(inputs: WetlandInputs): Float32Array {
   const { grid, heights } = inputs;
 
   const radius = Math.max(1, Math.round(BASIN_RADIUS / grid.cellSize / 2));
-  const surroundings = boxBlur(grid, boxBlur(grid, heights, radius), radius);
+  const surroundings = boxBlur(grid.cellsPerSide, boxBlur(grid.cellsPerSide, heights, radius), radius);
 
   return surroundings.map((surrounding, cell) => {
     return surrounding - heights[cell];
@@ -246,7 +246,7 @@ export function measureWetness(inputs: WetlandInputs, slopes: Float64Array): Flo
   }
 
   const radius = Math.max(1, Math.round(WETNESS_SPREAD / grid.cellSize / 2));
-  const spread = boxBlur(grid, boxBlur(grid, wetness, radius), radius);
+  const spread = boxBlur(grid.cellsPerSide, boxBlur(grid.cellsPerSide, wetness, radius), radius);
 
   for (let cell = 0; cell < grid.cellCount; cell += 1) {
     if (slopes[cell] > STEEPEST_WETLAND) {

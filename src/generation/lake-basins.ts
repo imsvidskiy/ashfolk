@@ -19,7 +19,6 @@ const LAKE_CLEARANCE = 400;
 const SHALLOWEST_DIG = 12;
 const DEEPEST_DIG = 45;
 const CLOSING_MARGIN = 2.2;
-const SHORE_BAND = 150;
 const GENTLE_SHORE_SLOPE = 0.12;
 const STEEPEST_SHORE_SLOPE = 0.85;
 const GENTLE_SHORE_WIDTH = 40;
@@ -27,10 +26,16 @@ const SHORE_STEEPENING_WIDTH = 120;
 const FAR_SLOPE = 0.95;
 const FAR_SLOPE_START = 150;
 const FAR_SLOPE_END = 300;
-const SMOOTHING_RADIUS = 20;
-const SMOOTHING_PASSES = 2;
-const FULL_SMOOTHING_CUT = 4;
-const SMOOTHING_DEPTH = 1;
+const SHORE_BAND = 150;
+const WALL_SLOPE = 1.05;
+const WALL_SLOPE_START = 300;
+const WALL_SLOPE_END = 450;
+const EXACT_CUT_WIDTH = 80;
+const BLENDED_CUT_WIDTH = 160;
+const CUT_BLUR_RADIUS = 20;
+const CUT_BLUR_PASSES = 2;
+const SHORE_CLEARANCE = 0.4;
+const RISE_TABLE_STEP = 1;
 
 export interface LakeSiting {
   readonly boundaryDistance: (cell: number) => number;
@@ -48,6 +53,7 @@ interface LakeSite {
 interface ShoreCut {
   readonly ceilings: Float32Array;
   readonly distances: Float32Array;
+  readonly levels: Float32Array;
 }
 
 interface Clearance {
@@ -159,11 +165,38 @@ function shoreSlopeAt(distance: number): number {
     smoothstep(GENTLE_SHORE_WIDTH, SHORE_STEEPENING_WIDTH, distance)
   );
 
-  return lerp(nearSlope, FAR_SLOPE, smoothstep(FAR_SLOPE_START, FAR_SLOPE_END, distance));
+  const farSlope = lerp(FAR_SLOPE, WALL_SLOPE, smoothstep(WALL_SLOPE_START, WALL_SLOPE_END, distance));
+
+  return lerp(nearSlope, farSlope, smoothstep(FAR_SLOPE_START, FAR_SLOPE_END, distance));
 }
 
 function rimFallAt(distance: number): number {
   return distance <= GENTLE_SHORE_WIDTH ? GENTLE_SHORE_SLOPE : STEEPEST_SHORE_SLOPE;
+}
+
+function shoreRises(): Float32Array {
+  const rises = new Float32Array(Math.ceil(WALL_SLOPE_END / RISE_TABLE_STEP) + 1);
+
+  for (let index = 1; index < rises.length; index += 1) {
+    rises[index] = rises[index - 1] + RISE_TABLE_STEP * shoreSlopeAt((index - 0.5) * RISE_TABLE_STEP);
+  }
+
+  return rises;
+}
+
+const SHORE_RISES = shoreRises();
+
+function shoreRiseAt(distance: number): number {
+  const position = distance / RISE_TABLE_STEP;
+  const last = SHORE_RISES.length - 1;
+
+  if (position >= last) {
+    return SHORE_RISES[last] + (position - last) * RISE_TABLE_STEP * WALL_SLOPE;
+  }
+
+  const index = Math.floor(position);
+
+  return lerp(SHORE_RISES[index], SHORE_RISES[index + 1], position - index);
 }
 
 function canCutPast(heights: Float32Array, cut: ShoreCut, cell: number): boolean {
@@ -195,14 +228,18 @@ function seedLakeCells(
 function measureShoreCut(heights: Float32Array, grid: WorldGrid, basins: DrainageBasins): ShoreCut {
   const { lakeIds } = basins;
 
-  const cut: ShoreCut = {
-    ceilings: new Float32Array(grid.cellCount).fill(Number.POSITIVE_INFINITY),
-    distances: new Float32Array(grid.cellCount).fill(Number.POSITIVE_INFINITY),
-  };
-  const heap = seedLakeCells(grid, basins, cut.ceilings, cut.distances, (level) => {
+  const ceilings = new Float32Array(grid.cellCount).fill(Number.POSITIVE_INFINITY);
+  const distances = new Float32Array(grid.cellCount).fill(Number.POSITIVE_INFINITY);
+  const heap = seedLakeCells(grid, basins, ceilings, distances, (level) => {
     return level;
   });
-
+  const levels = ceilings.map((ceiling) => {
+    return Number.isFinite(ceiling) ? ceiling : Number.NEGATIVE_INFINITY;
+  });
+  const cut: ShoreCut = { ceilings, distances, levels };
+  const nearest = Int32Array.from(lakeIds, (lakeId, cell) => {
+    return lakeId === NO_CELL ? NO_CELL : cell;
+  });
   const isSettled = new Uint8Array(grid.cellCount);
 
   while (heap.size > 0) {
@@ -216,6 +253,7 @@ function measureShoreCut(heights: Float32Array, grid: WorldGrid, basins: Drainag
 
     const column = grid.columnOf(cell);
     const row = grid.rowOf(cell);
+    const shore = nearest[cell];
 
     for (const offset of NEIGHBOR_OFFSETS) {
       const neighbor = grid.neighborIndex(column, row, offset);
@@ -224,13 +262,14 @@ function measureShoreCut(heights: Float32Array, grid: WorldGrid, basins: Drainag
         continue;
       }
 
-      const step = offset.distance * grid.cellSize;
-      const distance = cut.distances[cell] + step;
-      const ceiling = cut.ceilings[cell] + step * shoreSlopeAt(distance - step / 2);
+      const distance = grid.distanceBetween(shore, neighbor);
+      const ceiling = cut.levels[cell] + shoreRiseAt(distance);
 
       if (ceiling < cut.ceilings[neighbor]) {
+        nearest[neighbor] = shore;
         cut.ceilings[neighbor] = ceiling;
         cut.distances[neighbor] = distance;
+        cut.levels[neighbor] = cut.levels[cell];
         heap.push(neighbor, ceiling);
       }
     }
@@ -284,27 +323,19 @@ function measureRimFloors(grid: WorldGrid, basins: DrainageBasins, ceilings: Flo
   return floors;
 }
 
-function smoothCuts(grid: WorldGrid, heights: Float32Array, uneased: Float32Array, distances: Float32Array): void {
-  const radius = Math.max(1, Math.round(SMOOTHING_RADIUS / grid.cellSize));
-  let smooth: Float32Array = heights;
+function blurredCuts(grid: WorldGrid, cuts: Float32Array): Float32Array {
+  const radius = Math.round(CUT_BLUR_RADIUS / grid.cellSize);
+  let blurred = cuts;
 
-  for (let pass = 0; pass < SMOOTHING_PASSES; pass += 1) {
-    smooth = boxBlur(grid, smooth, radius);
+  if (radius < 1) {
+    return blurred;
   }
 
-  for (let cell = 0; cell < grid.cellCount; cell += 1) {
-    const cut = uneased[cell] - heights[cell];
-
-    if (cut > 0 && distances[cell] > SHORE_STEEPENING_WIDTH) {
-      const smoothed = lerp(heights[cell], smooth[cell], Math.min(1, cut / FULL_SMOOTHING_CUT));
-
-      heights[cell] = clamp(
-        smoothed,
-        heights[cell] - SMOOTHING_DEPTH,
-        Math.min(uneased[cell], heights[cell] + SMOOTHING_DEPTH)
-      );
-    }
+  for (let pass = 0; pass < CUT_BLUR_PASSES; pass += 1) {
+    blurred = boxBlur(grid.cellsPerSide, blurred, radius);
   }
+
+  return blurred;
 }
 
 export function easeLakeShores(
@@ -313,18 +344,28 @@ export function easeLakeShores(
   coastDistance: Float32Array,
   basins: DrainageBasins
 ): void {
-  const { ceilings, distances } = measureShoreCut(heights, grid, basins);
-  const floors = measureRimFloors(grid, basins, ceilings);
+  const cut = measureShoreCut(heights, grid, basins);
+  const floors = measureRimFloors(grid, basins, cut.ceilings);
 
-  const uneased = Float32Array.from(heights);
+  const isEased = (cell: number): boolean => {
+    return basins.lakeIds[cell] === NO_CELL && isOnIsland(coastDistance, cell);
+  };
+  const exactCuts = heights.map((height, cell) => {
+    return isEased(cell) ? Math.max(0, height - cut.ceilings[cell]) : 0;
+  });
+  const smoothCuts = blurredCuts(grid, exactCuts);
 
   for (let cell = 0; cell < grid.cellCount; cell += 1) {
-    if (basins.lakeIds[cell] === NO_CELL && isOnIsland(coastDistance, cell)) {
-      heights[cell] = Math.min(heights[cell], Math.max(ceilings[cell], floors[cell]));
+    if (!isEased(cell)) {
+      continue;
     }
-  }
 
-  smoothCuts(grid, heights, uneased, distances);
+    const exactness = 1 - smoothstep(EXACT_CUT_WIDTH, BLENDED_CUT_WIDTH, cut.distances[cell]);
+    const lowest = Math.max(floors[cell], cut.levels[cell] + SHORE_CLEARANCE);
+    const eased = heights[cell] - lerp(smoothCuts[cell], exactCuts[cell], exactness);
+
+    heights[cell] = Math.min(heights[cell], Math.max(eased, lowest));
+  }
 }
 
 export function digRiverLakes(heights: Float32Array, siting: LakeSiting): void {

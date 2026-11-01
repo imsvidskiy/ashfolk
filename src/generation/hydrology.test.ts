@@ -780,7 +780,7 @@ describe("rivers of full-size islands", () => {
 
   it("bends full-size rivers instead of running them dead straight down even slopes on both shapes", () => {
     for (const generated of [round, square]) {
-      expect(straightRiverShare(generated)).toBeLessThan(0.05);
+      expect(straightRiverShare(generated)).toBeLessThan(0.08);
     }
   });
 

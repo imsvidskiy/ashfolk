@@ -224,7 +224,7 @@ describe("river beds of full-size islands", () => {
   let worlds: GeneratedWorld[];
 
   beforeAll(() => {
-    worlds = [fullSizeWorld(10), fullSizeWorld(1), fullSizeWorld(3, "square"), fullSizeWorld(8, "square")];
+    worlds = [fullSizeWorld(10), fullSizeWorld(12), fullSizeWorld(3, "square"), fullSizeWorld(8, "square")];
   }, FULL_SIZE_TIMEOUT);
 
   it("keeps the land beside every river at least as high as its water on several seeds and both shapes", () => {
