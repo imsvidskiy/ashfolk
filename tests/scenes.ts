@@ -50,6 +50,17 @@ export const SCENES: readonly Scene[] = [
     name: "far-rivers",
     query: "seed=10&shape=round&quality=high&paused=1&hours=11&camera=35,2332,1500,0.8,0",
   },
+  { name: "lake-cut-crown", query: "seed=2&shape=round&quality=high&paused=1&hours=11&camera=0,0,1500,0.55,0" },
+  {
+    name: "crater-lake-wall",
+    query: "seed=7&shape=round&quality=high&paused=1&hours=11&camera=-1000,-500,900,0.45,1.57",
+  },
+  {
+    name: "round-flank-pleats",
+    query: "seed=7&shape=round&quality=high&paused=1&hours=11&camera=300,1700,1000,0.5,0",
+  },
+  { name: "ground-zones", query: "seed=7&shape=round&quality=high&paused=1&hours=11&camera=2000,-400,800,0.5,0" },
+  { name: "faceted-slope", query: "seed=7&shape=round&quality=high&paused=1&hours=11&camera=1800,-300,250,0.6,0" },
   {
     name: "inside-crown",
     query: "seed=7&shape=round&quality=high&paused=1&hours=11&camera=544.83,-628.35,12,0.985,0",
