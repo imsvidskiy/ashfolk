@@ -144,6 +144,7 @@ interface Waves {
 
 interface WaterSurface {
   readonly depth: Node<"float">;
+  readonly depthBeforeFord: Node<"float">;
   readonly flowSpeed: Node<"float">;
   readonly fordBed: Node<"float">;
   readonly ice: Node<"float">;
@@ -302,11 +303,11 @@ function bankSlope(depth: Node<"float">): Node<"float"> {
 }
 
 function foamAt(surface: WaterSurface): Node<"float"> {
-  const { depth, fordBed, ice, viewDistance } = surface;
+  const { depthBeforeFord, fordBed, ice, viewDistance } = surface;
   const point = positionWorld.xz;
   const pixel = max(length(fwidth(point)), 0.001);
 
-  const fromShore = depth.div(bankSlope(depth));
+  const fromShore = depthBeforeFord.div(bankSlope(depthBeforeFord));
   const wobble = unitNoise3(vec3(point.mul(RIM_WOBBLE_FREQUENCY), time.mul(RIM_WOBBLE_SPEED)));
   const width = max(wobble.mul(0.8).add(0.6).mul(RIM_WIDTH), pixel.mul(RIM_PIXELS));
 
@@ -486,7 +487,8 @@ export function createWaterMaterial(
 
   const isWet = shoreDepth.greaterThan(0);
   const fordBed = textures.fords.marksNode(positionWorld.xz).x;
-  const depth = mix(max(shoreDepth, 0), min(max(shoreDepth, 0), FORD_WATER_DEPTH), fordBed.mul(FORD_SHALLOWING));
+  const depthBeforeFord = max(shoreDepth, 0);
+  const depth = mix(depthBeforeFord, min(depthBeforeFord, FORD_WATER_DEPTH), fordBed.mul(FORD_SHALLOWING));
   const shoreEdge = max(fwidth(shoreDepth), SHORE_FADE);
   const flowSpeed = length(flow);
   const waves = surfaceWaves(flow, flowSpeed, viewDistance, look);
@@ -501,6 +503,7 @@ export function createWaterMaterial(
 
   const shading = shadeWater(look, {
     depth,
+    depthBeforeFord,
     flowSpeed,
     fordBed,
     ice,
