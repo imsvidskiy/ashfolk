@@ -90,6 +90,7 @@ async function runGameSeconds(page: Page, seconds: number): Promise<void> {
   await page.evaluate(
     ({ count, timeout }) => {
       const { session } = Reflect.get(window, "ashfolk");
+
       const lastTick = session.frame.tick + count;
       const deadline = performance.now() + timeout;
 

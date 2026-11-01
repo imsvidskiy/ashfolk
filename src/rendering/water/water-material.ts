@@ -242,7 +242,7 @@ function windMark(point: Node<"vec2">, wind: Node<"vec2">, pixel: Node<"float">)
     .mul(select(isShown, float(1), float(0)));
 }
 
-function surfaceWaves(flow: Node<"vec2">, slope: Node<"float">, viewDistance: Node<"float">, look: WaterLook): Waves {
+function surfaceWaves(look: WaterLook, flow: Node<"vec2">, slope: Node<"float">, viewDistance: Node<"float">): Waves {
   const speed = clamp(slope.mul(55), 0, FASTEST_FLOW);
   const direction = select(slope.greaterThan(0.0001), normalize(flow), vec2(0, 0));
 
@@ -323,6 +323,7 @@ function bankSlope(depth: Node<"float">): Node<"float"> {
 
 function foamAt(surface: WaterSurface): Node<"float"> {
   const { depthBeforeFord, fordBed, ice, viewDistance } = surface;
+
   const point = positionWorld.xz;
 
   const rim = Fn(() => {
@@ -526,7 +527,7 @@ export function createWaterMaterial(
   const depth = mix(depthBeforeFord, min(depthBeforeFord, FORD_WATER_DEPTH), fordBed.mul(FORD_SHALLOWING));
   const shoreEdge = max(fwidth(shoreDepth), SHORE_FADE);
   const flowSpeed = length(flow);
-  const waves = surfaceWaves(flow, flowSpeed, viewDistance, look);
+  const waves = surfaceWaves(look, flow, flowSpeed, viewDistance);
 
   const normal = normalize(
     mix(waves.normal.add(rainDimples(viewDistance, look.rainfall)), vec3(0, 1, 0), ice.mul(0.85))
