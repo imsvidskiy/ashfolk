@@ -56,6 +56,7 @@ import {
 import { NO_WATER } from "../../world/water.ts";
 import type { WorldGrid } from "../../world/world-grid.ts";
 import { geometryFromMeshData, InstanceBatch, toInstancedGeometry } from "../instancing.ts";
+import { MODEL_ROUGHNESS, styleModel } from "../model-style.ts";
 import { rotateAroundUp, SNOW_COLOR, slotColorTable, snowCoverNode } from "../node-helpers.ts";
 import { markOutlined } from "../outlines.ts";
 import { cellAtNode, coarseGroundOffsetNode } from "../terrain/height-sampling.ts";
@@ -147,7 +148,8 @@ function createCrossingMaterial(textures: TerrainTextures, grid: WorldGrid): Mes
   const waterline = smoothstep(0.1, 0.02, abs(positionWorld.y.sub(look.x))).mul(0.5);
 
   material.colorNode = mix(mix(wet, WATERLINE_FOAM, waterline), SNOW_COLOR, snowOnTop);
-  material.roughnessNode = mix(float(0.88), float(0.55), wetness);
+  styleModel(material);
+  material.roughnessNode = mix(float(MODEL_ROUGHNESS), float(0.55), wetness);
 
   markOutlined(material);
 

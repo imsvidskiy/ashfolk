@@ -29,6 +29,7 @@ import type { WorldGrid } from "../../world/world-grid.ts";
 import { columnVisibilityNode, fadeNearCamera, type ObjectExtent } from "../camera-fade.ts";
 import { type FireGlow, fireLightAt } from "../effects/fire-glow.ts";
 import { brightenHighlighted } from "../highlight.ts";
+import { styleModel } from "../model-style.ts";
 import { rotateAroundUp, SNOW_COLOR, slotColorTable, snowCoverNode } from "../node-helpers.ts";
 import { markOutlined } from "../outlines.ts";
 import { cellAtNode, coarseGroundOffsetNode } from "../terrain/height-sampling.ts";
@@ -220,7 +221,7 @@ export function createPlantMaterial({
     varying(highlighted, "plantHighlight")
   );
   material.emissiveNode = vertexColor.mul(fireLight).mul(CROWN_FIRE_LIGHT).add(burning);
-  material.roughnessNode = float(0.88);
+  styleModel(material);
 
   if (fadingExtent === null) {
     markOutlined(material);
