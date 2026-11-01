@@ -15,7 +15,7 @@ import { NEIGHBOR_OFFSETS, type WorldGrid } from "../world/world-grid.ts";
 import { NO_CELL } from "./drainage.ts";
 import { carvePond, isRiverWater } from "./ponds.ts";
 import { riverStrengthFor } from "./river-chains.ts";
-import { interpolatePoint, smoothPinned } from "./river-paths.ts";
+import { acrossAt, interpolatePoint, smoothPinned } from "./river-paths.ts";
 
 export const BANK_FREEBOARD = 0.2;
 
@@ -246,14 +246,10 @@ function wallSide(targets: ChannelTargets, points: readonly RiverPoint[], side: 
   const cuts = new Float64Array(points.length);
 
   for (const [index, point] of points.entries()) {
-    const before = points[Math.max(0, index - 1)];
-    const after = points[Math.min(points.length - 1, index + 1)];
-    const length = Math.max(1e-6, Math.hypot(after.x - before.x, after.z - before.z));
-    const acrossX = (-(after.z - before.z) / length) * side;
-    const acrossZ = ((after.x - before.x) / length) * side;
+    const across = acrossAt(points, index, 1);
 
-    rises[index] = sideRise(targets, point, acrossX, acrossZ);
-    cuts[index] = floorCut(targets, point, acrossX, acrossZ);
+    rises[index] = sideRise(targets, point, across.x * side, across.z * side);
+    cuts[index] = floorCut(targets, point, across.x * side, across.z * side);
   }
 
   const spread = WALL_SLOPE_SPREAD / WALL_SLOPE_SPACING;

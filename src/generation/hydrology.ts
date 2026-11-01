@@ -12,7 +12,17 @@ import { NEIGHBOR_OFFSETS, type WorldGrid } from "../world/world-grid.ts";
 import { analyzeDrainage, channelGround, DEFAULT_HYDROLOGY, type HydrologyOptions, NO_CELL } from "./drainage.ts";
 import { BANK_FREEBOARD, bankWidthOf, type ChannelTargets, carveWaterways } from "./river-carving.ts";
 import { chainCells, chainFlows, type RiverChain, riverStrengthFor, traceRiverChains } from "./river-chains.ts";
-import { makeSurfaceDescend, relaxRiverSurfaces, smoothRiverPath, smoothRiverSurfaces } from "./river-paths.ts";
+import {
+  acrossAt,
+  makeSurfaceDescend,
+  nearestAlong,
+  pointAlong,
+  relaxRiverSurfaces,
+  riverCourse,
+  smoothRiverPath,
+  smoothRiverSurfaces,
+  surfaceAlong,
+} from "./river-paths.ts";
 import { type RiverLand, spaceRiverChains } from "./river-spacing.ts";
 import { placeSprings } from "./springs.ts";
 
@@ -26,7 +36,6 @@ const FLOW_REACH = 15;
 const PATH_SPACING = 2.5;
 const PATH_SPREAD = 8;
 const SURFACE_SPREAD = 20;
-const SURFACE_LIFT = 0;
 const MEANDER_SIDE_REACH = 15;
 const ROOMY_SIDE_RISE = 0.15;
 const CRAMPED_SIDE_RISE = 0.45;
@@ -40,6 +49,11 @@ interface HydrologyResult {
   lakeIds: Int32Array;
   riverStrength: Uint8Array;
   waterSurface: Float32Array;
+}
+
+interface Banks {
+  readonly left: number;
+  readonly right: number;
 }
 
 interface Junction {
@@ -100,21 +114,19 @@ function lowestBankGround(land: RiverLand, point: RiverPoint, acrossX: number, a
   return lowest;
 }
 
+function banksAcross(land: RiverLand, points: readonly RiverPoint[], index: number, reach: number): Banks {
+  const point = points[index];
+  const across = acrossAt(points, index, reach);
+
+  return {
+    left: lowestBankGround(land, point, across.x, across.z),
+    right: lowestBankGround(land, point, -across.x, -across.z),
+  };
+}
+
 function sinkIntoSlopes(land: RiverLand, points: RiverPoint[]): void {
   for (const [index, point] of points.entries()) {
-    const before = points[Math.max(0, index - SLOPE_LOOKAROUND)];
-    const after = points[Math.min(points.length - 1, index + SLOPE_LOOKAROUND)];
-    const length = Math.hypot(after.x - before.x, after.z - before.z);
-
-    if (length < 1e-6) {
-      continue;
-    }
-
-    const acrossX = -(after.z - before.z) / length;
-    const acrossZ = (after.x - before.x) / length;
-
-    const left = lowestBankGround(land, point, acrossX, acrossZ);
-    const right = lowestBankGround(land, point, -acrossX, -acrossZ);
+    const { left, right } = banksAcross(land, points, index, SLOPE_LOOKAROUND);
 
     if (Number.isNaN(left) || Number.isNaN(right)) {
       continue;
@@ -145,48 +157,18 @@ function settleIntoMainRiver(points: RiverPoint[], mainSurface: number | undefin
 }
 
 function junctionOn(river: River, x: number, z: number): Junction {
-  let nearest: Junction = { surface: river.points[0].surface, x: river.points[0].x, z: river.points[0].z };
-  let nearestDistance = Number.POSITIVE_INFINITY;
+  const course = riverCourse(river);
+  const { along } = nearestAlong(course, { x, z });
 
-  for (let index = 1; index < river.points.length; index += 1) {
-    const start = river.points[index - 1];
-    const end = river.points[index];
-    const alongX = end.x - start.x;
-    const alongZ = end.z - start.z;
-    const lengthSquared = Math.max(1e-6, alongX * alongX + alongZ * alongZ);
-    const share = Math.min(Math.max(((x - start.x) * alongX + (z - start.z) * alongZ) / lengthSquared, 0), 1);
-    const pointX = start.x + alongX * share;
-    const pointZ = start.z + alongZ * share;
-    const distance = Math.hypot(pointX - x, pointZ - z);
-
-    if (distance < nearestDistance) {
-      nearestDistance = distance;
-      nearest = { surface: start.surface + (end.surface - start.surface) * share, x: pointX, z: pointZ };
-    }
-  }
-
-  return nearest;
+  return { ...pointAlong(course, along), surface: surfaceAlong(course, along) };
 }
 
 function capSurfaces(land: RiverLand, points: RiverPoint[], raw: Float64Array): void {
   for (const [index, point] of points.entries()) {
-    const before = points[Math.max(0, index - ACROSS_REACH)];
-    const after = points[Math.min(points.length - 1, index + ACROSS_REACH)];
-    const length = Math.hypot(after.x - before.x, after.z - before.z);
+    const { left, right } = banksAcross(land, points, index, ACROSS_REACH);
 
-    if (length < 1e-6) {
-      continue;
-    }
-
-    const acrossX = -(after.z - before.z) / length;
-    const acrossZ = (after.x - before.x) / length;
-
-    const left = lowestBankGround(land, point, acrossX, acrossZ);
-    const right = lowestBankGround(land, point, -acrossX, -acrossZ);
     const lowestBank = Number.isNaN(left) || Number.isNaN(right) ? Number.NaN : Math.min(left, right);
-    const cap = Number.isNaN(lowestBank)
-      ? raw[index] + SURFACE_LIFT
-      : Math.max(raw[index] + SURFACE_LIFT, lowestBank - BANK_FREEBOARD);
+    const cap = Number.isNaN(lowestBank) ? raw[index] : Math.max(raw[index], lowestBank - BANK_FREEBOARD);
 
     point.surface = Math.min(point.surface, cap);
   }

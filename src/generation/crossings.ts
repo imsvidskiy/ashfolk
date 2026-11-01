@@ -18,10 +18,11 @@ import {
 } from "../world/crossings.ts";
 import { isWalkableGround, slopeAt } from "../world/footing.ts";
 import { isWaterCell, sampleHeight } from "../world/terrain-sampling.ts";
-import type { River, WaterFeatures } from "../world/water.ts";
+import type { WaterFeatures } from "../world/water.ts";
 import type { WorldGrid } from "../world/world-grid.ts";
 import { BankRegions } from "./bank-regions.ts";
 import { isNearLake, NO_CELL } from "./drainage.ts";
+import { nearestAlong, pointAlong, type RiverCourse, riverCourse, surfaceAlong } from "./river-paths.ts";
 
 const SHORTEST_RIVER = 220;
 const SOURCE_MARGIN = 30;
@@ -137,12 +138,6 @@ interface Candidate {
   readonly score: number;
 }
 
-interface RiverCourse {
-  readonly length: number;
-  readonly lengths: readonly number[];
-  readonly river: River;
-}
-
 interface Stretch {
   readonly connects: (crossing: Crossing) => boolean;
   readonly from: number;
@@ -173,50 +168,6 @@ function passageIn(survey: CrossingSurvey, cell: number): Passage {
   }
 
   return isWalkableGround(terrain, grid, cell) && !isBlocked(cell) ? Passage.Ground : Passage.Blocked;
-}
-
-function segmentAt(course: RiverCourse, along: number): number {
-  const { lengths } = course;
-
-  let low = 0;
-  let high = lengths.length - 1;
-
-  while (high - low > 1) {
-    const middle = Math.floor((low + high) / 2);
-
-    if (lengths[middle] <= along) {
-      low = middle;
-    } else {
-      high = middle;
-    }
-  }
-
-  return low;
-}
-
-function interpolationAt(course: RiverCourse, along: number): { amount: number; index: number } {
-  const { lengths } = course;
-
-  const clamped = clamp(along, 0, course.length);
-  const index = segmentAt(course, clamped);
-  const span = lengths[index + 1] - lengths[index];
-
-  return { amount: span > 0 ? (clamped - lengths[index]) / span : 0, index };
-}
-
-function pointAlong(course: RiverCourse, along: number): Point {
-  const { amount, index } = interpolationAt(course, along);
-
-  const start = course.river.points[index];
-  const end = course.river.points[index + 1];
-
-  return { x: lerp(start.x, end.x, amount), z: lerp(start.z, end.z, amount) };
-}
-
-function surfaceAlong(course: RiverCourse, along: number): number {
-  const { amount, index } = interpolationAt(course, along);
-
-  return lerp(course.river.points[index].surface, course.river.points[index + 1].surface, amount);
 }
 
 function fallAlong(course: RiverCourse, along: number): number {
@@ -297,46 +248,6 @@ function riverCourses(water: WaterFeatures): RiverCourse[] {
   return water.rivers.map((river) => {
     return riverCourse(river);
   });
-}
-
-function riverCourse(river: River): RiverCourse {
-  const lengths = [0];
-
-  let length = 0;
-
-  for (let index = 1; index < river.points.length; index += 1) {
-    const previous = river.points[index - 1];
-    const current = river.points[index];
-
-    length += Math.hypot(current.x - previous.x, current.z - previous.z);
-    lengths.push(length);
-  }
-
-  return { length, lengths, river };
-}
-
-function nearestAlong(course: RiverCourse, point: Point): { along: number; distance: number } {
-  const { lengths, river } = course;
-
-  let best = { along: 0, distance: Number.POSITIVE_INFINITY };
-
-  for (let index = 1; index < river.points.length; index += 1) {
-    const start = river.points[index - 1];
-    const end = river.points[index];
-
-    const segmentX = end.x - start.x;
-    const segmentZ = end.z - start.z;
-    const lengthSquared = Math.max(1e-6, segmentX * segmentX + segmentZ * segmentZ);
-
-    const amount = clamp(((point.x - start.x) * segmentX + (point.z - start.z) * segmentZ) / lengthSquared, 0, 1);
-    const distance = Math.hypot(start.x + segmentX * amount - point.x, start.z + segmentZ * amount - point.z);
-
-    if (distance < best.distance) {
-      best = { along: lerp(lengths[index - 1], lengths[index], amount), distance };
-    }
-  }
-
-  return best;
 }
 
 function fallUnder(courses: readonly RiverCourse[], crossing: Crossing): number {

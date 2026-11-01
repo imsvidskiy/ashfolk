@@ -1,5 +1,6 @@
 import { clamp, hashToUnit, lerp, smoothstep } from "../shared/math.ts";
-import type { RiverPoint } from "../world/water.ts";
+import type { Point } from "../world/crossings.ts";
+import type { River, RiverPoint } from "../world/water.ts";
 
 const MEANDER_PER_WIDTH = 0.6;
 const LEAST_MEANDER = 2;
@@ -18,6 +19,12 @@ export interface RiverShaping {
   readonly pathSpread: number;
   readonly seed: number;
   readonly spacing: number;
+}
+
+export interface RiverCourse {
+  readonly length: number;
+  readonly lengths: readonly number[];
+  readonly river: River;
 }
 
 export function interpolatePoint(start: RiverPoint, end: RiverPoint, amount: number): RiverPoint {
@@ -140,6 +147,14 @@ function meanderAt(shaping: RiverShaping, along: number, length: number, width: 
   return amplitude * fade * wave;
 }
 
+export function acrossAt(points: readonly RiverPoint[], index: number, reach: number): Point {
+  const before = points[Math.max(0, index - reach)];
+  const after = points[Math.min(points.length - 1, index + reach)];
+  const length = Math.max(1e-6, Math.hypot(after.x - before.x, after.z - before.z));
+
+  return { x: -(after.z - before.z) / length, z: (after.x - before.x) / length };
+}
+
 export function smoothRiverPath(points: readonly RiverPoint[], shaping: RiverShaping): RiverPoint[] {
   const resampled = resampleRiverPath(points, shaping.spacing);
 
@@ -166,13 +181,8 @@ export function smoothRiverPath(points: readonly RiverPoint[], shaping: RiverSha
   });
   const alongs = distancesAlong(smoothed);
   const length = alongs.at(-1) ?? 0;
-  const last = smoothed.length - 1;
   const acrosses = smoothed.map((_, index) => {
-    const before = smoothed[Math.max(0, index - 1)];
-    const after = smoothed[Math.min(last, index + 1)];
-    const tangent = Math.max(1e-6, Math.hypot(after.x - before.x, after.z - before.z));
-
-    return { x: -(after.z - before.z) / tangent, z: (after.x - before.x) / tangent };
+    return acrossAt(smoothed, index, 1);
   });
   const rooms = smoothPinned(
     Float64Array.from(smoothed, (point, index) => {
@@ -209,4 +219,88 @@ export function relaxRiverSurfaces(points: RiverPoint[], passes: number): void {
       points[index].surface = Math.min(points[index].surface, average);
     }
   }
+}
+
+function segmentAt(course: RiverCourse, along: number): number {
+  const { lengths } = course;
+
+  let low = 0;
+  let high = lengths.length - 1;
+
+  while (high - low > 1) {
+    const middle = Math.floor((low + high) / 2);
+
+    if (lengths[middle] <= along) {
+      low = middle;
+    } else {
+      high = middle;
+    }
+  }
+
+  return low;
+}
+
+function interpolationAt(course: RiverCourse, along: number): { amount: number; index: number } {
+  const { lengths } = course;
+
+  const clamped = clamp(along, 0, course.length);
+  const index = segmentAt(course, clamped);
+  const span = lengths[index + 1] - lengths[index];
+
+  return { amount: span > 0 ? (clamped - lengths[index]) / span : 0, index };
+}
+
+export function pointAlong(course: RiverCourse, along: number): Point {
+  const { amount, index } = interpolationAt(course, along);
+
+  const start = course.river.points[index];
+  const end = course.river.points[index + 1];
+
+  return { x: lerp(start.x, end.x, amount), z: lerp(start.z, end.z, amount) };
+}
+
+export function surfaceAlong(course: RiverCourse, along: number): number {
+  const { amount, index } = interpolationAt(course, along);
+
+  return lerp(course.river.points[index].surface, course.river.points[index + 1].surface, amount);
+}
+
+export function riverCourse(river: River): RiverCourse {
+  const lengths = [0];
+
+  let length = 0;
+
+  for (let index = 1; index < river.points.length; index += 1) {
+    const previous = river.points[index - 1];
+    const current = river.points[index];
+
+    length += Math.hypot(current.x - previous.x, current.z - previous.z);
+    lengths.push(length);
+  }
+
+  return { length, lengths, river };
+}
+
+export function nearestAlong(course: RiverCourse, point: Point): { along: number; distance: number } {
+  const { lengths, river } = course;
+
+  let best = { along: 0, distance: Number.POSITIVE_INFINITY };
+
+  for (let index = 1; index < river.points.length; index += 1) {
+    const start = river.points[index - 1];
+    const end = river.points[index];
+
+    const segmentX = end.x - start.x;
+    const segmentZ = end.z - start.z;
+    const lengthSquared = Math.max(1e-6, segmentX * segmentX + segmentZ * segmentZ);
+
+    const amount = clamp(((point.x - start.x) * segmentX + (point.z - start.z) * segmentZ) / lengthSquared, 0, 1);
+    const distance = Math.hypot(start.x + segmentX * amount - point.x, start.z + segmentZ * amount - point.z);
+
+    if (distance < best.distance) {
+      best = { along: lerp(lengths[index - 1], lengths[index], amount), distance };
+    }
+  }
+
+  return best;
 }
