@@ -38,14 +38,22 @@ const BRANCH_SIDES: Readonly<Record<Exclude<PlantDetailLevel, "far">, readonly n
 };
 
 const CONE_SEGMENTS: Readonly<Record<DistantLevel, number>> = { far: 5, low: 6 };
-const PAD_SIDES: Readonly<Record<NearLevel, number>> = { high: 8, medium: 6 };
-const PAD_PROFILE: readonly (readonly [reach: number, height: number])[] = [
-  [0, -0.7],
-  [0.9, -0.5],
-  [1, 0.1],
-  [0.75, 0.7],
-  [0, 1.2],
-];
+const PAD_SIDES: Readonly<Record<NearLevel, number>> = { high: 8, medium: 5 };
+const PAD_PROFILES: Readonly<Record<NearLevel, readonly (readonly [reach: number, height: number])[]>> = {
+  high: [
+    [0, -0.7],
+    [0.9, -0.5],
+    [1, 0.1],
+    [0.75, 0.7],
+    [0, 1.2],
+  ],
+  medium: [
+    [0, -0.7],
+    [0.9, -0.5],
+    [1, 0.1],
+    [0, 1.2],
+  ],
+};
 const LOW_TIER_TOP = 0.62;
 const LOW_TIER_SPLIT = 0.45;
 const LOW_TIER_NARROWING = 0.62;
@@ -486,7 +494,7 @@ function addBlob(
   }
 
   if (look.hasPadCrowns === true && !isDistantLevel(level)) {
-    builder.add(padShape(foliage, PAD_SIDES[level]), {
+    builder.add(padShape(foliage, level), {
       style: foliageStyle(structure, look, foliage.tint, crown),
       transform: transformOf({ position: foliage.center }),
     });
@@ -511,14 +519,14 @@ function addBlob(
   });
 }
 
-function padShape(foliage: FoliageBlob, sides: number): Shape {
+function padShape(foliage: FoliageBlob, level: NearLevel): Shape {
   const { radius, squash } = foliage;
 
   return loft(
-    PAD_PROFILE.map(([reach, height]) => {
+    PAD_PROFILES[level].map(([reach, height]) => {
       return { radiusX: radius * reach, radiusZ: radius * reach, y: radius * squash * height };
     }),
-    sides
+    PAD_SIDES[level]
   );
 }
 
