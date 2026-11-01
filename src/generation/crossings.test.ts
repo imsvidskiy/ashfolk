@@ -19,6 +19,9 @@ const ON_RIVER = 18;
 const SPACING_ALONG = 500;
 const WIDEST_GAP = 900;
 const WIDTH_MARGIN = 0.4;
+const FALL_REACH = 15;
+const FORD_STEEPEST_FALL = 0.06;
+const STEEP_FALL = 0.2;
 
 const worlds = new Map<IslandShapeKind, GeneratedWorld>();
 
@@ -69,6 +72,48 @@ function positionsAlong(river: River, crossings: readonly Crossing[]): number[] 
   return positions.sort((first, second) => {
     return first - second;
   });
+}
+
+function fallAround(river: River, point: { x: number; z: number }): { distance: number; fall: number } {
+  const lengths = river.points.map((_, index) => {
+    return river.points.slice(1, index + 1).reduce((sum, current, step) => {
+      const previous = river.points[step];
+
+      return sum + Math.hypot(current.x - previous.x, current.z - previous.z);
+    }, 0);
+  });
+  const length = lengths.at(-1) ?? 0;
+
+  function surfaceAt(along: number): number {
+    const clamped = Math.min(Math.max(along, 0), length);
+    const index = Math.max(
+      0,
+      lengths.findLastIndex((start) => {
+        return start <= clamped;
+      })
+    );
+    const next = Math.min(index + 1, lengths.length - 1);
+    const span = lengths[next] - lengths[index];
+    const amount = span > 0 ? (clamped - lengths[index]) / span : 0;
+
+    return river.points[index].surface + (river.points[next].surface - river.points[index].surface) * amount;
+  }
+
+  const nearest = river.points.reduce(
+    (best, candidate, index) => {
+      const distance = Math.hypot(candidate.x - point.x, candidate.z - point.z);
+
+      return distance < best.distance ? { along: lengths[index], distance } : best;
+    },
+    { along: 0, distance: Number.POSITIVE_INFINITY }
+  );
+  const before = Math.max(0, nearest.along - FALL_REACH);
+  const after = Math.min(length, nearest.along + FALL_REACH);
+
+  return {
+    distance: nearest.distance,
+    fall: after > before ? Math.abs(surfaceAt(before) - surfaceAt(after)) / (after - before) : 0,
+  };
 }
 
 function samplesAlong(crossing: Crossing): { x: number; z: number }[] {
@@ -270,6 +315,24 @@ describe.each(["round", "square"] as const)("crossings on a %s island", (shape) 
     }
   });
 
+  test("keep fords to calm reaches of a river", () => {
+    const { crossings, water } = worldOf(shape);
+
+    for (const ford of crossings.filter((crossing) => {
+      return crossing.kind === "ford";
+    })) {
+      const nearest = water.rivers
+        .map((river) => {
+          return fallAround(river, crossingMiddle(ford));
+        })
+        .reduce((best, candidate) => {
+          return candidate.distance < best.distance ? candidate : best;
+        });
+
+      expect(nearest.fall, `ford ${ford.id}`).toBeLessThan(FORD_STEEPEST_FALL * 1.25);
+    }
+  });
+
   test("can be walked along from end to end", () => {
     for (const crossing of worldOf(shape).crossings) {
       expect(
@@ -310,43 +373,53 @@ describe.each(["round", "square"] as const)("crossings on a %s island", (shape) 
   });
 });
 
+function landCutInTwo(fall: number): Parameters<typeof planCrossings>[0] {
+  const dimensions = { cellSize: 10, cellsPerSide: 48 };
+  const grid = new WorldGrid(dimensions);
+  const terrain = createTerrainData(dimensions);
+
+  terrain.waterSurface.fill(NO_WATER);
+  terrain.height.fill(100);
+
+  for (let cell = 0; cell < grid.cellCount; cell += 1) {
+    if (Math.abs(grid.cellCenterX(cell)) < 10) {
+      terrain.height[cell] = 99.4;
+      terrain.waterSurface[cell] = 99.9;
+      terrain.riverStrength[cell] = 120;
+    }
+  }
+
+  const points = Array.from({ length: 21 }, (_, index) => {
+    return {
+      depth: 0.5,
+      flow: 1,
+      surface: 99.9 - (index - 10) * 10 * fall,
+      width: 8,
+      x: 0,
+      z: -100 + index * 10,
+    };
+  });
+
+  return {
+    grid,
+    isBlocked: () => {
+      return false;
+    },
+    lakeIds: new Int32Array(grid.cellCount).fill(-1),
+    terrain,
+    water: { lakes: [], rivers: [{ id: 0, points, reachesEdge: false }], springs: [], waterfalls: [] },
+  };
+}
+
+function kindsOf(crossings: readonly Crossing[]): string[] {
+  return crossings.map((crossing) => {
+    return crossing.kind;
+  });
+}
+
 describe("crossings on land a river cuts in two", () => {
   it("join the two sides even where the river is too short to space crossings along", () => {
-    const dimensions = { cellSize: 10, cellsPerSide: 48 };
-    const grid = new WorldGrid(dimensions);
-    const terrain = createTerrainData(dimensions);
-
-    terrain.waterSurface.fill(NO_WATER);
-    terrain.height.fill(100);
-
-    for (let cell = 0; cell < grid.cellCount; cell += 1) {
-      if (Math.abs(grid.cellCenterX(cell)) < 10) {
-        terrain.height[cell] = 99.4;
-        terrain.waterSurface[cell] = 99.9;
-        terrain.riverStrength[cell] = 120;
-      }
-    }
-
-    const points = Array.from({ length: 21 }, (_, index) => {
-      return {
-        depth: 0.5,
-        flow: 1,
-        surface: 99.9,
-        width: 8,
-        x: 0,
-        z: -100 + index * 10,
-      };
-    });
-
-    const crossings = planCrossings({
-      grid,
-      isBlocked: () => {
-        return false;
-      },
-      lakeIds: new Int32Array(grid.cellCount).fill(-1),
-      terrain,
-      water: { lakes: [], rivers: [{ id: 0, points, reachesEdge: false }], springs: [], waterfalls: [] },
-    });
+    const crossings = planCrossings(landCutInTwo(0));
 
     expect(crossings).toHaveLength(1);
     expect(
@@ -354,5 +427,21 @@ describe("crossings on land a river cuts in two", () => {
         return Math.sign(crossing.startX) !== Math.sign(crossing.endX);
       })
     ).toBe(true);
+  });
+
+  it("wade a calm stream and lay a fallen log over one that falls steeply", () => {
+    expect(kindsOf(planCrossings(landCutInTwo(0)))).toEqual(["ford"]);
+    expect(kindsOf(planCrossings(landCutInTwo(STEEP_FALL)))).toEqual(["log"]);
+  });
+
+  it("give up a ford once its stream falls steeply", () => {
+    const [ford] = planCrossings(landCutInTwo(0));
+
+    if (ford === undefined) {
+      throw new Error("Expected a ford across the calm stream");
+    }
+
+    expect(refreshCrossings(landCutInTwo(0), [ford])).toEqual([ford]);
+    expect(kindsOf(refreshCrossings(landCutInTwo(STEEP_FALL), [ford]))).toEqual(["log"]);
   });
 });
