@@ -70,4 +70,30 @@ export const SCENES: readonly Scene[] = [
     query: "seed=7&shape=round&quality=high&hours=11&camera=-1545,1457,160,0.5,-2.45",
     seconds: 25,
   },
+  {
+    name: "models-forest-close",
+    query: "seed=7&shape=round&quality=high&paused=1&hours=11&camera=90,-1050,45,0.35,0.5",
+  },
+  {
+    name: "models-forest-autumn",
+    query: "seed=7&shape=round&quality=high&paused=1&hours=11&camera=90,-1050,130,0.5,0.5",
+    season: 2.6,
+  },
+  {
+    name: "models-forest-lod",
+    query: "seed=7&shape=round&quality=high&paused=1&hours=11&camera=90,-1050,420,0.6,0.5",
+  },
+  {
+    name: "models-people-camp",
+    query: "seed=7&shape=round&quality=high&paused=1&hours=11&camera=185,1348,14,0.35,0.6",
+  },
+  {
+    name: "models-camp-buildings",
+    query: "seed=7&shape=round&quality=high&paused=1&hours=11&camera=1470,1320,30,0.55,0.3",
+    season: 1.5,
+    seconds: 90,
+    speed: 16,
+  },
+  { name: "models-mammoths", query: "seed=7&shape=round&quality=high&paused=1&hours=11&camera=2100,-45,22,0.3,0.4" },
+  { name: "models-dolmen", query: "seed=7&shape=round&quality=high&paused=1&hours=11&camera=-271,1162,18,0.35,0.6" },
 ];
