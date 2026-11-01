@@ -24,19 +24,26 @@ import {
 export const FOLIAGE_FLUTTER = 1;
 
 const MESH_NOISE = createVolumeNoise(createRandom(5150));
-const BLOB_LIMITS: Readonly<Record<NearLevel, number>> = { high: 9, medium: 4 };
+const BLOB_LIMITS: Readonly<Record<NearLevel, number>> = { high: 6, medium: 4 };
+export const CROWN_ROUGHNESS = 0.1;
 const GROUNDED_CROWN_LIFT = 0.8;
 const LOW_CROWN_FILL = 0.53;
 const LOW_FROND_CROWN_FILL = 0.4;
 const SWAY_GROWTH = 1.4;
 
 const BRANCH_SIDES: Readonly<Record<Exclude<PlantDetailLevel, "far">, readonly number[]>> = {
-  high: [6, 4, 3],
+  high: [5, 4, 3],
   low: [4],
   medium: [5, 3],
 };
 
-const CONE_SEGMENTS: Readonly<Record<DistantLevel, number>> = { far: 5, low: 7 };
+const CONE_SEGMENTS: Readonly<Record<DistantLevel, number>> = { far: 5, low: 6 };
+const PAD_SIDES: Readonly<Record<NearLevel, number>> = { high: 8, medium: 6 };
+const PAD_TOP = 0.95;
+const PAD_UNDERSIDE = 0.8;
+const LOW_TIER_TOP = 0.62;
+const LOW_TIER_SPLIT = 0.45;
+const LOW_TIER_NARROWING = 0.62;
 const SPIKE_SIDES = 3;
 
 const DOME: readonly (readonly [reach: number, radius: number])[] = [
@@ -68,6 +75,7 @@ export interface TreeLook {
   readonly bark: MaterialSlotIndex;
   readonly foliage: MaterialSlotIndex;
   readonly hasBarkMarks: boolean;
+  readonly hasPadCrowns?: boolean;
 }
 
 export const BROADLEAF_LOOK: TreeLook = { bark: MaterialSlot.Bark, foliage: MaterialSlot.Leaf, hasBarkMarks: false };
@@ -79,8 +87,8 @@ interface SkirtDetail {
 }
 
 const SKIRT_DETAILS: Readonly<Record<NearLevel, SkirtDetail>> = {
-  high: { hasRoundedUnderside: true, segments: 10, teeth: 8 },
-  medium: { hasRoundedUnderside: false, segments: 8, teeth: 7 },
+  high: { hasRoundedUnderside: false, segments: 10, teeth: 5 },
+  medium: { hasRoundedUnderside: false, segments: 8, teeth: 4 },
 };
 
 interface MergedBlob {
@@ -472,6 +480,15 @@ function addBlob(
     return;
   }
 
+  if (look.hasPadCrowns === true && !isDistantLevel(level)) {
+    builder.add(padShape(foliage, PAD_SIDES[level]), {
+      style: foliageStyle(structure, look, foliage.tint, crown),
+      transform: transformOf({ position: foliage.center }),
+    });
+
+    return;
+  }
+
   const shape =
     level === "high"
       ? blob({
@@ -479,7 +496,7 @@ function addBlob(
           noise: MESH_NOISE,
           offset: [x * 0.37, y * 0.29, z * 0.41],
           radius: foliage.radius,
-          roughness: 0.3,
+          roughness: CROWN_ROUGHNESS,
         })
       : icosphere(foliage.radius, 0);
 
@@ -487,6 +504,19 @@ function addBlob(
     style: foliageStyle(structure, look, foliage.tint, crown),
     transform: transformOf({ position: foliage.center, scale: [1, foliage.squash, 1] }),
   });
+}
+
+function padShape(foliage: FoliageBlob, sides: number): Shape {
+  const { radius, squash } = foliage;
+
+  return loft(
+    [
+      { radiusX: 0, radiusZ: 0, y: -radius * squash * PAD_UNDERSIDE },
+      { radiusX: radius, radiusZ: radius, y: 0 },
+      { radiusX: 0, radiusZ: 0, y: radius * squash * PAD_TOP },
+    ],
+    sides
+  );
 }
 
 function addFrond(
@@ -684,10 +714,26 @@ function addLowCrown(builder: MeshBuilder, structure: TreeStructure, look: TreeL
 
     const sides = CONE_SEGMENTS[level];
     const widening = silhouetteWidth(CONE_SEGMENTS.low) / silhouetteWidth(sides);
+    const style = foliageStyle(structure, look, 0, new Vector3(0, (top + bottom) / 2, 0));
 
-    builder.add(cone(radius * widening, top - bottom, sides), {
-      style: foliageStyle(structure, look, 0, new Vector3(0, (top + bottom) / 2, 0)),
+    if (level === "far") {
+      builder.add(cone(radius * widening, top - bottom, sides), {
+        style,
+        transform: transformOf({ position: [center[0], bottom, center[2]] }),
+      });
+
+      return;
+    }
+
+    const split = lerp(bottom, top, LOW_TIER_SPLIT);
+
+    builder.add(cone(radius, (top - bottom) * LOW_TIER_TOP, sides), {
+      style,
       transform: transformOf({ position: [center[0], bottom, center[2]] }),
+    });
+    builder.add(cone(radius * LOW_TIER_NARROWING, top - split, sides), {
+      style,
+      transform: transformOf({ position: [center[0], split, center[2]] }),
     });
 
     return;
