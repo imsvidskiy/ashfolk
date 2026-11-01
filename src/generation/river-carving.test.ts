@@ -21,6 +21,8 @@ const SIDEHILL_CROSS_SLOPE = 0.12;
 const NEIGHBOR_CELLS = 1.5;
 const WATER_LEVEL_CELLS = 2.5;
 const DRAWN_EDGE_CELLS = 1.25;
+const ROCK_SLOPE = 0.9;
+const ROCK_MADE_SHARE = 0.025;
 
 function highestSurfaceWithinCell(river: River, index: number, cellSize: number): number {
   const point = river.points[index];
@@ -212,6 +214,36 @@ function slopesAddedByCarving(generated: GeneratedWorld): number[] {
   return added;
 }
 
+function rockMadeByCarving(generated: GeneratedWorld): { carved: number; rock: number } {
+  const { terrain } = generated;
+
+  const grid = new WorldGrid(generated.dimensions);
+  const uncarved = terrain.height.map((height, cell) => {
+    return height + terrain.carving[cell];
+  });
+  let carved = 0;
+  let rock = 0;
+
+  for (let cell = 0; cell < grid.cellCount; cell += 1) {
+    const isCarvedLand =
+      terrain.carving[cell] > 1 &&
+      terrain.coastDistance[cell] >= INLAND_REACH &&
+      !hasWater(terrain.waterSurface[cell], terrain.height[cell]);
+
+    if (!isCarvedLand || grid.isOnEdge(cell)) {
+      continue;
+    }
+
+    carved += 1;
+
+    if (slopeAt(terrain.height, grid, cell) > ROCK_SLOPE && slopeAt(uncarved, grid, cell) <= ROCK_SLOPE) {
+      rock += 1;
+    }
+  }
+
+  return { carved, rock };
+}
+
 describe("river channels of coarse islands", () => {
   it("keeps the water of every river falling from its source to its mouth on several seeds and both shapes", () => {
     for (const seed of [3, 7, 11, 19]) {
@@ -277,6 +309,15 @@ describe("river beds of full-size islands", () => {
 
       expect(quantile(added, 0.9)).toBeLessThan(0.25);
       expect(quantile(added, 0.99)).toBeLessThan(0.65);
+    }
+  });
+
+  it("cuts gentle land beside rivers down to the water without leaving rock walls", () => {
+    for (const generated of worlds) {
+      const { carved, rock } = rockMadeByCarving(generated);
+
+      expect(carved).toBeGreaterThan(10_000);
+      expect(rock / carved).toBeLessThan(ROCK_MADE_SHARE);
     }
   });
 });

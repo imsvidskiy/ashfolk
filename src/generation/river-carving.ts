@@ -40,9 +40,17 @@ const WALL_SLOPE_REACH = 20;
 const WALL_SLOPE_SPREAD = 20;
 const WALL_SLOPE_SPACING = 2.5;
 const DEEPEST_WALL_CUT = 10;
+const DEEPEST_FLOOR_CUT = 30;
+const FLOOR_CUT_SLACK = 2;
+const FLOOR_CUT_REACH = 60;
+const FLOOR_CUT_PROBE = 20;
+const ROOMY_LAND_RISE = 0.45;
+const CRAMPED_LAND_RISE = 0.7;
 const WALL_CUT_EASING = 4;
 const WALL_REACH = 50;
 const WALL_FADE = 60;
+const WALL_FOOT_SOFTNESS = 6;
+const WALL_FOOT_CUTOFF = 4 * WALL_FOOT_SOFTNESS;
 const PINCH_PASSES = 2;
 const PINCHED_DEPTH = 0.6;
 const OPPOSITE_SIDES = [
@@ -67,6 +75,8 @@ interface ChannelSamples {
   readonly alongs: Float64Array;
   readonly cells: number[];
   readonly distances: Float64Array;
+  readonly footSurfaces: Float64Array;
+  readonly footWeights: Float64Array;
   readonly segments: Int32Array;
 }
 
@@ -84,15 +94,22 @@ interface ChannelKind {
 interface CellShape {
   readonly acrossX: number;
   readonly acrossZ: number;
+  readonly floorCut: number;
   readonly floorSurface: number;
+  readonly footSurface: number;
   readonly isPastCoast: boolean;
   readonly isRiver: boolean;
   readonly wallSlope: number;
 }
 
+interface WallSide {
+  readonly floorCuts: Float64Array;
+  readonly slopes: Float64Array;
+}
+
 interface RiverWalls {
-  readonly left: Float64Array;
-  readonly right: Float64Array;
+  readonly left: WallSide;
+  readonly right: WallSide;
 }
 
 export function bankWidthOf(point: RiverPoint): number {
@@ -129,15 +146,15 @@ function riverBed(distanceFromCenter: number, point: RiverPoint): number {
   return lerp(deep, Math.max(deep, point.surface - RIM_DEPTH), rim);
 }
 
-function easedCut(cut: number): number {
-  const start = DEEPEST_WALL_CUT - WALL_CUT_EASING;
+function easedCut(cut: number, deepest: number): number {
+  const start = deepest - WALL_CUT_EASING;
 
   if (cut <= start) {
     return cut;
   }
 
-  if (cut >= DEEPEST_WALL_CUT + WALL_CUT_EASING) {
-    return DEEPEST_WALL_CUT;
+  if (cut >= deepest + WALL_CUT_EASING) {
+    return deepest;
   }
 
   return cut - ((cut - start) * (cut - start)) / (4 * WALL_CUT_EASING);
@@ -165,14 +182,17 @@ function wallHeight(
   distanceFromCenter: number,
   floorReach: number,
   point: RiverPoint,
-  wallSlope: number,
+  shape: CellShape,
   uncarvedHeight: number
 ): number {
-  const wall = point.surface + BANK_FREEBOARD + wallSlope * softRamp(distanceFromCenter - floorReach);
-  const cut = easedCut(Math.max(0, uncarvedHeight - smoothMinimum(uncarvedHeight, wall)));
+  const wallStart = floorReach + WALL_FOOT;
+  const wall = shape.footSurface + BANK_FREEBOARD + shape.wallSlope * softRamp(distanceFromCenter - wallStart);
+  const floorShare = 1 - smoothstep(floorReach, floorReach + FLOOR_CUT_REACH, distanceFromCenter);
+  const deepest = DEEPEST_WALL_CUT + Math.max(0, shape.floorCut - DEEPEST_WALL_CUT) * floorShare;
+  const cut = easedCut(Math.max(0, uncarvedHeight - smoothMinimum(uncarvedHeight, wall)), deepest);
   const fade = 1 - saturate((distanceFromCenter - point.width / 2 - WALL_REACH) / WALL_FADE);
 
-  return uncarvedHeight - Math.max(0, smoothMinimum(cut, DEEPEST_WALL_CUT * fade));
+  return uncarvedHeight - Math.max(0, smoothMinimum(cut, deepest * fade));
 }
 
 function sideRise(targets: ChannelTargets, point: RiverPoint, acrossX: number, acrossZ: number): number {
@@ -188,31 +208,68 @@ function sideRise(targets: ChannelTargets, point: RiverPoint, acrossX: number, a
   return Math.max(0, uncarvedHeights[cell] - point.surface) / reach;
 }
 
-function riverWalls(targets: ChannelTargets, points: readonly RiverPoint[]): RiverWalls {
-  const left = new Float64Array(points.length);
-  const right = new Float64Array(points.length);
+function floorReachOf(grid: WorldGrid, halfWidth: number): number {
+  return drawnReach(halfWidth) + grid.cellSize * FLOOR_CELLS;
+}
+
+function landAcross(
+  targets: ChannelTargets,
+  point: RiverPoint,
+  acrossX: number,
+  acrossZ: number,
+  reach: number
+): number {
+  const { coastDistance, grid, uncarvedHeights } = targets;
+
+  const cell = grid.cellAt(point.x + acrossX * reach, point.z + acrossZ * reach);
+
+  return cell < 0 || !isOnIsland(coastDistance, cell) ? Number.NaN : uncarvedHeights[cell];
+}
+
+function floorCut(targets: ChannelTargets, point: RiverPoint, acrossX: number, acrossZ: number): number {
+  const reach = floorReachOf(targets.grid, point.width / 2);
+  const edge = landAcross(targets, point, acrossX, acrossZ, reach);
+  const beyond = landAcross(targets, point, acrossX, acrossZ, reach + FLOOR_CUT_PROBE);
+
+  if (Number.isNaN(edge) || Number.isNaN(beyond)) {
+    return DEEPEST_WALL_CUT;
+  }
+
+  const room = 1 - smoothstep(ROOMY_LAND_RISE, CRAMPED_LAND_RISE, (beyond - edge) / FLOOR_CUT_PROBE);
+  const needed = edge - point.surface - BANK_FREEBOARD + FLOOR_CUT_SLACK;
+
+  return DEEPEST_WALL_CUT + Math.max(0, needed - DEEPEST_WALL_CUT) * room;
+}
+
+function wallSide(targets: ChannelTargets, points: readonly RiverPoint[], side: number): WallSide {
+  const rises = new Float64Array(points.length);
+  const cuts = new Float64Array(points.length);
 
   for (const [index, point] of points.entries()) {
     const before = points[Math.max(0, index - 1)];
     const after = points[Math.min(points.length - 1, index + 1)];
     const length = Math.max(1e-6, Math.hypot(after.x - before.x, after.z - before.z));
-    const acrossX = -(after.z - before.z) / length;
-    const acrossZ = (after.x - before.x) / length;
+    const acrossX = (-(after.z - before.z) / length) * side;
+    const acrossZ = ((after.x - before.x) / length) * side;
 
-    left[index] = sideRise(targets, point, acrossX, acrossZ);
-    right[index] = sideRise(targets, point, -acrossX, -acrossZ);
+    rises[index] = sideRise(targets, point, acrossX, acrossZ);
+    cuts[index] = floorCut(targets, point, acrossX, acrossZ);
   }
 
   const spread = WALL_SLOPE_SPREAD / WALL_SLOPE_SPACING;
 
   return {
-    left: smoothPinned(left, spread).map((rise) => {
-      return clamp(rise + WALL_SLOPE_LIFT, GENTLEST_WALL, STEEPEST_WALL);
+    floorCuts: smoothPinned(cuts, spread).map((cut) => {
+      return clamp(cut, DEEPEST_WALL_CUT, DEEPEST_FLOOR_CUT);
     }),
-    right: smoothPinned(right, spread).map((rise) => {
+    slopes: smoothPinned(rises, spread).map((rise) => {
       return clamp(rise + WALL_SLOPE_LIFT, GENTLEST_WALL, STEEPEST_WALL);
     }),
   };
+}
+
+function riverWalls(targets: ChannelTargets, points: readonly RiverPoint[]): RiverWalls {
+  return { left: wallSide(targets, points, 1), right: wallSide(targets, points, -1) };
 }
 
 function createChannelSamples(cellCount: number): ChannelSamples {
@@ -220,13 +277,18 @@ function createChannelSamples(cellCount: number): ChannelSamples {
     alongs: new Float64Array(cellCount),
     cells: [],
     distances: new Float64Array(cellCount).fill(Number.POSITIVE_INFINITY),
+    footSurfaces: new Float64Array(cellCount),
+    footWeights: new Float64Array(cellCount),
     segments: new Int32Array(cellCount),
   };
 }
 
-function sampleSegment(grid: WorldGrid, points: readonly RiverPoint[], segment: number, samples: ChannelSamples): void {
-  const { alongs, cells, distances, segments } = samples;
-
+function visitSegment(
+  grid: WorldGrid,
+  points: readonly RiverPoint[],
+  segment: number,
+  visit: (cell: number, distance: number, along: number) => void
+): void {
   const start = points[segment];
   const end = points[segment + 1];
 
@@ -248,21 +310,48 @@ function sampleSegment(grid: WorldGrid, points: readonly RiverPoint[], segment: 
 
       const along = saturate(((x - start.x) * segmentX + (z - start.z) * segmentZ) / lengthSquared);
       const distance = Math.hypot(x - (start.x + segmentX * along), z - (start.z + segmentZ * along));
-      const cell = grid.index(column, row);
 
-      if (distance >= distances[cell]) {
-        continue;
-      }
-
-      if (distances[cell] === Number.POSITIVE_INFINITY) {
-        cells.push(cell);
-      }
-
-      alongs[cell] = along;
-      distances[cell] = distance;
-      segments[cell] = segment;
+      visit(grid.index(column, row), distance, along);
     }
   }
+}
+
+function sampleSegment(grid: WorldGrid, points: readonly RiverPoint[], segment: number, samples: ChannelSamples): void {
+  const { alongs, cells, distances, segments } = samples;
+
+  visitSegment(grid, points, segment, (cell, distance, along) => {
+    if (distance >= distances[cell]) {
+      return;
+    }
+
+    if (distances[cell] === Number.POSITIVE_INFINITY) {
+      cells.push(cell);
+    }
+
+    alongs[cell] = along;
+    distances[cell] = distance;
+    segments[cell] = segment;
+  });
+}
+
+function blendFeet(grid: WorldGrid, points: readonly RiverPoint[], segment: number, samples: ChannelSamples): void {
+  const { distances, footSurfaces, footWeights } = samples;
+
+  const start = points[segment];
+  const end = points[segment + 1];
+
+  visitSegment(grid, points, segment, (cell, distance, along) => {
+    const farther = distance - distances[cell];
+
+    if (farther > WALL_FOOT_CUTOFF) {
+      return;
+    }
+
+    const weight = Math.exp(-farther / WALL_FOOT_SOFTNESS);
+
+    footSurfaces[cell] += weight * (start.surface + (end.surface - start.surface) * along);
+    footWeights[cell] += weight;
+  });
 }
 
 function settledOnGround(point: RiverPoint, ground: number): RiverPoint {
@@ -304,8 +393,8 @@ function carveCell(
     (distanceFromCenter <= channelReach && uncarvedHeight < point.surface - SHALLOWEST_WATER);
 
   if (!isUnderWater) {
-    const floorReach = drawnReach(halfWidth) + targets.grid.cellSize * FLOOR_CELLS;
-    const wall = wallHeight(distanceFromCenter, floorReach + WALL_FOOT, point, shape.wallSlope, uncarvedHeight);
+    const floorReach = floorReachOf(targets.grid, halfWidth);
+    const wall = wallHeight(distanceFromCenter, floorReach, point, shape, uncarvedHeight);
     const floor = Math.max(point.surface, shape.floorSurface) + BANK_FREEBOARD;
 
     targets.sideCuts[cell] = Math.min(targets.sideCuts[cell], Math.max(wall, floor));
@@ -346,8 +435,16 @@ function pastCoastSegment(targets: ChannelTargets, river: River): number {
   return river.points.length - 2;
 }
 
-function wallSlopeAt(side: Float64Array, segment: number, along: number): number {
-  return side[segment] + (side[segment + 1] - side[segment]) * along;
+function wallSideOf(walls: RiverWalls | null, isLeft: boolean): WallSide | null {
+  if (walls === null) {
+    return null;
+  }
+
+  return isLeft ? walls.left : walls.right;
+}
+
+function alongSide(values: Float64Array, segment: number, along: number): number {
+  return values[segment] + (values[segment + 1] - values[segment]) * along;
 }
 
 function highestSurfaceAlong(points: readonly RiverPoint[], segment: number, point: RiverPoint, reach: number): number {
@@ -374,12 +471,16 @@ function carveChannel(
   points: readonly RiverPoint[],
   channel: ChannelKind
 ): void {
-  const { alongs, cells, distances, segments } = samples;
+  const { alongs, cells, distances, footSurfaces, footWeights, segments } = samples;
 
   const walls = channel.isRiver ? riverWalls(targets, points) : null;
 
   for (let segment = 0; segment < points.length - 1; segment += 1) {
     sampleSegment(targets.grid, points, segment, samples);
+  }
+
+  for (let segment = 0; segment < points.length - 1; segment += 1) {
+    blendFeet(targets.grid, points, segment, samples);
   }
 
   for (const cell of cells) {
@@ -392,18 +493,22 @@ function carveChannel(
       (end.x - start.x) * (targets.grid.cellCenterZ(cell) - start.z) -
         (end.z - start.z) * (targets.grid.cellCenterX(cell) - start.x) >
       0;
-    const wallSlope = walls === null ? GENTLEST_WALL : wallSlopeAt(isLeft ? walls.left : walls.right, segment, along);
+    const side = wallSideOf(walls, isLeft);
     const distance = Math.max(distances[cell], 1e-6);
 
     carveCell(targets, cell, distances[cell], point, {
       acrossX: (targets.grid.cellCenterX(cell) - point.x) / distance,
       acrossZ: (targets.grid.cellCenterZ(cell) - point.z) / distance,
+      floorCut: side === null ? DEEPEST_WALL_CUT : alongSide(side.floorCuts, segment, along),
       floorSurface: highestSurfaceAlong(points, segment, point, targets.grid.cellSize / 2),
+      footSurface: footWeights[cell] > 0 ? footSurfaces[cell] / footWeights[cell] : point.surface,
       isPastCoast: segment === channel.coastSegment,
       isRiver: channel.isRiver,
-      wallSlope,
+      wallSlope: side === null ? GENTLEST_WALL : alongSide(side.slopes, segment, along),
     });
     distances[cell] = Number.POSITIVE_INFINITY;
+    footSurfaces[cell] = 0;
+    footWeights[cell] = 0;
   }
 
   cells.length = 0;
