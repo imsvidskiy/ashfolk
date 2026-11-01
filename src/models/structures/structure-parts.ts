@@ -9,6 +9,7 @@ import { blob, box, card, cone, cylinder, type LoftSection, lathe } from "../mes
 import { segmentLength, segmentTransform, type Triple, transformOf } from "../mesh/transforms.ts";
 
 export const GLOW_PART = 1;
+export const STONE_ROUGHNESS = 0.12;
 
 const STRUCTURE_NOISE = createVolumeNoise(createRandom(5151));
 const SHADE_SALT = 41.3;
@@ -124,7 +125,7 @@ export function addRock(
       noise: STRUCTURE_NOISE,
       offset: [x * 2.1 + z * 0.7, y * 1.3, z * 1.9 - x * 0.4],
       radius,
-      roughness: 0.28,
+      roughness: STONE_ROUGHNESS,
     }),
     { style, transform: transformOf({ position, scale: squash }) }
   );
@@ -138,7 +139,7 @@ export function moundShape(context: StructureContext, position: Triple, radius: 
     noise: STRUCTURE_NOISE,
     offset: [x * 1.7, 3.1, z * 1.3],
     radius,
-    roughness: 0.22,
+    roughness: STONE_ROUGHNESS,
   });
 
   const floored = deformShape(rock, (vertex) => {

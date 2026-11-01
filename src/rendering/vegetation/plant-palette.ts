@@ -5,7 +5,7 @@ import { lerp } from "../../shared/math.ts";
 
 const BARE_BRANCHES = 0x7a_6a_44;
 const BUDS = 0x8e_9a_4c;
-const FRESH_LEAVES = 0x9c_c8_52;
+const FRESH_LEAVES = 0x92_b8_4e;
 
 interface FoliageLook {
   readonly color: number;
@@ -42,12 +42,12 @@ const FOLIAGE_KEYS: Readonly<Record<PlantSpeciesIndex, readonly FoliageKey[]>> =
   [PlantSpecies.Palm]: evergreen(0x58_94_3a, 0x52_86_3a),
   [PlantSpecies.PearTree]: fruitTree(0xf6_f3_ea, 0x4e_86_36, 0xc0_52_2c),
   [PlantSpecies.Pillar]: STONEWORK,
-  [PlantSpecies.Pine]: evergreen(0x3c_6a_38, 0x33_58_3c),
+  [PlantSpecies.Pine]: evergreen(0x40_6e_3a, 0x37_5c_3e),
   [PlantSpecies.PlumTree]: fruitTree(0xf4_e2_e8, 0x55_80_3a, 0xa4_4c_38),
   [PlantSpecies.Poplar]: deciduous(0x5a_92_38, 0xe2_c0_38),
   [PlantSpecies.Raspberry]: berryBush(0x5c_8e_3a, 0xb0_8a_2e),
   [PlantSpecies.Sandstone]: STONEWORK,
-  [PlantSpecies.Spruce]: evergreen(0x2c_56_38, 0x27_48_3a),
+  [PlantSpecies.Spruce]: evergreen(0x33_5f_3e, 0x2c_50_40),
   [PlantSpecies.Willow]: deciduous(0x82_a8_44, 0xbc_b0_46),
 };
 
@@ -55,7 +55,7 @@ function deciduous(summer: number, autumn: number): readonly FoliageKey[] {
   return [
     { color: BUDS, coverage: 0.4, season: 0 },
     { color: FRESH_LEAVES, coverage: 0.85, season: 0.2 },
-    { color: 0x86_b8_48, coverage: 1, season: 0.45 },
+    { color: 0x7c_ad_44, coverage: 1, season: 0.45 },
     { color: summer, coverage: 1, season: 1.2 },
     { color: summer, coverage: 1, season: 2 },
     { color: autumn, coverage: 1, season: 2.45 },

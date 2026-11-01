@@ -1,16 +1,17 @@
 import { mkdir } from "node:fs/promises";
 import { join } from "node:path";
 import { type Browser, type BrowserContextOptions, chromium, expect, type Page } from "@playwright/test";
+import { TICK_SECONDS } from "../src/simulation/tick.ts";
 import { WORLD_RISING_TIMEOUT } from "./launch.ts";
-import { type PowerCast, SCENES, type Scene } from "./scenes.ts";
+import { type PowerCast, SCENES, type Scene, sceneFromQuery } from "./scenes.ts";
 
 const SYSTEM_CHROME = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome";
 const GPU_ARGUMENTS = ["--use-angle=metal", "--enable-gpu"];
 const SETTLE_FRAMES = 60;
-const TICKS_PER_SECOND = 10;
 const SLOWEST_TICKS_PER_SECOND = 2.5;
 const MILLISECONDS_PER_SECOND = 1000;
 const SCENE_NAME = /^[a-z0-9-]+$/u;
+const RUN_TIMEOUT_FACTOR = 4;
 
 interface Device {
   readonly name: string;
@@ -38,7 +39,7 @@ function sceneOf(argument: string): Scene {
   }
 
   if (split >= 0) {
-    return { name, query: argument.slice(split + 1) };
+    return sceneFromQuery(name, argument.slice(split + 1));
   }
 
   const known = SCENES.find((scene) => {
@@ -78,14 +79,50 @@ async function waitForFrames(page: Page, count: number): Promise<void> {
   }, count);
 }
 
+async function send(page: Page, command: Record<string, unknown>): Promise<void> {
+  await page.evaluate((sent) => {
+    Reflect.get(window, "ashfolk").session.send(sent);
+  }, command);
+}
+
 async function castPower(page: Page, cast: PowerCast): Promise<void> {
-  await page.evaluate((command) => {
-    Reflect.get(window, "ashfolk").session.send({ ...command, type: "usePower" });
-  }, cast);
+  await send(page, { ...cast, type: "usePower" });
+}
+
+async function currentTick(page: Page): Promise<number> {
+  return await page.evaluate(() => {
+    return Reflect.get(window, "ashfolk").session.frame.tick;
+  });
+}
+
+async function runFor(page: Page, scene: Scene, seconds: number): Promise<void> {
+  if (scene.speed === undefined) {
+    await runGameSeconds(page, seconds);
+
+    return;
+  }
+
+  const hours = new URLSearchParams(scene.query).get("hours");
+  const target = (await currentTick(page)) + Math.round((seconds * scene.speed) / TICK_SECONDS);
+
+  await send(page, { speed: scene.speed, type: "setSpeed" });
+  await send(page, { isPaused: false, type: "setPaused" });
+  await page.waitForFunction(
+    (tick) => {
+      return Reflect.get(window, "ashfolk").session.frame.tick >= tick;
+    },
+    target,
+    { timeout: seconds * MILLISECONDS_PER_SECOND * RUN_TIMEOUT_FACTOR }
+  );
+  await send(page, { isPaused: true, type: "setPaused" });
+
+  if (hours !== null) {
+    await send(page, { hours: Number(hours), type: "setHours" });
+  }
 }
 
 async function runGameSeconds(page: Page, seconds: number): Promise<void> {
-  const ticks = Math.round(seconds * TICKS_PER_SECOND);
+  const ticks = Math.round(seconds / TICK_SECONDS);
 
   await page.evaluate(
     ({ count, timeout }) => {
@@ -167,7 +204,11 @@ async function shoot(browser: Browser, address: string, scene: Scene, device: De
     }
 
     if (scene.seconds !== undefined) {
-      await runGameSeconds(page, scene.seconds);
+      await runFor(page, scene, scene.seconds);
+    }
+
+    if (scene.season !== undefined) {
+      await send(page, { season: scene.season, type: "setSeason" });
     }
 
     await waitForFrames(page, SETTLE_FRAMES);
@@ -204,7 +245,7 @@ async function shootScenes(baseUrl: string, folder: string, scenes: readonly Sce
 const [serverUrl, shotsFolder, ...sceneArguments] = process.argv.slice(2);
 
 if (serverUrl === undefined || shotsFolder === undefined) {
-  throw new Error("Usage: bun run shots <base-url> <folder> [scene or name=query ...]");
+  throw new Error("Usage: bun run shots <base-url> <folder> [scene or name=query, with season, seconds and speed ...]");
 }
 
 await shootScenes(serverUrl, shotsFolder, sceneArguments.length === 0 ? SCENES : sceneArguments.map(sceneOf));

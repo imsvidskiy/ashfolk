@@ -58,6 +58,7 @@ import {
 import { NO_WATER } from "../../world/water.ts";
 import type { WorldGrid } from "../../world/world-grid.ts";
 import { geometryFromMeshData, InstanceBatch, toInstancedGeometry } from "../instancing.ts";
+import { MODEL_ROUGHNESS, modelColor, styleModel } from "../model-style.ts";
 import { rotateAroundUp, SNOW_COLOR, slotColorTable, snowCoverNode } from "../node-helpers.ts";
 import { markOutlined } from "../outlines.ts";
 import { cellAtNode, groundOffsetNode } from "../terrain/height-sampling.ts";
@@ -143,7 +144,7 @@ function createCrossingMaterial(textures: TerrainTextures, grid: WorldGrid): Mes
   const cell = cellAtNode(grid, placement.xz);
 
   const snow = varying(snowCoverNode(textureLoad(textures.surface, cell)), "crossingSnow");
-  const base = varying(slotColorTable().element(slot).mul(shade).mul(look.y), "crossingColor");
+  const base = modelColor(slotColorTable().element(slot).mul(shade).mul(look.y), "crossingColor");
 
   const belowWater = look.x.sub(positionWorld.y);
   const covered = smoothstep(0, COVERED_DEPTH, drawnWaterDepthNode(textures, grid));
@@ -156,8 +157,9 @@ function createCrossingMaterial(textures: TerrainTextures, grid: WorldGrid): Mes
   const waterline = smoothstep(WATERLINE_BAND, 0.01, abs(positionWorld.y.sub(look.x))).mul(WATERLINE_FOAM_SHARE);
 
   material.colorNode = mix(mix(sunken, WATERLINE_FOAM, waterline.mul(covered)), SNOW_COLOR, snowOnTop);
+  styleModel(material);
   material.normalNode = normalize(mix(normalView, transformNormalToView(vec3(0, 1, 0)), sinking));
-  material.roughnessNode = mix(float(0.88), float(0.55), wetness);
+  material.roughnessNode = mix(float(MODEL_ROUGHNESS), float(0.55), wetness);
 
   markOutlined(material, float(1).sub(sinking));
 

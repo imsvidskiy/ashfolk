@@ -35,7 +35,7 @@ every push to `main`, and deploys `main`; run them before you push. Fix the
 code rather than the rule. `test:e2e` runs only locally: run it when you change
 the launch or the HUD layout.
 
-`src/**/*.test.ts` and `worker/**/*.test.ts` run in Node;
+`src/**/*.test.ts`, `tests/**/*.test.ts` and `worker/**/*.test.ts` run in Node;
 `src/**/*.browser.test.ts` and `src/**/*.test.tsx` run in Chromium. Browser
 tests and Playwright need Chromium. Install Playwright's headless shell with
 `bunx playwright install --only-shell chromium`, or point them at a system

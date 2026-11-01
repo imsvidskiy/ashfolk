@@ -1,8 +1,7 @@
 import { type Matrix4, Vector3 } from "three";
-import { alongPath, alongSections, alongTube, segmentsAtLeast } from "../level-of-detail.ts";
+import { alongPath, segmentsAtLeast } from "../level-of-detail.ts";
 import { MaterialSlot } from "../materials.ts";
 import type { MeshBuilder, VertexStyle } from "../mesh/mesh-builder.ts";
-import { curveTube } from "../mesh/path-curves.ts";
 import type { Shape } from "../mesh/shape.ts";
 import { type LoftSection, loft, sphere } from "../mesh/shapes.ts";
 import { outermostHit } from "../mesh/surface-probe.ts";
@@ -158,7 +157,7 @@ export function forEachSide(add: (side: Side, mirror: Matrix4) => void): void {
 }
 
 export function headShape(detail: HumanDetail): Shape {
-  return loft(alongSections(HEAD_SECTIONS, detail), detail.headSegments);
+  return loft(alongPath(HEAD_SECTIONS, detail), detail.headSegments);
 }
 
 function onHead(head: Shape, point: Triple): Vector3 {
@@ -231,7 +230,7 @@ function addHead(builder: MeshBuilder, detail: HumanDetail): void {
   const head = headShape(detail);
 
   builder.add(head, { seam: SKIN_SEAM, style: { ...rigidStyle(HumanBone.Head), ...SKIN } });
-  builder.add(tube(curveTube(NECK, detail.curveSteps), { radialSegments: detail.limbSegments }), {
+  builder.add(tube(NECK, { radialSegments: detail.limbSegments }), {
     seam: SKIN_SEAM,
     style: { ...TORSO_STYLE, ...SKIN },
   });
@@ -254,7 +253,7 @@ function addArms(builder: MeshBuilder, detail: HumanDetail): void {
     const style = { ...armStyle(side), ...SKIN };
 
     builder.add(
-      tube(alongTube(detail.hasFineDetails ? DOMED_ARM : ARM, detail), { radialSegments: detail.limbSegments }),
+      tube(alongPath(detail.hasFineDetails ? DOMED_ARM : ARM, detail), { radialSegments: detail.limbSegments }),
       { seam: SKIN_SEAM, style, transform: mirror }
     );
     builder.add(sphere(SHOULDER_RADIUS, detail.limbSegments, Math.max(4, detail.limbSegments - 3)), {
@@ -284,7 +283,7 @@ function addLegs(builder: MeshBuilder, detail: HumanDetail): void {
 }
 
 function addBody(builder: MeshBuilder, detail: HumanDetail, torso: readonly LoftSection[]): void {
-  builder.add(loft(alongSections(torso, detail), detail.torsoSegments), {
+  builder.add(loft(alongPath(torso, detail), detail.torsoSegments), {
     seam: SKIN_SEAM,
     style: { ...FLEXIBLE_TORSO_STYLE, ...SKIN },
   });

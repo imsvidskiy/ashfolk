@@ -1,3 +1,5 @@
+const SCENE_OPTIONS = ["season", "seconds", "speed"] as const;
+
 export interface PowerCast {
   readonly parameters: Readonly<Record<string, number>>;
   readonly powerId: string;
@@ -9,7 +11,9 @@ export interface Scene {
   readonly cast?: PowerCast;
   readonly name: string;
   readonly query: string;
+  readonly season?: number;
   readonly seconds?: number;
+  readonly speed?: number;
 }
 
 export const SCENES: readonly Scene[] = [
@@ -198,4 +202,77 @@ export const SCENES: readonly Scene[] = [
     query: "seed=7&shape=round&quality=high&paused=1&hours=11&camera=2265,-525,520,0.8,0",
     seconds: 85,
   },
+  {
+    name: "models-forest-close",
+    query: "seed=7&shape=round&quality=high&paused=1&hours=11&camera=90,-1050,45,0.35,0.5",
+  },
+  {
+    name: "models-forest-autumn",
+    query: "seed=7&shape=round&quality=high&paused=1&hours=11&camera=90,-1050,130,0.5,0.5",
+    season: 2.6,
+  },
+  {
+    name: "models-forest-lod",
+    query: "seed=7&shape=round&quality=high&paused=1&hours=11&camera=90,-1050,420,0.6,0.5",
+  },
+  {
+    name: "models-people-camp",
+    query: "seed=7&shape=round&quality=high&paused=1&hours=11&camera=185,1348,14,0.35,0.6",
+  },
+  {
+    name: "models-people-walk",
+    query: "seed=7&shape=round&quality=high&paused=1&hours=11&camera=1473,1315,16,0.45,0.3",
+    seconds: 90,
+    speed: 16,
+  },
+  {
+    name: "models-camp-buildings",
+    query: "seed=7&shape=round&quality=high&paused=1&hours=11&camera=1470,1320,30,0.55,0.3",
+    season: 1.5,
+    seconds: 90,
+    speed: 16,
+  },
+  { name: "models-mammoths", query: "seed=7&shape=round&quality=high&paused=1&hours=11&camera=2100,-45,22,0.3,0.4" },
+  { name: "models-dolmen", query: "seed=7&shape=round&quality=high&paused=1&hours=11&camera=-271,1162,18,0.35,0.6" },
+  {
+    name: "models-stone-head",
+    query: "seed=7&shape=round&quality=high&paused=1&hours=11&camera=-132,2336,22,0.3,0.6",
+  },
+  {
+    name: "models-pines-side",
+    query: "seed=7&shape=round&quality=high&paused=1&hours=11&camera=-50,-1920,16,0.3,0.4",
+  },
+  { name: "models-wolves", query: "seed=7&shape=round&quality=high&paused=1&hours=11&camera=-2107,640,22,0.7,0.4" },
+  {
+    cast: { parameters: { herdSize: 6 }, powerId: "ibex", x: -768.8, z: -580 },
+    name: "models-ibex",
+    query: "seed=7&shape=round&quality=high&hours=11&camera=-768.8,-580,24,0.5,0.4",
+    seconds: 3,
+  },
 ];
+
+function optionNumber(option: string, value: string): number {
+  const number = Number(value);
+
+  if (value.trim() === "" || !Number.isFinite(number)) {
+    throw new Error(`The scene option ${option} takes a number, got "${value}"`);
+  }
+
+  return number;
+}
+
+export function sceneFromQuery(name: string, query: string): Scene {
+  const parameters = new URLSearchParams(query);
+  const options: Partial<Record<(typeof SCENE_OPTIONS)[number], number>> = {};
+
+  for (const option of SCENE_OPTIONS) {
+    const value = parameters.get(option);
+
+    if (value !== null) {
+      options[option] = optionNumber(option, value);
+      parameters.delete(option);
+    }
+  }
+
+  return { ...options, name, query: parameters.toString() };
+}

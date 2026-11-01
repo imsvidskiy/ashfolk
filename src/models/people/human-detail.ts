@@ -18,7 +18,6 @@ export interface HumanDetail extends DetailSteps {
 
 export const HUMAN_DETAILS: Readonly<Record<HumanDetailLevel, HumanDetail>> = {
   far: {
-    curveSteps: 1,
     hasFineDetails: false,
     hasSmallParts: false,
     headSegments: 6,
@@ -28,24 +27,22 @@ export const HUMAN_DETAILS: Readonly<Record<HumanDetailLevel, HumanDetail>> = {
     trimShare: 0.4,
   },
   high: {
-    curveSteps: 2,
     hasFineDetails: true,
     hasSmallParts: true,
-    headSegments: 16,
-    limbSegments: 10,
+    headSegments: 10,
+    limbSegments: 7,
     propSubdivisions: 1,
-    torsoSegments: 14,
-    trimShare: 1,
+    torsoSegments: 10,
+    trimShare: 0.8,
   },
   low: {
-    curveSteps: 1,
     hasFineDetails: false,
     hasSmallParts: true,
-    headSegments: 8,
+    headSegments: 7,
     limbSegments: 5,
     propSubdivisions: 1,
-    torsoSegments: 8,
-    trimShare: 0.6,
+    torsoSegments: 7,
+    trimShare: 0.5,
   },
 };
 

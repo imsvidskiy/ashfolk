@@ -128,7 +128,7 @@ export class PeopleView {
   constructor(tribes: TribeLooks) {
     this.#tribes = tribes;
 
-    const material = createSkinnedMaterial(this.#palette, PERSON_LAYOUT);
+    const material = createSkinnedMaterial(this.#palette, PERSON_LAYOUT, false);
     const farParts = buildHumanParts(HUMAN_DETAILS.far);
 
     this.#batches = new PartBatches(

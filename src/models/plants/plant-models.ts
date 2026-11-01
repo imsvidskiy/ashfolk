@@ -91,6 +91,7 @@ const CROWNS_WITHOUT_BURIED_FOLIAGE: ReadonlySet<PlantSpeciesIndex> = new Set([
 const FORM_PER_VARIANT: ReadonlySet<PlantSpeciesIndex> = new Set([PlantSpecies.Cactus, PlantSpecies.DesertShrub]);
 const FOOTPRINT_HEIGHT = 0.3;
 const CONIFER: TreeLook = { bark: MaterialSlot.Bark, foliage: MaterialSlot.Needle, hasBarkMarks: false };
+const PINE: TreeLook = { ...CONIFER, hasPadCrowns: true };
 const BIRCH: TreeLook = { bark: MaterialSlot.BirchBark, foliage: MaterialSlot.Leaf, hasBarkMarks: true };
 const PALM: TreeLook = { bark: MaterialSlot.Wood, foliage: MaterialSlot.Leaf, hasBarkMarks: true };
 const DEADWOOD: TreeLook = { bark: MaterialSlot.Deadwood, foliage: MaterialSlot.Leaf, hasBarkMarks: false };
@@ -105,7 +106,7 @@ const TREE_LOOKS: Readonly<Partial<Record<PlantSpeciesIndex, TreeLook>>> = {
   [PlantSpecies.Maple]: BROADLEAF_LOOK,
   [PlantSpecies.Oak]: BROADLEAF_LOOK,
   [PlantSpecies.Palm]: PALM,
-  [PlantSpecies.Pine]: CONIFER,
+  [PlantSpecies.Pine]: PINE,
   [PlantSpecies.Poplar]: BROADLEAF_LOOK,
   [PlantSpecies.Spruce]: CONIFER,
   [PlantSpecies.Willow]: BROADLEAF_LOOK,
