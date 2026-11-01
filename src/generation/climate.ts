@@ -46,6 +46,7 @@ const SHADE_BLUR_RADIUS = 30;
 const ZONE_RADIUS = 23;
 const ZONE_PASSES = 2;
 const ZONE_LABELS = 32;
+const NO_MAJORITY = -1;
 const BED_FILL_PASSES = 8;
 const STILL_WATER_CLEARANCE = 2;
 const FIXED_BIOMES: ReadonlySet<number> = new Set([Biome.Alpine, Biome.Beach, Biome.Mesa, Biome.Swamp, Biome.Water]);
@@ -106,6 +107,12 @@ interface ClimateFields {
 interface DrainedLand {
   biome: Uint8Array;
   ground: Uint8Array;
+}
+
+interface ZoneWindow {
+  readonly halfWidths: Int32Array;
+  readonly majority: number;
+  readonly reach: number;
 }
 
 function summitChill(height: number): number {
@@ -393,53 +400,82 @@ function shapeSwamps(inputs: WetlandInputs, result: ClimateResult, wetness: Floa
   }
 }
 
-function zoneWindow(size: number, radius: number): Int32Array {
+function zoneWindow(radius: number): ZoneWindow {
   const reach = Math.floor(radius);
-  const offsets: number[] = [];
+  const halfWidths = Int32Array.from({ length: 2 * reach + 1 }, (_, index) => {
+    let halfWidth = 0;
 
-  for (let rowOffset = -reach; rowOffset <= reach; rowOffset += 1) {
-    for (let columnOffset = -reach; columnOffset <= reach; columnOffset += 1) {
-      if (Math.hypot(columnOffset, rowOffset) <= radius) {
-        offsets.push(rowOffset * size + columnOffset);
+    while (Math.hypot(halfWidth + 1, index - reach) <= radius) {
+      halfWidth += 1;
+    }
+
+    return halfWidth;
+  });
+  const cellCount = halfWidths.reduce((total, halfWidth) => {
+    return total + 2 * halfWidth + 1;
+  }, 0);
+
+  return { halfWidths, majority: Math.ceil(cellCount / 2), reach };
+}
+
+function rowMajorities(zones: Uint16Array, size: number, row: number, window: ZoneWindow): Int32Array {
+  const { halfWidths, majority, reach } = window;
+
+  const counts = new Uint8Array(ZONE_LABELS * ZONE_LABELS);
+  const majorities = new Int32Array(size).fill(NO_MAJORITY);
+
+  let leader = NO_MAJORITY;
+
+  for (let index = 0; index < halfWidths.length; index += 1) {
+    const rowStart = (row + index - reach) * size;
+
+    for (let column = reach - halfWidths[index]; column <= reach + halfWidths[index]; column += 1) {
+      const zone = zones[rowStart + column];
+
+      counts[zone] += 1;
+
+      if (counts[zone] >= majority) {
+        leader = zone;
       }
     }
   }
 
-  return Int32Array.from(offsets);
-}
+  majorities[reach] = leader;
 
-function majorityZone(zones: Uint16Array, cell: number, window: Int32Array, counts: Uint8Array): number {
-  const majority = Math.ceil(window.length / 2);
-  let zone = zones[cell];
-
-  for (const offset of window) {
-    const neighbor = zones[cell + offset];
-
-    counts[neighbor] += 1;
-
-    if (counts[neighbor] >= majority) {
-      zone = neighbor;
+  for (let column = reach + 1; column < size - reach; column += 1) {
+    for (let index = 0; index < halfWidths.length; index += 1) {
+      counts[zones[(row + index - reach) * size + column - 1 - halfWidths[index]]] -= 1;
     }
+
+    if (leader !== NO_MAJORITY && counts[leader] < majority) {
+      leader = NO_MAJORITY;
+    }
+
+    for (let index = 0; index < halfWidths.length; index += 1) {
+      const zone = zones[(row + index - reach) * size + column + halfWidths[index]];
+
+      counts[zone] += 1;
+
+      if (counts[zone] >= majority) {
+        leader = zone;
+      }
+    }
+
+    majorities[column] = leader;
   }
 
-  for (const offset of window) {
-    counts[zones[cell + offset]] = 0;
-  }
-
-  return zone;
+  return majorities;
 }
 
 function smoothZones(grid: WorldGrid, result: ClimateResult): void {
-  const radius = ZONE_RADIUS / grid.cellSize;
-  const reach = Math.floor(radius);
+  const window = zoneWindow(ZONE_RADIUS / grid.cellSize);
+  const { reach } = window;
 
   if (reach < 1) {
     return;
   }
 
   const size = grid.cellsPerSide;
-  const window = zoneWindow(size, radius);
-  const counts = new Uint8Array(ZONE_LABELS * ZONE_LABELS);
   let zones = Uint16Array.from(result.biome, (biome, cell) => {
     return biome * ZONE_LABELS + result.ground[cell];
   });
@@ -448,15 +484,14 @@ function smoothZones(grid: WorldGrid, result: ClimateResult): void {
     const smoothed = Uint16Array.from(zones);
 
     for (let row = reach; row < size - reach; row += 1) {
+      const majorities = rowMajorities(zones, size, row, window);
+
       for (let column = reach; column < size - reach; column += 1) {
         const cell = grid.index(column, row);
+        const zone = majorities[column] === NO_MAJORITY ? zones[cell] : majorities[column];
 
-        if (!FIXED_BIOMES.has(result.biome[cell])) {
-          const zone = majorityZone(zones, cell, window, counts);
-
-          if (!FIXED_BIOMES.has(Math.floor(zone / ZONE_LABELS))) {
-            smoothed[cell] = zone;
-          }
+        if (!(FIXED_BIOMES.has(result.biome[cell]) || FIXED_BIOMES.has(Math.floor(zone / ZONE_LABELS)))) {
+          smoothed[cell] = zone;
         }
       }
     }
