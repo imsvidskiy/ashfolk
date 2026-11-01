@@ -19,6 +19,10 @@ const VISIBLE_HALF_WIDTH = 13;
 const BANK_HEIGHT = 100.6;
 const BANK_SLOPE = 0.3;
 const WATER_FALL = 0.2;
+const DRAWN_HALF_WIDTH = 10;
+const CELL_HALF_WIDTH = 14;
+const RIM_DEPTH = 0.12;
+const FORD_SEEDS = [0.11, 0.37, 0.52, 0.64, 0.73, 0.85, 0.91];
 
 const FORD: Ford = { endX: 16, endZ: 0, id: 0, kind: "ford", seed: 0.37, startX: -16, startZ: 0 };
 
@@ -70,6 +74,29 @@ function hillsideStream(): FordSurroundings {
       return Math.abs(x) < RIVER_HALF_WIDTH ? WATER_LEVEL - Math.round(z / 10) * 10 * WATER_FALL : NO_WATER;
     },
     waterSurfaceAt: surfaceAt,
+  };
+}
+
+function wideCellRiver(): FordSurroundings {
+  function heightAt(x: number): number {
+    if (Math.abs(x) >= CELL_HALF_WIDTH) {
+      return BANK_HEIGHT;
+    }
+
+    return WATER_LEVEL - Math.max(RIM_DEPTH, Math.min(1.2, (DRAWN_HALF_WIDTH - Math.abs(x)) * 0.4));
+  }
+
+  return {
+    heightAt,
+    shoreDepthAt: (x) => {
+      return Math.abs(x) < DRAWN_HALF_WIDTH ? WATER_LEVEL + 0.2 - heightAt(x) : -1;
+    },
+    waterLevelAt: (x) => {
+      return Math.abs(x) < CELL_HALF_WIDTH ? WATER_LEVEL : NO_WATER;
+    },
+    waterSurfaceAt: (x) => {
+      return Math.abs(x) < DRAWN_HALF_WIDTH ? WATER_LEVEL : NO_WATER;
+    },
   };
 }
 
@@ -240,6 +267,22 @@ describe("layFord", () => {
     for (const stone of beside) {
       expect(stone.top - (stone.bottom + STONE_SINK)).toBeLessThanOrEqual(SIDE_DEEPEST);
       expect(stone.top).toBeGreaterThan(surroundings.waterSurfaceAt(stone.x, stone.z));
+    }
+  });
+
+  it("keeps stones off the dry rim where the water cells reach past the drawn water", () => {
+    const surroundings = wideCellRiver();
+
+    for (const seed of FORD_SEEDS) {
+      const standing = layFord({ ...FORD, seed }, surroundings).stones.filter((stone) => {
+        return stone.kind !== "slab";
+      });
+
+      expect(standing.length, `seed ${seed}`).toBeGreaterThan(0);
+
+      for (const stone of standing) {
+        expect(surroundings.shoreDepthAt(stone.x, stone.z), `seed ${seed}`).toBeGreaterThan(0);
+      }
     }
   });
 
