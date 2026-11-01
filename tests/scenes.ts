@@ -61,6 +61,9 @@ export const SCENES: readonly Scene[] = [
   },
   { name: "ground-zones", query: "seed=7&shape=round&quality=high&paused=1&hours=11&camera=2000,-400,800,0.5,0" },
   { name: "faceted-slope", query: "seed=7&shape=round&quality=high&paused=1&hours=11&camera=1800,-300,250,0.6,0" },
+  { name: "peak-tip", query: "seed=2&shape=round&quality=high&paused=1&hours=11&camera=0,0,1500,0.3,1.57" },
+  { name: "snow-cap", query: "seed=3&shape=round&quality=high&paused=1&hours=11&camera=-700,1085,800,0.45,0.6" },
+  { name: "deposit-patches", query: "seed=2&shape=round&quality=high&paused=1&hours=11&camera=0,1800,700,0.45,0" },
   {
     name: "inside-crown",
     query: "seed=7&shape=round&quality=high&paused=1&hours=11&camera=544.83,-628.35,12,0.985,0",
