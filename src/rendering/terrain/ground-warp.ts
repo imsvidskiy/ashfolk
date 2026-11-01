@@ -1,4 +1,4 @@
-import { float, mx_fractal_noise_float, mx_noise_float, screenCoordinate, texture, vec2, vec3, vec4 } from "three/tsl";
+import { float, mx_fractal_noise_float, screenCoordinate, texture, vec2, vec3, vec4 } from "three/tsl";
 import {
   HalfFloatType,
   LinearFilter,
@@ -13,6 +13,7 @@ import type { WorldGrid } from "../../world/world-grid.ts";
 import { mapCoordinatesNode } from "./height-sampling.ts";
 
 const METERS_PER_TEXEL = 2;
+const WARP_CELLS = 1;
 
 function warpOffset(point: Node<"vec2">, cellSize: number): Node<"vec2"> {
   const broadWarp = vec2(
@@ -20,9 +21,7 @@ function warpOffset(point: Node<"vec2">, cellSize: number): Node<"vec2"> {
     mx_fractal_noise_float(vec3(point.mul(0.011), 9.3), 3, 2, 0.5)
   );
 
-  const fineWarp = vec2(mx_noise_float(vec3(point.mul(0.09), 2)), mx_noise_float(vec3(point.mul(0.09), 5)));
-
-  return broadWarp.mul(cellSize * 1.4).add(fineWarp.mul(cellSize * 0.35));
+  return broadWarp.mul(cellSize * WARP_CELLS);
 }
 
 export class GroundWarp {

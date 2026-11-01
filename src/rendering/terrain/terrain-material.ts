@@ -48,7 +48,6 @@ const ASH = vec3(0.13, 0.12, 0.11);
 const EMBER_DEEP = vec3(1.2, 0.24, 0.03);
 const EMBER_BRIGHT = vec3(1.3, 0.42, 0.06);
 const GROUND_FIRE_LIGHT = 0.6;
-const STONE = vec3(0.19, 0.155, 0.12);
 const DARK_STONE = 0.04;
 const GRAY_STONE = 0.82;
 const STRATA_FREQUENCY = 0.45;
@@ -58,6 +57,11 @@ const STRATA_WOBBLE = 1.5;
 const STRATA_LENSES = vec3(0.035, 0.12, 0.035);
 const STRATA_THRESHOLD = 0.001;
 const VEGETATED_ROCK_LIFT = 0.1;
+const ROCK_START = 0.3;
+const ROCK_BAND = 0.03;
+const ROCK_TONE = 0.06;
+const GROUND_MOTTLE = 0.05;
+const GROUND_GRAIN = 0.02;
 const STEEP_FACE_SHADE = 0.82;
 const EMBER_THRESHOLD = 0.004;
 const TRODDEN_EARTH = vec3(0.3, 0.22, 0.14);
@@ -156,16 +160,15 @@ function terrainPosition(textures: TerrainTextures, grid: WorldGrid, plinth: num
   const skirt = attribute("skirt", "float");
   const skirtAxis = attribute("skirtAxis", "float");
 
-  function heightAt(cell: Node<"vec2">, column: number, row: number): Node<"float"> {
-    return textureLoad(textures.height, ivec2(clamp(cell.add(vec2(column, row)), vec2(0, 0), vec2(lastCell, lastCell))))
-      .x;
+  function heightAt(cell: Node<"vec2">): Node<"float"> {
+    return textureLoad(textures.height, ivec2(clamp(cell, vec2(0, 0), vec2(lastCell, lastCell)))).x;
   }
 
   function slopeAt(cell: Node<"vec2">): Node<"vec3"> {
-    const slopeX = heightAt(cell, -1, 0).sub(heightAt(cell, 1, 0));
-    const slopeZ = heightAt(cell, 0, -1).sub(heightAt(cell, 0, 1));
+    const slopeX = heightAt(cell.sub(vec2(step, 0))).sub(heightAt(cell.add(vec2(step, 0))));
+    const slopeZ = heightAt(cell.sub(vec2(0, step))).sub(heightAt(cell.add(vec2(0, step))));
 
-    return normalize(vec3(slopeX, cellSize.mul(2), slopeZ));
+    return normalize(vec3(slopeX, cellSize.mul(step).mul(2), slopeZ));
   }
 
   function cornerOf(cell: Node<"vec2">, column: number, row: number): Node<"vec2"> {
@@ -185,17 +188,11 @@ function terrainPosition(textures: TerrainTextures, grid: WorldGrid, plinth: num
         cornerOf(cell, 1, 1),
       ];
 
-      height.assign(
-        heightAt(first, 0, 0)
-          .add(heightAt(right, 0, 0))
-          .add(heightAt(below, 0, 0))
-          .add(heightAt(diagonal, 0, 0))
-          .mul(0.25)
-      );
+      height.assign(heightAt(first).add(heightAt(right)).add(heightAt(below)).add(heightAt(diagonal)).mul(0.25));
       normal.assign(slopeAt(first).add(slopeAt(right)).add(slopeAt(below)).add(slopeAt(diagonal)));
       cell.assign(first.add(diagonal).mul(0.5));
     }).Else(() => {
-      height.assign(heightAt(cell, 0, 0));
+      height.assign(heightAt(cell));
       normal.assign(slopeAt(cell));
     });
 
@@ -293,7 +290,7 @@ export function createTerrainMaterial({
 
   const surface = texture(textures.surface, mapCoordinates);
   const groundSample = texture(textures.groundAlbedo.texture, mapCoordinates);
-  const albedo = groundSample.rgb;
+  const albedo = textures.groundAlbedo.crispColorNode(mapCoordinates, groundSample.rgb);
   const layer = positionWorld.y.mul(STRATA_FREQUENCY).add(broad.mul(STRATA_BEND)).add(patches.mul(STRATA_WOBBLE));
 
   const depth = underwaterDepth(textures, grid);
@@ -301,7 +298,7 @@ export function createTerrainMaterial({
   const field = fieldGroundNode(
     textures,
     grid,
-    albedo.mul(broad.mul(0.1).add(patches.mul(0.07)).add(fine.mul(0.035)).add(1)),
+    albedo.mul(broad.mul(GROUND_MOTTLE).add(fine.mul(GROUND_GRAIN)).add(1)),
     vec2(fine, patches)
   );
   const mottled = field.color;
@@ -311,14 +308,13 @@ export function createTerrainMaterial({
   );
   const faceShade = mix(float(1), float(STEEP_FACE_SHADE), smoothstep(0.3, 0.7, steepness));
 
-  const vegetated = smoothstep(0.08, 0.3, groundSample.a.add(patches.mul(0.1)).add(fine.mul(0.05)));
-  const rockStart = mix(float(0.24), float(0.16), snowCover).add(vegetated.mul(VEGETATED_ROCK_LIFT));
-  const rockBand = mix(float(0.07), float(0.14), snowCover);
-  const edgeGrain = fine.mul(float(0.025).mul(float(1).sub(snowCover)));
-  const rock = smoothstep(rockStart, rockStart.add(rockBand), steepness.add(broad.mul(0.07)).add(edgeGrain));
-  const rockColor = mix(STONE, albedo.mul(0.85), max(redStone, darkStone))
+  const vegetated = smoothstep(0.08, 0.3, groundSample.a);
+  const rockStart = mix(float(ROCK_START), float(0.16), snowCover).add(vegetated.mul(VEGETATED_ROCK_LIFT));
+  const rockBand = mix(float(ROCK_BAND), float(0.14), snowCover);
+  const rock = smoothstep(rockStart, rockStart.add(rockBand), steepness);
+  const rockColor = mix(textures.groundAlbedo.rock, albedo.mul(0.85), max(redStone, darkStone))
     .mul(rockStrata(layer, strataFade, rock))
-    .mul(broad.mul(0.06).add(patches.mul(0.04)).add(1))
+    .mul(broad.mul(ROCK_TONE).add(1))
     .mul(faceShade);
   const ground = mix(mottled, rockColor, rock);
 
