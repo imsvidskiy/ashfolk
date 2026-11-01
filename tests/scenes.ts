@@ -175,8 +175,8 @@ export const SCENES: readonly Scene[] = [
     name: "lake-evening",
     query: "seed=7&shape=round&quality=high&paused=1&hours=17.5&camera=300,-400,300,0.35,1.6",
   },
-  { name: "river-rapids", query: "seed=7&shape=round&quality=high&paused=1&hours=11&camera=155,1695,140,0.7,0" },
-  { name: "river-close", query: "seed=7&shape=round&quality=high&paused=1&hours=11&camera=155,1695,45,0.6,0" },
+  { name: "river-rapids", query: "seed=7&shape=round&quality=high&paused=1&hours=11&camera=-416,-2716,140,0.7,2.2" },
+  { name: "river-close", query: "seed=7&shape=round&quality=high&paused=1&hours=11&camera=-416,-2716,45,0.6,2.2" },
   { name: "lake-fade-band", query: "seed=7&shape=round&quality=high&paused=1&hours=11&camera=0,-300,550,0.45,0" },
   {
     cast: { parameters: { radius: 120, strength: 60 }, powerId: "volcano", x: 2265, z: -525 },
@@ -217,7 +217,7 @@ export const SCENES: readonly Scene[] = [
   },
   {
     name: "models-people-camp",
-    query: "seed=7&shape=round&quality=high&paused=1&hours=11&camera=185,1348,14,0.35,0.6",
+    query: "seed=7&shape=round&quality=high&paused=1&hours=11&camera=227,1398,14,0.35,0.6",
   },
   {
     name: "models-people-walk",
@@ -233,20 +233,20 @@ export const SCENES: readonly Scene[] = [
     speed: 16,
   },
   { name: "models-mammoths", query: "seed=7&shape=round&quality=high&paused=1&hours=11&camera=2100,-45,22,0.3,0.4" },
-  { name: "models-dolmen", query: "seed=7&shape=round&quality=high&paused=1&hours=11&camera=-271,1162,18,0.35,0.6" },
+  { name: "models-dolmen", query: "seed=7&shape=round&quality=high&paused=1&hours=11&camera=-2004,1376,18,0.35,0.6" },
   {
     name: "models-stone-head",
-    query: "seed=7&shape=round&quality=high&paused=1&hours=11&camera=-132,2336,22,0.3,0.6",
+    query: "seed=7&shape=round&quality=high&paused=1&hours=11&camera=227,-2503,22,0.3,0.6",
   },
   {
     name: "models-pines-side",
-    query: "seed=7&shape=round&quality=high&paused=1&hours=11&camera=-50,-1920,16,0.3,0.4",
+    query: "seed=7&shape=round&quality=high&paused=1&hours=11&camera=2400,-480,30,0.2,3.6",
   },
-  { name: "models-wolves", query: "seed=7&shape=round&quality=high&paused=1&hours=11&camera=-2107,640,22,0.7,0.4" },
+  { name: "models-wolves", query: "seed=7&shape=round&quality=high&paused=1&hours=11&camera=-2501,-1173,24,0.9,3.6" },
   {
     cast: { parameters: { herdSize: 6 }, powerId: "ibex", x: -768.8, z: -580 },
     name: "models-ibex",
-    query: "seed=7&shape=round&quality=high&hours=11&camera=-768.8,-580,24,0.5,0.4",
+    query: "seed=7&shape=round&quality=high&hours=11&camera=-768.8,-580,24,0.5,4",
     seconds: 3,
   },
 ];
