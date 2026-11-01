@@ -9,6 +9,7 @@ import {
   fwidth,
   If,
   length,
+  max,
   min,
   mix,
   normalWorldGeometry,
@@ -22,7 +23,7 @@ import { type DataTexture, type Node, RedFormat } from "three/webgpu";
 import type { LavaView } from "../../simulation/frame.ts";
 import { byteTexture } from "../data-textures.ts";
 import { unitNoise } from "../node-helpers.ts";
-import { type LavaPlates, PLATE_FREQUENCY } from "./lava-plates.ts";
+import { type LavaPlates, PLATE_EDGE_ERROR, PLATE_FREQUENCY } from "./lava-plates.ts";
 
 const HOT_CRUST = vec3(0.04, 0.03, 0.026);
 const GLOW_DEEP = vec3(0.75, 0.09, 0.015);
@@ -49,9 +50,14 @@ interface LavaLook {
 }
 
 function crackAt(edge: Node<"float">, width: Node<"float">, blur: Node<"float">, detail: Node<"float">): Node<"float"> {
-  const coverage = float(1).sub(exp(width.add(blur.mul(0.5)).mul(-CRACK_COVERAGE)));
+  const spread = width.add(blur.mul(0.5));
+  const coverage = float(1).sub(exp(spread.mul(-CRACK_COVERAGE)));
+  const sharpWidth = max(width, PLATE_EDGE_ERROR);
+  const sharp = float(1)
+    .sub(smoothstep(sharpWidth, sharpWidth.add(blur), edge))
+    .mul(spread.div(sharpWidth.add(blur.mul(0.5))));
 
-  return mix(min(coverage.mul(FAR_GLOW), 1), float(1).sub(smoothstep(width, width.add(blur), edge)), detail);
+  return mix(min(coverage.mul(FAR_GLOW), 1), sharp, detail);
 }
 
 export class LavaField {
