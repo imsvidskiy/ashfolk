@@ -26,6 +26,7 @@ import {
   RepeatWrapping,
   type WebGPURenderer,
 } from "three/webgpu";
+import { FULL_TURN } from "../../shared/math.ts";
 import { cellKey, unitHash } from "../node-helpers.ts";
 
 export const PLATE_FREQUENCY = 0.07;
@@ -41,14 +42,13 @@ const PLATE_BEND_FREQUENCY = 0.04;
 const PLATES_PER_TILE = Math.round(TILE_SIZE * PLATE_FREQUENCY);
 const BENDS_PER_TILE = Math.round(TILE_SIZE * PLATE_BEND_FREQUENCY);
 const FARTHEST_PLATE = 8;
-const FULL_TURN = Math.PI * 2;
 const NEIGHBORS = [-1, 0, 1];
 const SALT_BEND_ACROSS = 0x3c_6e_f3_72;
 const SALT_BEND_ALONG = 0xa5_4f_f5_3a;
 const SALT_PLATE_ACROSS = 0x51_0e_52_7f;
 const SALT_PLATE_ALONG = 0x9b_05_68_8c;
 
-function tiledNoise(point: Node<"vec2">, period: number, salt: number): Node<"float"> {
+function tiledNoise(point: Node<"vec2">, salt: number): Node<"float"> {
   const cell = floor(point);
   const local = fract(point);
   const fade = local
@@ -58,7 +58,7 @@ function tiledNoise(point: Node<"vec2">, period: number, salt: number): Node<"fl
 
   function cornerShare(column: number, row: number): Node<"float"> {
     const corner = vec2(column, row);
-    const angle = unitHash(cellKey(cell.add(corner).mod(period)), salt).mul(FULL_TURN);
+    const angle = unitHash(cellKey(cell.add(corner).mod(BENDS_PER_TILE)), salt).mul(FULL_TURN);
 
     return dot(vec2(cos(angle), sin(angle)), local.sub(corner));
   }
@@ -74,10 +74,7 @@ function tiledNoise(point: Node<"vec2">, period: number, salt: number): Node<"fl
 
 function plateEdge(point: Node<"vec2">): Node<"float"> {
   const bendSpot = point.mul(BENDS_PER_TILE / TILE_SIZE);
-  const bend = vec2(
-    tiledNoise(bendSpot, BENDS_PER_TILE, SALT_BEND_ACROSS),
-    tiledNoise(bendSpot, BENDS_PER_TILE, SALT_BEND_ALONG)
-  );
+  const bend = vec2(tiledNoise(bendSpot, SALT_BEND_ACROSS), tiledNoise(bendSpot, SALT_BEND_ALONG));
   const spot = point.add(bend.sub(0.5).mul(PLATE_BEND)).mul(PLATES_PER_TILE / TILE_SIZE);
   const cell = floor(spot);
 
