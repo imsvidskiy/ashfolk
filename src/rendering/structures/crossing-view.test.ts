@@ -61,7 +61,7 @@ function drawnFrom({ mirror, view }: CrossingScene, height: number): Drawn {
 }
 
 describe("crossing view", () => {
-  it("draws a ford with gravel and foam up close and only its stones from afar", () => {
+  it("draws a ford with foam up close and only its stones from afar", () => {
     const ford = createView(fordAcross(-24, 24, 0));
 
     const near = drawnFrom(ford, 20);
@@ -71,7 +71,7 @@ describe("crossing view", () => {
     expect(near.foam).toBeLessThanOrEqual(far.pieces);
     expect(far.foam).toBe(0);
     expect(far.pieces).toBeGreaterThan(0);
-    expect(near.pieces).toBeGreaterThan(far.pieces);
+    expect(near.pieces).toBe(far.pieces);
   });
 
   it("draws a log bridge as a single log without foam", () => {

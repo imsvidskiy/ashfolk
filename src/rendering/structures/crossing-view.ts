@@ -37,7 +37,6 @@ import {
   CROSSING_DETAIL_LEVELS,
   FALLEN_LOG_LENGTHS,
   FALLEN_LOG_ROOT_RADIUS,
-  FALLEN_LOG_VARIANTS,
   fallenLogVariant,
   STEPPING_STONE_HEIGHT,
   STONE_WIDTH,
@@ -68,7 +67,6 @@ import { createBarGeometry, createBarMaterial, createFoamMaterial, FOAM_FIELDS }
 const LEVEL_DISTANCES: readonly number[] = [150, 650, 3600];
 const SHADOW_LEVEL_COUNT = 2;
 const FINE_LEVEL_COUNT = 2;
-const PEBBLE_BATCH = STEPPING_STONE_VARIANTS + FALLEN_LOG_VARIANTS;
 const FOAM_BATCH = -1;
 const FOAM_WAKE = 3.2;
 const FOAM_ABOVE = 0.15;
@@ -78,7 +76,7 @@ const WET_STONE = vec3(0.55, 0.58, 0.52);
 const RIVERBED = vec3(0.07, 0.17, 0.19);
 const MURKIEST = 0.85;
 const DROWNED_SHADE = 0.55;
-const MURK_DEPTH = 2.2;
+const MURK_DEPTH = 0.9;
 const WATERLINE_FOAM = vec3(0.84, 0.89, 0.9);
 
 const CROSSING_CHANNELS = ["shade", "slot"] as const;
@@ -196,10 +194,9 @@ function logPiece(bridge: LogBridge): PlacedPiece {
 
 function stonePiece(stone: FordStone): PlacedPiece {
   const width = (stone.radius * 2) / STONE_WIDTH;
-  const isPebble = stone.kind === "pebble";
 
   return {
-    batch: isPebble ? PEBBLE_BATCH + stone.variant : stone.variant,
+    batch: stone.variant,
     data: [
       stone.x,
       stone.bottom,
@@ -208,13 +205,13 @@ function stonePiece(stone: FordStone): PlacedPiece {
       width,
       (stone.top - stone.bottom) / STEPPING_STONE_HEIGHT,
       width,
-      0,
+      stone.pitch,
       stone.waterLevel,
       0.86 + 0.28 * fractionalPart(stone.rotation * 7.3),
       stone.isGrounded ? 1 : 0,
       0,
     ],
-    isFine: isPebble,
+    isFine: false,
   };
 }
 
@@ -255,11 +252,9 @@ export class CrossingView {
     const material = createCrossingMaterial(textures, mirror.grid);
 
     this.#batches = CROSSING_DETAIL_LEVELS.map((level, levelIndex) => {
-      return [...buildSteppingStones(level), ...buildFallenLogs(level), ...buildSteppingStones("low")].map(
-        (model, index) => {
-          return this.#createBatch(model, material, index < PEBBLE_BATCH && levelIndex < SHADOW_LEVEL_COUNT);
-        }
-      );
+      return [...buildSteppingStones(level), ...buildFallenLogs(level)].map((model) => {
+        return this.#createBatch(model, material, levelIndex < SHADOW_LEVEL_COUNT);
+      });
     });
 
     this.#foam = new InstanceBatch(
