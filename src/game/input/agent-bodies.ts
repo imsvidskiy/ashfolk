@@ -2,11 +2,14 @@ import { Box3, Ray, Vector3 } from "three/webgpu";
 import { ANIMAL_KINDS, type AnimalKind } from "../../content/animals.ts";
 import { animalAppearance } from "../../models/animals/animal-appearance.ts";
 import { buildAnimalParts } from "../../models/animals/animal-models.ts";
-import type { MeshData } from "../../models/mesh/mesh-data.ts";
-import { statureAt } from "../../models/people/appearance.ts";
+import { type MeshData, vertexCount } from "../../models/mesh/mesh-data.ts";
+import { personAppearance, type TribeLook } from "../../models/people/appearance.ts";
 import { HUMAN_DETAILS } from "../../models/people/human-detail.ts";
-import { buildHumanParts, humanPartIndex } from "../../models/people/human-model.ts";
-import { FIGURE_SCALE } from "../../models/people/human-proportions.ts";
+import { appearanceParts, buildHumanParts, humanPartIndex } from "../../models/people/human-model.ts";
+import { humanBoneScales } from "../../models/people/human-proportions.ts";
+import { HUMAN_SKELETON } from "../../models/people/human-skeleton.ts";
+import { Pose } from "../../models/rig/pose.ts";
+import { SkeletonPoser } from "../../models/rig/skeleton-poser.ts";
 import { AnimalField, PersonField } from "../../world/agent-buffers.ts";
 
 export interface AgentBody {
@@ -24,9 +27,17 @@ export interface StandingBody extends AgentBody {
 }
 
 const UP = new Vector3(0, 1, 0);
-const measured = new Map<AnimalKind | "person", AgentBody>();
+const UNCOLORED_TRIBE: TribeLook = { accent: 0, fur: 0, id: 0 };
+const measured = new Map<AnimalKind, AgentBody>();
 const localRay = new Ray();
 const localBox = new Box3();
+const restPose = new Pose(HUMAN_SKELETON.bones.length);
+const poser = new SkeletonPoser(HUMAN_SKELETON);
+const restPoint = new Vector3();
+const firstPoint = new Vector3();
+const secondPoint = new Vector3();
+
+let humanParts: readonly MeshData[] | null = null;
 
 function bodyOf(mesh: MeshData): AgentBody {
   const { maximum, minimum } = mesh.bounds;
@@ -39,19 +50,45 @@ function bodyOf(mesh: MeshData): AgentBody {
   };
 }
 
-function measuredBody(subject: AnimalKind | "person"): AgentBody {
-  const known = measured.get(subject);
+function farHumanParts(): readonly MeshData[] {
+  if (humanParts === null) {
+    humanParts = buildHumanParts(HUMAN_DETAILS.far);
+  }
+
+  return humanParts;
+}
+
+function posedBody(meshes: readonly MeshData[], scales: Float32Array): AgentBody {
+  localBox.makeEmpty();
+  poser.pose(restPose, scales);
+
+  for (const mesh of meshes) {
+    for (let vertex = 0; vertex < vertexCount(mesh); vertex += 1) {
+      restPoint.fromArray(mesh.positions, vertex * 3);
+      poser.skinPoint(mesh.channels.boneA[vertex], restPoint, firstPoint);
+      poser.skinPoint(mesh.channels.boneB[vertex], restPoint, secondPoint);
+      localBox.expandByPoint(firstPoint.lerp(secondPoint, mesh.channels.boneWeight[vertex]));
+    }
+  }
+
+  return {
+    back: localBox.min.z,
+    front: localBox.max.z,
+    halfWidth: Math.max(-localBox.min.x, localBox.max.x),
+    height: localBox.max.y,
+  };
+}
+
+function measuredBody(kind: AnimalKind): AgentBody {
+  const known = measured.get(kind);
 
   if (known !== undefined) {
     return known;
   }
 
-  const body =
-    subject === "person"
-      ? bodyOf(buildHumanParts(HUMAN_DETAILS.far)[humanPartIndex("bodyMale")])
-      : bodyOf(buildAnimalParts(subject, "low")[0]);
+  const body = bodyOf(buildAnimalParts(kind, "low")[0]);
 
-  measured.set(subject, body);
+  measured.set(kind, body);
 
   return body;
 }
@@ -77,11 +114,23 @@ export function animalBody(animals: Float32Array, offset: number): AgentBody {
 }
 
 export function personBody(people: Float32Array, offset: number): AgentBody {
-  return scaled(measuredBody("person"), FIGURE_SCALE * statureAt(people[offset + PersonField.Age]));
+  const appearance = personAppearance({
+    age: people[offset + PersonField.Age],
+    era: people[offset + PersonField.Era],
+    isFemale: people[offset + PersonField.IsFemale] > 0.5,
+    seed: people[offset + PersonField.AppearanceSeed],
+    tribe: UNCOLORED_TRIBE,
+  });
+  const parts = farHumanParts();
+  const drawn = appearanceParts(appearance).map((part) => {
+    return parts[humanPartIndex(part)];
+  });
+
+  return posedBody(drawn, humanBoneScales(appearance.body));
 }
 
 export function measureAgentBodies(): void {
-  measuredBody("person");
+  farHumanParts();
 
   for (const kind of ANIMAL_KINDS) {
     measuredBody(kind);

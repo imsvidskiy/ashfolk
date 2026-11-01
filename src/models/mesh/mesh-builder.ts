@@ -38,6 +38,8 @@ interface PlacedSurface {
 
 type ChannelWriter = (vertex: number, normal: Vector3, position: Vector3) => void;
 
+type FaceCenter = Omit<SurfacePoint, "normal">;
+
 export function resolveChannel(value: ChannelValue | undefined, fallback: number, point: SurfacePoint): number {
   if (value === undefined) {
     return fallback;
@@ -48,6 +50,57 @@ export function resolveChannel(value: ChannelValue | undefined, fallback: number
   }
 
   return value(point);
+}
+
+function isFaceted(shape: Shape): boolean {
+  if (shape.indices.length !== shapeVertexCount(shape)) {
+    return false;
+  }
+
+  const isUsed = new Uint8Array(shape.indices.length);
+
+  for (const vertex of shape.indices) {
+    if (isUsed[vertex] === 1) {
+      return false;
+    }
+
+    isUsed[vertex] = 1;
+  }
+
+  return true;
+}
+
+function faceCenters(shape: Shape, transform = IDENTITY): FaceCenter[] | null {
+  if (!isFaceted(shape)) {
+    return null;
+  }
+
+  const faces: FaceCenter[] = [];
+
+  for (let corner = 0; corner < shape.indices.length; corner += 3) {
+    const corners = [shape.indices[corner], shape.indices[corner + 1], shape.indices[corner + 2]];
+    const position = new Vector3();
+    let along = 0;
+    let around = 0;
+
+    for (const vertex of corners) {
+      position.add(new Vector3().fromArray(shape.positions, vertex * 3));
+      along += shape.along[vertex];
+      around += shape.around[vertex];
+    }
+
+    const face: FaceCenter = {
+      along: along / 3,
+      around: around / 3,
+      position: position.divideScalar(3).applyMatrix4(transform),
+    };
+
+    for (const vertex of corners) {
+      faces[vertex] = face;
+    }
+  }
+
+  return faces;
 }
 
 export class MeshBuilder {
@@ -69,12 +122,16 @@ export class MeshBuilder {
 
   add(shape: Shape, placement: Placement = {}): void {
     const style: VertexStyle = { ...this.#baseStyle, ...placement.style };
+    const faces = faceCenters(shape, placement.transform);
 
     this.#place(shape, placement, (vertex, normal, position) => {
       const point = { along: shape.along[vertex], around: shape.around[vertex], normal, position };
+      const face = faces === null ? point : { ...faces[vertex], normal };
 
       for (const channel of VERTEX_CHANNELS) {
-        this.#channels[channel].push(resolveChannel(style[channel], DEFAULT_VERTEX_VALUES[channel], point));
+        const at = channel === "slot" ? face : point;
+
+        this.#channels[channel].push(resolveChannel(style[channel], DEFAULT_VERTEX_VALUES[channel], at));
       }
     });
   }

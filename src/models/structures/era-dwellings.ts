@@ -43,6 +43,7 @@ const COURSE_HEIGHT = 0.34;
 const STONE_DEPTH = 0.14;
 const STONE_PROUD = 0.04;
 const STONE_SALT = 17.9;
+const SHORTEST_STONE = 0.2;
 
 interface Opening {
   readonly bottom: number;
@@ -223,16 +224,16 @@ export function addLonghouse(context: StructureContext): void {
   }
 }
 
-function overlapsOpening(
-  openings: readonly Opening[],
-  left: number,
-  right: number,
-  bottom: number,
-  top: number
-): boolean {
-  return openings.some((opening) => {
-    return left < opening.right && right > opening.left && bottom < opening.top && top > opening.bottom;
+function openingAt(openings: readonly Opening[], x: number): Opening | undefined {
+  return openings.find((opening) => {
+    return x > opening.left - SHORTEST_STONE && x < opening.right;
   });
+}
+
+function nextOpeningEdge(openings: readonly Opening[], x: number, end: number): number {
+  return openings.reduce((edge, opening) => {
+    return opening.left > x ? Math.min(edge, opening.left) : edge;
+  }, end);
 }
 
 function addCladdingStone(
@@ -265,16 +266,25 @@ function addCladding(context: StructureContext, face: WallFace): void {
   const courses = Math.floor(HOUSE_WALL_TOP / COURSE_HEIGHT);
 
   for (let course = 0; course < courses; course += 1) {
+    const bottom = course * COURSE_HEIGHT;
+    const openings = face.openings.filter((opening) => {
+      return bottom < opening.top && bottom + COURSE_HEIGHT > opening.bottom;
+    });
     let left = -face.halfLength + 0.06;
 
     for (let block = 0; left < face.halfLength - 0.2; block += 1) {
-      const length = 0.5 + 0.45 * hashToUnit(course, block, STONE_SALT + face.offset);
-      const right = Math.min(face.halfLength - 0.06, left + length);
-      const bottom = course * COURSE_HEIGHT;
+      const blocking = openingAt(openings, left);
 
-      if (!overlapsOpening(face.openings, left, right, bottom, bottom + COURSE_HEIGHT)) {
-        addCladdingStone(context, face, left, right, course);
+      if (blocking !== undefined) {
+        left = blocking.right;
+
+        continue;
       }
+
+      const length = 0.9 + 0.7 * hashToUnit(course, block, STONE_SALT + face.offset);
+      const right = nextOpeningEdge(openings, left, Math.min(face.halfLength - 0.06, left + length));
+
+      addCladdingStone(context, face, left, right, course);
 
       left = right;
     }

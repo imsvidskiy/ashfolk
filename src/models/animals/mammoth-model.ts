@@ -3,7 +3,7 @@ import { FULL_TURN } from "../../shared/math.ts";
 import { createVolumeNoise } from "../../shared/noise.ts";
 import { createRandom } from "../../shared/random.ts";
 import type { AnimalPose } from "../../world/agent-poses.ts";
-import { alongBody, alongPath, alongTube, segmentsAtLeast } from "../level-of-detail.ts";
+import { alongPath, segmentsAtLeast } from "../level-of-detail.ts";
 import { MaterialSlot } from "../materials.ts";
 import type { MeshBuilder } from "../mesh/mesh-builder.ts";
 import { deformShape, type Shape, transformShape } from "../mesh/shape.ts";
@@ -228,7 +228,7 @@ function bodyShape(detail: AnimalDetail): Shape {
 }
 
 function headShape(detail: AnimalDetail): Shape {
-  return deformShape(lengthwiseLoft(alongBody(HEAD, detail), detail.segments + 4), (vertex) => {
+  return deformShape(lengthwiseLoft(alongPath(HEAD, detail), detail.segments + 4), (vertex) => {
     const fur = FUR_DEPTH * 0.8 * FUR_NOISE.fractal(vertex.x * 2.6 + 9, vertex.y * 2.6, vertex.z * 2.6, { octaves: 2 });
 
     return [vertex.normalX * fur, vertex.normalY * fur, vertex.normalZ * fur];
@@ -281,7 +281,7 @@ function addHead(builder: MeshBuilder, detail: AnimalDetail): void {
   const head = headShape(detail);
 
   builder.add(head, { seam: HEAD_SEAM, style: { ...neckStyle(MAMMOTH_FRAME, 0.25), slot: MaterialSlot.Coat } });
-  builder.add(tube(alongTube(TRUNK, detail), { radialSegments: detail.segments }), {
+  builder.add(tube(alongPath(TRUNK, detail), { radialSegments: detail.segments }), {
     seam: TRUNK_SEAM,
     style: { ...TRUNK_STYLE, slot: MaterialSlot.Coat },
   });

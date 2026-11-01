@@ -1,5 +1,5 @@
 import { uniform } from "three/tsl";
-import { Color, type DataTexture, RedFormat, RGBAFormat, RGFormat, type WebGPURenderer } from "three/webgpu";
+import { Color, type DataTexture, RedFormat, RGBAFormat, type WebGPURenderer } from "three/webgpu";
 import { Ground, isPoolGround } from "../../content/grounds.ts";
 import type { WorldMirror } from "../../game/world-mirror.ts";
 import type { CellRegion, RowRun } from "../../world/change-tracking.ts";
@@ -8,6 +8,7 @@ import { POND_SHORE_SLOPE, pondEdgeReach, pondOutlineExtent } from "../../world/
 import { byteTexture, floatDataTexture } from "../data-textures.ts";
 import { CaveOutlets } from "../water/cave-outlets.ts";
 import { FordField } from "../water/ford-field.ts";
+import { RiverField } from "../water/river-field.ts";
 import {
   buildShoreField,
   NOT_POND,
@@ -28,7 +29,7 @@ import { PATCH_CELLS, PATCH_STEPS } from "./terrain-patches.ts";
 const SEASON_STEP = 0.01;
 const POND_SHORE_CELLS = 2;
 const BYTE = 255;
-const WETLAND_CHANNELS = 2;
+const WETLAND_CHANNELS = 4;
 
 export class TerrainTextures {
   readonly bloom = uniform(0);
@@ -42,6 +43,7 @@ export class TerrainTextures {
   readonly outline: IslandOutline;
   readonly patchSteps: DataTexture;
   readonly patchesPerSide: number;
+  readonly rivers: RiverField;
   readonly shore: DataTexture;
   readonly skyColor = uniform(new Color(0x9c_c0_e0));
   readonly surface: DataTexture;
@@ -79,16 +81,23 @@ export class TerrainTextures {
     };
     this.shore = floatDataTexture(this.#shoreData, size, size, RGBAFormat);
     this.#buildShore();
+    this.rivers = new RiverField(mirror.grid, mirror.water.riverLines, mirror.terrain, {
+      data: this.#shoreData,
+      stride: SHORE_CHANNELS,
+      texture: this.shore,
+    });
     this.surface = byteTexture(mirror.surface, size, RGBAFormat);
     this.#wetlandData = new Uint8Array(size * size * WETLAND_CHANNELS);
     this.#paintWetland({ firstRow: 0, rowCount: size });
-    this.wetland = byteTexture(this.#wetlandData, size, RGFormat);
+    this.wetland = byteTexture(this.#wetlandData, size, RGBAFormat);
     this.groundAlbedo = new GroundAlbedo(mirror);
     this.fields = new FieldPlan(mirror);
   }
 
   shoreDepthAt(x: number, z: number): number {
-    return sampleCells(this.#shoreData, this.#mirror.grid, x, z, SHORE_CHANNELS, ShoreChannel.Depth);
+    const cellDepth = sampleCells(this.#shoreData, this.#mirror.grid, x, z, SHORE_CHANNELS, ShoreChannel.Depth);
+
+    return this.rivers.depthAt(x, z, cellDepth);
   }
 
   followPatchLevels(levels: Readonly<Int8Array>): void {
@@ -122,6 +131,7 @@ export class TerrainTextures {
 
     if (changes.hasWaterChanged) {
       this.#buildShore();
+      this.rivers.rebuild(this.#mirror.water.riverLines, this.#mirror.terrain);
       this.caveOutlets.rebuild(this.#mirror.water.springs);
       this.fords.rebuild(this.#mirror.crossings);
     } else {
@@ -160,6 +170,7 @@ export class TerrainTextures {
     this.height.dispose();
     this.lava.dispose();
     this.patchSteps.dispose();
+    this.rivers.dispose();
     this.surface.dispose();
     this.water.dispose();
     this.shore.dispose();
@@ -178,6 +189,7 @@ export class TerrainTextures {
 
       this.#wetlandData[cell * WETLAND_CHANNELS] = isPool || ground === Ground.Swamp ? BYTE : 0;
       this.#wetlandData[cell * WETLAND_CHANNELS + 1] = isPool ? BYTE : 0;
+      this.#wetlandData[cell * WETLAND_CHANNELS + 2] = ground === Ground.Snow ? BYTE : 0;
     }
   }
 
@@ -213,6 +225,7 @@ export class TerrainTextures {
     if (levelRegion !== null) {
       updateShoreField(this.#shoreSource, levelRegion, this.#shoreData);
       this.shore.needsUpdate = true;
+      this.rivers.updateStandingWater(this.#mirror.terrain);
     }
 
     if (heightRegion !== null) {

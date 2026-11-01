@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { alongPath, type DetailSteps, segmentsAtLeast, segmentsUpTo, thinned } from "./level-of-detail.ts";
 
-const NEAR: DetailSteps = { curveSteps: 3, hasSmallParts: true };
-const FAR: DetailSteps = { curveSteps: 1, hasSmallParts: false };
+const NEAR: DetailSteps = { hasSmallParts: true };
+const FAR: DetailSteps = { hasSmallParts: false };
 
 describe("level of detail", () => {
   it("thins a path to every other point and keeps both ends", () => {

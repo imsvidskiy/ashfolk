@@ -30,6 +30,8 @@ const FORD_SAND = vec3(0.5, 0.42, 0.27);
 const FORD_GRAVEL = vec3(0.3, 0.28, 0.24);
 const EDGE_WOBBLE = 0.6;
 const BED_OVERHANG = 1.5;
+const BED_DRY_MARGIN = 0.2;
+const BED_WET_DEPTH = 0.05;
 const LARGEST_FORD_COUNT = 255;
 const MARKED_HALF_WIDTH = FORD_BED_HALF_WIDTH + EDGE_WOBBLE;
 
@@ -137,7 +139,26 @@ export class FordField {
     this.segments.needsUpdate = true;
   }
 
-  marksNode(point: Node<"vec2">): Node<"vec2"> {
+  marksNode(point: Node<"vec2">, depth: Node<"float">): Node<"vec2"> {
+    const wet = smoothstep(-BED_DRY_MARGIN, BED_WET_DEPTH, depth);
+
+    return this.#marksNear(point, (frame, wobble) => {
+      return vec2(bedOf(frame, wobble).mul(wet), pathOf(frame, point, wobble));
+    });
+  }
+
+  pathNode(point: Node<"vec2">): Node<"float"> {
+    return this.#marksNear(point, (frame, wobble) => {
+      return vec2(0, pathOf(frame, point, wobble));
+    }).y;
+  }
+
+  dispose(): void {
+    this.cells.dispose();
+    this.segments.dispose();
+  }
+
+  #marksNear(point: Node<"vec2">, marksOf: (frame: FordFrame, wobble: Node<"float">) => Node<"vec2">): Node<"vec2"> {
     const grid = this.#grid;
 
     const cell = cellAtNode(grid, point);
@@ -162,18 +183,11 @@ export class FordField {
         const isNear = abs(frame.across).lessThan(MARKED_HALF_WIDTH).and(beyondFord(frame).lessThan(FORD_PATH_REACH));
 
         If(isNear, () => {
-          const wobble = edgeWobble(point);
-
-          marks.assign(vec2(bedOf(frame, wobble), pathOf(frame, point, wobble)));
+          marks.assign(marksOf(frame, edgeWobble(point)));
         });
       });
 
       return marks;
     })();
-  }
-
-  dispose(): void {
-    this.cells.dispose();
-    this.segments.dispose();
   }
 }

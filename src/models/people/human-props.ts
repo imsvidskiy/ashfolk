@@ -3,7 +3,7 @@ import { segmentsAtLeast } from "../level-of-detail.ts";
 import { MaterialSlot } from "../materials.ts";
 import type { MeshBuilder } from "../mesh/mesh-builder.ts";
 import type { Shape } from "../mesh/shape.ts";
-import { blob, box, cone, cylinder, loft, sphere } from "../mesh/shapes.ts";
+import { blob, box, cone, cylinder, icosphere, loft } from "../mesh/shapes.ts";
 import { segmentLength, segmentTransform, type Triple, transformOf } from "../mesh/transforms.ts";
 import { tube } from "../mesh/tubes.ts";
 import { STONE_NOISE } from "../stones.ts";
@@ -123,7 +123,7 @@ export function addCarriedBerries(builder: MeshBuilder, detail: HumanDetail): vo
     const angle = (index / 9) * FULL_TURN;
     const distance = index % 3 === 0 ? 0.02 : 0.055;
 
-    builder.add(sphere(0.022, 6, 4), {
+    builder.add(icosphere(0.024, 0), {
       style: inLeftHand(MaterialSlot.Berry),
       transform: transformOf({
         position: [

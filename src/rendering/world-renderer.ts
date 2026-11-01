@@ -202,6 +202,7 @@ export class WorldRenderer {
       islandHalfSize: mirror.grid.halfSize,
       shadowMapSize: quality.shadowMapSize,
     });
+    this.#water.look.shadowMatrix.value = this.#atmosphere.sun.shadow.matrix;
 
     this.scene.add(
       this.#terrain.group,
@@ -414,6 +415,7 @@ export class WorldRenderer {
     look.daylight.value = this.#atmosphere.daylight;
     look.precipitation.value = precipitation;
     look.rainfall.value = rainfall;
+    look.wind.value.set(windX, windZ);
     look.windTravel.value.x += windX * WATER_DRIFT * realSeconds;
     look.windTravel.value.y += windZ * WATER_DRIFT * realSeconds;
   }

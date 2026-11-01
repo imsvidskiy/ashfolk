@@ -24,6 +24,7 @@ const SPECIES: readonly PlantSpeciesIndex[] = PLANT_SPECIES.map((definition) => 
 });
 const FOLIAGE_SLOTS: ReadonlySet<number> = new Set([MaterialSlot.Leaf, MaterialSlot.Needle]);
 const NEAR_LEVELS: readonly NearLevel[] = ["high", "medium"];
+const TIERED_LEVELS: readonly PlantDetailLevel[] = [...NEAR_LEVELS, "low"];
 
 const TREES = [
   PlantSpecies.Acacia,
@@ -326,7 +327,7 @@ describe("tree details", () => {
   });
 
   it("tucks the tip of every spruce tier inside the tier above it", () => {
-    for (const level of NEAR_LEVELS) {
+    for (const level of TIERED_LEVELS) {
       for (const spruce of variantsOf(PlantSpecies.Spruce, level)) {
         const tiers = meshPieces(spruce)
           .filter((piece) => {

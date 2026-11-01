@@ -1,8 +1,7 @@
 import { type Matrix4, Vector3 } from "three";
-import { alongPath, alongTube, type DetailSteps, segmentsUpTo } from "../level-of-detail.ts";
+import { alongPath, type DetailSteps, segmentsUpTo } from "../level-of-detail.ts";
 import { MaterialSlot, type MaterialSlotIndex } from "../materials.ts";
 import type { MeshBuilder, SurfacePoint, VertexStyle } from "../mesh/mesh-builder.ts";
-import { curveBodySections } from "../mesh/path-curves.ts";
 import { type Shape, transformShape } from "../mesh/shape.ts";
 import { type BodySection, lengthwiseLoft, sphere } from "../mesh/shapes.ts";
 import { outermostHit, surfaceTransform } from "../mesh/surface-probe.ts";
@@ -72,11 +71,11 @@ export function addLegs(builder: MeshBuilder, options: LegOptions): void {
 }
 
 export function bodyShape(sections: readonly BodySection[], detail: AnimalDetail): Shape {
-  return lengthwiseLoft(curveBodySections(sections, detail.curveSteps), detail.segments + 2);
+  return lengthwiseLoft(sections, detail.segments + 2);
 }
 
 export function muzzleShape(points: readonly TubePoint[], detail: AnimalDetail, narrowing: number): Shape {
-  const muzzle = tube(alongTube(points, detail), { hasEndCap: false, radialSegments: detail.segments });
+  const muzzle = tube(alongPath(points, detail), { hasEndCap: false, radialSegments: detail.segments });
 
   return transformShape(muzzle, transformOf({ scale: [narrowing, 1, 1] }));
 }

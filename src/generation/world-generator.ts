@@ -55,7 +55,8 @@ const LOWLAND_HEIGHT = 420;
 const UPLAND_HEIGHT = 650;
 const VALLEY_CELL_SIZES = [40, 20] as const;
 const VALLEY_DROPLETS_PER_CELL = 1.6;
-const GULLY_DROPLETS_PER_CELL = 1.2;
+const GULLY_DROPLETS_PER_CELL = 0.5;
+const COARSE_GULLY_DROPLETS_PER_CELL = 1.2;
 
 export interface GeneratedWorld {
   crossings: readonly Crossing[];
@@ -80,7 +81,10 @@ function erosionScales(grid: WorldGrid, strength: number): ErosionScale[] {
       return { dropletsPerCell: VALLEY_DROPLETS_PER_CELL * strength, factor };
     });
 
-  return [...coarse, { dropletsPerCell: GULLY_DROPLETS_PER_CELL * strength, factor: 1 }];
+  const gullies =
+    grid.cellSize < Math.min(...VALLEY_CELL_SIZES) ? GULLY_DROPLETS_PER_CELL : COARSE_GULLY_DROPLETS_PER_CELL;
+
+  return [...coarse, { dropletsPerCell: gullies * strength, factor: 1 }];
 }
 
 function erosionPlan(grid: WorldGrid, heights: Float32Array, dryness: Float32Array, strength: number): ErosionPlan {
@@ -214,7 +218,9 @@ export function generateWorld(
   carveValleys(heights, grid, dryness, coastDistance);
   relaxSlopes(heights, size, grid.cellSize, talusSlopes(heights, dryness, rockStrength), FINAL_RELAXATION_ITERATIONS);
   limitSlopes(heights, size, grid.cellSize, STEEPEST_SLOPE);
-  smoothHeights(heights, size);
+  smoothHeights(heights, size, grid.cellSize, (cell) => {
+    return isOnIsland(coastDistance, cell);
+  });
   easeLakeShores(heights, grid, coastDistance, fillSinks(heights, grid, dryness, coastDistance));
   onProgress({ island: sketch, stage: "water" });
 

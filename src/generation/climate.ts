@@ -5,8 +5,10 @@ import { createNoiseSampler, type NoiseSampler } from "../shared/noise.ts";
 import { createRandom } from "../shared/random.ts";
 import { gradientXAt, gradientZAt, slopeAt } from "../world/footing.ts";
 import { hasWater } from "../world/water.ts";
-import { ORTHOGONAL_STEPS, type WorldGrid } from "../world/world-grid.ts";
+import { NEIGHBOR_OFFSETS, ORTHOGONAL_STEPS, type WorldGrid } from "../world/world-grid.ts";
+import { boxBlur } from "./box-blur.ts";
 import type { ClimateProfile } from "./island-layout.ts";
+import { isRiverWater } from "./ponds.ts";
 import { type IslandPoint, islandPointAt } from "./relief.ts";
 import {
   findPools,
@@ -41,6 +43,14 @@ const RIVER_BANK_RISE = 1.4;
 const RIVER_BANK_RISE_PER_CELL = 0.9;
 const STEEPEST_RIVER_BANK = 0.36;
 const BOG_TEMPERATURE = 3;
+const SHADE_BLUR_RADIUS = 30;
+const ZONE_RADIUS = 23;
+const ZONE_PASSES = 2;
+const ZONE_LABELS = 32;
+const NO_MAJORITY = -1;
+const BED_FILL_PASSES = 8;
+const STILL_WATER_CLEARANCE = 2;
+const FIXED_BIOMES: ReadonlySet<number> = new Set([Biome.Alpine, Biome.Beach, Biome.Mesa, Biome.Swamp, Biome.Water]);
 
 const BIOME_GROUND: Readonly<Record<BiomeIndex, GroundIndex>> = {
   [Biome.Alpine]: Ground.Rock,
@@ -98,6 +108,12 @@ interface ClimateFields {
 interface DrainedLand {
   biome: Uint8Array;
   ground: Uint8Array;
+}
+
+interface ZoneWindow {
+  readonly halfWidths: Int32Array;
+  readonly majority: number;
+  readonly reach: number;
 }
 
 function summitChill(height: number): number {
@@ -272,12 +288,16 @@ function shadedFacing(
 
 function measureSlopes(profile: ClimateProfile, grid: WorldGrid, heights: Float32Array, slopes: Float64Array): Slopes {
   const warmth = Math.hypot(profile.warmthX, profile.warmthZ);
+  const blurRadius = Math.round(SHADE_BLUR_RADIUS / grid.cellSize);
 
-  const shaded = slopes.map((slope, cell) => {
+  const shaded = Float32Array.from(slopes, (slope, cell) => {
     return shadedFacing(profile, warmth, gradientXAt(heights, grid, cell), gradientZAt(heights, grid, cell), slope);
   });
 
-  return { shaded: Float32Array.from(shaded), slope: Float32Array.from(slopes) };
+  return {
+    shaded: blurRadius < 1 ? shaded : boxBlur(grid.cellsPerSide, shaded, blurRadius),
+    slope: Float32Array.from(slopes),
+  };
 }
 
 function riverBankWidth(strength: number): number {
@@ -380,6 +400,111 @@ function shapeSwamps(inputs: WetlandInputs, result: ClimateResult, wetness: Floa
   }
 }
 
+function zoneWindow(radius: number): ZoneWindow {
+  const reach = Math.floor(radius);
+  const halfWidths = Int32Array.from({ length: 2 * reach + 1 }, (_, index) => {
+    let halfWidth = 0;
+
+    while (Math.hypot(halfWidth + 1, index - reach) <= radius) {
+      halfWidth += 1;
+    }
+
+    return halfWidth;
+  });
+  const cellCount = halfWidths.reduce((total, halfWidth) => {
+    return total + 2 * halfWidth + 1;
+  }, 0);
+
+  return { halfWidths, majority: Math.ceil(cellCount / 2), reach };
+}
+
+function rowMajorities(zones: Uint16Array, size: number, row: number, window: ZoneWindow): Int32Array {
+  const { halfWidths, majority, reach } = window;
+
+  const counts = new Uint8Array(ZONE_LABELS * ZONE_LABELS);
+  const majorities = new Int32Array(size).fill(NO_MAJORITY);
+
+  let leader = NO_MAJORITY;
+
+  for (let index = 0; index < halfWidths.length; index += 1) {
+    const rowStart = (row + index - reach) * size;
+
+    for (let column = reach - halfWidths[index]; column <= reach + halfWidths[index]; column += 1) {
+      const zone = zones[rowStart + column];
+
+      counts[zone] += 1;
+
+      if (counts[zone] >= majority) {
+        leader = zone;
+      }
+    }
+  }
+
+  majorities[reach] = leader;
+
+  for (let column = reach + 1; column < size - reach; column += 1) {
+    for (let index = 0; index < halfWidths.length; index += 1) {
+      counts[zones[(row + index - reach) * size + column - 1 - halfWidths[index]]] -= 1;
+    }
+
+    if (leader !== NO_MAJORITY && counts[leader] < majority) {
+      leader = NO_MAJORITY;
+    }
+
+    for (let index = 0; index < halfWidths.length; index += 1) {
+      const zone = zones[(row + index - reach) * size + column + halfWidths[index]];
+
+      counts[zone] += 1;
+
+      if (counts[zone] >= majority) {
+        leader = zone;
+      }
+    }
+
+    majorities[column] = leader;
+  }
+
+  return majorities;
+}
+
+function smoothZones(grid: WorldGrid, result: ClimateResult): void {
+  const window = zoneWindow(ZONE_RADIUS / grid.cellSize);
+  const { reach } = window;
+
+  if (reach < 1) {
+    return;
+  }
+
+  const size = grid.cellsPerSide;
+  let zones = Uint16Array.from(result.biome, (biome, cell) => {
+    return biome * ZONE_LABELS + result.ground[cell];
+  });
+
+  for (let pass = 0; pass < ZONE_PASSES; pass += 1) {
+    const smoothed = Uint16Array.from(zones);
+
+    for (let row = reach; row < size - reach; row += 1) {
+      const majorities = rowMajorities(zones, size, row, window);
+
+      for (let column = reach; column < size - reach; column += 1) {
+        const cell = grid.index(column, row);
+        const zone = majorities[column] === NO_MAJORITY ? zones[cell] : majorities[column];
+
+        if (!(FIXED_BIOMES.has(result.biome[cell]) || FIXED_BIOMES.has(Math.floor(zone / ZONE_LABELS)))) {
+          smoothed[cell] = zone;
+        }
+      }
+    }
+
+    zones = smoothed;
+  }
+
+  for (const [cell, zone] of zones.entries()) {
+    result.biome[cell] = Math.floor(zone / ZONE_LABELS);
+    result.ground[cell] = zone % ZONE_LABELS;
+  }
+}
+
 function cellClimate(fields: ClimateFields, column: number, row: number, point: IslandPoint): CellClimate {
   const { inputs, noise, profile, riverBanks, rockStrength, slopes, waterDistance, wetness } = fields;
 
@@ -387,7 +512,7 @@ function cellClimate(fields: ClimateFields, column: number, row: number, point: 
   const height = inputs.heights[cell];
   const desert = inputs.desert[cell];
   const shaded = slopes.shaded[cell];
-  const moistureNoise = 0.28 * noise.fractal(point.x * 1.3 + 11, point.z * 1.3 - 7, { octaves: 4 });
+  const moistureNoise = 0.28 * noise.fractal(point.x * 1.3 + 11, point.z * 1.3 - 7, { octaves: 3 });
   const waterInfluence = 0.36 * Math.exp(-waterDistance[cell] / 13);
 
   const warmSide = profile.warmthX * point.x + profile.warmthZ * point.z;
@@ -415,6 +540,108 @@ function cellClimate(fields: ClimateFields, column: number, row: number, point: 
     slope: slopes.slope[cell],
     temperature,
   };
+}
+
+function isNearStillWater(inputs: WetlandInputs, cell: number): boolean {
+  const { grid } = inputs;
+
+  const column = grid.columnOf(cell);
+  const row = grid.rowOf(cell);
+
+  for (let rowOffset = -STILL_WATER_CLEARANCE; rowOffset <= STILL_WATER_CLEARANCE; rowOffset += 1) {
+    for (let columnOffset = -STILL_WATER_CLEARANCE; columnOffset <= STILL_WATER_CLEARANCE; columnOffset += 1) {
+      if (
+        grid.contains(column + columnOffset, row + rowOffset) &&
+        isStillWater(inputs, grid.index(column + columnOffset, row + rowOffset))
+      ) {
+        return true;
+      }
+    }
+  }
+
+  return false;
+}
+
+function isRiverBed(inputs: WetlandInputs, result: ClimateResult, riverBanks: Uint8Array, cell: number): boolean {
+  const isSandBank = riverBanks[cell] === 1 && result.biome[cell] === Biome.Beach;
+
+  return (isRiverWater(inputs, cell) || isSandBank) && !isNearStillWater(inputs, cell);
+}
+
+function commonGroundAround(grid: WorldGrid, ground: Uint8Array, isOpen: Uint8Array, cell: number): number {
+  const column = grid.columnOf(cell);
+  const row = grid.rowOf(cell);
+  const counts = new Map<number, number>();
+
+  let common = -1;
+  let commonCount = 0;
+
+  for (const offset of NEIGHBOR_OFFSETS) {
+    const neighbor = grid.neighborIndex(column, row, offset);
+
+    if (neighbor < 0 || isOpen[neighbor] === 1) {
+      continue;
+    }
+
+    const known = counts.get(ground[neighbor]);
+    const count = known === undefined ? 1 : known + 1;
+
+    counts.set(ground[neighbor], count);
+
+    if (count > commonCount || (count === commonCount && ground[neighbor] < common)) {
+      common = ground[neighbor];
+      commonCount = count;
+    }
+  }
+
+  return common;
+}
+
+function sandMouths(inputs: WetlandInputs, result: ClimateResult): void {
+  const { grid } = inputs;
+
+  for (let cell = 0; cell < grid.cellCount; cell += 1) {
+    const isRockyRiverBed = isRiverWater(inputs, cell) && result.ground[cell] === Ground.Rock;
+
+    if (isRockyRiverBed && isNearStillWater(inputs, cell)) {
+      result.ground[cell] = Ground.Sand;
+    }
+  }
+}
+
+function groundRiverBeds(inputs: WetlandInputs, result: ClimateResult, riverBanks: Uint8Array): void {
+  const { grid } = inputs;
+
+  sandMouths(inputs, result);
+
+  const isOpen = Uint8Array.from({ length: grid.cellCount }, (_, cell) => {
+    return isRiverBed(inputs, result, riverBanks, cell) ? 1 : 0;
+  });
+
+  for (let pass = 0; pass < BED_FILL_PASSES; pass += 1) {
+    const filled: [number, number][] = [];
+
+    for (let cell = 0; cell < grid.cellCount; cell += 1) {
+      if (isOpen[cell] === 0) {
+        continue;
+      }
+
+      const ground = commonGroundAround(grid, result.ground, isOpen, cell);
+
+      if (ground >= 0) {
+        filled.push([cell, ground]);
+      }
+    }
+
+    if (filled.length === 0) {
+      return;
+    }
+
+    for (const [cell, ground] of filled) {
+      result.ground[cell] = ground;
+      isOpen[cell] = 0;
+    }
+  }
 }
 
 export function buildClimate(
@@ -469,7 +696,9 @@ export function buildClimate(
     }
   }
 
+  smoothZones(grid, result);
   shapeSwamps(inputs, result, wetness, { biome: drained, ground: drainedGround });
+  groundRiverBeds(inputs, result, riverBanks);
 
   return result;
 }

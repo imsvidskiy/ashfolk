@@ -1,7 +1,4 @@
-import type { WorldGrid } from "../world/world-grid.ts";
-
-export function boxBlur(grid: WorldGrid, values: Float32Array, radius: number): Float32Array {
-  const size = grid.cellsPerSide;
+export function boxBlur(size: number, values: Float32Array, radius: number): Float32Array {
   const across = new Float32Array(values.length);
   const result = new Float32Array(values.length);
 

@@ -23,6 +23,7 @@ import { MaterialSlot, SLOT_COLOR_TABLE } from "../../models/materials.ts";
 import { GLOW_PART } from "../../models/structures/structure-parts.ts";
 import type { WorldGrid } from "../../world/world-grid.ts";
 import { fadeNearCamera } from "../camera-fade.ts";
+import { styleModel } from "../model-style.ts";
 import { rotateAroundUp, slotColorTable } from "../node-helpers.ts";
 import { markOutlined } from "../outlines.ts";
 import { coarseGroundOffsetNode } from "../terrain/height-sampling.ts";
@@ -93,7 +94,7 @@ export function createBuildingMaterial(
   const glow = select(isGlow, state.y.mul(flicker).mul(5), float(0));
 
   material.emissiveNode = vec3(1, 0.42, 0.12).mul(glow);
-  material.roughnessNode = float(0.86);
+  styleModel(material);
 
   if (isFading) {
     fadeNearCamera(material, state.w);
@@ -134,7 +135,7 @@ export function createPlinthMaterial(
   const footing = select(style.greaterThanEqual(STONE_FOOTING_STYLE - 0.5), stone, EARTH);
 
   material.colorNode = mix(footing.mul(grain), CHARCOAL, damage.mul(0.6));
-  material.roughnessNode = float(0.92);
+  styleModel(material);
 
   if (isFading) {
     fadeNearCamera(material, look.w);

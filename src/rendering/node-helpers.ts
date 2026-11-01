@@ -1,8 +1,11 @@
-import { cos, mx_noise_float, sin, smoothstep, uniformArray, vec3 } from "three/tsl";
+import { cos, hash, mx_noise_float, sin, smoothstep, uint, uniformArray, vec3 } from "three/tsl";
 import { Color, type Node, Vector3 } from "three/webgpu";
 import { SLOT_COLOR_TABLE } from "../models/materials.ts";
 
 export const SNOW_COLOR = vec3(0.86, 0.9, 0.95);
+
+const CELL_KEY_OFFSET = 32_768;
+const CELL_KEY_ROW = 65_536;
 
 function linearColorVector(hex: number): Vector3 {
   const color = new Color(hex);
@@ -14,6 +17,12 @@ export function slotColorTable() {
   return uniformArray<"vec3">(SLOT_COLOR_TABLE.map(linearColorVector), "vec3");
 }
 
+export function cellKey(cell: Node<"vec2">): Node<"uint"> {
+  return uint(cell.x.add(CELL_KEY_OFFSET))
+    .mul(CELL_KEY_ROW)
+    .add(uint(cell.y.add(CELL_KEY_OFFSET)));
+}
+
 export function rotateAroundUp(vector: Node<"vec3">, angle: Node<"float">): Node<"vec3"> {
   const cosine = cos(angle);
   const sine = sin(angle);
@@ -23,6 +32,10 @@ export function rotateAroundUp(vector: Node<"vec3">, angle: Node<"float">): Node
 
 export function snowCoverNode(surface: Node<"vec4">): Node<"float"> {
   return smoothstep(0.1, 0.45, surface.r);
+}
+
+export function unitHash(seed: Node<"uint">, salt: number): Node<"float"> {
+  return hash(seed.bitXor(salt));
 }
 
 export function unitNoise3(point: Node<"vec3">): Node<"float"> {

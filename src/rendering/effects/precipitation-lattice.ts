@@ -1,5 +1,6 @@
-import { clamp, float, floor, hash, instanceIndex, uint, uniform, vec2 } from "three/tsl";
+import { clamp, float, floor, instanceIndex, uint, uniform, vec2 } from "three/tsl";
 import { type Node, Vector2 } from "three/webgpu";
+import { unitHash } from "../node-helpers.ts";
 
 export const CYCLES = 256;
 
@@ -26,10 +27,6 @@ function scramble(seed: Node<"uint">): Node<"uint"> {
   const word = state.shiftRight(state.shiftRight(28).add(4)).bitXor(state).mul(277_803_737);
 
   return word.shiftRight(22).bitXor(word);
-}
-
-export function unitHash(seed: Node<"uint">, salt: number): Node<"float"> {
-  return hash(seed.bitXor(salt));
 }
 
 function wrapIdentity(value: number): number {

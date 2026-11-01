@@ -22,21 +22,41 @@ import {
 } from "./tree-structure.ts";
 
 export const FOLIAGE_FLUTTER = 1;
+export const CROWN_ROUGHNESS = 0.1;
 
 const MESH_NOISE = createVolumeNoise(createRandom(5150));
-const BLOB_LIMITS: Readonly<Record<NearLevel, number>> = { high: 9, medium: 4 };
+const BLOB_LIMITS: Readonly<Record<NearLevel, number>> = { high: 6, medium: 4 };
 const GROUNDED_CROWN_LIFT = 0.8;
 const LOW_CROWN_FILL = 0.53;
 const LOW_FROND_CROWN_FILL = 0.4;
 const SWAY_GROWTH = 1.4;
 
 const BRANCH_SIDES: Readonly<Record<Exclude<PlantDetailLevel, "far">, readonly number[]>> = {
-  high: [6, 4, 3],
+  high: [5, 4, 3],
   low: [4],
   medium: [5, 3],
 };
 
-const CONE_SEGMENTS: Readonly<Record<DistantLevel, number>> = { far: 5, low: 7 };
+const CONE_SEGMENTS: Readonly<Record<DistantLevel, number>> = { far: 5, low: 6 };
+const PAD_SIDES: Readonly<Record<NearLevel, number>> = { high: 8, medium: 5 };
+const PAD_PROFILES: Readonly<Record<NearLevel, readonly (readonly [reach: number, height: number])[]>> = {
+  high: [
+    [0, -0.7],
+    [0.9, -0.5],
+    [1, 0.1],
+    [0.75, 0.7],
+    [0, 1.2],
+  ],
+  medium: [
+    [0, -0.7],
+    [0.9, -0.5],
+    [1, 0.1],
+    [0, 1.2],
+  ],
+};
+const LOW_TIER_TOP = 0.62;
+const LOW_TIER_SPLIT = 0.45;
+const LOW_TIER_NARROWING = 0.62;
 const SPIKE_SIDES = 3;
 
 const DOME: readonly (readonly [reach: number, radius: number])[] = [
@@ -68,19 +88,19 @@ export interface TreeLook {
   readonly bark: MaterialSlotIndex;
   readonly foliage: MaterialSlotIndex;
   readonly hasBarkMarks: boolean;
+  readonly hasPadCrowns?: boolean;
 }
 
 export const BROADLEAF_LOOK: TreeLook = { bark: MaterialSlot.Bark, foliage: MaterialSlot.Leaf, hasBarkMarks: false };
 
 interface SkirtDetail {
-  readonly hasRoundedUnderside: boolean;
   readonly segments: number;
   readonly teeth: number;
 }
 
 const SKIRT_DETAILS: Readonly<Record<NearLevel, SkirtDetail>> = {
-  high: { hasRoundedUnderside: true, segments: 10, teeth: 8 },
-  medium: { hasRoundedUnderside: false, segments: 8, teeth: 7 },
+  high: { segments: 10, teeth: 5 },
+  medium: { segments: 8, teeth: 4 },
 };
 
 interface MergedBlob {
@@ -177,7 +197,7 @@ export function foliageStyle(
       const facing = outward.dot(point.normal) * 0.5 + 0.5;
       const lift = smoothstep(0, structure.height, point.position.y) * 0.15;
 
-      return clamp(0.5 + 0.38 * facing + lift + tint, 0.3, 1.15);
+      return clamp(0.64 + 0.34 * facing + lift * 0.6 + tint, 0.56, 1.08);
     },
     slot: look.foliage,
     sway: (point) => {
@@ -348,11 +368,6 @@ function skirtShape(skirt: FoliageSkirt, detail: SkirtDetail, isCovered: boolean
   ];
 
   const rounded = toothedLoft([hollow, underside, ...upperSide], skirt, detail);
-
-  if (detail.hasRoundedUnderside) {
-    return rounded;
-  }
-
   const plain = toothedLoft([hollow, ...upperSide], skirt, detail);
   const normals = new Float32Array(plain.normals);
   const rimInRounded = (HOLLOW_VERTICES + detail.segments) * 3;
@@ -472,6 +487,15 @@ function addBlob(
     return;
   }
 
+  if (look.hasPadCrowns === true && !isDistantLevel(level)) {
+    builder.add(padShape(foliage, level), {
+      style: foliageStyle(structure, look, foliage.tint, crown),
+      transform: transformOf({ position: foliage.center }),
+    });
+
+    return;
+  }
+
   const shape =
     level === "high"
       ? blob({
@@ -479,7 +503,7 @@ function addBlob(
           noise: MESH_NOISE,
           offset: [x * 0.37, y * 0.29, z * 0.41],
           radius: foliage.radius,
-          roughness: 0.3,
+          roughness: CROWN_ROUGHNESS,
         })
       : icosphere(foliage.radius, 0);
 
@@ -487,6 +511,17 @@ function addBlob(
     style: foliageStyle(structure, look, foliage.tint, crown),
     transform: transformOf({ position: foliage.center, scale: [1, foliage.squash, 1] }),
   });
+}
+
+function padShape(foliage: FoliageBlob, level: NearLevel): Shape {
+  const { radius, squash } = foliage;
+
+  return loft(
+    PAD_PROFILES[level].map(([reach, height]) => {
+      return { radiusX: radius * reach, radiusZ: radius * reach, y: radius * squash * height };
+    }),
+    PAD_SIDES[level]
+  );
 }
 
 function addFrond(
@@ -683,11 +718,28 @@ function addLowCrown(builder: MeshBuilder, structure: TreeStructure, look: TreeL
     const { bottom, center, radius, top } = crown;
 
     const sides = CONE_SEGMENTS[level];
-    const widening = silhouetteWidth(CONE_SEGMENTS.low) / silhouetteWidth(sides);
+    const style = foliageStyle(structure, look, 0, new Vector3(0, (top + bottom) / 2, 0));
 
-    builder.add(cone(radius * widening, top - bottom, sides), {
-      style: foliageStyle(structure, look, 0, new Vector3(0, (top + bottom) / 2, 0)),
+    if (level === "far") {
+      const widening = silhouetteWidth(CONE_SEGMENTS.low) / silhouetteWidth(sides);
+
+      builder.add(cone(radius * widening, top - bottom, sides), {
+        style,
+        transform: transformOf({ position: [center[0], bottom, center[2]] }),
+      });
+
+      return;
+    }
+
+    const split = lerp(bottom, top, LOW_TIER_SPLIT);
+
+    builder.add(cone(radius, (top - bottom) * LOW_TIER_TOP, sides), {
+      style,
       transform: transformOf({ position: [center[0], bottom, center[2]] }),
+    });
+    builder.add(cone(radius * LOW_TIER_NARROWING, top - split, sides), {
+      style,
+      transform: transformOf({ position: [center[0], split, center[2]] }),
     });
 
     return;

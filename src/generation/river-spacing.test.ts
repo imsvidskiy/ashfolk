@@ -1,5 +1,6 @@
 import { beforeAll, describe, expect, it } from "vitest";
 import { ISLAND_SHAPES } from "../world/island-shape.ts";
+import { isStandingWater } from "../world/terrain-sampling.ts";
 import type { River, RiverPoint } from "../world/water.ts";
 import { WorldGrid } from "../world/world-grid.ts";
 import { NO_CELL } from "./drainage.ts";
@@ -9,7 +10,6 @@ import { labelPatches } from "./testing/cell-patches.ts";
 import { coarseWorld, FULL_SIZE_TIMEOUT, fullSizeWorld } from "./testing/generated-worlds.ts";
 import {
   endsAwayFromWater,
-  isLakeWater,
   isNear,
   JUNCTION_CELLS,
   joinsRiver,
@@ -206,7 +206,7 @@ function closestDistinctRivers(generated: GeneratedWorld): number {
   const { rivers } = generated.water;
 
   const lakes = labelPatches(new WorldGrid(generated.dimensions), (cell) => {
-    return isLakeWater(generated.terrain, cell);
+    return isStandingWater(generated.terrain, cell);
   });
 
   let closestSquared = Number.POSITIVE_INFINITY;
@@ -271,7 +271,7 @@ function isTrunkFedByLake(generated: GeneratedWorld, worldGrid: WorldGrid, river
   return worldGrid
     .cellsInRadius(worldGrid.cellCenterX(head), worldGrid.cellCenterZ(head), worldGrid.cellSize * TRUNK_LAKE_CELLS)
     .some((cell) => {
-      return isLakeWater(generated.terrain, cell);
+      return isStandingWater(generated.terrain, cell);
     });
 }
 

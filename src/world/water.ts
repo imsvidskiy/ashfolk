@@ -4,6 +4,12 @@ export const NO_WATER = -10_000;
 
 export const POND_SHORE_SLOPE = 0.3;
 
+export const RIVER_LINE_STRIDE = 3;
+export const DRAWN_RIVER_WIDTH_SCALE = 1.2;
+export const WIDEST_DRAWN_RIVER_WIDENING = 1;
+export const NARROWEST_DRAWN_RIVER_HALF_WIDTH = 2.6;
+export const DRAWN_RIVER_EDGE_WOBBLE = 0.45;
+
 export const SPRING_KINDS = ["pond", "cave"] as const;
 
 const POND_STRETCH = 1.7;
@@ -118,10 +124,45 @@ export interface WaterFeatures {
   waterfalls: Waterfall[];
 }
 
-export type MirroredWater = Omit<WaterFeatures, "rivers">;
+export interface RiverLines {
+  readonly ends: Uint32Array;
+  readonly points: Float32Array;
+}
 
-export function mirroredWater({ lakes, springs, waterfalls }: WaterFeatures): MirroredWater {
-  return { lakes, springs, waterfalls };
+export interface MirroredWater extends Omit<WaterFeatures, "rivers"> {
+  riverLines: RiverLines;
+}
+
+export function drawnRiverHalfWidth(halfWidth: number): number {
+  const widening = Math.min(halfWidth * (DRAWN_RIVER_WIDTH_SCALE - 1), WIDEST_DRAWN_RIVER_WIDENING);
+
+  return Math.max(halfWidth + widening, NARROWEST_DRAWN_RIVER_HALF_WIDTH);
+}
+
+export function packRiverLines(rivers: readonly River[]): RiverLines {
+  const ends = new Uint32Array(rivers.length);
+  const points = new Float32Array(
+    rivers.reduce((total, river) => {
+      return total + river.points.length;
+    }, 0) * RIVER_LINE_STRIDE
+  );
+
+  let offset = 0;
+
+  for (const [index, river] of rivers.entries()) {
+    for (const point of river.points) {
+      points.set([point.x, point.z, point.width / 2], offset * RIVER_LINE_STRIDE);
+      offset += 1;
+    }
+
+    ends[index] = offset;
+  }
+
+  return { ends, points };
+}
+
+export function mirroredWater({ lakes, rivers, springs, waterfalls }: WaterFeatures): MirroredWater {
+  return { lakes, riverLines: packRiverLines(rivers), springs, waterfalls };
 }
 
 function featureDraw(spring: Spring, feature: number, index: number): number {

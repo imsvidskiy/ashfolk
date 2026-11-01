@@ -4,6 +4,18 @@ import type { WorldGrid } from "../../world/world-grid.ts";
 import { PATCH_CELLS } from "./terrain-patches.ts";
 import type { TerrainTextures } from "./terrain-textures.ts";
 
+const CORNERS = [
+  [0, 0],
+  [1, 0],
+  [0, 1],
+  [1, 1],
+] as const;
+
+export interface Corner {
+  readonly cell: Node<"ivec2">;
+  readonly weight: Node<"float">;
+}
+
 export function sampleCellsNode(cells: DataTexture, grid: WorldGrid, point: Node<"vec2">): Node<"vec4"> {
   const last = grid.cellsPerSide - 1;
   const cellCoordinate = point.add(grid.halfSize).div(grid.cellSize).sub(0.5);
@@ -19,6 +31,21 @@ export function sampleCellsNode(cells: DataTexture, grid: WorldGrid, point: Node
   const far = mix(valueAt(0, 1), valueAt(1, 1), fraction.x);
 
   return mix(near, far, fraction.y);
+}
+
+export function cornersAt(size: number, coordinates: Node<"vec2">): Corner[] {
+  const last = size - 1;
+  const cellCoordinate = coordinates.mul(size).sub(0.5);
+  const base = floor(cellCoordinate);
+  const fraction = cellCoordinate.sub(base);
+  const across = float(1).sub(fraction);
+
+  return CORNERS.map(([column, row]) => {
+    return {
+      cell: ivec2(clamp(base.add(vec2(column, row)), vec2(0, 0), vec2(last, last))),
+      weight: (column === 0 ? across.x : fraction.x).mul(row === 0 ? across.y : fraction.y),
+    };
+  });
 }
 
 export function cellAtNode(grid: WorldGrid, point: Node<"vec2">): Node<"ivec2"> {
@@ -110,4 +137,8 @@ export function coarseGroundOffsetNode(textures: TerrainTextures, grid: WorldGri
 
     return offset;
   })();
+}
+
+export function groundOffsetNode(textures: TerrainTextures, grid: WorldGrid, point: Node<"vec2">): Node<"float"> {
+  return renderedHeightNode(textures, grid, point).sub(sampleHeightNode(textures.height, grid, point));
 }

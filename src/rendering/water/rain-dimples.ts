@@ -1,21 +1,6 @@
-import {
-  exp,
-  Fn,
-  float,
-  floor,
-  fract,
-  hash,
-  If,
-  length,
-  max,
-  positionWorld,
-  smoothstep,
-  time,
-  uint,
-  vec2,
-  vec3,
-} from "three/tsl";
+import { exp, Fn, float, floor, fract, If, length, max, positionWorld, smoothstep, time, vec2, vec3 } from "three/tsl";
 import type { Node } from "three/webgpu";
+import { cellKey, unitHash } from "../node-helpers.ts";
 
 const DIMPLES_PER_METER = 2;
 const DIMPLE_NEAR = 25;
@@ -24,8 +9,6 @@ const DIMPLE_STRENGTH = 0.9;
 const DIMPLES_PER_SECOND = 1.1;
 const DIMPLE_REACH = 0.42;
 const CREST_WIDTH = 0.11;
-const CELL_OFFSET = 32_768;
-const CELL_ROW = 65_536;
 const SALT_FIRST_LAYER = 0x2f_6b_1c_93;
 const SALT_SECOND_LAYER = 0xc4_19_e8_57;
 const SALT_ACROSS = 0x71_d3_0a_5f;
@@ -35,15 +18,10 @@ const SALT_PHASE = 0x93_5c_27_e6;
 function dimple(point: Node<"vec2">, salt: number): Node<"vec2"> {
   const cell = floor(point);
 
-  const key = uint(cell.x.add(CELL_OFFSET))
-    .mul(CELL_ROW)
-    .add(uint(cell.y.add(CELL_OFFSET)))
-    .bitXor(salt);
+  const key = cellKey(cell).bitXor(salt);
 
-  const center = vec2(hash(key.bitXor(SALT_ACROSS)), hash(key.bitXor(SALT_ALONG)))
-    .mul(0.16)
-    .add(0.42);
-  const age = fract(time.mul(DIMPLES_PER_SECOND).add(hash(key.bitXor(SALT_PHASE))));
+  const center = vec2(unitHash(key, SALT_ACROSS), unitHash(key, SALT_ALONG)).mul(0.16).add(0.42);
+  const age = fract(time.mul(DIMPLES_PER_SECOND).add(unitHash(key, SALT_PHASE)));
 
   const offset = fract(point).sub(center);
   const reach = length(offset);

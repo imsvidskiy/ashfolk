@@ -5,6 +5,8 @@ import { hasRoomFromCoast, isOnIsland } from "./coast.ts";
 import { isWaterCell, type SampledTerrain, touchesWaterCell } from "./terrain-sampling.ts";
 import type { WorldGrid } from "./world-grid.ts";
 
+export const CELL_STAND_INSET = 0.5;
+
 const WALKABLE_SLOPE = 1.15;
 const STAND_SALT = 19.19;
 

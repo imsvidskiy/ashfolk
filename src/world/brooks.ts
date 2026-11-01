@@ -1,4 +1,4 @@
-import { isWaterCell, type SampledTerrain } from "./terrain-sampling.ts";
+import { isWaterCell, type RiverTerrain } from "./terrain-sampling.ts";
 import { riverCodeOfWidth } from "./water.ts";
 import type { WorldGrid } from "./world-grid.ts";
 
@@ -19,10 +19,6 @@ const HOP_SPAN_CELLS = 3.2;
 const HOP_OFFSETS = hopOffsets();
 
 export type Passage = (typeof Passage)[keyof typeof Passage];
-
-interface BrookTerrain extends SampledTerrain {
-  readonly riverStrength: Uint8Array;
-}
 
 interface Point {
   readonly x: number;
@@ -49,7 +45,7 @@ function hopOffsets(): CellOffset[] {
   return offsets;
 }
 
-export function isBrookCell(terrain: BrookTerrain, cell: number): boolean {
+export function isBrookCell(terrain: RiverTerrain, cell: number): boolean {
   const strength = terrain.riverStrength[cell];
 
   return strength > 0 && strength <= BROOK_STRENGTH && isWaterCell(terrain, cell);

@@ -43,16 +43,16 @@ const HILL_FREQUENCY = 2.1;
 
 const MOUNTAIN_RIDGES: ErodedRidgedOptions = {
   damping: 6,
-  gain: 0.45,
-  octaves: 5,
+  gain: 0.4,
+  octaves: 4,
   rounding: 0.03,
   slopeScale: (RIDGE_HEIGHT * RIDGE_FREQUENCY) / METERS_PER_DETAIL_UNIT,
 };
 
 const HILL_RIDGES: ErodedRidgedOptions = {
   damping: 4,
-  gain: 0.42,
-  octaves: 5,
+  gain: 0.35,
+  octaves: 4,
   rounding: 0.06,
   slopeScale: (HILL_HEIGHT * HILL_FREQUENCY) / METERS_PER_DETAIL_UNIT,
 };
@@ -165,12 +165,12 @@ function basinWeight(layout: IslandLayout, point: IslandPoint): number {
   return weight;
 }
 
-function boundaryDistance(noise: ReliefNoise, island: IslandShape, point: IslandPoint, coastDistance: number): number {
+function boundaryDistance(noise: ReliefNoise, island: IslandShape, point: IslandPoint): number {
   if (island.kind === "square") {
     return distanceToBoundary(noise, point);
   }
 
-  return coastDistance;
+  return island.inlandDistanceAt(point.x, point.z);
 }
 
 function landformHeight(
@@ -181,7 +181,7 @@ function landformHeight(
   desert: number
 ): number {
   const detail = inDetailUnits(noise, point);
-  const warped = warpPoint(noise.primary, detail, 3, 0.13);
+  const warped = warpPoint(noise.primary, detail, 2, 0.13);
   const outline = warpPoint(noise.primary, point, 1, 0.07);
   const lake = basinWeight(layout, point);
 
@@ -200,7 +200,7 @@ function landformHeight(
 
   const tilt = layout.tilt.base + layout.tilt.x * point.x + layout.tilt.z * point.z;
   const rolling =
-    70 * layout.roughness * noise.primary.fractal(detail.x * 0.9 + 2.2, detail.z * 0.9 + 9.1, { octaves: 4 });
+    70 * layout.roughness * noise.primary.fractal(detail.x * 0.9 + 2.2, detail.z * 0.9 + 9.1, { octaves: 2 });
   const massif = MASSIF_HEIGHT * layout.peakHeight * mountains;
   const peaks = RIDGE_HEIGHT * mountains * ridges;
   const cones = coneHeightAt(layout.cones, outline.x, outline.z) * (0.94 + 0.12 * ridges) * inland;
@@ -244,14 +244,14 @@ function coastalHeight(
   }
 
   const width = (0.07 + 0.11 * smoothstep(shore, shore + 900, inland)) * layout.shoreWidth;
-  const cliffs = noise.secondary.ridged(detail.x * 5.5 - 13, detail.z * 5.5 + 4, { octaves: 3 });
+  const cliffs = noise.secondary.ridged(detail.x * 5.5 - 13, detail.z * 5.5 + 4, { octaves: 2 });
 
   return lerp(shore, inland, smoothstep(0, width * (0.7 + 0.6 * cliffs), fromCoast));
 }
 
 function reliefSample(noise: ReliefNoise, layout: IslandLayout, island: IslandShape, point: IslandPoint): ReliefSample {
   const coastDistance = island.coastDistanceAt(point.x, point.z);
-  const boundary = boundaryDistance(noise, island, point, coastDistance);
+  const boundary = boundaryDistance(noise, island, point);
   const desert = desertMask(noise.desert, layout.climate.desert, point);
   const landform = landformHeight(noise, layout, point, boundary, desert);
 
@@ -283,7 +283,7 @@ export function createRelief(seed: number, layout: IslandLayout, island: IslandS
 
   return {
     boundaryDistanceAt: (point) => {
-      return boundaryDistance(noise, island, point, island.coastDistanceAt(point.x, point.z));
+      return boundaryDistance(noise, island, point);
     },
     sampleAt: (point) => {
       return reliefSample(noise, layout, island, point);

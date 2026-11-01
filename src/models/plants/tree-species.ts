@@ -51,7 +51,9 @@ export const TREE_GENERATORS: Readonly<Partial<Record<PlantSpeciesIndex, TreeGen
 const FORK_HEIGHT = 0.93;
 const DRAPE_SHARE = 0.68;
 const STUBS_PER_TIER = 3;
-const BARE_TOP_TIERS = 2;
+const BARE_TOP_TIERS = 1;
+const FEWEST_SPRUCE_TIERS = 4;
+const MOST_SPRUCE_TIERS = 6;
 const TUCKED_SHARE = 0.12;
 const BLOB_COVER = 0.45;
 const DESERT_SHRUB_FORMS: readonly ((growth: Growth) => void)[] = [addSagebrush, addRosette, addGrassTuft];
@@ -354,7 +356,7 @@ function spruce(seed: number): TreeStructure {
     wobble: 0.04,
   });
 
-  const tiers = random.integer(6, 12);
+  const tiers = random.integer(FEWEST_SPRUCE_TIERS, MOST_SPRUCE_TIERS);
   const lowest = random.between(1.4, 3.4);
   const baseRadius = random.between(3.3, 4.9);
   const taper = random.between(0.8, 1.15);

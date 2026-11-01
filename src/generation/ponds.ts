@@ -10,6 +10,7 @@ const DEEPEST_SHORE_CUT = 12;
 const WET_REACH = 0.75;
 const SHORE_CELLS = 0.5;
 const LOWEST_RIM = 1.5;
+const LOWEST_OUTLET_RIM = 4;
 const RIM_CELLS = 1;
 const OUTLET_SECTOR = 0.7;
 const BANK_CELLS = 1.5;
@@ -71,7 +72,10 @@ export function pondCut(grid: WorldGrid, heights: Float32Array, pond: Spring): n
   return cut;
 }
 
-export function isRiverWater(targets: PondTargets, cell: number): boolean {
+export function isRiverWater(
+  targets: Pick<PondTargets, "heights" | "riverStrength" | "waterSurface">,
+  cell: number
+): boolean {
   return targets.riverStrength[cell] > 0 && hasWater(targets.waterSurface[cell], targets.heights[cell]);
 }
 
@@ -108,7 +112,8 @@ function shapeShore(targets: PondTargets, pond: Spring, cell: number, reach: num
     return;
   }
 
-  const bank = Math.min(pond.level, uncarvedHeights[cell] + LOWEST_RIM) + STRAND_HEIGHT;
+  const raise = isAtOutlet(pond, grid.cellCenterX(cell), grid.cellCenterZ(cell)) ? LOWEST_OUTLET_RIM : LOWEST_RIM;
+  const bank = Math.min(pond.level, uncarvedHeights[cell] + raise) + STRAND_HEIGHT;
 
   heights[cell] = Math.max(heights[cell], bank);
 }

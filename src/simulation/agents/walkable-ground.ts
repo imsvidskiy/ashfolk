@@ -1,14 +1,14 @@
 import { clamp, distanceSquared, FULL_TURN } from "../../shared/math.ts";
+import { CELL_STAND_INSET } from "../../world/footing.ts";
 import type { WorldState } from "../world/world-state.ts";
 import type { Waypoint } from "./navigation.ts";
 
-const EDGE_INSET = 0.5;
 const STAND_DIRECTIONS = 8;
 
 export function pointInsideCell(world: WorldState, cell: number, x: number, z: number): Waypoint {
   const { grid } = world;
 
-  const reach = grid.cellSize / 2 - EDGE_INSET;
+  const reach = grid.cellSize / 2 - CELL_STAND_INSET;
   const centerX = grid.cellCenterX(cell);
   const centerZ = grid.cellCenterZ(cell);
 

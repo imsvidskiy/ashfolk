@@ -3,7 +3,7 @@ import { createRandom } from "../shared/random.ts";
 import { slopeAt } from "../world/footing.ts";
 import type { TerrainData } from "../world/terrain-data.ts";
 import { WorldGrid } from "../world/world-grid.ts";
-import { erodeAcrossScales, limitSlopes, relaxSlopes } from "./erosion.ts";
+import { erodeAcrossScales, limitSlopes, relaxSlopes, smoothHeights } from "./erosion.ts";
 import { COARSE_DIMENSIONS, coarseWorld, FULL_SIZE_TIMEOUT, fullSizeWorld } from "./testing/generated-worlds.ts";
 import { meanOf, shareAbove } from "./testing/statistics.ts";
 import type { GeneratedWorld } from "./world-generator.ts";
@@ -13,6 +13,8 @@ const STEEP = 1;
 const CLIFF = Math.tan((55 * Math.PI) / 180);
 const TERRACE_WINDOW = 24;
 const TERRACE_STEEPNESS = 0.6;
+const SUMMIT_TOLERANCE = 0.5;
+const FLANK_BUMP = 20;
 const NEIGHBORS: readonly (readonly [number, number])[] = [
   [1, 0],
   [0, 1],
@@ -195,6 +197,27 @@ describe("slope limit", () => {
         return height <= original[cell];
       })
     ).toBe(true);
+  });
+});
+
+describe("height smoothing", () => {
+  it("keeps the summit pointed while it smooths a bump low on the flank", () => {
+    const size = 65;
+    const heights = cone(size, 300);
+    const tip = 32 * size + 32;
+    const bump = 32 * size + 48;
+
+    heights[bump] += FLANK_BUMP;
+
+    const tipBefore = heights[tip];
+    const bumpBefore = heights[bump];
+
+    smoothHeights(heights, size, CELL_SIZE, () => {
+      return true;
+    });
+
+    expect(Math.abs(heights[tip] - tipBefore)).toBeLessThan(SUMMIT_TOLERANCE);
+    expect(heights[bump]).toBeLessThan(bumpBefore - FLANK_BUMP / 2);
   });
 });
 

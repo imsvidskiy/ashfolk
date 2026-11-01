@@ -1,3 +1,5 @@
+const SCENE_OPTIONS = ["season", "seconds", "speed"] as const;
+
 export interface PowerCast {
   readonly parameters: Readonly<Record<string, number>>;
   readonly powerId: string;
@@ -9,7 +11,9 @@ export interface Scene {
   readonly cast?: PowerCast;
   readonly name: string;
   readonly query: string;
+  readonly season?: number;
   readonly seconds?: number;
+  readonly speed?: number;
 }
 
 export const SCENES: readonly Scene[] = [
@@ -28,7 +32,7 @@ export const SCENES: readonly Scene[] = [
   { name: "cave-mouth", query: "seed=7&shape=round&quality=high&paused=1&hours=11&camera=-1573,1583,40,0.6,-0.79" },
   {
     name: "cave-wide-river",
-    query: "seed=7&shape=round&quality=high&paused=1&hours=11&camera=-2182.1,-425.7,55,0.7,-1.34",
+    query: "seed=7&shape=round&quality=high&paused=1&hours=11&camera=-2210,-338,70,0.6,-1.34",
   },
   {
     name: "spring-pond",
@@ -44,12 +48,110 @@ export const SCENES: readonly Scene[] = [
   },
   {
     name: "river-across-hillside",
-    query: "seed=7&shape=round&quality=high&paused=1&hours=11&camera=-2308.7,-135,180,0.7,2.84",
+    query: "seed=7&shape=round&quality=high&paused=1&hours=11&camera=-2490,-950,180,0.6,-1.6",
+  },
+  {
+    name: "river-cascade",
+    query: "seed=21&shape=round&quality=high&paused=1&hours=11&camera=-375,-1676,140,0.5,2.4",
+  },
+  {
+    name: "river-cascade-up",
+    query: "seed=21&shape=round&quality=high&paused=1&hours=11&camera=-375,-1676,120,0.4,3.14",
+  },
+  {
+    name: "cascade-low",
+    query: "seed=21&shape=round&quality=high&paused=1&hours=11&camera=-375,-1676,60,0.22,2.4",
+  },
+  {
+    name: "river-cascade-far",
+    query: "seed=21&shape=round&quality=high&paused=1&hours=11&camera=-531,-1721,900,0.6,2.11",
+  },
+  {
+    name: "river-cascade-far-low",
+    query: "seed=21&shape=round&quality=low&paused=1&hours=11&camera=-531,-1721,900,0.6,2.11",
+  },
+  {
+    name: "river-wide-bends",
+    query: "seed=21&shape=round&quality=high&paused=1&hours=11&camera=1746,-625,160,0.55,1",
+  },
+  {
+    name: "river-steep-ford",
+    query: "seed=7&shape=round&quality=high&paused=1&hours=11&camera=-945,-2488,70,0.55,2.07",
+  },
+  {
+    name: "river-narrow-slope",
+    query: "seed=7&shape=round&quality=high&paused=1&hours=11&camera=-1676,-2136,110,0.5,2.36",
+  },
+  {
+    name: "ford-steep-reach",
+    query: "seed=7&shape=round&quality=high&paused=1&hours=11&camera=-930,-2445,35,0.6,3.17",
+  },
+  {
+    name: "ford-calm-reach",
+    query: "seed=7&shape=round&quality=high&paused=1&hours=11&camera=-1280,2007,35,0.45,2.71",
+  },
+  {
+    name: "ford-stones-close",
+    query: "seed=7&shape=round&quality=high&paused=1&hours=11&camera=-1280,2007,12,0.6,2.71",
+  },
+  {
+    name: "ford-wide-shallows",
+    query: "seed=10&shape=round&quality=high&paused=1&hours=11&camera=-1355,-1496,45,0.45,0.64",
+  },
+  {
+    name: "ford-stones-low",
+    query: "seed=7&shape=round&quality=high&paused=1&hours=11&camera=-1280,2007,10,0.22,1.2",
+  },
+  {
+    name: "ford-wide-close",
+    query: "seed=10&shape=round&quality=high&paused=1&hours=11&camera=-1355,-1496,16,0.35,0.64",
+  },
+  {
+    name: "ford-wide-side",
+    query: "seed=10&shape=round&quality=high&paused=1&hours=11&camera=-1355,-1496,22,0.15,2.2",
+  },
+  {
+    name: "river-pool-step",
+    query: "seed=7&shape=round&quality=high&paused=1&hours=11&camera=-416,-2716,140,0.5,2.2",
+  },
+  {
+    name: "river-junction",
+    query: "seed=7&shape=round&quality=high&paused=1&hours=11&camera=2184,-1526,300,0.6,0.6",
+  },
+  {
+    name: "junction-close",
+    query: "seed=7&shape=round&quality=high&paused=1&hours=11&camera=2120,-1600,110,0.5,0.6",
+  },
+  {
+    name: "lake-link-mid",
+    query: "seed=7&shape=round&quality=high&paused=1&hours=11&camera=-190,1000,600,0.8,0.6",
+  },
+  {
+    name: "wolf-mouth-close",
+    query: "seed=7&shape=round&quality=high&paused=1&hours=11&camera=235,1398,35,0.85,0.6",
+  },
+  {
+    name: "river-pond-mouth",
+    query: "seed=10&shape=round&quality=high&paused=1&hours=11&camera=-215,2250,250,0.8,0",
   },
   {
     name: "far-rivers",
     query: "seed=10&shape=round&quality=high&paused=1&hours=11&camera=35,2332,1500,0.8,0",
   },
+  { name: "lake-cut-crown", query: "seed=2&shape=round&quality=high&paused=1&hours=11&camera=0,0,1500,0.55,0" },
+  {
+    name: "crater-lake-wall",
+    query: "seed=7&shape=round&quality=high&paused=1&hours=11&camera=-1000,-500,900,0.45,1.57",
+  },
+  {
+    name: "round-flank-pleats",
+    query: "seed=7&shape=round&quality=high&paused=1&hours=11&camera=300,1700,1000,0.5,0",
+  },
+  { name: "ground-zones", query: "seed=7&shape=round&quality=high&paused=1&hours=11&camera=2000,-400,800,0.5,0" },
+  { name: "faceted-slope", query: "seed=7&shape=round&quality=high&paused=1&hours=11&camera=1800,-300,250,0.6,0" },
+  { name: "peak-tip", query: "seed=2&shape=round&quality=high&paused=1&hours=11&camera=0,0,1500,0.3,1.57" },
+  { name: "snow-cap", query: "seed=3&shape=round&quality=high&paused=1&hours=11&camera=-700,1085,800,0.45,0.6" },
+  { name: "deposit-patches", query: "seed=2&shape=round&quality=high&paused=1&hours=11&camera=0,1800,700,0.45,0" },
   {
     name: "inside-crown",
     query: "seed=7&shape=round&quality=high&paused=1&hours=11&camera=544.83,-628.35,12,0.985,0",
@@ -68,4 +170,109 @@ export const SCENES: readonly Scene[] = [
     query: "seed=7&shape=round&quality=high&hours=11&camera=-1545,1457,160,0.5,-2.45",
     seconds: 25,
   },
+  { name: "lake-shore", query: "seed=7&shape=round&quality=high&paused=1&hours=11&camera=480,-560,220,0.75,0" },
+  {
+    name: "lake-evening",
+    query: "seed=7&shape=round&quality=high&paused=1&hours=17.5&camera=300,-400,300,0.35,1.6",
+  },
+  { name: "river-rapids", query: "seed=7&shape=round&quality=high&paused=1&hours=11&camera=-416,-2716,140,0.7,2.2" },
+  { name: "river-close", query: "seed=7&shape=round&quality=high&paused=1&hours=11&camera=-416,-2716,45,0.6,2.2" },
+  { name: "lake-fade-band", query: "seed=7&shape=round&quality=high&paused=1&hours=11&camera=0,-300,550,0.45,0" },
+  {
+    cast: { parameters: { radius: 120, strength: 60 }, powerId: "volcano", x: 2265, z: -525 },
+    name: "volcano-flow",
+    query: "seed=7&shape=round&quality=high&paused=1&hours=11&camera=2265,-525,520,0.8,0",
+    seconds: 35,
+  },
+  {
+    cast: { parameters: { radius: 120, strength: 60 }, powerId: "volcano", x: 2265, z: -525 },
+    name: "volcano-far",
+    query: "seed=7&shape=round&quality=high&paused=1&hours=11&camera=2265,-525,1400,0.8,0",
+    seconds: 35,
+  },
+  {
+    cast: { parameters: { radius: 120, strength: 60 }, powerId: "volcano", x: 2265, z: -525 },
+    name: "volcano-overview",
+    query: "seed=7&shape=round&quality=high&paused=1&hours=11&camera=2265,-525,2200,0.8,0",
+    seconds: 35,
+  },
+  {
+    cast: { parameters: { radius: 120, strength: 60 }, powerId: "volcano", x: 2265, z: -525 },
+    name: "volcano-cooling",
+    query: "seed=7&shape=round&quality=high&paused=1&hours=11&camera=2265,-525,520,0.8,0",
+    seconds: 85,
+  },
+  {
+    name: "models-forest-close",
+    query: "seed=7&shape=round&quality=high&paused=1&hours=11&camera=90,-1050,45,0.35,0.5",
+  },
+  {
+    name: "models-forest-autumn",
+    query: "seed=7&shape=round&quality=high&paused=1&hours=11&camera=90,-1050,130,0.5,0.5",
+    season: 2.6,
+  },
+  {
+    name: "models-forest-lod",
+    query: "seed=7&shape=round&quality=high&paused=1&hours=11&camera=90,-1050,420,0.6,0.5",
+  },
+  {
+    name: "models-people-camp",
+    query: "seed=7&shape=round&quality=high&paused=1&hours=11&camera=227,1398,14,0.35,0.6",
+  },
+  {
+    name: "models-people-walk",
+    query: "seed=7&shape=round&quality=high&paused=1&hours=11&camera=1473,1315,16,0.45,0.3",
+    seconds: 90,
+    speed: 16,
+  },
+  {
+    name: "models-camp-buildings",
+    query: "seed=7&shape=round&quality=high&paused=1&hours=11&camera=1470,1320,30,0.55,0.3",
+    season: 1.5,
+    seconds: 90,
+    speed: 16,
+  },
+  { name: "models-mammoths", query: "seed=7&shape=round&quality=high&paused=1&hours=11&camera=2100,-45,22,0.3,0.4" },
+  { name: "models-dolmen", query: "seed=7&shape=round&quality=high&paused=1&hours=11&camera=-2004,1376,18,0.35,0.6" },
+  {
+    name: "models-stone-head",
+    query: "seed=7&shape=round&quality=high&paused=1&hours=11&camera=227,-2503,22,0.3,0.6",
+  },
+  {
+    name: "models-pines-side",
+    query: "seed=7&shape=round&quality=high&paused=1&hours=11&camera=2400,-480,30,0.2,3.6",
+  },
+  { name: "models-wolves", query: "seed=7&shape=round&quality=high&paused=1&hours=11&camera=-2501,-1173,24,0.9,3.6" },
+  {
+    cast: { parameters: { herdSize: 6 }, powerId: "ibex", x: -768.8, z: -580 },
+    name: "models-ibex",
+    query: "seed=7&shape=round&quality=high&hours=11&camera=-768.8,-580,24,0.5,4",
+    seconds: 3,
+  },
 ];
+
+function optionNumber(option: string, value: string): number {
+  const number = Number(value);
+
+  if (value.trim() === "" || !Number.isFinite(number)) {
+    throw new Error(`The scene option ${option} takes a number, got "${value}"`);
+  }
+
+  return number;
+}
+
+export function sceneFromQuery(name: string, query: string): Scene {
+  const parameters = new URLSearchParams(query);
+  const options: Partial<Record<(typeof SCENE_OPTIONS)[number], number>> = {};
+
+  for (const option of SCENE_OPTIONS) {
+    const value = parameters.get(option);
+
+    if (value !== null) {
+      options[option] = optionNumber(option, value);
+      parameters.delete(option);
+    }
+  }
+
+  return { ...options, name, query: parameters.toString() };
+}

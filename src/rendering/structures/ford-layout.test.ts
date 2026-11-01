@@ -7,6 +7,8 @@ import {
   type FordSurroundings,
   LARGEST_STEP_GAP,
   layFord,
+  SIDE_DEEPEST,
+  SLAB_LARGEST_SHARE,
   STONE_SINK,
   visibleWaterSpan,
 } from "./ford-layout.ts";
@@ -15,6 +17,12 @@ const WATER_LEVEL = 100;
 const RIVER_HALF_WIDTH = 12;
 const VISIBLE_HALF_WIDTH = 13;
 const BANK_HEIGHT = 100.6;
+const BANK_SLOPE = 0.3;
+const WATER_FALL = 0.2;
+const DRAWN_HALF_WIDTH = 10;
+const CELL_HALF_WIDTH = 14;
+const RIM_DEPTH = 0.12;
+const FORD_SEEDS = [0.11, 0.37, 0.52, 0.64, 0.73, 0.85, 0.91];
 
 const FORD: Ford = { endX: 16, endZ: 0, id: 0, kind: "ford", seed: 0.37, startX: -16, startZ: 0 };
 
@@ -25,7 +33,7 @@ function riverDepth(x: number, deepest: number): number {
 }
 
 function river(deepest: number): FordSurroundings {
-  function heightAt(x: number) {
+  function heightAt(x: number): number {
     return Math.abs(x) < RIVER_HALF_WIDTH ? WATER_LEVEL - riverDepth(x, deepest) : BANK_HEIGHT;
   }
 
@@ -41,6 +49,53 @@ function river(deepest: number): FordSurroundings {
     },
     waterSurfaceAt: (x) => {
       return Math.abs(x) < VISIBLE_HALF_WIDTH ? WATER_LEVEL : NO_WATER;
+    },
+  };
+}
+
+function hillsideStream(): FordSurroundings {
+  function heightAt(x: number, z: number): number {
+    const fromBank = Math.abs(x) - RIVER_HALF_WIDTH;
+    const ground = fromBank < 0 ? WATER_LEVEL - riverDepth(x, 1.2) : BANK_HEIGHT + fromBank * BANK_SLOPE;
+
+    return ground - z * WATER_FALL;
+  }
+
+  function surfaceAt(x: number, z: number): number {
+    return Math.abs(x) < VISIBLE_HALF_WIDTH ? WATER_LEVEL - z * WATER_FALL : NO_WATER;
+  }
+
+  return {
+    heightAt,
+    shoreDepthAt: (x, z) => {
+      return Math.abs(x) < RIVER_HALF_WIDTH ? surfaceAt(x, z) + 0.2 - heightAt(x, z) : -1;
+    },
+    waterLevelAt: (x, z) => {
+      return Math.abs(x) < RIVER_HALF_WIDTH ? WATER_LEVEL - Math.round(z / 10) * 10 * WATER_FALL : NO_WATER;
+    },
+    waterSurfaceAt: surfaceAt,
+  };
+}
+
+function wideCellRiver(): FordSurroundings {
+  function heightAt(x: number): number {
+    if (Math.abs(x) >= CELL_HALF_WIDTH) {
+      return BANK_HEIGHT;
+    }
+
+    return WATER_LEVEL - Math.max(RIM_DEPTH, Math.min(1.2, (DRAWN_HALF_WIDTH - Math.abs(x)) * 0.4));
+  }
+
+  return {
+    heightAt,
+    shoreDepthAt: (x) => {
+      return Math.abs(x) < DRAWN_HALF_WIDTH ? WATER_LEVEL + 0.2 - heightAt(x) : -1;
+    },
+    waterLevelAt: (x) => {
+      return Math.abs(x) < CELL_HALF_WIDTH ? WATER_LEVEL : NO_WATER;
+    },
+    waterSurfaceAt: (x) => {
+      return Math.abs(x) < DRAWN_HALF_WIDTH ? WATER_LEVEL : NO_WATER;
     },
   };
 }
@@ -141,6 +196,32 @@ describe("layFord", () => {
     }
   });
 
+  it("keeps one slab on each bank no larger than the middle stepping stone", () => {
+    for (const deepest of [0.3, 1.2, 2.8]) {
+      const stones = footpath(layFord(FORD, river(deepest)).stones);
+
+      const steps = stones.filter((stone) => {
+        return stone.kind === "step";
+      });
+      const slabs = stones.filter((stone) => {
+        return stone.kind === "slab";
+      });
+      const middle = steps
+        .map((stone) => {
+          return stone.radius;
+        })
+        .toSorted((first, second) => {
+          return first - second;
+        })[Math.floor(steps.length / 2)];
+
+      expect(slabs.length, `deepest ${deepest}`).toBeLessThanOrEqual(2);
+
+      for (const slab of slabs) {
+        expect(slab.radius).toBeLessThanOrEqual(middle * SLAB_LARGEST_SHARE + 1e-9);
+      }
+    }
+  });
+
   it("keeps the gravel bar under the water and buries its edges in the ground", () => {
     const surroundings = river(2.8);
     const { bar } = layFord(FORD, surroundings);
@@ -156,6 +237,7 @@ describe("layFord", () => {
     for (const point of raised) {
       expect(point.y).toBeLessThanOrEqual(WATER_LEVEL - BAR_SHALLOWEST + 1e-6);
       expect(point.y).toBeGreaterThanOrEqual(surroundings.heightAt(point.x, point.z));
+      expect(surroundings.shoreDepthAt(point.x, point.z)).toBeGreaterThan(0);
     }
 
     for (const point of points.filter((candidate) => {
@@ -165,17 +247,72 @@ describe("layFord", () => {
     }
   });
 
-  it("scatters gravel only where the water is shallow", () => {
+  it("sets stones in the water and keeps the ones beside the path from standing tall", () => {
     const surroundings = river(2.8);
-    const pebbles = layFord(FORD, surroundings).stones.filter((stone) => {
-      return stone.kind === "pebble";
+    const { stones } = layFord(FORD, surroundings);
+
+    const standing = stones.filter((stone) => {
+      return stone.kind !== "slab";
+    });
+    const beside = stones.filter((stone) => {
+      return stone.kind === "boulder";
     });
 
-    expect(pebbles.length).toBeGreaterThan(20);
+    expect(beside.length).toBeGreaterThan(0);
 
-    for (const pebble of pebbles) {
-      expect(pebble.radius).toBeLessThan(0.2);
-      expect(pebble.top).toBeGreaterThan(pebble.bottom);
+    for (const stone of standing) {
+      expect(surroundings.shoreDepthAt(stone.x, stone.z)).toBeGreaterThan(0);
+    }
+
+    for (const stone of beside) {
+      expect(stone.top - (stone.bottom + STONE_SINK)).toBeLessThanOrEqual(SIDE_DEEPEST);
+      expect(stone.top).toBeGreaterThan(surroundings.waterSurfaceAt(stone.x, stone.z));
+    }
+  });
+
+  it("keeps stones off the dry rim where the water cells reach past the drawn water", () => {
+    const surroundings = wideCellRiver();
+
+    for (const seed of FORD_SEEDS) {
+      const standing = layFord({ ...FORD, seed }, surroundings).stones.filter((stone) => {
+        return stone.kind !== "slab";
+      });
+
+      expect(standing.length, `seed ${seed}`).toBeGreaterThan(0);
+
+      for (const stone of standing) {
+        expect(surroundings.shoreDepthAt(stone.x, stone.z), `seed ${seed}`).toBeGreaterThan(0);
+      }
+    }
+  });
+
+  it("lifts every stepping stone above the drawn water on its upstream side", () => {
+    const surroundings = hillsideStream();
+    const steps = layFord(FORD, surroundings).stones.filter((stone) => {
+      return stone.kind === "step";
+    });
+
+    expect(steps.length).toBeGreaterThan(10);
+
+    for (const step of steps) {
+      const upstream = surroundings.waterSurfaceAt(step.x, step.z - step.radius);
+
+      expect(step.top).toBeGreaterThan(upstream + STONE_RISE / 2);
+    }
+  });
+
+  it("tilts the slabs on the banks up the slope", () => {
+    const slabs = layFord(FORD, hillsideStream()).stones.filter((stone) => {
+      return stone.kind === "slab";
+    });
+
+    expect(slabs.length).toBeGreaterThan(1);
+
+    for (const slab of slabs) {
+      const uphill = Math.cos(slab.rotation) * slab.pitch * Math.sign(slab.x);
+
+      expect(Math.abs(slab.pitch)).toBeGreaterThan(Math.atan(BANK_SLOPE) * 0.5);
+      expect(uphill).toBeGreaterThan(0);
     }
   });
 

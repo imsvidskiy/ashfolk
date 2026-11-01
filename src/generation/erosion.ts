@@ -1,6 +1,7 @@
-import { clamp, lerp } from "../shared/math.ts";
+import { clamp, lerp, smoothstep } from "../shared/math.ts";
 import type { RandomSource } from "../shared/random.ts";
 import { CellSet } from "../world/cell-set.ts";
+import { boxBlur } from "./box-blur.ts";
 
 const BRUSH_RADIUS = 3;
 const CAPACITY = 4;
@@ -13,7 +14,10 @@ const INERTIA = 0.06;
 const MAXIMUM_STEPS = 60;
 const MINIMUM_CAPACITY = 0.01;
 const SETTLED_EXCESS = 0.02;
-const SMOOTHING = 0.2;
+const SMOOTHING_PASSES = 2;
+const SMOOTHING_REACH = 10;
+const SUMMIT_START = 0.8;
+const SUMMIT_END = 0.95;
 
 interface ErosionBrush {
   columns: Int32Array;
@@ -324,6 +328,7 @@ function addUpsampledChange(
 ): void {
   const coarseSize = size / factor;
   const { after, amount, before } = coarseSpans(size, factor, coarseSize);
+  const upsampled = new Float32Array(heights.length);
 
   for (let row = 0; row < size; row += 1) {
     const top = before[row] * coarseSize;
@@ -338,8 +343,14 @@ function addUpsampledChange(
       const upper = lerp(change[top + left], change[top + right], rightward);
       const lower = lerp(change[bottom + left], change[bottom + right], rightward);
 
-      heights[row * size + column] += lerp(upper, lower, downward) * reach[row * size + column];
+      upsampled[row * size + column] = lerp(upper, lower, downward);
     }
+  }
+
+  const smoothed = boxBlur(size, upsampled, factor);
+
+  for (let cell = 0; cell < heights.length; cell += 1) {
+    heights[cell] += smoothed[cell] * reach[cell];
   }
 }
 
@@ -572,20 +583,36 @@ export function limitSlopes(heights: Float32Array, size: number, cellSize: numbe
   limitFromLaterCells(heights, size, straight, straight * Math.SQRT2);
 }
 
-export function smoothHeights(heights: Float32Array, size: number): void {
-  const smoothed = new Float32Array(heights.length);
+export function smoothHeights(
+  heights: Float32Array,
+  size: number,
+  cellSize: number,
+  isLand: (cell: number) => boolean
+): void {
+  const amount = Math.min(1, (SMOOTHING_REACH / cellSize) ** 2);
+  let smoothed = heights;
 
-  for (let row = 0; row < size; row += 1) {
-    for (let column = 0; column < size; column += 1) {
-      const index = row * size + column;
-      const left = heights[row * size + Math.max(0, column - 1)];
-      const right = heights[row * size + Math.min(size - 1, column + 1)];
-      const up = heights[Math.max(0, row - 1) * size + column];
-      const down = heights[Math.min(size - 1, row + 1) * size + column];
+  for (let pass = 0; pass < SMOOTHING_PASSES; pass += 1) {
+    const blurred = boxBlur(size, smoothed, 1);
 
-      smoothed[index] = lerp(heights[index], (left + right + up + down) * 0.25, SMOOTHING);
+    smoothed = smoothed.map((height, cell) => {
+      return lerp(height, blurred[cell], amount);
+    });
+  }
+
+  let peak = Number.NEGATIVE_INFINITY;
+
+  for (let cell = 0; cell < heights.length; cell += 1) {
+    if (isLand(cell)) {
+      peak = Math.max(peak, heights[cell]);
     }
   }
 
-  heights.set(smoothed);
+  for (let cell = 0; cell < heights.length; cell += 1) {
+    if (isLand(cell)) {
+      const summit = smoothstep(SUMMIT_START * peak, SUMMIT_END * peak, heights[cell]);
+
+      heights[cell] = lerp(smoothed[cell], heights[cell], summit);
+    }
+  }
 }

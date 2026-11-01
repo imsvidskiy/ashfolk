@@ -3,6 +3,7 @@ import { Biome } from "../content/biomes.ts";
 import { Ground } from "../content/grounds.ts";
 import { isOnIsland } from "../world/coast.ts";
 import { slopeAt } from "../world/footing.ts";
+import { isRiverWater, isStandingWater } from "../world/terrain-sampling.ts";
 import { landEverywhere } from "../world/testing/terrain-fixtures.ts";
 import { hasWater, NO_WATER } from "../world/water.ts";
 import { WorldGrid } from "../world/world-grid.ts";
@@ -12,7 +13,6 @@ import { cellsAround, labelPatches, NO_PATCH } from "./testing/cell-patches.ts";
 import { coarseWorld, FULL_SIZE_TIMEOUT, fullSizeWorld, islandsAcrossSeeds } from "./testing/generated-worlds.ts";
 import { type IslandSurvey, surveyIsland } from "./testing/island-survey.ts";
 import { meanOf } from "./testing/statistics.ts";
-import { isRiverWater } from "./testing/water-checks.ts";
 import type { WetlandInputs } from "./wetlands.ts";
 import type { GeneratedWorld } from "./world-generator.ts";
 
@@ -35,6 +35,7 @@ const WARM_WEST: ClimateProfile = { ...WARM_EAST, warmthX: -WARMTH };
 const WELL_BELOW_TREE_LINE = 4.6;
 const CLIFF_SLOPE = 0.86;
 const STEEP_SLOPE = 0.9;
+const STILL_WATER_CLEARANCE = 2;
 
 interface RockSurvey {
   readonly gentleLowRock: number;
@@ -120,6 +121,41 @@ function largestPatch(islandGrid: WorldGrid, mask: Uint8Array): number {
   return sizes.reduce((largest, size) => {
     return Math.max(largest, size);
   }, 0);
+}
+
+function isNearLakeWater(generated: GeneratedWorld, islandGrid: WorldGrid, cell: number): boolean {
+  const column = islandGrid.columnOf(cell);
+  const row = islandGrid.rowOf(cell);
+
+  for (let rowOffset = -STILL_WATER_CLEARANCE; rowOffset <= STILL_WATER_CLEARANCE; rowOffset += 1) {
+    for (let columnOffset = -STILL_WATER_CLEARANCE; columnOffset <= STILL_WATER_CLEARANCE; columnOffset += 1) {
+      if (
+        islandGrid.contains(column + columnOffset, row + rowOffset) &&
+        isStandingWater(generated.terrain, islandGrid.index(column + columnOffset, row + rowOffset))
+      ) {
+        return true;
+      }
+    }
+  }
+
+  return false;
+}
+
+function rockyRiverMouths(generated: GeneratedWorld): number[] {
+  const { terrain } = generated;
+
+  const islandGrid = new WorldGrid(generated.dimensions);
+  const rocky: number[] = [];
+
+  for (let cell = 0; cell < islandGrid.cellCount; cell += 1) {
+    const isRockyRiver = isRiverWater(terrain, cell) && terrain.ground[cell] === Ground.Rock;
+
+    if (isRockyRiver && isNearLakeWater(generated, islandGrid, cell)) {
+      rocky.push(cell);
+    }
+  }
+
+  return rocky;
 }
 
 describe("climate", () => {
@@ -218,7 +254,7 @@ describe("climate of a generated island", () => {
     expect(new Set(waterBiomes)).toEqual(new Set([Biome.Water]));
   });
 
-  it("lines warm, low river banks outside wetlands with sand", () => {
+  it("keeps warm, low river banks outside wetlands open as beach on the ground of the land around them", () => {
     const { terrain } = world;
 
     const islandGrid = new WorldGrid(world.dimensions);
@@ -241,12 +277,20 @@ describe("climate of a generated island", () => {
       }
     }
 
-    const sandy = [...banks].filter((bank) => {
+    const beaches = [...banks].filter((bank) => {
+      return terrain.biome[bank] === Biome.Beach;
+    });
+    const sandy = beaches.filter((bank) => {
       return terrain.ground[bank] === Ground.Sand;
     });
 
-    expect(banks.size).toBeGreaterThan(50);
-    expect(sandy.length / banks.size).toBeGreaterThan(0.8);
+    expect(banks.size).toBeGreaterThan(30);
+    expect(beaches.length / banks.size).toBeGreaterThan(0.8);
+    expect(sandy.length / beaches.length).toBeLessThan(0.2);
+  });
+
+  it("lays no rock on river beds that meet still water", () => {
+    expect(rockyRiverMouths(world)).toEqual([]);
   });
 });
 
@@ -266,6 +310,10 @@ describe("climate of a full-size island", () => {
 
     expect(rockCells / islandGrid.cellCount).toBeLessThan(0.02);
     expect(largestPatch(islandGrid, mask)).toBeLessThan(4500);
+  });
+
+  it("lays no rock on river beds that meet still water", () => {
+    expect(rockyRiverMouths(fullSize)).toEqual([]);
   });
 });
 

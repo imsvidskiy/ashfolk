@@ -40,7 +40,7 @@ type FruitTreeSpecies = keyof typeof FRUIT_TREE_HEIGHTS;
 
 const FRUIT_LOOKS: Readonly<Record<FruitTreeSpecies, FruitLook>> = {
   [CultivatedSpecies.AppleTree]: {
-    counts: { high: 34, medium: 14 },
+    counts: { high: 16, medium: 8 },
     hanging: 0,
     highest: 0.55,
     lowest: -0.7,
@@ -50,7 +50,7 @@ const FRUIT_LOOKS: Readonly<Record<FruitTreeSpecies, FruitLook>> = {
     tessellation: TREE_FRUIT,
   },
   [CultivatedSpecies.PearTree]: {
-    counts: { high: 26, medium: 12 },
+    counts: { high: 12, medium: 6 },
     hanging: 0,
     highest: 0.4,
     lowest: -0.75,
@@ -60,7 +60,7 @@ const FRUIT_LOOKS: Readonly<Record<FruitTreeSpecies, FruitLook>> = {
     tessellation: TREE_FRUIT,
   },
   [CultivatedSpecies.PlumTree]: {
-    counts: { high: 40, medium: 16 },
+    counts: { high: 18, medium: 8 },
     hanging: 0,
     highest: 0.6,
     lowest: -0.75,

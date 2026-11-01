@@ -33,11 +33,13 @@ import type { WorldGrid } from "../../world/world-grid.ts";
 import { type FireGlow, fireLightAt } from "../effects/fire-glow.ts";
 import { unitNoise } from "../node-helpers.ts";
 import { fordBedColorNode } from "../water/ford-field.ts";
+import { groundFootprintNode } from "../water/river-field.ts";
 import { POOL_BANK, poolReachNode } from "./bog-pools.ts";
 import { fieldGroundNode } from "./field-ground.ts";
 import { FIREWEED, fireweedNode } from "./fireweed.ts";
 import type { GroundWarp } from "./ground-warp.ts";
 import { cellAtNode, mapCoordinatesNode, sampleCellsNode } from "./height-sampling.ts";
+import type { LavaPlates } from "./lava-plates.ts";
 import { PATCH_CELLS } from "./terrain-patches.ts";
 import type { TerrainTextures } from "./terrain-textures.ts";
 
@@ -48,7 +50,6 @@ const ASH = vec3(0.13, 0.12, 0.11);
 const EMBER_DEEP = vec3(1.2, 0.24, 0.03);
 const EMBER_BRIGHT = vec3(1.3, 0.42, 0.06);
 const GROUND_FIRE_LIGHT = 0.6;
-const STONE = vec3(0.19, 0.155, 0.12);
 const DARK_STONE = 0.04;
 const GRAY_STONE = 0.82;
 const STRATA_FREQUENCY = 0.45;
@@ -58,10 +59,29 @@ const STRATA_WOBBLE = 1.5;
 const STRATA_LENSES = vec3(0.035, 0.12, 0.035);
 const STRATA_THRESHOLD = 0.001;
 const VEGETATED_ROCK_LIFT = 0.1;
-const STEEP_FACE_SHADE = 0.82;
+const ROCK_START = 0.3;
+const ROCK_BAND = 0.03;
+const ROCK_TONE = 0.06;
+const GROUND_MOTTLE = 0.05;
+const GROUND_GRAIN = 0.02;
+const STEEP_FACE_SHADE = 0.78;
+const SNOW = vec3(0.9, 0.93, 0.97);
+const ETERNAL_SNOW = 0.375;
+const SNOW_DRIFT = 14;
+const SNOW_EDGE_LOW = 0.07;
+const SNOW_EDGE_HIGH = 0.28;
+const SNOW_EDGE_BAND = 0.02;
+const SNOW_SLIDE = 0.29;
+const SNOW_SLIDE_BAND = 0.008;
+const SNOW_SLIDE_WOBBLE = 0.05;
 const EMBER_THRESHOLD = 0.004;
+const EMBER_PATCH_FREQUENCY = 0.15;
+const EMBER_PATCH_START = 0.45;
+const EMBER_PATCH_END = 0.85;
 const TRODDEN_EARTH = vec3(0.3, 0.22, 0.14);
 const FORD_BED_DEPTH = 0.6;
+const DRY_BED = -1;
+const RIVER_BED_REACH = 2;
 const POOL_WATER = vec3(0.034, 0.038, 0.022);
 const POOL_SCUM = vec3(0.11, 0.14, 0.04);
 const POOL_RIM = 0.45;
@@ -79,10 +99,26 @@ interface Marsh {
 interface TerrainMaterialOptions {
   readonly glow: FireGlow;
   readonly grid: WorldGrid;
+  readonly plates: LavaPlates;
   readonly plinth: number;
   readonly shouldCutAtCoast: boolean;
   readonly textures: TerrainTextures;
   readonly warp: GroundWarp;
+}
+
+function snowCoverAt(
+  textures: TerrainTextures,
+  grid: WorldGrid,
+  mapCoordinates: Node<"vec2">,
+  shape: Node<"vec2">
+): Node<"float"> {
+  const coordinates = mapCoordinates.add(shape.mul(SNOW_DRIFT / grid.worldSize));
+  const eternal = texture(textures.wetland, coordinates).b.mul(ETERNAL_SNOW);
+  const lying = max(texture(textures.surface, coordinates).r, eternal);
+  const edge = mix(float(SNOW_EDGE_LOW), float(SNOW_EDGE_HIGH), smoothstep(-0.7, 0.7, shape.x.add(shape.y)));
+  const band = max(fwidth(lying), SNOW_EDGE_BAND);
+
+  return smoothstep(edge.sub(band), edge.add(band), lying);
 }
 
 function marshAt(textures: TerrainTextures, grid: WorldGrid, wobble: Node<"float">): Marsh {
@@ -112,11 +148,11 @@ function poolGlint(textures: TerrainTextures, pool: Node<"float">): Node<"vec3">
   return textures.skyColor.mul(fresnel).mul(textures.daylight.mul(0.5).add(0.03)).mul(pool);
 }
 
-function burningGlow(fire: Node<"float">, point: Node<"vec2">, grain: Node<"float">): Node<"vec3"> {
+function burningGlow(fire: Node<"float">, point: Node<"vec2">): Node<"vec3"> {
   const flicker = unitNoise(point.mul(0.35).add(vec2(time.mul(1.3), time.mul(-0.9))))
     .mul(0.4)
     .add(0.6);
-  const embers = smoothstep(0.35, 0.8, unitNoise(point.mul(0.6)).mul(0.6).add(grain.mul(0.4)));
+  const embers = smoothstep(EMBER_PATCH_START, EMBER_PATCH_END, unitNoise(point.mul(EMBER_PATCH_FREQUENCY)));
 
   const smolder = smoothstep(0.02, 0.35, fire).mul(embers.mul(1.1).add(0.08)).mul(flicker);
   const blaze = fire.mul(fire).mul(embers.mul(0.8).add(0.2));
@@ -124,12 +160,12 @@ function burningGlow(fire: Node<"float">, point: Node<"vec2">, grain: Node<"floa
   return EMBER_DEEP.mul(smolder).add(EMBER_BRIGHT.mul(blaze));
 }
 
-function emberGlow(fire: Node<"float">, point: Node<"vec2">, grain: Node<"float">): Node<"vec3"> {
+function emberGlow(fire: Node<"float">, point: Node<"vec2">): Node<"vec3"> {
   return Fn(() => {
     const glow = vec3(0).toVar();
 
     If(fire.greaterThan(EMBER_THRESHOLD), () => {
-      glow.assign(burningGlow(fire, point, grain));
+      glow.assign(burningGlow(fire, point));
     });
 
     return glow;
@@ -156,16 +192,15 @@ function terrainPosition(textures: TerrainTextures, grid: WorldGrid, plinth: num
   const skirt = attribute("skirt", "float");
   const skirtAxis = attribute("skirtAxis", "float");
 
-  function heightAt(cell: Node<"vec2">, column: number, row: number): Node<"float"> {
-    return textureLoad(textures.height, ivec2(clamp(cell.add(vec2(column, row)), vec2(0, 0), vec2(lastCell, lastCell))))
-      .x;
+  function heightAt(cell: Node<"vec2">): Node<"float"> {
+    return textureLoad(textures.height, ivec2(clamp(cell, vec2(0, 0), vec2(lastCell, lastCell)))).x;
   }
 
   function slopeAt(cell: Node<"vec2">): Node<"vec3"> {
-    const slopeX = heightAt(cell, -1, 0).sub(heightAt(cell, 1, 0));
-    const slopeZ = heightAt(cell, 0, -1).sub(heightAt(cell, 0, 1));
+    const slopeX = heightAt(cell.sub(vec2(step, 0))).sub(heightAt(cell.add(vec2(step, 0))));
+    const slopeZ = heightAt(cell.sub(vec2(0, step))).sub(heightAt(cell.add(vec2(0, step))));
 
-    return normalize(vec3(slopeX, cellSize.mul(2), slopeZ));
+    return normalize(vec3(slopeX, cellSize.mul(step).mul(2), slopeZ));
   }
 
   function cornerOf(cell: Node<"vec2">, column: number, row: number): Node<"vec2"> {
@@ -185,17 +220,11 @@ function terrainPosition(textures: TerrainTextures, grid: WorldGrid, plinth: num
         cornerOf(cell, 1, 1),
       ];
 
-      height.assign(
-        heightAt(first, 0, 0)
-          .add(heightAt(right, 0, 0))
-          .add(heightAt(below, 0, 0))
-          .add(heightAt(diagonal, 0, 0))
-          .mul(0.25)
-      );
+      height.assign(heightAt(first).add(heightAt(right)).add(heightAt(below)).add(heightAt(diagonal)).mul(0.25));
       normal.assign(slopeAt(first).add(slopeAt(right)).add(slopeAt(below)).add(slopeAt(diagonal)));
       cell.assign(first.add(diagonal).mul(0.5));
     }).Else(() => {
-      height.assign(heightAt(cell, 0, 0));
+      height.assign(heightAt(cell));
       normal.assign(slopeAt(cell));
     });
 
@@ -221,18 +250,23 @@ function warpedMapCoordinates(warp: GroundWarp, grid: WorldGrid): Node<"vec2"> {
   return mapCoordinatesNode(grid, point.add(warp.offsetAt(point)));
 }
 
-function underwaterDepth(textures: TerrainTextures, grid: WorldGrid): Node<"float"> {
+function riverBed(textures: TerrainTextures, grid: WorldGrid): Node<"vec2"> {
   const cell = cellAtNode(grid, positionWorld.xz);
   const reach = textureLoad(textures.shore, cell).w;
 
   return Fn(() => {
-    const depth = float(0).toVar();
+    const metersPerPixel = groundFootprintNode().toVar();
+    const bed = vec2(DRY_BED, 0).toVar();
 
-    If(reach.lessThan(1.5), () => {
-      depth.assign(max(sampleCellsNode(textures.shore, grid, positionWorld.xz).x, 0));
+    If(reach.lessThan(RIVER_BED_REACH + 0.5), () => {
+      const shore = sampleCellsNode(textures.shore, grid, positionWorld.xz);
+      const river = textures.rivers.bedNode(positionWorld.xz, shore.x, metersPerPixel);
+      const fade = smoothstep(RIVER_BED_REACH + 0.25, RIVER_BED_REACH - 0.75, shore.w);
+
+      bed.assign(vec2(mix(float(DRY_BED), river.x, fade), river.y.mul(fade)));
     });
 
-    return depth;
+    return bed;
   })();
 }
 
@@ -271,6 +305,7 @@ function rockStrata(layer: Node<"float">, strataFade: Node<"float">, rock: Node<
 export function createTerrainMaterial({
   glow,
   grid,
+  plates,
   plinth,
   shouldCutAtCoast,
   textures,
@@ -293,15 +328,16 @@ export function createTerrainMaterial({
 
   const surface = texture(textures.surface, mapCoordinates);
   const groundSample = texture(textures.groundAlbedo.texture, mapCoordinates);
-  const albedo = groundSample.rgb;
+  const albedo = textures.groundAlbedo.crispColorNode(mapCoordinates, groundSample.rgb);
   const layer = positionWorld.y.mul(STRATA_FREQUENCY).add(broad.mul(STRATA_BEND)).add(patches.mul(STRATA_WOBBLE));
 
-  const depth = underwaterDepth(textures, grid);
-  const snowCover = smoothstep(0.08, 0.42, surface.r);
+  const bed = riverBed(textures, grid);
+  const depth = bed.x;
+  const snowCover = snowCoverAt(textures, grid, mapCoordinates, vec2(broad, patches));
   const field = fieldGroundNode(
     textures,
     grid,
-    albedo.mul(broad.mul(0.1).add(patches.mul(0.07)).add(fine.mul(0.035)).add(1)),
+    albedo.mul(broad.mul(GROUND_MOTTLE).add(fine.mul(GROUND_GRAIN)).add(1)),
     vec2(fine, patches)
   );
   const mottled = field.color;
@@ -309,27 +345,30 @@ export function createTerrainMaterial({
   const darkStone = smoothstep(DARK_STONE, DARK_STONE * 0.5, albedo.r).mul(
     smoothstep(GRAY_STONE - 0.1, GRAY_STONE, albedo.b.div(max(albedo.g, 0.001)))
   );
-  const faceShade = mix(float(1), float(STEEP_FACE_SHADE), smoothstep(0.3, 0.7, steepness));
+  const faceShade = mix(float(1), float(STEEP_FACE_SHADE), smoothstep(0.2, 0.5, steepness));
 
-  const vegetated = smoothstep(0.08, 0.3, groundSample.a.add(patches.mul(0.1)).add(fine.mul(0.05)));
-  const rockStart = mix(float(0.24), float(0.16), snowCover).add(vegetated.mul(VEGETATED_ROCK_LIFT));
-  const rockBand = mix(float(0.07), float(0.14), snowCover);
-  const edgeGrain = fine.mul(float(0.025).mul(float(1).sub(snowCover)));
-  const rock = smoothstep(rockStart, rockStart.add(rockBand), steepness.add(broad.mul(0.07)).add(edgeGrain));
-  const rockColor = mix(STONE, albedo.mul(0.85), max(redStone, darkStone))
+  const vegetated = smoothstep(0.08, 0.3, groundSample.a);
+  const rockStart = mix(float(ROCK_START), float(0.16), snowCover).add(vegetated.mul(VEGETATED_ROCK_LIFT));
+  const rockBand = mix(float(ROCK_BAND), float(0.14), snowCover);
+  const rock = smoothstep(rockStart, rockStart.add(rockBand), steepness);
+  const rockColor = mix(textures.groundAlbedo.rock, albedo.mul(0.85), max(redStone, darkStone))
     .mul(rockStrata(layer, strataFade, rock))
-    .mul(broad.mul(0.06).add(patches.mul(0.04)).add(1))
+    .mul(broad.mul(ROCK_TONE).add(1))
     .mul(faceShade);
-  const ground = mix(mottled, rockColor, rock);
+  const sand = textures.groundAlbedo.sand.mul(broad.mul(GROUND_MOTTLE).add(fine.mul(GROUND_GRAIN)).add(1));
+  const ground = mix(mix(mottled, sand, bed.y), rockColor, rock);
 
   const marsh = marshAt(textures, grid, patches.mul(0.35).add(fine.mul(0.15)).add(0.5));
   const openPool = marsh.pool.mul(float(1).sub(snowCover));
   const marshy = marshGround(ground, marsh, patches.mul(0.6).add(fine.mul(0.4)));
 
-  const fordMarks = textures.fords.marksNode(positionWorld.xz);
+  const fordMarks = textures.fords.marksNode(positionWorld.xz, depth);
   const forded = fordGround(marshy, fordMarks, rock);
 
-  const snowy = mix(forded, vec3(0.9, 0.93, 0.97), snowCover.mul(float(1).sub(rock.mul(0.6))));
+  const snowSlide = steepness.add(broad.mul(SNOW_SLIDE_WOBBLE)).add(patches.mul(SNOW_SLIDE_WOBBLE * 0.5));
+  const slideBand = max(fwidth(snowSlide), SNOW_SLIDE_BAND);
+  const snowHold = smoothstep(float(SNOW_SLIDE).add(slideBand), float(SNOW_SLIDE).sub(slideBand), snowSlide);
+  const snowy = mix(forded, SNOW, snowCover.mul(snowHold));
   const wetness = max(surface.g, smoothstep(0, 0.6, depth));
   const damp = snowy.mul(float(1).sub(wetness.mul(0.32)));
   const shallowDepth = mix(depth, min(depth, FORD_BED_DEPTH), fordMarks.x);
@@ -340,14 +379,14 @@ export function createTerrainMaterial({
   const petals = smoothstep(0.55, 0.85, fine.mul(0.65).add(patches.mul(0.35)).add(0.5));
   const flowering = mix(scorched, FIREWEED, fireweedNode(surface.b, textures.bloom).mul(petals).mul(0.42));
 
-  const lava = textures.lava.look(flowering, mapCoordinates, positionWorld.xz);
+  const lava = textures.lava.look(plates, flowering, mapCoordinates, positionWorld.xz);
   const fireLight = fireLightAt(glow, grid, positionWorld.xz);
   const roughness = mix(mix(float(0.95), float(MARSH_ROUGHNESS), marsh.soak), float(0.5), wetness);
 
   material.colorNode = lava.color;
   material.roughnessNode = mix(roughness, float(POOL_ROUGHNESS), openPool);
   material.normalNode = normalize(mix(field.normal, transformNormalToView(vec3(0, 1, 0)), openPool));
-  material.emissiveNode = emberGlow(surface.a, positionWorld.xz, fine.mul(0.5).add(0.5))
+  material.emissiveNode = emberGlow(surface.a, positionWorld.xz)
     .add(lava.glow)
     .add(lava.color.mul(fireLight).mul(GROUND_FIRE_LIGHT))
     .add(poolGlint(textures, openPool));

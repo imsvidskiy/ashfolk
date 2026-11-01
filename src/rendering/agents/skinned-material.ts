@@ -20,6 +20,7 @@ import {
 import { MeshStandardNodeMaterial, type Node } from "three/webgpu";
 import { SLOT_COLOR_TABLE } from "../../models/materials.ts";
 import { brightenHighlighted } from "../highlight.ts";
+import { styleModel } from "../model-style.ts";
 import { rotateAroundUp, slotColorTable } from "../node-helpers.ts";
 import { markOutlined } from "../outlines.ts";
 import type { AgentPalette } from "./agent-palette.ts";
@@ -31,7 +32,11 @@ function skin(rows: BoneRows, vector: Node<"vec4">): Node<"vec3"> {
   return vec3(dot(rows[0], vector), dot(rows[1], vector), dot(rows[2], vector));
 }
 
-export function createSkinnedMaterial(palette: AgentPalette, layout: PaletteLayout): MeshStandardNodeMaterial {
+export function createSkinnedMaterial(
+  palette: AgentPalette,
+  layout: PaletteLayout,
+  isFaceted?: boolean
+): MeshStandardNodeMaterial {
   const material = new MeshStandardNodeMaterial();
   const rowNumber = attribute("agentRow", "float");
   const row = int(rowNumber);
@@ -85,7 +90,7 @@ export function createSkinnedMaterial(palette: AgentPalette, layout: PaletteLayo
   const highlighted = varying(float(1).sub(step(0.5, rowNumber.sub(palette.highlightRow).abs())), "agentHighlight");
 
   material.colorNode = brightenHighlighted(varying(color.mul(shade), "agentColor"), highlighted);
-  material.roughnessNode = float(0.82);
+  styleModel(material, isFaceted);
 
   markOutlined(material);
 

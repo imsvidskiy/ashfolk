@@ -17,6 +17,7 @@ import { DISTANT_BERRY, type FruitLook, fruitMeshes, ROUND_FRUIT } from "./orcha
 import { BLOB_TINT, createGrowth, type Growth } from "./tree-growth.ts";
 import {
   BROADLEAF_LOOK,
+  CROWN_ROUGHNESS,
   foliageStyle,
   isDistantLevel,
   type NearLevel,
@@ -40,7 +41,7 @@ type BerryBushSpecies = keyof typeof BERRY_BUSH_HEIGHTS;
 
 const BERRY_LOOKS: Readonly<Record<BerryBushSpecies, FruitLook>> = {
   [CultivatedSpecies.Blueberry]: {
-    counts: { high: 30, medium: 12 },
+    counts: { high: 14, medium: 8 },
     hanging: 0,
     highest: 0.9,
     lowest: -0.2,
@@ -50,7 +51,7 @@ const BERRY_LOOKS: Readonly<Record<BerryBushSpecies, FruitLook>> = {
     tessellation: { high: { rings: 2, segments: 5 }, medium: DISTANT_BERRY },
   },
   [CultivatedSpecies.Currant]: {
-    counts: { high: 16, medium: 8 },
+    counts: { high: 9, medium: 6 },
     hanging: 3,
     highest: 0.3,
     lowest: -0.7,
@@ -60,7 +61,7 @@ const BERRY_LOOKS: Readonly<Record<BerryBushSpecies, FruitLook>> = {
     tessellation: { high: { rings: 3, segments: 4 }, medium: DISTANT_BERRY },
   },
   [CultivatedSpecies.Raspberry]: {
-    counts: { high: 22, medium: 10 },
+    counts: { high: 12, medium: 8 },
     hanging: 0,
     highest: 0.7,
     lowest: -0.5,
@@ -240,7 +241,7 @@ function leafShape(leaf: BushLeaf, level: NearLevel): Shape {
     noise: LEAF_NOISE,
     offset: [x * 2.3, y * 2.9, z * 2.1],
     radius: leaf.radius,
-    roughness: 0.25,
+    roughness: CROWN_ROUGHNESS,
   });
 }
 
