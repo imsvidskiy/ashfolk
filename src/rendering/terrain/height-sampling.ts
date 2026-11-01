@@ -111,3 +111,7 @@ export function coarseGroundOffsetNode(textures: TerrainTextures, grid: WorldGri
     return offset;
   })();
 }
+
+export function groundOffsetNode(textures: TerrainTextures, grid: WorldGrid, point: Node<"vec2">): Node<"float"> {
+  return renderedHeightNode(textures, grid, point).sub(sampleHeightNode(textures.height, grid, point));
+}

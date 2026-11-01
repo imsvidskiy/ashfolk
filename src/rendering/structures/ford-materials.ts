@@ -14,16 +14,18 @@ import {
   positionWorld,
   smoothstep,
   time,
+  transformNormalToView,
   varying,
   vec2,
   vec3,
 } from "three/tsl";
-import { BufferGeometry, Float32BufferAttribute, MeshStandardNodeMaterial } from "three/webgpu";
+import { BufferGeometry, Float32BufferAttribute, MeshStandardNodeMaterial, type Node } from "three/webgpu";
 import type { WorldGrid } from "../../world/world-grid.ts";
 import { rotateAroundUp, unitNoise3 } from "../node-helpers.ts";
-import { coarseGroundOffsetNode } from "../terrain/height-sampling.ts";
+import { groundOffsetNode } from "../terrain/height-sampling.ts";
 import type { TerrainTextures } from "../terrain/terrain-textures.ts";
 import { fordBedColorNode } from "../water/ford-field.ts";
+import { drawnWaterDepthNode } from "../water/water-material.ts";
 import type { BarPoint } from "./ford-layout.ts";
 
 export const FOAM_FIELDS = [
@@ -52,8 +54,8 @@ export function createFoamMaterial(): MeshStandardNodeMaterial {
   const facing = point.y.div(max(reach, 0.001));
   const behind = max(point.y, 0);
 
-  const pillow = smoothstep(radius.mul(1.55), radius.mul(0.95), reach).mul(smoothstep(0.35, -0.6, facing));
-  const collar = smoothstep(radius.mul(1.3), radius.mul(0.95), reach).mul(0.55);
+  const pillow = smoothstep(radius.mul(1.4), radius.mul(0.95), reach).mul(smoothstep(0.35, -0.6, facing));
+  const collar = smoothstep(radius.mul(1.15), radius.mul(0.95), reach).mul(0.35);
   const wakeWidth = radius.mul(behind.div(max(wake, 0.01)).mul(0.7).add(0.65));
   const wakeBody = smoothstep(wakeWidth, wakeWidth.mul(0.2), abs(point.x))
     .mul(smoothstep(wake.add(radius), radius, behind))
@@ -82,19 +84,23 @@ export function createFoamMaterial(): MeshStandardNodeMaterial {
   return material;
 }
 
+export function sunkenBedColorNode(depth: Node<"float">): Node<"vec3"> {
+  const bed = fordBedColorNode(positionWorld).mul(mix(float(1), float(0.72), smoothstep(-0.05, 0.3, depth)));
+
+  return mix(bed, bed.mul(vec3(0.5, 0.68, 0.7)), smoothstep(0.1, 3, depth));
+}
+
 export function createBarMaterial(textures: TerrainTextures, grid: WorldGrid): MeshStandardNodeMaterial {
   const material = new MeshStandardNodeMaterial();
   const grounding = attribute("grounding", "float");
   const waterLevel = attribute("barWater", "float");
 
   material.positionNode = positionLocal.add(
-    vec3(0, coarseGroundOffsetNode(textures, grid, positionLocal.xz).mul(grounding), 0)
+    vec3(0, groundOffsetNode(textures, grid, positionLocal.xz).mul(grounding), 0)
   );
-
-  const depth = max(waterLevel.sub(positionWorld.y), 0);
-  const bed = fordBedColorNode(positionWorld).mul(mix(float(1), float(0.72), smoothstep(-0.05, 0.3, depth)));
-
-  material.colorNode = mix(bed, bed.mul(vec3(0.5, 0.68, 0.7)), smoothstep(0.1, 3, depth));
+  material.maskNode = drawnWaterDepthNode(textures, grid).greaterThan(0);
+  material.colorNode = sunkenBedColorNode(max(waterLevel.sub(positionWorld.y), 0));
+  material.normalNode = transformNormalToView(vec3(0, 1, 0));
   material.roughnessNode = float(0.6);
 
   return material;

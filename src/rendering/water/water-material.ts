@@ -34,6 +34,7 @@ import type { WorldGrid } from "../../world/world-grid.ts";
 import { unitNoise3 } from "../node-helpers.ts";
 import { mapCoordinatesNode, sampleCellsNode } from "../terrain/height-sampling.ts";
 import type { TerrainTextures } from "../terrain/terrain-textures.ts";
+import type { CaveOutlet } from "./cave-outlets.ts";
 import { rainDimples } from "./rain-dimples.ts";
 import { groundFootprintNode } from "./river-field.ts";
 import { BANK_SINK, PRESENT_LEVEL, RIVER_BANK_LIFT } from "./shore-field.ts";
@@ -239,6 +240,25 @@ function waterPosition(textures: TerrainTextures, grid: WorldGrid): Node<"vec3">
   })();
 }
 
+function drawnDepthFrom(
+  textures: TerrainTextures,
+  shore: Node<"vec4">,
+  outlet: CaveOutlet,
+  viewDistance: Node<"float">
+): Node<"float"> {
+  const cellDepth = shore.x.add(shoreWobble(shore.x, viewDistance));
+  const riverDepth = textures.rivers.depthNode(positionWorld.xz, cellDepth, groundFootprintNode());
+
+  return mix(riverDepth, outlet.depth, outlet.share);
+}
+
+export function drawnWaterDepthNode(textures: TerrainTextures, grid: WorldGrid): Node<"float"> {
+  const shore = sampleCellsNode(textures.shore, grid, positionWorld.xz);
+  const outlet = textures.caveOutlets.outletAt(positionWorld.xz);
+
+  return drawnDepthFrom(textures, shore, outlet, distance(positionWorld, cameraPosition));
+}
+
 export function createWaterMaterial(
   textures: TerrainTextures,
   grid: WorldGrid,
@@ -256,9 +276,7 @@ export function createWaterMaterial(
   const outlet = textures.caveOutlets.outletAt(positionWorld.xz);
   const flow = mix(shore.yz, outlet.direction.mul(max(length(shore.yz), OUTLET_FLOW)), outlet.share);
   const ice = smoothstep(THIN_ICE, SOLID_ICE, texture(textures.surface, mapCoordinates).r);
-  const cellDepth = shore.x.add(shoreWobble(shore.x, viewDistance));
-  const riverDepth = textures.rivers.depthNode(positionWorld.xz, cellDepth, groundFootprintNode());
-  const shoreDepth = mix(riverDepth, outlet.depth, outlet.share);
+  const shoreDepth = drawnDepthFrom(textures, shore, outlet, viewDistance);
 
   const isWet = shoreDepth.greaterThan(0);
   const fordBed = textures.fords.marksNode(positionWorld.xz, shoreDepth).x;

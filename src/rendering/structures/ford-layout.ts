@@ -15,8 +15,8 @@ export const STONE_SINK = 0.3;
 export const BAR_SHALLOWEST = 0.28;
 export const SIDE_DEEPEST = 0.7;
 const BAR_DEEPEST = 0.5;
-const BAR_FOOT = 3.8;
-const BAR_ACROSS: readonly number[] = [-BAR_FOOT, -2.7, -1.9, -1.3, -0.6, 0, 0.6, 1.3, 1.9, 2.7, BAR_FOOT];
+const BAR_FOOT = 2.6;
+const BAR_ACROSS: readonly number[] = [-BAR_FOOT, -2, -1.4, -0.7, 0, 0.7, 1.4, 2, BAR_FOOT];
 
 const SCAN_STEP = 0.25;
 const BEYOND_ENDS = 4;
@@ -38,7 +38,7 @@ const SLAB_RISE_SPREAD = 0.07;
 const SLAB_WIDENING = 1.15;
 const SLAB_STEEPEST = 0.6;
 const BAR_NARROWEST = 0.9;
-const BAR_WIDEST = 1.8;
+const BAR_WIDEST = 1.5;
 const BAR_SIDE_DROP = 2.6;
 const BAR_BURIAL = 0.3;
 const BAR_ROW_STEP = 0.5;
@@ -164,7 +164,7 @@ function bedAt(ford: Ford, surroundings: FordSurroundings, along: number, across
   const ground = surroundings.heightAt(point.x, point.z);
   const waterLevel = surroundings.waterLevelAt(center.x, center.z);
 
-  if (waterLevel === NO_WATER) {
+  if (waterLevel === NO_WATER || surroundings.shoreDepthAt(point.x, point.z) <= 0) {
     return { ground, height: ground, waterLevel };
   }
 

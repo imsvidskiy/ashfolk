@@ -5,15 +5,18 @@ import {
   Fn,
   float,
   int,
+  max,
   mix,
   normalize,
   normalLocal,
+  normalView,
   normalWorld,
   positionLocal,
   positionWorld,
   sin,
   smoothstep,
   textureLoad,
+  transformNormalToView,
   varying,
   vec3,
 } from "three/tsl";
@@ -57,12 +60,19 @@ import type { WorldGrid } from "../../world/world-grid.ts";
 import { geometryFromMeshData, InstanceBatch, toInstancedGeometry } from "../instancing.ts";
 import { rotateAroundUp, SNOW_COLOR, slotColorTable, snowCoverNode } from "../node-helpers.ts";
 import { markOutlined } from "../outlines.ts";
-import { cellAtNode, coarseGroundOffsetNode } from "../terrain/height-sampling.ts";
+import { cellAtNode, groundOffsetNode } from "../terrain/height-sampling.ts";
 import type { TerrainTextures } from "../terrain/terrain-textures.ts";
 import { assignSphereLevels, HIDDEN_LEVEL } from "../view-input.ts";
+import { drawnWaterDepthNode } from "../water/water-material.ts";
 import { sampleWaterSurface } from "../water/water-surface.ts";
 import { type BarPoint, type FordStone, layFord } from "./ford-layout.ts";
-import { createBarGeometry, createBarMaterial, createFoamMaterial, FOAM_FIELDS } from "./ford-materials.ts";
+import {
+  createBarGeometry,
+  createBarMaterial,
+  createFoamMaterial,
+  FOAM_FIELDS,
+  sunkenBedColorNode,
+} from "./ford-materials.ts";
 
 const LEVEL_DISTANCES: readonly number[] = [150, 650, 3600];
 const SHADOW_LEVEL_COUNT = 2;
@@ -73,10 +83,11 @@ const FOAM_ABOVE = 0.15;
 const FLOW_PROBE = 8;
 const BOUNDS_MARGIN = 4;
 const WET_STONE = vec3(0.55, 0.58, 0.52);
-const RIVERBED = vec3(0.07, 0.17, 0.19);
-const MURKIEST = 0.85;
-const DROWNED_SHADE = 0.55;
-const MURK_DEPTH = 0.9;
+const COVERED_DEPTH = 0.12;
+const SINKING_START = 0.02;
+const SUNK_DEPTH = 0.22;
+const WATERLINE_BAND = 0.06;
+const WATERLINE_FOAM_SHARE = 0.35;
 const WATERLINE_FOAM = vec3(0.84, 0.89, 0.9);
 
 const CROSSING_CHANNELS = ["shade", "slot"] as const;
@@ -120,7 +131,7 @@ function createCrossingMaterial(textures: TerrainTextures, grid: WorldGrid): Mes
   const slot = int(attribute("slot", "float").add(0.5));
   const shade = attribute("shade", "float");
 
-  const ground = vec3(0, coarseGroundOffsetNode(textures, grid, placement.xz).mul(look.z), 0);
+  const ground = vec3(0, groundOffsetNode(textures, grid, placement.xz).mul(look.z), 0);
 
   material.positionNode = Fn(() => {
     normalLocal.assign(normalize(rotateAroundUp(pitched(normalLocal.div(shape.xyz), shape.w), placement.w)));
@@ -136,18 +147,20 @@ function createCrossingMaterial(textures: TerrainTextures, grid: WorldGrid): Mes
   const base = varying(slotColorTable().element(slot).mul(shade).mul(look.y), "crossingColor");
 
   const belowWater = look.x.sub(positionWorld.y);
-  const wetness = smoothstep(-0.08, 0.2, belowWater);
-  const murk = smoothstep(0, MURK_DEPTH, belowWater).mul(MURKIEST);
+  const covered = smoothstep(0, COVERED_DEPTH, drawnWaterDepthNode(textures, grid));
+  const wetness = smoothstep(-0.08, 0.2, belowWater).mul(covered);
+  const sinking = smoothstep(SINKING_START, SUNK_DEPTH, belowWater).mul(covered);
   const snowOnTop = snow.mul(smoothstep(0.3, 0.8, normalWorld.y)).mul(float(1).sub(wetness));
-  const drowned = mix(float(1), float(DROWNED_SHADE), smoothstep(0.05, 0.7, belowWater));
 
-  const wet = mix(mix(base, base.mul(WET_STONE), wetness).mul(drowned), RIVERBED, murk);
-  const waterline = smoothstep(0.1, 0.02, abs(positionWorld.y.sub(look.x))).mul(0.5);
+  const wet = mix(base, base.mul(WET_STONE), wetness);
+  const sunken = mix(wet, sunkenBedColorNode(max(belowWater, 0)), sinking);
+  const waterline = smoothstep(WATERLINE_BAND, 0.01, abs(positionWorld.y.sub(look.x))).mul(WATERLINE_FOAM_SHARE);
 
-  material.colorNode = mix(mix(wet, WATERLINE_FOAM, waterline), SNOW_COLOR, snowOnTop);
+  material.colorNode = mix(mix(sunken, WATERLINE_FOAM, waterline.mul(covered)), SNOW_COLOR, snowOnTop);
+  material.normalNode = normalize(mix(normalView, transformNormalToView(vec3(0, 1, 0)), sinking));
   material.roughnessNode = mix(float(0.88), float(0.55), wetness);
 
-  markOutlined(material);
+  markOutlined(material, float(1).sub(sinking));
 
   return material;
 }
