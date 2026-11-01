@@ -561,8 +561,23 @@ function commonGroundAround(grid: WorldGrid, ground: Uint8Array, isOpen: Uint8Ar
   return common;
 }
 
+function sandMouths(inputs: WetlandInputs, result: ClimateResult): void {
+  const { grid, heights, riverStrength, waterSurface } = inputs;
+
+  for (let cell = 0; cell < grid.cellCount; cell += 1) {
+    const isRockyRiverBed =
+      riverStrength[cell] > 0 && hasWater(waterSurface[cell], heights[cell]) && result.ground[cell] === Ground.Rock;
+
+    if (isRockyRiverBed && isNearStillWater(inputs, grid.columnOf(cell), grid.rowOf(cell))) {
+      result.ground[cell] = Ground.Sand;
+    }
+  }
+}
+
 function groundRiverBeds(inputs: WetlandInputs, result: ClimateResult, riverBanks: Uint8Array): void {
   const { grid } = inputs;
+
+  sandMouths(inputs, result);
 
   const isOpen = Uint8Array.from({ length: grid.cellCount }, (_, cell) => {
     return isRiverBed(inputs, result, riverBanks, cell) ? 1 : 0;
