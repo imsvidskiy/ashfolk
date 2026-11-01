@@ -34,8 +34,8 @@ describe("generation fingerprints", () => {
   }, 60_000);
 
   it("keeps the fingerprints of known islands until generation is meant to change", () => {
-    expect(generationFingerprint(world)).toBe(1_044_858_140);
-    expect(generationFingerprint(generateWorld(7, { ...OPTIONS, shape: "square" }))).toBe(1_419_597_250);
+    expect(generationFingerprint(world)).toBe(4_143_106_754);
+    expect(generationFingerprint(generateWorld(7, { ...OPTIONS, shape: "square" }))).toBe(3_895_610_461);
   }, 60_000);
 
   it("changes when one river point moves", () => {

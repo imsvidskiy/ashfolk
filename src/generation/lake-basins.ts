@@ -34,6 +34,8 @@ const EXACT_CUT_WIDTH = 80;
 const BLENDED_CUT_WIDTH = 160;
 const CUT_BLUR_RADIUS = 20;
 const CUT_BLUR_PASSES = 2;
+const SHALLOW_CUT = 10;
+const DEEP_CUT = 40;
 const SHORE_CLEARANCE = 0.4;
 const RISE_TABLE_STEP = 1;
 
@@ -360,7 +362,9 @@ export function easeLakeShores(
       continue;
     }
 
-    const exactness = 1 - smoothstep(EXACT_CUT_WIDTH, BLENDED_CUT_WIDTH, cut.distances[cell]);
+    const nearness = 1 - smoothstep(EXACT_CUT_WIDTH, BLENDED_CUT_WIDTH, cut.distances[cell]);
+    const depth = smoothstep(SHALLOW_CUT, DEEP_CUT, Math.min(exactCuts[cell], smoothCuts[cell]));
+    const exactness = Math.max(nearness, depth);
     const lowest = Math.max(floors[cell], cut.levels[cell] + SHORE_CLEARANCE);
     const eased = heights[cell] - lerp(smoothCuts[cell], exactCuts[cell], exactness);
 

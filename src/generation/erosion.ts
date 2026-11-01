@@ -1,4 +1,4 @@
-import { clamp, lerp } from "../shared/math.ts";
+import { clamp, lerp, smoothstep } from "../shared/math.ts";
 import type { RandomSource } from "../shared/random.ts";
 import { CellSet } from "../world/cell-set.ts";
 import { boxBlur } from "./box-blur.ts";
@@ -16,6 +16,8 @@ const MINIMUM_CAPACITY = 0.01;
 const SETTLED_EXCESS = 0.02;
 const SMOOTHING_PASSES = 2;
 const SMOOTHING_REACH = 10;
+const SUMMIT_START = 0.8;
+const SUMMIT_END = 0.95;
 
 interface ErosionBrush {
   columns: Int32Array;
@@ -598,9 +600,19 @@ export function smoothHeights(
     });
   }
 
+  let peak = Number.NEGATIVE_INFINITY;
+
   for (let cell = 0; cell < heights.length; cell += 1) {
     if (isLand(cell)) {
-      heights[cell] = smoothed[cell];
+      peak = Math.max(peak, heights[cell]);
+    }
+  }
+
+  for (let cell = 0; cell < heights.length; cell += 1) {
+    if (isLand(cell)) {
+      const summit = smoothstep(SUMMIT_START * peak, SUMMIT_END * peak, heights[cell]);
+
+      heights[cell] = lerp(smoothed[cell], heights[cell], summit);
     }
   }
 }
