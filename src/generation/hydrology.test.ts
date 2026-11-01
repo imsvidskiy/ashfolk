@@ -3,8 +3,8 @@ import { lerp, saturate } from "../shared/math.ts";
 import { isOnIsland } from "../world/coast.ts";
 import { sampleHeight } from "../world/terrain-sampling.ts";
 import { landEverywhere, shapeTerrain } from "../world/testing/terrain-fixtures.ts";
-import { hasWater, type Lake, NO_WATER, type River, type RiverPoint } from "../world/water.ts";
-import { NEIGHBOR_OFFSETS, WorldGrid } from "../world/world-grid.ts";
+import { drawnRiverHalfWidth, hasWater, type Lake, NO_WATER, type River, type RiverPoint } from "../world/water.ts";
+import { WorldGrid } from "../world/world-grid.ts";
 import { DEFAULT_HYDROLOGY, type HydrologyOptions, NO_CELL } from "./drainage.ts";
 import { computeHydrology } from "./hydrology.ts";
 import { pondShoreReach } from "./ponds.ts";
@@ -16,6 +16,9 @@ const VALLEY_FLOOR_HALF_WIDTH = 10;
 const GENTLE_WALLS = 0.6;
 const STEEP_WALLS = 2;
 const BANK_FREEBOARD = 0.2;
+const DRAWN_EDGE_CELLS = 0.75;
+const DROP_WITHIN_CELL = 0.35;
+const ALONG_SLOPE = 0.05;
 const DEEPEST_BANK_LOWERING = 10;
 const DEEPEST_POND_SHORE_CUT = 12;
 const UNTOUCHED_DISTANCE = 120;
@@ -59,12 +62,6 @@ interface RiverSpot {
   readonly point: RiverPoint;
 }
 
-interface CarvedWater {
-  readonly carved: Float32Array;
-  readonly riverStrength: Uint8Array;
-  readonly waterSurface: Float32Array;
-}
-
 function hydrologyOf(
   grid: WorldGrid,
   heights: Float32Array,
@@ -81,7 +78,12 @@ function carveValley(wallSlope: number, ridgeHeight = 0) {
   const grid = new WorldGrid({ cellSize: 10, cellsPerSide: 64 });
 
   const uncarved = shapeTerrain(grid, (x, z) => {
-    return 100 + Math.abs(x) * wallSlope + (z + grid.halfSize) * 0.05 + ridgeHeight * Math.exp(-(z * z) / RIDGE_SPREAD);
+    return (
+      100 +
+      Math.abs(x) * wallSlope +
+      (z + grid.halfSize) * ALONG_SLOPE +
+      ridgeHeight * Math.exp(-(z * z) / RIDGE_SPREAD)
+    );
   });
 
   const carved = Float32Array.from(uncarved);
@@ -139,37 +141,6 @@ function nearestOnRiver(river: River, x: number, z: number): RiverSpot {
 
 function channelReachOf(point: RiverPoint): number {
   return Math.max(point.width / 2 + Math.max(MINIMUM_BANK_WIDTH, point.width), SURE_WET_REACH);
-}
-
-function riverLevelBeside(grid: WorldGrid, cell: number, water: CarvedWater): number {
-  const { carved, riverStrength, waterSurface } = water;
-
-  let total = 0;
-  let count = 0;
-
-  for (const offset of NEIGHBOR_OFFSETS) {
-    const column = grid.columnOf(cell) + offset.column;
-    const row = grid.rowOf(cell) + offset.row;
-
-    if (!grid.contains(column, row)) {
-      continue;
-    }
-
-    const neighbor = grid.index(column, row);
-
-    if (!hasWater(waterSurface[neighbor], carved[neighbor])) {
-      continue;
-    }
-
-    if (riverStrength[neighbor] === 0) {
-      return Number.NaN;
-    }
-
-    total += waterSurface[neighbor];
-    count += 1;
-  }
-
-  return count > 0 ? total / count : Number.NaN;
 }
 
 function resampledRiver(river: River): { x: number; z: number }[] {
@@ -258,8 +229,9 @@ function leavesLake(lake: Lake, point: RiverPoint): boolean {
 }
 
 describe("river carving", () => {
-  it("cuts a channel and lowers the banks beside it to just above the water level there", () => {
+  it("cuts a channel and keeps the land under and just past the drawn edge at the water level there", () => {
     const { carved, grid, result } = carveValley(GENTLE_WALLS);
+    const { rivers } = result.features;
 
     const rises: number[] = [];
     let wetFloorCells = 0;
@@ -271,21 +243,20 @@ describe("river carving", () => {
         continue;
       }
 
-      const water = riverLevelBeside(grid, cell, {
-        carved,
-        riverStrength: result.riverStrength,
-        waterSurface: result.waterSurface,
-      });
+      for (const river of rivers) {
+        const spot = nearestOnRiver(river, grid.cellCenterX(cell), grid.cellCenterZ(cell));
 
-      if (Number.isFinite(water)) {
-        rises.push(carved[cell] - water);
+        if (spot.distance <= drawnRiverHalfWidth(spot.point.width / 2) + grid.cellSize * DRAWN_EDGE_CELLS) {
+          rises.push(carved[cell] - spot.point.surface);
+        }
       }
     }
 
-    expect(result.features.rivers.length).toBeGreaterThan(0);
+    expect(rivers.length).toBeGreaterThan(0);
     expect(wetFloorCells).toBeGreaterThan(10);
     expect(rises.length).toBeGreaterThan(20);
-    expect(Math.max(...rises)).toBeLessThan(BANK_FREEBOARD + 0.01);
+    expect(Math.min(...rises)).toBeGreaterThan(0);
+    expect(Math.max(...rises)).toBeLessThan(BANK_FREEBOARD + DROP_WITHIN_CELL);
   });
 
   it("rises steadily from the river to the untouched valley walls", () => {
@@ -414,6 +385,10 @@ describe("river confluences", () => {
     let sharedCells = 0;
 
     for (const cell of wetCells(grid, carved, result.waterSurface)) {
+      if (result.riverStrength[cell] === 0) {
+        continue;
+      }
+
       const spots = rivers
         .map((river) => {
           return nearestOnRiver(river, grid.cellCenterX(cell), grid.cellCenterZ(cell));
@@ -780,7 +755,7 @@ describe("rivers of full-size islands", () => {
 
   it("bends full-size rivers instead of running them dead straight down even slopes on both shapes", () => {
     for (const generated of [round, square]) {
-      expect(straightRiverShare(generated)).toBeLessThan(0.08);
+      expect(straightRiverShare(generated)).toBeLessThan(0.05);
     }
   });
 

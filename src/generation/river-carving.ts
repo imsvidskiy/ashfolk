@@ -1,28 +1,43 @@
-import { clamp, saturate, smoothstep } from "../shared/math.ts";
-import { MinHeap } from "../shared/min-heap.ts";
+import { clamp, saturate } from "../shared/math.ts";
 import { isOnIsland } from "../world/coast.ts";
-import { hasWater, NO_WATER, type River, type RiverPoint, riverCodeOfStrength, type Spring } from "../world/water.ts";
+import {
+  drawnRiverHalfWidth,
+  hasWater,
+  NO_WATER,
+  type River,
+  type RiverPoint,
+  riverCodeOfStrength,
+  type Spring,
+} from "../world/water.ts";
 import { NEIGHBOR_OFFSETS, type WorldGrid } from "../world/world-grid.ts";
 import { NO_CELL } from "./drainage.ts";
 import { carvePond, isRiverWater } from "./ponds.ts";
 import { riverStrengthFor } from "./river-chains.ts";
-import { interpolatePoint } from "./river-paths.ts";
+import { interpolatePoint, smoothPinned } from "./river-paths.ts";
 
 export const BANK_FREEBOARD = 0.2;
 
 const DIAGONAL_REACH = 0.75;
 const BANK_DEPTH = 0.7;
+const SHORE_DEPTH = 0.3;
 const SHALLOWEST_WATER = 0.05;
 const MINIMUM_BANK_WIDTH = 6;
-const BANK_HEIGHT = 1.6;
-const DEEPEST_BANK_CUT = 2;
-const DEEPEST_BANK_LOWERING = 10;
-const BANK_LOWERING_FADE = 0.2;
 const SHALLOWEST_CHANNEL = 0.6;
 const DESCENT_PASSES = 8;
 const LIFT_ALLOWANCE = 0.3;
-const GENTLE_BANK_SLOPE = 0.2;
-const WIDEST_SIDE_CUT = 40;
+const FLOOR_CELLS = 0.8;
+const WALL_SLOPE_LIFT = 0.2;
+const GENTLEST_WALL = 0.35;
+const STEEPEST_WALL = 0.75;
+const WALL_FOOT = 5;
+const WALL_BLEND = 3;
+const WALL_SLOPE_REACH = 20;
+const WALL_SLOPE_SPREAD = 20;
+const WALL_SLOPE_SPACING = 2.5;
+const DEEPEST_WALL_CUT = 10;
+const WALL_CUT_EASING = 4;
+const WALL_REACH = 50;
+const WALL_FADE = 60;
 const PINCH_PASSES = 2;
 const PINCHED_DEPTH = 0.6;
 const OPPOSITE_SIDES = [
@@ -37,6 +52,7 @@ export interface ChannelTargets {
   lakeIds: Int32Array;
   riverStrength: Uint8Array;
   sideCuts: Float32Array;
+  sideFloors: Float32Array;
   threshold: number;
   uncarvedHeights: Float32Array;
   waterSurface: Float32Array;
@@ -55,46 +71,123 @@ interface PinchedBank {
   readonly strength: number;
 }
 
-interface BankLowering {
-  readonly cuts: Float32Array;
-  readonly floors: Float32Array;
-  readonly heap: MinHeap;
-  readonly isBesideWater: Uint8Array;
+interface ChannelKind {
+  readonly coastSegment: number;
+  readonly isRiver: boolean;
+}
+
+interface CellShape {
+  readonly floorSurface: number;
+  readonly isPastCoast: boolean;
+  readonly isRiver: boolean;
+  readonly wallSlope: number;
+}
+
+interface RiverWalls {
+  readonly left: Float64Array;
+  readonly right: Float64Array;
 }
 
 export function bankWidthOf(point: RiverPoint): number {
   return Math.max(MINIMUM_BANK_WIDTH, point.width);
 }
 
-function channelBed(distanceFromCenter: number, point: RiverPoint, uncarvedHeight: number): number {
+function channelBed(distanceFromCenter: number, point: RiverPoint): number {
   const halfWidth = point.width / 2;
 
-  if (distanceFromCenter < halfWidth) {
-    const across = distanceFromCenter / halfWidth;
-
-    return point.surface - point.depth * (1 - across * across * 0.7);
+  if (distanceFromCenter >= halfWidth) {
+    return point.surface - SHORE_DEPTH * point.depth;
   }
 
-  const bank = smoothstep(0, 1, (distanceFromCenter - halfWidth) / bankWidthOf(point));
+  const across = distanceFromCenter / halfWidth;
 
-  const shapedBank = point.surface - 0.3 * point.depth + (0.3 * point.depth + BANK_HEIGHT) * bank;
-  const lowestBank = uncarvedHeight - (0.3 * point.depth + DEEPEST_BANK_CUT) * (1 - bank);
-
-  return Math.max(shapedBank, lowestBank);
+  return point.surface - point.depth * (1 - across * across * 0.7);
 }
 
-function sideCut(distanceFromCenter: number, point: RiverPoint, uncarvedHeight: number): number {
-  const brink = point.surface + BANK_HEIGHT;
-  const rise = uncarvedHeight - brink;
+function easedCut(cut: number): number {
+  const start = DEEPEST_WALL_CUT - WALL_CUT_EASING;
 
-  if (rise <= 0) {
-    return uncarvedHeight;
+  if (cut <= start) {
+    return cut;
   }
 
-  const cutWidth = clamp(rise / GENTLE_BANK_SLOPE, MINIMUM_BANK_WIDTH, WIDEST_SIDE_CUT);
-  const blend = smoothstep(0, 1, (distanceFromCenter - point.width / 2) / cutWidth);
+  if (cut >= DEEPEST_WALL_CUT + WALL_CUT_EASING) {
+    return DEEPEST_WALL_CUT;
+  }
 
-  return uncarvedHeight - Math.min(rise, DEEPEST_BANK_LOWERING) * (1 - blend);
+  return cut - ((cut - start) * (cut - start)) / (4 * WALL_CUT_EASING);
+}
+
+function softRamp(amount: number): number {
+  if (amount >= WALL_FOOT) {
+    return amount;
+  }
+
+  if (amount <= -WALL_FOOT) {
+    return 0;
+  }
+
+  return ((amount + WALL_FOOT) * (amount + WALL_FOOT)) / (4 * WALL_FOOT);
+}
+
+function smoothMinimum(first: number, second: number): number {
+  const overlap = Math.max(WALL_BLEND - Math.abs(first - second), 0) / WALL_BLEND;
+
+  return Math.min(first, second) - (overlap * overlap * WALL_BLEND) / 4;
+}
+
+function wallHeight(
+  distanceFromCenter: number,
+  floorReach: number,
+  point: RiverPoint,
+  wallSlope: number,
+  uncarvedHeight: number
+): number {
+  const wall = point.surface + BANK_FREEBOARD + wallSlope * softRamp(distanceFromCenter - floorReach);
+  const cut = easedCut(Math.max(0, uncarvedHeight - smoothMinimum(uncarvedHeight, wall)));
+  const fade = 1 - saturate((distanceFromCenter - point.width / 2 - WALL_REACH) / WALL_FADE);
+
+  return uncarvedHeight - Math.max(0, smoothMinimum(cut, DEEPEST_WALL_CUT * fade));
+}
+
+function sideRise(targets: ChannelTargets, point: RiverPoint, acrossX: number, acrossZ: number): number {
+  const { coastDistance, grid, uncarvedHeights } = targets;
+
+  const reach = point.width / 2 + WALL_SLOPE_REACH;
+  const cell = grid.cellAt(point.x + acrossX * reach, point.z + acrossZ * reach);
+
+  if (cell < 0 || !isOnIsland(coastDistance, cell)) {
+    return 0;
+  }
+
+  return Math.max(0, uncarvedHeights[cell] - point.surface) / reach;
+}
+
+function riverWalls(targets: ChannelTargets, points: readonly RiverPoint[]): RiverWalls {
+  const left = new Float64Array(points.length);
+  const right = new Float64Array(points.length);
+
+  for (const [index, point] of points.entries()) {
+    const before = points[Math.max(0, index - 1)];
+    const after = points[Math.min(points.length - 1, index + 1)];
+    const length = Math.max(1e-6, Math.hypot(after.x - before.x, after.z - before.z));
+    const acrossX = -(after.z - before.z) / length;
+    const acrossZ = (after.x - before.x) / length;
+
+    left[index] = sideRise(targets, point, acrossX, acrossZ);
+    right[index] = sideRise(targets, point, -acrossX, -acrossZ);
+  }
+
+  const spread = WALL_SLOPE_SPREAD / WALL_SLOPE_SPACING;
+
+  return {
+    left: smoothPinned(left, spread).map((rise) => {
+      return clamp(rise + WALL_SLOPE_LIFT, GENTLEST_WALL, STEEPEST_WALL);
+    }),
+    right: smoothPinned(right, spread).map((rise) => {
+      return clamp(rise + WALL_SLOPE_LIFT, GENTLEST_WALL, STEEPEST_WALL);
+    }),
+  };
 }
 
 function createChannelSamples(cellCount: number): ChannelSamples {
@@ -115,8 +208,7 @@ function sampleSegment(grid: WorldGrid, points: readonly RiverPoint[], segment: 
   const segmentX = end.x - start.x;
   const segmentZ = end.z - start.z;
 
-  const reach =
-    Math.max(start.width, end.width) / 2 + Math.max(WIDEST_SIDE_CUT, start.width, end.width) + grid.cellSize;
+  const reach = Math.max(start.width, end.width) / 2 + WALL_REACH + WALL_FADE + grid.cellSize;
   const lengthSquared = Math.max(1e-6, segmentX * segmentX + segmentZ * segmentZ);
 
   const firstColumn = Math.max(0, grid.columnAt(Math.min(start.x, end.x) - reach));
@@ -163,41 +255,46 @@ function carveCell(
   cell: number,
   distanceFromCenter: number,
   sampled: RiverPoint,
-  isPastCoast: boolean
+  shape: CellShape
 ): void {
   const halfWidth = sampled.width / 2;
   const wetReach = Math.max(halfWidth, targets.grid.cellSize * DIAGONAL_REACH);
   const channelReach = Math.max(halfWidth + bankWidthOf(sampled), wetReach);
 
-  if (distanceFromCenter > Math.max(halfWidth + WIDEST_SIDE_CUT, channelReach)) {
+  if (distanceFromCenter > halfWidth + WALL_REACH + WALL_FADE) {
     return;
   }
 
-  if (!(isPastCoast || isOnIsland(targets.coastDistance, cell))) {
+  if (!(shape.isPastCoast || isOnIsland(targets.coastDistance, cell))) {
     return;
   }
 
   const uncarvedHeight = targets.uncarvedHeights[cell];
 
-  const point = isPastCoast ? sampled : settledOnGround(sampled, uncarvedHeight);
-  const cut = sideCut(distanceFromCenter, point, uncarvedHeight);
-
-  if (distanceFromCenter > channelReach) {
-    targets.sideCuts[cell] = Math.min(targets.sideCuts[cell], cut);
-
-    return;
-  }
-
-  const bed = Math.min(channelBed(distanceFromCenter, point, uncarvedHeight), cut);
-  const isUnderWater = distanceFromCenter <= wetReach || bed < point.surface - SHALLOWEST_WATER;
+  const point = shape.isPastCoast || shape.isRiver ? sampled : settledOnGround(sampled, uncarvedHeight);
+  const isUnderWater =
+    distanceFromCenter <= wetReach ||
+    (distanceFromCenter <= channelReach && uncarvedHeight < point.surface - SHALLOWEST_WATER);
 
   if (!isUnderWater) {
-    targets.heights[cell] = Math.min(targets.heights[cell], Math.max(bed, point.surface));
+    const floorReach = drawnRiverHalfWidth(halfWidth) + targets.grid.cellSize * FLOOR_CELLS;
+    const wall = wallHeight(distanceFromCenter, floorReach + WALL_FOOT, point, shape.wallSlope, uncarvedHeight);
+    const floor = Math.max(point.surface, shape.floorSurface) + BANK_FREEBOARD;
+
+    targets.sideCuts[cell] = Math.min(targets.sideCuts[cell], Math.max(wall, floor));
+
+    if (distanceFromCenter <= floorReach) {
+      targets.sideFloors[cell] = Math.max(targets.sideFloors[cell], floor);
+    }
 
     return;
   }
 
-  targets.heights[cell] = Math.min(targets.heights[cell], bed, point.surface - point.depth * BANK_DEPTH);
+  const bed = shape.isRiver
+    ? channelBed(distanceFromCenter, point)
+    : Math.min(channelBed(distanceFromCenter, point), point.surface - point.depth * BANK_DEPTH);
+
+  targets.heights[cell] = Math.min(targets.heights[cell], bed);
 
   if (targets.lakeIds[cell] !== NO_CELL) {
     return;
@@ -222,13 +319,37 @@ function pastCoastSegment(targets: ChannelTargets, river: River): number {
   return river.points.length - 2;
 }
 
+function wallSlopeAt(side: Float64Array, segment: number, along: number): number {
+  return side[segment] + (side[segment + 1] - side[segment]) * along;
+}
+
+function highestSurfaceAlong(points: readonly RiverPoint[], segment: number, point: RiverPoint, reach: number): number {
+  let highest = point.surface;
+
+  for (const step of [-1, 1]) {
+    for (let index = step < 0 ? segment : segment + 1; index >= 0 && index < points.length; index += step) {
+      const near = points[index];
+
+      if (Math.hypot(near.x - point.x, near.z - point.z) > reach) {
+        break;
+      }
+
+      highest = Math.max(highest, near.surface);
+    }
+  }
+
+  return highest;
+}
+
 function carveChannel(
   targets: ChannelTargets,
   samples: ChannelSamples,
   points: readonly RiverPoint[],
-  coastSegment = NO_CELL
+  channel: ChannelKind
 ): void {
   const { alongs, cells, distances, segments } = samples;
+
+  const walls = channel.isRiver ? riverWalls(targets, points) : null;
 
   for (let segment = 0; segment < points.length - 1; segment += 1) {
     sampleSegment(targets.grid, points, segment, samples);
@@ -236,9 +357,22 @@ function carveChannel(
 
   for (const cell of cells) {
     const segment = segments[cell];
-    const point = interpolatePoint(points[segment], points[segment + 1], alongs[cell]);
+    const along = alongs[cell];
+    const start = points[segment];
+    const end = points[segment + 1];
+    const point = interpolatePoint(start, end, along);
+    const isLeft =
+      (end.x - start.x) * (targets.grid.cellCenterZ(cell) - start.z) -
+        (end.z - start.z) * (targets.grid.cellCenterX(cell) - start.x) >
+      0;
+    const wallSlope = walls === null ? GENTLEST_WALL : wallSlopeAt(isLeft ? walls.left : walls.right, segment, along);
 
-    carveCell(targets, cell, distances[cell], point, segment === coastSegment);
+    carveCell(targets, cell, distances[cell], point, {
+      floorSurface: highestSurfaceAlong(points, segment, point, targets.grid.cellSize / 2),
+      isPastCoast: segment === channel.coastSegment,
+      isRiver: channel.isRiver,
+      wallSlope,
+    });
     distances[cell] = Number.POSITIVE_INFINITY;
   }
 
@@ -259,7 +393,7 @@ function matchStrengthUnderPoints(targets: ChannelTargets, points: readonly Rive
 
 function carveRivers(targets: ChannelTargets, samples: ChannelSamples, rivers: readonly River[]): void {
   for (const river of rivers) {
-    carveChannel(targets, samples, river.points, pastCoastSegment(targets, river));
+    carveChannel(targets, samples, river.points, { coastSegment: pastCoastSegment(targets, river), isRiver: true });
     matchStrengthUnderPoints(targets, river.points);
   }
 }
@@ -381,31 +515,34 @@ function fillPinchedBanks(targets: ChannelTargets): void {
   }
 }
 
-function highestWaterBeside(targets: ChannelTargets, cell: number, isStandingOnly: boolean): number {
+function waterFloorBeside(targets: ChannelTargets, cell: number): number {
   const { grid, heights, riverStrength, waterSurface } = targets;
 
   const column = grid.columnOf(cell);
   const row = grid.rowOf(cell);
 
-  let highest = Number.NEGATIVE_INFINITY;
+  let highestStanding = Number.NEGATIVE_INFINITY;
+  let lowestRiver = Number.POSITIVE_INFINITY;
 
   for (const offset of NEIGHBOR_OFFSETS) {
     const neighbor = grid.neighborIndex(column, row, offset);
 
-    if (neighbor < 0 || (isStandingOnly && riverStrength[neighbor] > 0)) {
+    if (neighbor < 0 || !hasWater(waterSurface[neighbor], heights[neighbor])) {
       continue;
     }
 
-    if (hasWater(waterSurface[neighbor], heights[neighbor])) {
-      highest = Math.max(highest, waterSurface[neighbor]);
+    if (riverStrength[neighbor] > 0) {
+      lowestRiver = Math.min(lowestRiver, waterSurface[neighbor]);
+    } else {
+      highestStanding = Math.max(highestStanding, waterSurface[neighbor]);
     }
   }
 
-  return highest;
+  return Math.max(highestStanding, Number.isFinite(lowestRiver) ? lowestRiver : Number.NEGATIVE_INFINITY);
 }
 
 function applySideCuts(targets: ChannelTargets): void {
-  const { heights, sideCuts, waterSurface } = targets;
+  const { heights, sideCuts, sideFloors, waterSurface } = targets;
 
   for (let cell = 0; cell < sideCuts.length; cell += 1) {
     const cut = sideCuts[cell];
@@ -414,140 +551,7 @@ function applySideCuts(targets: ChannelTargets): void {
       continue;
     }
 
-    heights[cell] = Math.min(heights[cell], Math.max(cut, highestWaterBeside(targets, cell, false)));
-  }
-}
-
-function isDryLand(targets: ChannelTargets, cell: number): boolean {
-  return isOnIsland(targets.coastDistance, cell) && !hasWater(targets.waterSurface[cell], targets.heights[cell]);
-}
-
-function waterLevelBeside(targets: ChannelTargets, cell: number): number {
-  const { grid, heights, riverStrength, waterSurface } = targets;
-
-  const column = grid.columnOf(cell);
-  const row = grid.rowOf(cell);
-
-  let total = 0;
-  let count = 0;
-  let isBesideRiver = false;
-
-  for (const offset of NEIGHBOR_OFFSETS) {
-    const neighbor = grid.neighborIndex(column, row, offset);
-
-    if (neighbor < 0) {
-      continue;
-    }
-
-    if (!hasWater(waterSurface[neighbor], heights[neighbor])) {
-      continue;
-    }
-
-    total += waterSurface[neighbor];
-    count += 1;
-
-    if (riverStrength[neighbor] > 0) {
-      isBesideRiver = true;
-    }
-  }
-
-  return isBesideRiver ? total / count : NO_WATER;
-}
-
-function startBankLowering(targets: ChannelTargets): BankLowering {
-  const { grid, uncarvedHeights } = targets;
-
-  const lowering: BankLowering = {
-    cuts: new Float32Array(grid.cellCount),
-    floors: new Float32Array(grid.cellCount).fill(Number.NEGATIVE_INFINITY),
-    heap: new MinHeap(grid.cellsPerSide * 16),
-    isBesideWater: new Uint8Array(grid.cellCount),
-  };
-
-  for (let cell = 0; cell < grid.cellCount; cell += 1) {
-    if (!isDryLand(targets, cell)) {
-      continue;
-    }
-
-    const water = waterLevelBeside(targets, cell);
-
-    if (water === NO_WATER) {
-      continue;
-    }
-
-    const floor = water + BANK_FREEBOARD;
-    const cut = clamp(uncarvedHeights[cell] - floor, 0, DEEPEST_BANK_LOWERING);
-
-    lowering.floors[cell] = floor;
-    lowering.isBesideWater[cell] = 1;
-
-    if (cut > 0) {
-      lowering.cuts[cell] = cut;
-      lowering.heap.push(cell, -cut);
-    }
-  }
-
-  return lowering;
-}
-
-function spreadBankLowering(targets: ChannelTargets, lowering: BankLowering): void {
-  const { cuts, floors, heap, isBesideWater } = lowering;
-  const { grid } = targets;
-
-  const settled = new Uint8Array(grid.cellCount);
-
-  while (heap.size > 0) {
-    const cell = heap.pop();
-
-    if (settled[cell] === 1) {
-      continue;
-    }
-
-    settled[cell] = 1;
-
-    const column = grid.columnOf(cell);
-    const row = grid.rowOf(cell);
-
-    for (const offset of NEIGHBOR_OFFSETS) {
-      const neighbor = grid.neighborIndex(column, row, offset);
-
-      if (neighbor < 0) {
-        continue;
-      }
-
-      const cut = cuts[cell] - BANK_LOWERING_FADE * offset.distance * grid.cellSize;
-
-      if (cut <= cuts[neighbor] || settled[neighbor] === 1 || !isDryLand(targets, neighbor)) {
-        continue;
-      }
-
-      cuts[neighbor] = cut;
-      heap.push(neighbor, -cut);
-
-      if (isBesideWater[neighbor] === 0) {
-        floors[neighbor] = Math.max(floors[neighbor], floors[cell]);
-      }
-    }
-  }
-}
-
-function lowerBanks(targets: ChannelTargets): void {
-  const { heights, uncarvedHeights } = targets;
-
-  const lowering = startBankLowering(targets);
-
-  spreadBankLowering(targets, lowering);
-
-  for (let cell = 0; cell < lowering.cuts.length; cell += 1) {
-    const cut = lowering.cuts[cell];
-
-    if (cut <= 0) {
-      continue;
-    }
-
-    const floor = Math.max(lowering.floors[cell], highestWaterBeside(targets, cell, true));
-
-    heights[cell] = Math.min(heights[cell], Math.max(uncarvedHeights[cell] - cut, floor));
+    heights[cell] = Math.min(heights[cell], Math.max(cut, sideFloors[cell], waterFloorBeside(targets, cell)));
   }
 }
 
@@ -571,7 +575,7 @@ export function carveWaterways(
   carveRivers(targets, samples, rivers);
 
   for (const channel of channels) {
-    carveChannel(targets, samples, channel);
+    carveChannel(targets, samples, channel, { coastSegment: NO_CELL, isRiver: false });
   }
 
   for (const spring of springs) {
@@ -583,6 +587,5 @@ export function carveWaterways(
   applySideCuts(targets);
   keepRiversDescending(targets, rivers);
   dropShallowWater(targets.heights, targets.waterSurface, targets.riverStrength);
-  lowerBanks(targets);
   fillPinchedBanks(targets);
 }

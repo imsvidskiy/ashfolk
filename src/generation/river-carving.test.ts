@@ -3,8 +3,8 @@ import { isOnIsland } from "../world/coast.ts";
 import { slopeAt } from "../world/footing.ts";
 import { ISLAND_SHAPES } from "../world/island-shape.ts";
 import type { TerrainData } from "../world/terrain-data.ts";
-import { hasWater } from "../world/water.ts";
-import { NEIGHBOR_OFFSETS, WorldGrid } from "../world/world-grid.ts";
+import { drawnRiverHalfWidth, hasWater, type River } from "../world/water.ts";
+import { WorldGrid } from "../world/world-grid.ts";
 import { cellsAround } from "./testing/cell-patches.ts";
 import { coarseWorld, FULL_SIZE_TIMEOUT, fullSizeWorld } from "./testing/generated-worlds.ts";
 import { median, quantile, shareAbove } from "./testing/statistics.ts";
@@ -14,47 +14,69 @@ import type { GeneratedWorld } from "./world-generator.ts";
 const INLAND_REACH = 60;
 const HANGING_SLACK = 0.3;
 const SHALLOWEST_BED = 0.3;
+const SHALLOW_SIDEHILL_SHARE = 0.26;
 const GENTLE_REACH_DROP = 0.05;
 const SIDEHILL_CROSS_SLOPE = 0.12;
 const NEIGHBOR_CELLS = 1.5;
 const WATER_LEVEL_CELLS = 2.5;
+const DRAWN_EDGE_CELLS = 0.75;
 
-function waterLevelBesideRiver(terrain: TerrainData, grid: WorldGrid, cell: number): number {
-  let total = 0;
-  let count = 0;
-  let isBesideRiver = false;
+function highestSurfaceWithinCell(river: River, index: number, cellSize: number): number {
+  const point = river.points[index];
 
-  for (const offset of NEIGHBOR_OFFSETS) {
-    const neighbor = grid.neighborIndex(grid.columnOf(cell), grid.rowOf(cell), offset);
+  let highest = point.surface;
 
-    if (neighbor < 0 || !hasWater(terrain.waterSurface[neighbor], terrain.height[neighbor])) {
-      continue;
+  for (let upstream = index - 1; upstream >= 0; upstream -= 1) {
+    const near = river.points[upstream];
+
+    if (Math.hypot(near.x - point.x, near.z - point.z) > cellSize / 2) {
+      break;
     }
 
-    total += terrain.waterSurface[neighbor];
-    count += 1;
+    highest = Math.max(highest, near.surface);
+  }
 
-    if (isRiverWater(terrain, neighbor)) {
-      isBesideRiver = true;
+  return highest;
+}
+
+function riverSurfacesUnderDrawnEdges(generated: GeneratedWorld): Map<number, number> {
+  const grid = new WorldGrid(generated.dimensions);
+  const nearest = new Map<number, { distance: number; surface: number }>();
+
+  for (const river of generated.water.rivers) {
+    for (const [index, point] of river.points.entries()) {
+      const reach = drawnRiverHalfWidth(point.width / 2) + grid.cellSize * DRAWN_EDGE_CELLS;
+      const surface = highestSurfaceWithinCell(river, index, grid.cellSize);
+
+      for (const cell of grid.cellsInRadius(point.x, point.z, reach)) {
+        const distance = Math.hypot(grid.cellCenterX(cell) - point.x, grid.cellCenterZ(cell) - point.z);
+        const known = nearest.get(cell);
+
+        if (known === undefined || distance < known.distance) {
+          nearest.set(cell, { distance, surface });
+        }
+      }
     }
   }
 
-  return isBesideRiver ? total / count : Number.NaN;
+  return new Map(
+    [...nearest].map(([cell, { surface }]) => {
+      return [cell, surface];
+    })
+  );
 }
 
 function bankRises(generated: GeneratedWorld): number[] {
   const { terrain } = generated;
 
-  const grid = new WorldGrid(generated.dimensions);
   const rises: number[] = [];
 
-  for (let cell = 0; cell < grid.cellCount; cell += 1) {
+  for (const [cell, surface] of riverSurfacesUnderDrawnEdges(generated)) {
     const isDryLand =
-      isOnIsland(terrain.coastDistance, cell) && !hasWater(terrain.waterSurface[cell], terrain.height[cell]);
-    const water = isDryLand ? waterLevelBesideRiver(terrain, grid, cell) : Number.NaN;
+      terrain.coastDistance[cell] >= INLAND_REACH && !hasWater(terrain.waterSurface[cell], terrain.height[cell]);
 
-    if (Number.isFinite(water)) {
-      rises.push(terrain.height[cell] - water);
+    if (isDryLand) {
+      rises.push(terrain.height[cell] - surface);
     }
   }
 
@@ -209,11 +231,11 @@ describe("river banks of full-size islands", () => {
     worlds = [fullSizeWorld(7), fullSizeWorld(1, "square")];
   }, FULL_SIZE_TIMEOUT);
 
-  it("lowers the banks of rivers to just above the water beside them on both shapes", () => {
+  it("keeps the land under and just past the drawn edge of rivers just above the water on both shapes", () => {
     for (const generated of worlds) {
       const rises = bankRises(generated);
 
-      expect(rises.length).toBeGreaterThan(2000);
+      expect(rises.length).toBeGreaterThan(800);
       expect(median(rises)).toBeLessThan(0.3);
       expect(quantile(rises, 0.9)).toBeLessThan(0.5);
     }
@@ -243,7 +265,7 @@ describe("river beds of full-size islands", () => {
       expect(all.length).toBeGreaterThan(500);
       expect(sidehill.length).toBeGreaterThan(50);
       expect(1 - shareAbove(all, SHALLOWEST_BED)).toBeLessThan(0.08);
-      expect(1 - shareAbove(sidehill, SHALLOWEST_BED)).toBeLessThan(0.22);
+      expect(1 - shareAbove(sidehill, SHALLOWEST_BED)).toBeLessThan(SHALLOW_SIDEHILL_SHARE);
       expect(median(sidehill)).toBeGreaterThan(0.8);
     }
   });

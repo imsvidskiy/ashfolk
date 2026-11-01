@@ -12,7 +12,7 @@ import { NEIGHBOR_OFFSETS, type WorldGrid } from "../world/world-grid.ts";
 import { analyzeDrainage, channelGround, DEFAULT_HYDROLOGY, type HydrologyOptions, NO_CELL } from "./drainage.ts";
 import { BANK_FREEBOARD, bankWidthOf, type ChannelTargets, carveWaterways } from "./river-carving.ts";
 import { chainCells, chainFlows, type RiverChain, riverStrengthFor, traceRiverChains } from "./river-chains.ts";
-import { makeSurfaceDescend, smoothRiverPath } from "./river-paths.ts";
+import { makeSurfaceDescend, relaxRiverSurfaces, smoothRiverPath, smoothRiverSurfaces } from "./river-paths.ts";
 import { type RiverLand, spaceRiverChains } from "./river-spacing.ts";
 import { placeSprings } from "./springs.ts";
 
@@ -23,6 +23,16 @@ const OUTER_BANK_SLOPE = 0.3;
 const FLAT_CROSS_SLOPE = 0.04;
 const STEEP_CROSS_SLOPE = 0.12;
 const FLOW_REACH = 15;
+const PATH_SPACING = 2.5;
+const PATH_SPREAD = 8;
+const SURFACE_SPREAD = 20;
+const SURFACE_LIFT = 0;
+const MEANDER_SIDE_REACH = 15;
+const ROOMY_SIDE_RISE = 0.15;
+const CRAMPED_SIDE_RISE = 0.45;
+const RELAXING_PASSES = 16;
+const SMOOTHED_POINT_DROP = 0.01;
+const ACROSS_REACH = 4;
 
 interface HydrologyResult {
   carving: Float32Array;
@@ -30,6 +40,12 @@ interface HydrologyResult {
   lakeIds: Int32Array;
   riverStrength: Uint8Array;
   waterSurface: Float32Array;
+}
+
+interface Junction {
+  readonly surface: number;
+  readonly x: number;
+  readonly z: number;
 }
 
 interface NeighborCell {
@@ -128,6 +144,93 @@ function settleIntoMainRiver(points: RiverPoint[], mainSurface: number | undefin
   last.surface = mainSurface;
 }
 
+function junctionOn(river: River, x: number, z: number): Junction {
+  let nearest: Junction = { surface: river.points[0].surface, x: river.points[0].x, z: river.points[0].z };
+  let nearestDistance = Number.POSITIVE_INFINITY;
+
+  for (let index = 1; index < river.points.length; index += 1) {
+    const start = river.points[index - 1];
+    const end = river.points[index];
+    const alongX = end.x - start.x;
+    const alongZ = end.z - start.z;
+    const lengthSquared = Math.max(1e-6, alongX * alongX + alongZ * alongZ);
+    const share = Math.min(Math.max(((x - start.x) * alongX + (z - start.z) * alongZ) / lengthSquared, 0), 1);
+    const pointX = start.x + alongX * share;
+    const pointZ = start.z + alongZ * share;
+    const distance = Math.hypot(pointX - x, pointZ - z);
+
+    if (distance < nearestDistance) {
+      nearestDistance = distance;
+      nearest = { surface: start.surface + (end.surface - start.surface) * share, x: pointX, z: pointZ };
+    }
+  }
+
+  return nearest;
+}
+
+function capSurfaces(land: RiverLand, points: RiverPoint[], raw: Float64Array): void {
+  for (const [index, point] of points.entries()) {
+    const before = points[Math.max(0, index - ACROSS_REACH)];
+    const after = points[Math.min(points.length - 1, index + ACROSS_REACH)];
+    const length = Math.hypot(after.x - before.x, after.z - before.z);
+
+    if (length < 1e-6) {
+      continue;
+    }
+
+    const acrossX = -(after.z - before.z) / length;
+    const acrossZ = (after.x - before.x) / length;
+
+    const left = lowestBankGround(land, point, acrossX, acrossZ);
+    const right = lowestBankGround(land, point, -acrossX, -acrossZ);
+    const lowestBank = Number.isNaN(left) || Number.isNaN(right) ? Number.NaN : Math.min(left, right);
+    const cap = Number.isNaN(lowestBank)
+      ? raw[index] + SURFACE_LIFT
+      : Math.max(raw[index] + SURFACE_LIFT, lowestBank - BANK_FREEBOARD);
+
+    point.surface = Math.min(point.surface, cap);
+  }
+}
+
+function meanderRoom(land: RiverLand, point: RiverPoint, acrossX: number, acrossZ: number): number {
+  const ground = bankGroundAt(land, point.x, point.z);
+  const rise = Math.max(
+    ...[1, -1].map((side) => {
+      const bank = bankGroundAt(
+        land,
+        point.x + acrossX * side * MEANDER_SIDE_REACH,
+        point.z + acrossZ * side * MEANDER_SIDE_REACH
+      );
+
+      return Number.isNaN(bank) || Number.isNaN(ground) ? 0 : (bank - ground) / MEANDER_SIDE_REACH;
+    })
+  );
+
+  return 1 - smoothstep(ROOMY_SIDE_RISE, CRAMPED_SIDE_RISE, rise);
+}
+
+function shapeRiver(land: RiverLand, points: readonly RiverPoint[], seed: number, endSurface?: number): RiverPoint[] {
+  const shaped = smoothRiverPath(points, {
+    meanderRoom: (point, acrossX, acrossZ) => {
+      return meanderRoom(land, point, acrossX, acrossZ);
+    },
+    pathSpread: PATH_SPREAD,
+    seed,
+    spacing: PATH_SPACING,
+  });
+  const raw = Float64Array.from(shaped, (point) => {
+    return point.surface;
+  });
+
+  smoothRiverSurfaces(shaped, SURFACE_SPREAD, PATH_SPACING);
+  capSurfaces(land, shaped, raw);
+  relaxRiverSurfaces(shaped, RELAXING_PASSES);
+  makeSurfaceDescend(shaped, SMOOTHED_POINT_DROP);
+  settleIntoMainRiver(shaped, endSurface);
+
+  return shaped;
+}
+
 function offIslandNeighbors(grid: WorldGrid, coastDistance: Float32Array, cell: number): NeighborCell[] {
   const column = grid.columnOf(cell);
   const row = grid.rowOf(cell);
@@ -223,11 +326,23 @@ function appendLakeEntry(grid: WorldGrid, points: RiverPoint[], lake: Lake, lake
   points.push({ ...last, surface: lake.level, x: grid.cellCenterX(lakeCell), z: grid.cellCenterZ(lakeCell) });
 }
 
+function joinMainRiver(points: RiverPoint[], junction: Junction | null): void {
+  const last = points.at(-1);
+
+  if (junction === null || last === undefined) {
+    return;
+  }
+
+  settleIntoMainRiver(points, junction.surface);
+  last.x = junction.x;
+  last.z = junction.z;
+}
+
 function buildRivers(land: RiverLand, chains: readonly RiverChain[]): River[] {
   const { basins, grid } = land;
 
   const rivers: River[] = [];
-  const surfaces = new Map<number, number>();
+  const owners = new Map<number, River>();
   const claimedPastCoast = new Set<number>();
   const flows = chainFlows(basins.network, chains);
 
@@ -243,27 +358,36 @@ function buildRivers(land: RiverLand, chains: readonly RiverChain[]): River[] {
     });
     const lakeId = lakeAtMouth(basins.lakeIds, chain);
     const reachesEdge = chain.mouthReceiver === NO_CELL && chain.joinsCell === NO_CELL;
+    const mainRiver = owners.get(chain.joinsCell);
+    const junction =
+      mainRiver === undefined
+        ? null
+        : junctionOn(mainRiver, grid.cellCenterX(chain.joinsCell), grid.cellCenterZ(chain.joinsCell));
+    const lake = lakeId >= 0 ? basins.lakes[lakeId] : undefined;
 
     sinkIntoSlopes(land, points);
 
-    if (lakeId >= 0) {
-      appendLakeEntry(grid, points, basins.lakes[lakeId], chain.mouthReceiver);
+    if (lake !== undefined) {
+      appendLakeEntry(grid, points, lake, chain.mouthReceiver);
     }
 
     makeSurfaceDescend(points, MINIMUM_POINT_DROP);
-    settleIntoMainRiver(points, surfaces.get(chain.joinsCell));
+    joinMainRiver(points, junction);
 
-    for (const [index, cell] of chain.cells.entries()) {
-      surfaces.set(cell, points[index].surface);
-    }
-
-    const smoothed = smoothRiverPath(points);
+    const endSurface = junction === null ? lake?.level : junction.surface;
+    const shaped = shapeRiver(land, points, chain.cells[0], endSurface);
 
     if (reachesEdge) {
-      runPastCoast(land, smoothed, claimedPastCoast);
+      runPastCoast(land, shaped, claimedPastCoast);
     }
 
-    rivers.push({ id: rivers.length, points: smoothed, reachesEdge });
+    const river = { id: rivers.length, points: shaped, reachesEdge };
+
+    for (const cell of chain.cells) {
+      owners.set(cell, river);
+    }
+
+    rivers.push(river);
   }
 
   return rivers;
@@ -327,6 +451,7 @@ export function computeHydrology(
     lakeIds,
     riverStrength,
     sideCuts: new Float32Array(grid.cellCount).fill(Number.POSITIVE_INFINITY),
+    sideFloors: new Float32Array(grid.cellCount).fill(Number.NEGATIVE_INFINITY),
     threshold: riverThreshold,
     uncarvedHeights: Float32Array.from(heights),
     waterSurface,

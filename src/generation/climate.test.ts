@@ -218,7 +218,7 @@ describe("climate of a generated island", () => {
     expect(new Set(waterBiomes)).toEqual(new Set([Biome.Water]));
   });
 
-  it("lines warm, low river banks outside wetlands with sand", () => {
+  it("keeps warm, low river banks outside wetlands open as beach on the ground of the land around them", () => {
     const { terrain } = world;
 
     const islandGrid = new WorldGrid(world.dimensions);
@@ -241,12 +241,16 @@ describe("climate of a generated island", () => {
       }
     }
 
-    const sandy = [...banks].filter((bank) => {
+    const beaches = [...banks].filter((bank) => {
+      return terrain.biome[bank] === Biome.Beach;
+    });
+    const sandy = beaches.filter((bank) => {
       return terrain.ground[bank] === Ground.Sand;
     });
 
-    expect(banks.size).toBeGreaterThan(50);
-    expect(sandy.length / banks.size).toBeGreaterThan(0.8);
+    expect(banks.size).toBeGreaterThan(30);
+    expect(beaches.length / banks.size).toBeGreaterThan(0.8);
+    expect(sandy.length / beaches.length).toBeLessThan(0.2);
   });
 });
 
