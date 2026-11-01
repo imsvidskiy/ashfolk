@@ -605,7 +605,15 @@ export class RiverField {
   }
 
   depthNode(point: Node<"vec2">, cellDepth: Node<"float">, metersPerPixel: Node<"float">): Node<"float"> {
-    return depthFrom(this.sampleNode(point), point, cellDepth, metersPerPixel);
+    return Fn(() => {
+      const depth = cellDepth.toVar();
+
+      If(this.#isNearRiverNode(point), () => {
+        depth.assign(depthFrom(this.sampleNode(point), point, cellDepth, metersPerPixel));
+      });
+
+      return depth;
+    })();
   }
 
   bedNode(point: Node<"vec2">, cellDepth: Node<"float">, metersPerPixel: Node<"float">): Node<"vec2"> {
@@ -627,5 +635,15 @@ export class RiverField {
 
   dispose(): void {
     this.texture.dispose();
+  }
+
+  #isNearRiverNode(point: Node<"vec2">): Node<"bool"> {
+    return cornersAt(this.#grid.cellsPerSide, mapCoordinatesNode(this.#grid, point))
+      .map((corner) => {
+        return textureLoad(this.texture, corner.cell).w.mul(BYTE).round().mod(STANDING_FLAG).greaterThan(0.5);
+      })
+      .reduce((either, other) => {
+        return either.or(other);
+      });
   }
 }
