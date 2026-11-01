@@ -12,7 +12,7 @@ import { cellsAround, labelPatches, NO_PATCH } from "./testing/cell-patches.ts";
 import { coarseWorld, FULL_SIZE_TIMEOUT, fullSizeWorld, islandsAcrossSeeds } from "./testing/generated-worlds.ts";
 import { type IslandSurvey, surveyIsland } from "./testing/island-survey.ts";
 import { meanOf } from "./testing/statistics.ts";
-import { isRiverWater } from "./testing/water-checks.ts";
+import { isLakeWater, isRiverWater } from "./testing/water-checks.ts";
 import type { WetlandInputs } from "./wetlands.ts";
 import type { GeneratedWorld } from "./world-generator.ts";
 
@@ -35,6 +35,7 @@ const WARM_WEST: ClimateProfile = { ...WARM_EAST, warmthX: -WARMTH };
 const WELL_BELOW_TREE_LINE = 4.6;
 const CLIFF_SLOPE = 0.86;
 const STEEP_SLOPE = 0.9;
+const STILL_WATER_CLEARANCE = 2;
 
 interface RockSurvey {
   readonly gentleLowRock: number;
@@ -120,6 +121,41 @@ function largestPatch(islandGrid: WorldGrid, mask: Uint8Array): number {
   return sizes.reduce((largest, size) => {
     return Math.max(largest, size);
   }, 0);
+}
+
+function isNearLakeWater(generated: GeneratedWorld, islandGrid: WorldGrid, cell: number): boolean {
+  const column = islandGrid.columnOf(cell);
+  const row = islandGrid.rowOf(cell);
+
+  for (let rowOffset = -STILL_WATER_CLEARANCE; rowOffset <= STILL_WATER_CLEARANCE; rowOffset += 1) {
+    for (let columnOffset = -STILL_WATER_CLEARANCE; columnOffset <= STILL_WATER_CLEARANCE; columnOffset += 1) {
+      if (
+        islandGrid.contains(column + columnOffset, row + rowOffset) &&
+        isLakeWater(generated.terrain, islandGrid.index(column + columnOffset, row + rowOffset))
+      ) {
+        return true;
+      }
+    }
+  }
+
+  return false;
+}
+
+function rockyRiverMouths(generated: GeneratedWorld): number[] {
+  const { terrain } = generated;
+
+  const islandGrid = new WorldGrid(generated.dimensions);
+  const rocky: number[] = [];
+
+  for (let cell = 0; cell < islandGrid.cellCount; cell += 1) {
+    const isRockyRiver = isRiverWater(terrain, cell) && terrain.ground[cell] === Ground.Rock;
+
+    if (isRockyRiver && isNearLakeWater(generated, islandGrid, cell)) {
+      rocky.push(cell);
+    }
+  }
+
+  return rocky;
 }
 
 describe("climate", () => {
@@ -252,6 +288,10 @@ describe("climate of a generated island", () => {
     expect(beaches.length / banks.size).toBeGreaterThan(0.8);
     expect(sandy.length / beaches.length).toBeLessThan(0.2);
   });
+
+  it("lays no rock on river beds that meet still water", () => {
+    expect(rockyRiverMouths(world)).toEqual([]);
+  });
 });
 
 describe("climate of a full-size island", () => {
@@ -270,6 +310,10 @@ describe("climate of a full-size island", () => {
 
     expect(rockCells / islandGrid.cellCount).toBeLessThan(0.02);
     expect(largestPatch(islandGrid, mask)).toBeLessThan(4500);
+  });
+
+  it("lays no rock on river beds that meet still water", () => {
+    expect(rockyRiverMouths(fullSize)).toEqual([]);
   });
 });
 
