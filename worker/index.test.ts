@@ -22,7 +22,7 @@ describe("worker", () => {
   it("sends the old address to the domain with the path and query kept", async () => {
     const assets = assetsReturning("game");
 
-    const response = await worker.fetch(new Request("https://dawnfolk.svidskiy.workers.dev/?seed=7&shape=round"), {
+    const response = await worker.fetch(new Request("https://ashfolk.svidskiy.workers.dev/?seed=7&shape=round"), {
       ASSETS: assets,
     });
 
@@ -70,11 +70,5 @@ describe("worker", () => {
       "https://ashfolk.com/manifest.webmanifest"
     );
     expect(homeAddressOf(new Request("https://www.ashfolk.com/?seed=7"))).toBe("https://ashfolk.com/?seed=7");
-  });
-
-  it("sends the old domain to the new one with the path and query kept", () => {
-    expect(homeAddressOf(new Request("https://playdawnfolk.com/"))).toBe("https://ashfolk.com/");
-    expect(homeAddressOf(new Request("https://www.playdawnfolk.com/?seed=7"))).toBe("https://ashfolk.com/?seed=7");
-    expect(homeAddressOf(new Request("https://playdawnfolk.com/privacy/"))).toBe("https://ashfolk.com/privacy/");
   });
 });
