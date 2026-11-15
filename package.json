@@ -3,7 +3,7 @@
   "name": "ashfolk",
   "version": "0.11.1",
   "private": true,
-  "description": "A god simulator about the first tribes on a floating island",
+  "description": "Browser god simulator with tribes on a floating island",
   "type": "module",
   "scripts": {
     "build": "vite build",
