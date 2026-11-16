@@ -4,7 +4,7 @@
 
 <h1 align="center">Ashfolk</h1>
 
-<p align="center">Browser god simulator with tribes on a floating island.</p>
+<p align="center">God simulator with tribes on a floating island.</p>
 
 <p align="center">
   <a
