@@ -514,6 +514,13 @@ Sound landed in 0.9. It lives on the main thread in `src/audio`; the worker neve
 frames, commands and the camera already carry: `frame.effects`, the chronicle, notices, `held`, burning cells, lava,
 volcanoes, weather, the calendar and people's poses. Cues move into modules later.
 
+### Sounds to record for the 0.12 powers
+
+- Nuclear bomb. A deep initial impact and a separate rolling tail as the cloud rises.
+- Black hole. A short opening swell, a seamless low hum for the time it stays open, and a brief collapse.
+
+### Playback
+
 - **Plain Web Audio, no library.** One `AudioContext` in `sound-engine.ts`, created and `resume()`d on the first
   `pointerdown`, `pointerup`, `touchend` or `keydown`; not on `pointermove` or `wheel`, which don't count as
   gestures. Until then, nothing loads. A hidden tab or muted sound suspends the context. The default `ambient`

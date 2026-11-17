@@ -233,6 +233,12 @@ export function connectWorldSounds(engine: WorldEngine, sound: SoundEngine): () 
     );
   }
 
+  for (const effect of frame.effects) {
+    if (effect.kind === "tornado" && effect.elapsedSeconds !== undefined) {
+      effects.hear(effect, viewOf());
+    }
+  }
+
   const unsubscribeFrames = engine.session.subscribe(hearFrame);
   const unsubscribeCommands = engine.session.subscribeToCommands((command) => {
     powers.hear(command, secondsNow(), engine.session.isAdvancing);

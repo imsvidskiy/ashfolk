@@ -4,7 +4,8 @@ const MOVE_SPEED_PER_DISTANCE = 0.9;
 const TURN_SPEED = 1.6;
 const PITCH_SPEED = 0.9;
 const ZOOM_SPEED = 1.8;
-const TYPING_TAGS: ReadonlySet<string> = new Set(["INPUT", "SELECT", "TEXTAREA"]);
+const SHORTCUT_EXCLUSIONS =
+  'input, select, textarea, dialog, [role="dialog"], [role="alertdialog"], [role="menu"], [role="listbox"]';
 
 type CameraAction =
   | "back"
@@ -37,16 +38,22 @@ const KEY_ACTIONS: ReadonlyMap<string, CameraAction> = new Map([
   ["NumpadSubtract", "zoomOut"],
 ]);
 
-export function isTypingTarget(target: EventTarget | null): boolean {
-  if (!(target instanceof HTMLElement)) {
+export function canUseGameShortcut(event: KeyboardEvent): boolean {
+  if (event.defaultPrevented || event.ctrlKey || event.metaKey || event.altKey) {
     return false;
   }
 
-  return target.isContentEditable || TYPING_TAGS.has(target.tagName);
+  const { target } = event;
+
+  if (!(target instanceof Element)) {
+    return true;
+  }
+
+  return !(target instanceof HTMLElement && target.isContentEditable) && target.closest(SHORTCUT_EXCLUSIONS) === null;
 }
 
 function actionOf(event: KeyboardEvent): CameraAction | undefined {
-  if (event.defaultPrevented || event.ctrlKey || event.metaKey || event.altKey || isTypingTarget(event.target)) {
+  if (!canUseGameShortcut(event)) {
     return undefined;
   }
 

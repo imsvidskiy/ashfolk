@@ -1,8 +1,9 @@
 import { RotateCcw, SlidersHorizontal } from "lucide-react";
 import { useState } from "react";
 import { describeParameters, type ParameterValue } from "../../content/parameters.ts";
-import { POWERS, type PowerId } from "../../content/powers.ts";
+import { isPowerId, POWERS, type PowerId, powerFamily } from "../../content/powers.ts";
 import { IconButton } from "../../design/buttons.tsx";
+import { SegmentedChoice } from "../../design/choice-field.tsx";
 import { cn } from "../../design/cn.ts";
 import { GameIcon } from "../../design/game-icon.tsx";
 import { Island } from "../../design/island.tsx";
@@ -54,6 +55,30 @@ function useFieldDisclosure() {
   return { areFieldsShown: !isCompact || isExpanded, handleFieldsToggle, isCompact };
 }
 
+function handleVariantChange(value: string): void {
+  if (isPowerId(value)) {
+    usePowerStore.getState().selectPower(value);
+  }
+}
+
+function PowerVariants({ powerId }: { readonly powerId: PowerId }) {
+  const family = powerFamily(powerId);
+
+  if (family === undefined) {
+    return null;
+  }
+
+  const options = family.map((id) => {
+    return { label: POWERS[id].name, value: id };
+  });
+
+  return (
+    <div className="order-last basis-full whitespace-nowrap @xl:order-none @xl:basis-auto">
+      <SegmentedChoice label="Cast mode" onChange={handleVariantChange} options={options} value={powerId} />
+    </div>
+  );
+}
+
 function PowerSettingsContent({ powerId }: { readonly powerId: PowerId }) {
   const { handleParameterChange, handleReset, values } = usePowerParameters(powerId);
   const { areFieldsShown, handleFieldsToggle, isCompact } = useFieldDisclosure();
@@ -63,7 +88,7 @@ function PowerSettingsContent({ powerId }: { readonly powerId: PowerId }) {
 
   return (
     <section aria-label={`${power.name} settings`} className="@container flex min-h-0 flex-1 flex-col gap-3 p-3">
-      <header className="flex items-center gap-2.5">
+      <header className="flex flex-wrap items-center gap-2.5">
         <span className="bg-ink/6 grid size-9 shrink-0 place-items-center rounded-xl">
           <GameIcon name={POWER_ICONS[powerId]} size={28} />
         </span>
@@ -75,6 +100,8 @@ function PowerSettingsContent({ powerId }: { readonly powerId: PowerId }) {
             {USAGE_HINTS[power.usage]}
           </p>
         </div>
+
+        <PowerVariants powerId={powerId} />
 
         {isCompact ? (
           <IconButton
@@ -90,6 +117,8 @@ function PowerSettingsContent({ powerId }: { readonly powerId: PowerId }) {
 
       {areFieldsShown ? (
         <ScrollPanel className="-mx-1 px-1">
+          <p className="text-ink-soft mb-3 text-sm leading-snug">{power.description}</p>
+
           <div className={cn("grid gap-3", { "@sm:grid-cols-2": fields.length > 1 })}>
             {fields.map((field) => {
               return (

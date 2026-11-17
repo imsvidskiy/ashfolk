@@ -10,12 +10,13 @@ interface SavesStore {
   readonly acceptedLand: GameSession | null;
   readonly acceptLand: (session: GameSession) => void;
   readonly canReadSaves: boolean;
-  readonly hasFailed: boolean;
   readonly isSaving: boolean;
+  readonly isWaitingToLeave: boolean;
   readonly lastSavedAt: number | null;
   readonly refresh: () => Promise<void>;
   readonly remove: (id: string) => Promise<void>;
   readonly saveNow: () => Promise<SaveOutcome>;
+  readonly saveProblem: "busy" | "failed" | null;
   readonly saver: WorldSaver | null;
   readonly worlds: readonly SavedWorldListing[];
 }
@@ -27,8 +28,8 @@ export const useSavesStore = create<SavesStore>()((set, get) => {
       set({ acceptedLand: session });
     },
     canReadSaves: true,
-    hasFailed: false,
     isSaving: false,
+    isWaitingToLeave: false,
     lastSavedAt: null,
     refresh: async () => {
       const worlds = await listSavedWorlds();
@@ -52,12 +53,17 @@ export const useSavesStore = create<SavesStore>()((set, get) => {
         return "unchanged";
       }
 
-      const outcome = await saver.saveSoon();
+      const outcome = await saver.saveSoon().catch((): SaveOutcome => {
+        return "failed";
+      });
 
-      set({ hasFailed: outcome === "failed" });
+      if (get().saver === saver) {
+        set({ saveProblem: outcome === "busy" || outcome === "failed" ? outcome : null });
+      }
 
       return outcome;
     },
+    saveProblem: null,
     saver: null,
     worlds: [],
   };
@@ -76,19 +82,36 @@ export function useIsLandChangePending(session: GameSession | null): boolean {
 }
 
 export function saveBeforeLeaving(leave: () => void): void {
-  useSavesStore.getState().saveNow().finally(leave);
+  const { isWaitingToLeave, saveNow, saver } = useSavesStore.getState();
+
+  if (isWaitingToLeave) {
+    return;
+  }
+
+  useSavesStore.setState({ isWaitingToLeave: true, saveProblem: null });
+  saveNow().then((outcome) => {
+    if (useSavesStore.getState().saver !== saver) {
+      return;
+    }
+
+    useSavesStore.setState({ isWaitingToLeave: false });
+
+    if (outcome === "saved" || outcome === "unchanged") {
+      leave();
+    }
+  });
 }
 
 function reportOutcome(outcome: SaveOutcome): void {
   if (outcome === "failed") {
-    useSavesStore.setState({ hasFailed: true });
+    useSavesStore.setState({ saveProblem: "failed" });
   }
 }
 
 export function connectAutosave(session: GameSession, identity: SavedWorldIdentity): () => void {
   const saver = new WorldSaver(session, identity, {
     onSaved: (savedAt) => {
-      useSavesStore.setState({ hasFailed: false, lastSavedAt: savedAt });
+      useSavesStore.setState({ lastSavedAt: savedAt, saveProblem: null });
     },
     onSaving: (isSaving) => {
       useSavesStore.setState({ isSaving });
@@ -109,7 +132,7 @@ export function connectAutosave(session: GameSession, identity: SavedWorldIdenti
 
   document.addEventListener("visibilitychange", saveWhenHidden);
   window.addEventListener("pagehide", autosave);
-  useSavesStore.setState({ hasFailed: false, isSaving: false, lastSavedAt: null, saver });
+  useSavesStore.setState({ isSaving: false, isWaitingToLeave: false, lastSavedAt: null, saveProblem: null, saver });
 
   return () => {
     window.clearInterval(interval);
@@ -117,7 +140,7 @@ export function connectAutosave(session: GameSession, identity: SavedWorldIdenti
     window.removeEventListener("pagehide", autosave);
 
     if (useSavesStore.getState().saver === saver) {
-      useSavesStore.setState({ isSaving: false, saver: null });
+      useSavesStore.setState({ isSaving: false, isWaitingToLeave: false, saver: null });
     }
   };
 }

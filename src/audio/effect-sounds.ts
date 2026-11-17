@@ -114,7 +114,8 @@ export class EffectSounds {
   }
 
   #startTwister(effect: TornadoEffect): void {
-    const start = tornadoPositionAt(effect.path, 0);
+    const { elapsedSeconds: age = 0 } = effect;
+    const start = tornadoPositionAt(effect.path, age);
     const loop = this.#engine.loop(SOUNDS.tornado, this.#groundPoint(start.x, start.z), {
       seconds: TORNADO_FADE_SECONDS,
       volume: 1,
@@ -124,7 +125,7 @@ export class EffectSounds {
       return;
     }
 
-    this.#twisters.push({ age: 0, duration: tornadoDuration(effect.path), effect, loop });
+    this.#twisters.push({ age, duration: tornadoDuration(effect.path), effect, loop });
   }
 
   #play(sound: SoundDefinition, x: number, z: number, options: PlayOptions = {}): void {

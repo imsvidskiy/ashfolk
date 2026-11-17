@@ -1,100 +1,52 @@
 import type { PowerId } from "../../content/powers.ts";
 import type { ChronicleCategory } from "../../simulation/chronicle.ts";
 
-export const INTRO_TIPS = ["look", "pick", "use", "speed", "follow"] as const;
+export const INTRO_TIPS = ["follow", "use", "speed", "chronicle"] as const;
 
 const MOMENT_TIPS = ["fire", "winter", "era", "feud"] as const;
 
+type IntroTip = (typeof INTRO_TIPS)[number];
+
+type MomentTip = (typeof MOMENT_TIPS)[number];
+
+export type GuideTipId = IntroTip | MomentTip;
+
 const TIP_IDS: ReadonlySet<string> = new Set([...INTRO_TIPS, ...MOMENT_TIPS]);
 
-const WINTER = "Winter";
-
-type GuideTipId = (typeof INTRO_TIPS)[number] | (typeof MOMENT_TIPS)[number];
-
 export type GuideEvent =
-  | { readonly kind: "cameraMoved" }
+  | { readonly kind: "step"; readonly step: IntroTip }
   | { readonly category: ChronicleCategory; readonly kind: "chronicle" }
-  | { readonly kind: "powerPicked" }
-  | { readonly kind: "powerUsed" }
   | { readonly kind: "season"; readonly name: string }
-  | { readonly kind: "selected" }
-  | { readonly kind: "speedChanged"; readonly speed: number };
-
-export interface GuideTip {
-  readonly powerId: PowerId | null;
-  readonly text: string;
-}
-
-export const GUIDE_TIPS: Readonly<Record<GuideTipId, GuideTip>> = {
-  era: { powerId: "inspiration", text: "A tribe reached a new era. Inspiration brings its next discovery sooner." },
-  feud: { powerId: null, text: "Tribes are feuding. The Relations tab of the journal follows their quarrels." },
-  fire: { powerId: "rain", text: "Fire spreads with the wind. Rain puts it out." },
-  follow: { powerId: null, text: "Tap a tribe's banner to see its people, then follow them with the camera." },
-  look: { powerId: null, text: "You are the god of this island. Drag to look around, and scroll or pinch to zoom." },
-  pick: { powerId: "lightning", text: "Your powers are in the dock below. Pick Lightning and strike a tree." },
-  speed: { powerId: null, text: "Time runs on its own. Pick a faster speed to watch the tribes grow." },
-  use: { powerId: null, text: "Click or tap the land to use the power. Pick Select to put it away." },
-  winter: { powerId: "healing", text: "Winter is here. Healing feeds and warms everyone inside its circle." },
-};
+  | { readonly kind: "cast"; readonly powerId: PowerId };
 
 export interface GuideProgress {
   readonly done: readonly GuideTipId[];
   readonly isOff: boolean;
-  readonly shown: GuideTipId | null;
+  readonly shown: MomentTip | null;
 }
 
 export const FRESH_GUIDE: GuideProgress = { done: [], isOff: false, shown: null };
 
-function completedIntroTip(event: GuideEvent): GuideTipId | null {
-  switch (event.kind) {
-    case "cameraMoved":
-      return "look";
-    case "powerPicked":
-      return "pick";
-    case "powerUsed":
-      return "use";
-    case "selected":
-      return "follow";
-    case "speedChanged":
-      return event.speed > 1 ? "speed" : null;
-    default:
-      return null;
-  }
-}
+const SUGGESTED_POWERS: Partial<Record<GuideTipId, PowerId>> = {
+  era: "inspiration",
+  fire: "rain",
+  use: "abundance",
+  winter: "healing",
+};
 
-function momentTip(event: GuideEvent): GuideTipId | null {
+function momentTip(event: GuideEvent): MomentTip | null {
   if (event.kind === "season") {
-    return event.name === WINTER ? "winter" : null;
+    return event.name === "Winter" ? "winter" : null;
   }
 
-  if (event.kind !== "chronicle") {
-    return null;
+  if (
+    event.kind === "chronicle" &&
+    (event.category === "era" || event.category === "feud" || event.category === "fire")
+  ) {
+    return event.category;
   }
 
-  switch (event.category) {
-    case "era":
-      return "era";
-    case "feud":
-      return "feud";
-    case "fire":
-      return "fire";
-    default:
-      return null;
-  }
-}
-
-function withDone(done: readonly GuideTipId[], tip: GuideTipId | null): readonly GuideTipId[] {
-  if (tip === null || done.includes(tip)) {
-    return done;
-  }
-
-  return [...done, tip];
-}
-
-function hasFinishedIntro(progress: GuideProgress): boolean {
-  return INTRO_TIPS.every((tip) => {
-    return progress.done.includes(tip);
-  });
+  return null;
 }
 
 export function isGuideTipId(value: string): value is GuideTipId {
@@ -119,34 +71,33 @@ export function currentTip(progress: GuideProgress): GuideTipId | null {
 
 export function suggestedPowerId(progress: GuideProgress): PowerId | null {
   const tip = currentTip(progress);
+  const powerId = tip === null ? undefined : SUGGESTED_POWERS[tip];
 
-  return tip === null ? null : GUIDE_TIPS[tip].powerId;
+  return powerId === undefined ? null : powerId;
 }
 
 export function applyGuideEvent(progress: GuideProgress, event: GuideEvent): GuideProgress {
-  const done = withDone(progress.done, completedIntroTip(event));
-  const hasActed = event.kind === "powerUsed" && progress.shown !== null;
-  const shown = hasActed ? null : progress.shown;
-  const isUnchanged = done === progress.done && shown === progress.shown;
-  const advanced = isUnchanged ? progress : { ...progress, done, shown };
+  if (progress.isOff) {
+    return progress;
+  }
 
-  if (shown !== null || !hasFinishedIntro(advanced)) {
-    return advanced;
+  if (event.kind === "step") {
+    return progress.done.includes(event.step) ? progress : { ...progress, done: [...progress.done, event.step] };
+  }
+
+  if (progress.shown !== null) {
+    if (event.kind === "cast" && SUGGESTED_POWERS[progress.shown] === event.powerId) {
+      return { ...progress, shown: null };
+    }
+
+    return progress;
   }
 
   const tip = momentTip(event);
 
-  if (tip === null || done.includes(tip)) {
-    return advanced;
+  if (tip === null || progress.done.includes(tip) || currentTip(progress) !== null) {
+    return progress;
   }
 
-  return { ...advanced, done: [...done, tip], shown: tip };
-}
-
-export function dismissTip(progress: GuideProgress): GuideProgress {
-  if (progress.shown !== null) {
-    return { ...progress, shown: null };
-  }
-
-  return { ...progress, done: withDone(progress.done, currentTip(progress)) };
+  return { ...progress, done: [...progress.done, tip], shown: tip };
 }

@@ -73,9 +73,9 @@ describe("autosave", () => {
 
     await expect
       .poll(() => {
-        return useSavesStore.getState().hasFailed;
+        return useSavesStore.getState().saveProblem;
       })
-      .toBe(true);
+      .toBe("failed");
   });
 
   it("lets go of its saver only while it is the current one", async () => {
@@ -114,6 +114,39 @@ describe("saving before leaving", () => {
   it("leaves while no world is open", async () => {
     const leave = vi.fn<() => void>();
 
+    saveBeforeLeaving(leave);
+
+    await vi.waitFor(() => {
+      expect(leave).toHaveBeenCalledOnce();
+    });
+  });
+
+  it("stays in the world after a busy save or a storage failure", async () => {
+    const { session } = await connectWorld();
+    const leave = vi.fn<() => void>();
+    const save = vi.spyOn(session, "saveWorld").mockResolvedValue(null);
+
+    saveBeforeLeaving(leave);
+    saveBeforeLeaving(leave);
+
+    await vi.waitFor(
+      () => {
+        expect(useSavesStore.getState().saveProblem).toBe("busy");
+      },
+      { timeout: 5000 }
+    );
+    expect(leave).not.toHaveBeenCalled();
+
+    vi.spyOn(console, "warn").mockImplementation(ignore);
+    save.mockRejectedValue(new Error("Storage failed"));
+    saveBeforeLeaving(leave);
+
+    await vi.waitFor(() => {
+      expect(useSavesStore.getState().saveProblem).toBe("failed");
+    });
+    expect(leave).not.toHaveBeenCalled();
+
+    save.mockRestore();
     saveBeforeLeaving(leave);
 
     await vi.waitFor(() => {

@@ -53,6 +53,8 @@ describe("powers", () => {
       "earthquake",
       "volcano",
       "tornado",
+      "nuclear",
+      "black-hole",
     ]);
   });
 

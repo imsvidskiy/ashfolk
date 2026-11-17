@@ -27,10 +27,11 @@ import { type FireSnapshot, FireSystem } from "./nature/fire.ts";
 import { SurfaceSystem } from "./nature/surface.ts";
 import { type VegetationGrowthSnapshot, VegetationGrowthSystem } from "./nature/vegetation-growth.ts";
 import { type WeatherState, WeatherSystem } from "./nature/weather.ts";
+import { type BlackHole, BlackHoleSystem } from "./powers/black-holes.ts";
 import { naturalStrikeSite, strikeLightning } from "./powers/catastrophes.ts";
 import { type PowerOutcome, type PowerServices, type PowerTarget, percent } from "./powers/power-handler.ts";
 import { applyPower, parsePowerParameters } from "./powers/power-registry.ts";
-import { TornadoSystem } from "./powers/tornadoes.ts";
+import { type Tornado, TornadoSystem } from "./powers/tornadoes.ts";
 import { type Volcano, VolcanoSystem } from "./powers/volcanoes.ts";
 import { type BuildingIncidentKind, BuildingSystem, type BuildingsSnapshot } from "./society/buildings.ts";
 import { type RivalrySnapshot, RivalrySystem } from "./society/rivalry/rivalry-system.ts";
@@ -70,6 +71,7 @@ const GLOWING_EMBER_INTENSITY = 0.35;
 const COOLING_EMBER_HEAT = 0.22;
 
 export interface SimulationSnapshot {
+  blackHoles?: BlackHole[];
   buildings: BuildingsSnapshot;
   calendar: CalendarSnapshot;
   chronicle: ChronicleSnapshot;
@@ -87,6 +89,7 @@ export interface SimulationSnapshot {
   surfaceRow: number;
   tick: number;
   tickBacklog: number;
+  tornadoes?: Tornado[];
   vegetationGrowth: VegetationGrowthSnapshot;
   viewFocus: Waypoint;
   volcanoes?: Volcano[];
@@ -147,6 +150,7 @@ export class Simulation {
   readonly #frameBuilder: FrameBuilder;
   readonly #identifiers = new IdentifierSource();
   readonly #surface: SurfaceSystem;
+  readonly #blackHoles = new BlackHoleSystem();
   readonly #tornadoes = new TornadoSystem();
   readonly #vegetationGrowth: VegetationGrowthSystem;
   #grab: Grab | null = null;
@@ -199,13 +203,11 @@ export class Simulation {
   }
 
   get isBusy(): boolean {
-    return (
-      this.#tasks.length > 0 ||
-      this.#stroke !== null ||
-      this.#grab !== null ||
-      this.#tornadoes.isActive ||
-      this.waterRecomputation.isPending
-    );
+    return this.#hasPendingEdits || this.#blackHoles.isActive || this.#tornadoes.isActive;
+  }
+
+  get #hasPendingEdits(): boolean {
+    return this.#tasks.length > 0 || this.#stroke !== null || this.#grab !== null || this.waterRecomputation.isPending;
   }
 
   get held(): HeldView | null {
@@ -269,11 +271,12 @@ export class Simulation {
   }
 
   snapshot(): SimulationSnapshot | null {
-    if (this.isBusy) {
+    if (this.#hasPendingEdits) {
       return null;
     }
 
     return {
+      blackHoles: this.#blackHoles.snapshot(),
       buildings: this.buildings.snapshot(),
       calendar: this.calendar.snapshot(),
       chronicle: this.chronicle.snapshot(),
@@ -291,6 +294,7 @@ export class Simulation {
       surfaceRow: this.#surface.nextRow,
       tick: this.#tick,
       tickBacklog: this.#tickBacklog,
+      tornadoes: this.#tornadoes.snapshot(),
       vegetationGrowth: this.#vegetationGrowth.snapshot(),
       viewFocus: { ...this.#viewFocus },
       volcanoes: this.volcanoes.snapshot(),
@@ -327,12 +331,13 @@ export class Simulation {
     this.#tickBacklog = snapshot.tickBacklog;
     this.#viewFocus = { ...snapshot.viewFocus };
     this.#tasks = [];
-    this.#tornadoes.clear();
     this.#stroke = null;
     this.#grab = null;
     this.#notices = [];
     this.#waterUpdate = null;
     this.effects.takeEffects();
+    this.#blackHoles.restore(snapshot.blackHoles === undefined ? [] : snapshot.blackHoles, this.effects);
+    this.#tornadoes.restore(snapshot.tornadoes === undefined ? [] : snapshot.tornadoes, this.effects);
   }
 
   execute(command: unknown): void {
@@ -564,6 +569,7 @@ export class Simulation {
 
   #createServices(): PowerServices {
     return {
+      blackHoles: this.#blackHoles,
       buildings: this.buildings,
       chronicle: this.chronicle,
       effects: this.effects,
@@ -749,6 +755,7 @@ export class Simulation {
     this.embers.update(TICK_SECONDS, (ember) => {
       this.#landEmber(ember);
     });
+    this.#blackHoles.update(TICK_SECONDS, this.services);
     this.#tornadoes.update(TICK_SECONDS, this.services);
     this.volcanoes.update(TICK_SECONDS, this.services);
     this.#surface.update(TICK_SECONDS, days, environment, rules);

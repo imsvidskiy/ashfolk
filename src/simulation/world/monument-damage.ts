@@ -29,12 +29,13 @@ const PILE_SHARE = 0.5;
 const ROLL_SALT = 41.3;
 const FRAGMENT_SALT = 7.7;
 
-export type Catastrophe = "earthquake" | "explosion" | "meteor";
+export type Catastrophe = "earthquake" | "explosion" | "meteor" | "nuclear";
 
 const CATASTROPHE_NAMES: Readonly<Record<Catastrophe, string>> = {
   earthquake: "The earthquake",
   explosion: "The blast",
   meteor: "The meteor",
+  nuclear: "The nuclear blast",
 };
 
 type DamageOdds = readonly [readonly number[], readonly number[], readonly number[]];

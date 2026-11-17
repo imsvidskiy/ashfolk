@@ -56,7 +56,7 @@ function useListChange(onChange: (value: string) => void) {
   };
 }
 
-function SegmentedChoice({ label, onChange, options, value }: ChoiceFieldProps) {
+export function SegmentedChoice({ label, onChange, options, value }: ChoiceFieldProps) {
   const handleChange = useSegmentChange(onChange);
 
   return (

@@ -4,10 +4,10 @@ import { persist } from "zustand/middleware";
 import { mergeStoredField } from "../../app/preferences.ts";
 import {
   applyGuideEvent,
-  dismissTip,
   FRESH_GUIDE,
   type GuideEvent,
   type GuideProgress,
+  INTRO_TIPS,
   isGuideTipId,
 } from "./guide-tips.ts";
 
@@ -31,7 +31,7 @@ export const useGuideStore = create<GuideStore>()(
       return {
         dismiss: () => {
           set((state) => {
-            return { progress: dismissTip(state.progress) };
+            return { progress: { ...state.progress, shown: null } };
           });
         },
         progress: FRESH_GUIDE,
@@ -67,5 +67,11 @@ export function readStoredGuide(value: unknown): GuideProgress {
     return FRESH_GUIDE;
   }
 
-  return { ...FRESH_GUIDE, done: result.data.done.filter(isGuideTipId), isOff: result.data.isOff };
+  const { done, isOff } = result.data;
+  const hadFinished = ["look", "pick", "use", "speed", "follow"].every((tip) => {
+    return done.includes(tip);
+  });
+  const kept = done.filter(isGuideTipId);
+
+  return { ...FRESH_GUIDE, done: hadFinished ? [...new Set([...kept, ...INTRO_TIPS])] : kept, isOff };
 }

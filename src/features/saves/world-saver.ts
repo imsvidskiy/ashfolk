@@ -53,6 +53,10 @@ export class WorldSaver {
   }
 
   async saveSoon(retries = BUSY_RETRIES): Promise<SaveOutcome> {
+    if (this.#pending !== null) {
+      await this.#pending;
+    }
+
     const outcome = await this.save();
 
     if (outcome !== "busy" || retries <= 0) {

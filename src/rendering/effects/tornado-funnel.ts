@@ -42,6 +42,7 @@ export class TornadoFunnel implements ActiveEffect {
   #age = 0;
 
   constructor(context: EffectContext, effect: TornadoEffect) {
+    this.#age = effect.elapsedSeconds === undefined ? 0 : effect.elapsedSeconds;
     this.#context = context;
     this.#effect = effect;
     this.#duration = tornadoDuration(effect.path);

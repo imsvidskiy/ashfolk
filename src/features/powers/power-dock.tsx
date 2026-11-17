@@ -1,12 +1,13 @@
 import { ScrollArea } from "@base-ui/react/scroll-area";
 import { Toolbar } from "@base-ui/react/toolbar";
-import { Hand, MousePointer2 } from "lucide-react";
+import { Hand, Layers2, MousePointer2 } from "lucide-react";
 import { Fragment, type ReactNode, type RefObject, useEffect, useRef, useState } from "react";
 import {
   POWER_CATEGORIES,
   POWERS,
   type PowerCategory,
   type PowerId,
+  powerFamily,
   powerGroupsInCategory,
   powersInCategory,
 } from "../../content/powers.ts";
@@ -16,7 +17,7 @@ import type { GameIconName } from "../../design/game-icon-sources.ts";
 import { Island } from "../../design/island.tsx";
 import { FOCUS_RING } from "../../design/styles.ts";
 import { WithTooltip } from "../../design/tooltip.tsx";
-import { isTypingTarget } from "../../game/input/keyboard-controls.ts";
+import { canUseGameShortcut } from "../../game/input/keyboard-controls.ts";
 import { useGuideStore } from "../guide/guide-store.ts";
 import { suggestedPowerId } from "../guide/guide-tips.ts";
 import { POWER_ICONS } from "./power-icons.ts";
@@ -27,8 +28,6 @@ const SELECT_HINT = "Tap people, animals, buildings or land to see their details
 const HAND_HINT = "Pick up people, animals, trees and bushes and set them down elsewhere.";
 
 const DIGIT_KEYS = ["Digit1", "Digit2", "Digit3", "Digit4", "Digit5", "Digit6", "Digit7", "Digit8", "Digit9"];
-
-const DIALOG_SELECTOR = '[role="dialog"], [role="alertdialog"]';
 
 const CELL_CLASS = `grid size-11 shrink-0 snap-start place-items-center rounded-xl transition-[background-color,box-shadow,translate,scale] duration-150 hover:bg-paper-hover active:scale-95 motion-safe:hover:-translate-y-0.5 ${FOCUS_RING}`;
 
@@ -77,10 +76,6 @@ function initialKind(): PowerCategory {
   return selectedPowerId === null ? "elements" : POWERS[selectedPowerId].category;
 }
 
-function isInDialog(target: EventTarget | null): boolean {
-  return target instanceof Element && target.closest(DIALOG_SELECTOR) !== null;
-}
-
 function hotkeyOf(index: number): string | undefined {
   return index < DIGIT_KEYS.length ? String(index + 1) : undefined;
 }
@@ -97,19 +92,39 @@ function useSuggestedPower(): PowerId | null {
 }
 
 function usePowerSelection(powerId: PowerId) {
+  const buttonReference = useRef<HTMLButtonElement>(null);
+  const family = powerFamily(powerId);
   const isSelected = usePowerStore((state) => {
-    return state.selectedPowerId === powerId;
+    return (
+      state.selectedPowerId === powerId ||
+      (state.selectedPowerId !== null && family?.includes(state.selectedPowerId) === true)
+    );
   });
   const selectPower = usePowerStore((state) => {
     return state.selectPower;
   });
   const isSuggested = useSuggestedPower() === powerId;
 
+  useEffect(() => {
+    const button = buttonReference.current;
+
+    if (!isSelected || button === null) {
+      return;
+    }
+
+    const viewport = button.closest(".scroll-fade-x")?.getBoundingClientRect();
+    const bounds = button.getBoundingClientRect();
+
+    if (viewport !== undefined && (bounds.left < viewport.left || bounds.right > viewport.right)) {
+      button.scrollIntoView({ block: "nearest", inline: "center" });
+    }
+  }, [isSelected]);
+
   function handleToggle(): void {
     selectPower(isSelected ? null : powerId);
   }
 
-  return { handleToggle, isSelected, isSuggested };
+  return { buttonReference, handleToggle, isSelected, isSuggested };
 }
 
 function useClearPower() {
@@ -155,14 +170,7 @@ function useDigitHotkeys(kind: PowerCategory): void {
     const powers = powersInCategory(kind);
 
     function handleKeyDown(event: KeyboardEvent): void {
-      if (
-        event.altKey ||
-        event.ctrlKey ||
-        event.metaKey ||
-        event.repeat ||
-        isTypingTarget(event.target) ||
-        isInDialog(event.target)
-      ) {
+      if (event.repeat || !canUseGameShortcut(event)) {
         return;
       }
 
@@ -231,7 +239,7 @@ function TileHint({ description, hotkey, name }: TileHintProps) {
 }
 
 function PowerTile({ hotkey, powerId }: PowerTileProps) {
-  const { handleToggle, isSelected, isSuggested } = usePowerSelection(powerId);
+  const { buttonReference, handleToggle, isSelected, isSuggested } = usePowerSelection(powerId);
 
   const power = POWERS[powerId];
 
@@ -241,10 +249,19 @@ function PowerTile({ hotkey, powerId }: PowerTileProps) {
         aria-keyshortcuts={hotkey}
         aria-label={power.name}
         aria-pressed={isSelected}
-        className={cn(CELL_CLASS, { [CHOSEN_CELL_CLASS]: isSelected, [SUGGESTED_CLASS]: isSuggested })}
+        className={cn(CELL_CLASS, "relative", { [CHOSEN_CELL_CLASS]: isSelected, [SUGGESTED_CLASS]: isSuggested })}
         onClick={handleToggle}
+        ref={buttonReference}
       >
         <GameIcon name={POWER_ICONS[powerId]} size={30} />
+
+        {powerFamily(powerId) === undefined ? null : (
+          <Layers2
+            aria-hidden="true"
+            className="bg-paper text-ink-soft absolute right-0.5 bottom-0.5 rounded-sm"
+            size={12}
+          />
+        )}
       </Toolbar.Button>
     </WithTooltip>
   );
@@ -346,6 +363,14 @@ export function PowerDock({ className }: { readonly className?: string | undefin
   const [kind, setKind] = useState(initialKind);
 
   const powers = powersInCategory(kind);
+
+  useEffect(() => {
+    return usePowerStore.subscribe((state, previous) => {
+      if (state.selectedPowerId !== null && previous.selectedPowerId !== state.selectedPowerId) {
+        setKind(POWERS[state.selectedPowerId].category);
+      }
+    });
+  }, []);
 
   useDigitHotkeys(kind);
 

@@ -4,7 +4,7 @@ import { COMPACT_QUERY } from "../../design/use-media-query.ts";
 
 export type JournalTab = "chronicle" | "relations" | "tribes";
 
-export type SettingsTab = "island" | "photo" | "sound" | "time" | "weather" | "world";
+export type SettingsTab = "general" | "island" | "photo" | "sound" | "time" | "weather" | "world";
 
 export interface InterfaceStore {
   readonly areLabelsShown: boolean;
@@ -40,7 +40,7 @@ export const useInterfaceStore = create<InterfaceStore>()((set) => {
       set({ isJournalOpen: true, journalTab: tab });
     },
     openSettings: () => {
-      set({ isSettingsOpen: true, settingsTab: "world" });
+      set({ isSettingsOpen: true });
     },
     setJournalTab: (tab) => {
       set({ journalTab: tab });
@@ -59,7 +59,7 @@ export const useInterfaceStore = create<InterfaceStore>()((set) => {
     setSettingsTab: (tab) => {
       set({ settingsTab: tab });
     },
-    settingsTab: "world",
+    settingsTab: "general",
     toggleMap: () => {
       set((state) => {
         return { isMapOpen: !state.isMapOpen };

@@ -52,7 +52,7 @@ describe("menu buttons", () => {
     expect(useInterfaceStore.getState().isMapOpen).toBe(true);
   });
 
-  it("opens the world settings", async () => {
+  it("reopens the last settings section", async () => {
     useInterfaceStore.setState({ settingsTab: "island" });
 
     const screen = await render(<MenuButtons />);
@@ -62,7 +62,7 @@ describe("menu buttons", () => {
     const state = useInterfaceStore.getState();
 
     expect(state.isSettingsOpen).toBe(true);
-    expect(state.settingsTab).toBe("world");
+    expect(state.settingsTab).toBe("island");
   });
 
   it("keeps the install button hidden until the browser offers it", async () => {

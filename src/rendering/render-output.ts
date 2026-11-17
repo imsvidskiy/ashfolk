@@ -9,6 +9,7 @@ import {
   type Node,
   RenderPipeline,
   type Scene,
+  type Texture,
   type WebGPURenderer,
 } from "three/webgpu";
 import { ignore } from "../shared/ignore.ts";
@@ -23,6 +24,7 @@ const VIGNETTE_STRENGTH = 0.38;
 export interface RenderOutput {
   readonly dispose: () => void;
   readonly render: () => void;
+  readonly sceneColor: Texture;
   readonly setOutlinesShown: (areShown: boolean) => void;
 }
 
@@ -93,6 +95,7 @@ export function createRenderOutput(
       outlines.pixelRatio.value = renderer.getPixelRatio();
       pipeline.render();
     },
+    sceneColor: solidPass.getTexture("output"),
     setOutlinesShown: (areShown) => {
       outlines.strength.value = areShown ? 1 : 0;
     },

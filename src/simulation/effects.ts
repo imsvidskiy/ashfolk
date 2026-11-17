@@ -10,6 +10,24 @@ export interface ArrowEffect {
   toZ: number;
 }
 
+export interface BlackHoleEffect {
+  durationSeconds: number;
+  elapsedSeconds?: number;
+  kind: "black-hole";
+  radius: number;
+  surfaceY: number;
+  x: number;
+  z: number;
+}
+
+export interface NuclearCloudEffect {
+  kind: "nuclear-cloud";
+  radius: number;
+  surfaceY: number;
+  x: number;
+  z: number;
+}
+
 export interface BlessingEffect {
   kind: "blessing";
   radius: number;
@@ -70,6 +88,7 @@ export interface SplashEffect {
 }
 
 export interface TornadoEffect {
+  elapsedSeconds?: number;
   kind: "tornado";
   path: readonly number[];
   radius: number;
@@ -77,7 +96,9 @@ export interface TornadoEffect {
 
 export type SimulationEffect =
   | ArrowEffect
+  | BlackHoleEffect
   | BlessingEffect
+  | NuclearCloudEffect
   | EarthquakeEffect
   | EmberEffect
   | ExplosionEffect

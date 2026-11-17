@@ -1,3 +1,4 @@
+import { ChevronDown } from "lucide-react";
 import { useSendCommand } from "../../app/use-engine.ts";
 import {
   describeParameterGroups,
@@ -7,10 +8,12 @@ import {
 } from "../../content/parameters.ts";
 import { DEFAULT_WORLD_RULES, readWorldRules, type WorldRules, worldRulesSchema } from "../../content/world-rules.ts";
 import { TextButton } from "../../design/buttons.tsx";
+import { cn } from "../../design/cn.ts";
+import { FOCUS_RING } from "../../design/styles.ts";
 import { useHeldDraft } from "../../design/use-held-draft.ts";
 import { ParameterControl } from "../parameters/parameter-control.tsx";
 import { useWorldStore } from "../world/world-store.ts";
-import { FIELD_GRID, GROUP_CLASS, GroupHeading } from "./settings-group.tsx";
+import { FIELD_GRID } from "./settings-group.tsx";
 
 const RULE_GROUPS = describeParameterGroups(worldRulesSchema);
 
@@ -84,17 +87,32 @@ function RuleControl({ field, group, onChange, rules }: RuleControlProps) {
 
 function RuleGroup({ group, onChange, rules }: RuleGroupProps) {
   return (
-    <fieldset className={GROUP_CLASS}>
-      <legend className="sr-only">{group.metadata.label}</legend>
+    <details
+      aria-label={group.metadata.label}
+      className="group border-line border-b last:border-b-0"
+      name="world-rules"
+    >
+      <summary
+        className={cn(
+          FOCUS_RING,
+          "hover:bg-paper-hover flex cursor-pointer list-none items-center justify-between gap-3 rounded-lg py-3 [&::-webkit-details-marker]:hidden"
+        )}
+      >
+        <span>
+          <span className="block text-sm font-bold">{group.metadata.label}</span>
 
-      <GroupHeading description={group.metadata.description} title={group.metadata.label} />
+          <span className="text-ink-soft block text-sm">{group.metadata.description}</span>
+        </span>
 
-      <div className={FIELD_GRID}>
+        <ChevronDown aria-hidden="true" className="text-ink-muted mr-1 shrink-0 group-open:rotate-180" size={16} />
+      </summary>
+
+      <div className={cn(FIELD_GRID, "pt-2 pb-4")}>
         {group.fields.map((field) => {
           return <RuleControl field={field} group={group} key={field.key} onChange={onChange} rules={rules} />;
         })}
       </div>
-    </fieldset>
+    </details>
   );
 }
 
@@ -108,7 +126,7 @@ export function WorldRulesSection() {
   return (
     <>
       <div className="flex items-center justify-between gap-3 pb-4">
-        <p className="text-ink-soft text-sm">Tune how nature and people behave on this island.</p>
+        <p className="text-ink-soft text-sm">Choose a group to change its rules.</p>
 
         <TextButton className="-mr-3 h-8 px-3" onClick={handleReset} tone="quiet">
           Reset all

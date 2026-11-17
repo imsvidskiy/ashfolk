@@ -1,13 +1,30 @@
+import { useEffect, useRef } from "react";
 import { useInterfaceStore } from "../interface/interface-store.ts";
 import { saveBeforeLeaving } from "./saves-store.ts";
 
 export function useLeaveWorld(): (leave: () => void) => void {
-  const setSettingsOpen = useInterfaceStore((state) => {
-    return state.setSettingsOpen;
-  });
+  const isMounted = useRef<boolean>(false);
+
+  useEffect(() => {
+    isMounted.current = true;
+
+    return () => {
+      isMounted.current = false;
+    };
+  }, []);
 
   return (leave) => {
-    setSettingsOpen(false);
-    saveBeforeLeaving(leave);
+    const wasOpen = useInterfaceStore.getState().isSettingsOpen;
+
+    saveBeforeLeaving(() => {
+      const { isSettingsOpen, setSettingsOpen } = useInterfaceStore.getState();
+
+      if (!isMounted.current || isSettingsOpen !== wasOpen) {
+        return;
+      }
+
+      setSettingsOpen(false);
+      leave();
+    });
   };
 }

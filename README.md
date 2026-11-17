@@ -57,7 +57,9 @@ Ashfolk is a free god simulator in your browser. Shape a floating island, call r
 - **Tribes.** People gather, hunt, farm and build, and grow from the Stone Age to the Iron Age.
 - **Feuds.** Tribes raid each other over land and later make peace.
 - **Wildlife.** Herds of deer, mammoths and ibex, hares, and wolf packs that hunt them.
-- **Powers.** Fire, lightning, rain, snow, meteors, earthquakes, terraforming and more.
+- **First island.** Visit a camp, feed its tribe and follow what happens in the chronicle through a short playable guide.
+- **Powers.** Call down a single meteor or a meteor shower, send a lightning storm or a swarm of tornadoes,
+  open a black hole over a camp, or leave a crater beneath a mushroom cloud.
 - **Healing land.** Burnt land grows back, and craters fill into lakes.
 - **Saves.** Worlds save in the browser on their own.
 

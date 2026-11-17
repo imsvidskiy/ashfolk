@@ -84,6 +84,21 @@ export const worldSummarySchema = z.object({
 const sparseSchema = z.object({ cells: z.instanceof(Int32Array), values: z.instanceof(Float64Array) });
 
 const snapshotShapeSchema = z.looseObject({
+  blackHoles: z
+    .array(
+      z.object({
+        effect: z.object({
+          durationSeconds: z.number().positive(),
+          kind: z.literal("black-hole"),
+          radius: z.number().positive(),
+          surfaceY: z.number(),
+          x: z.number(),
+          z: z.number(),
+        }),
+        remaining: z.number().positive(),
+      })
+    )
+    .optional(),
   buildings: z.looseObject({ buildings: z.array(z.looseObject({ id: z.number() })), losses: z.array(z.unknown()) }),
   calendar: z.looseObject({ day: z.number(), daySeconds: z.number().positive(), daysPerSeason: z.number().positive() }),
   chronicle: z.looseObject({ entries: z.array(z.unknown()), nextId: z.number() }),
@@ -106,6 +121,21 @@ const snapshotShapeSchema = z.looseObject({
   }),
   speed: z.number().positive(),
   tick: z.number().int().nonnegative(),
+  tornadoes: z
+    .array(
+      z.object({
+        age: z.number().nonnegative(),
+        path: z
+          .array(z.number())
+          .min(4)
+          .refine((path) => {
+            return path.length % 2 === 0;
+          }),
+        radius: z.number().positive(),
+        strength: z.number().positive(),
+      })
+    )
+    .optional(),
   vegetationGrowth: z.looseObject({}),
   waterRecomputation: z.looseObject({ settledHeights: sparseSchema }),
   weather: z.looseObject({ kind: z.string() }),

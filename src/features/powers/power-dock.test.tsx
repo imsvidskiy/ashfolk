@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { userEvent } from "vitest/browser";
+import { page, userEvent } from "vitest/browser";
 import { render } from "vitest-browser-react";
 import { POWERS, powersInCategory } from "../../content/powers.ts";
 import { PowerDock } from "./power-dock.tsx";
@@ -15,6 +15,8 @@ const ELEMENT_POWERS = [
   "Earthquake",
   "Volcano",
   "Tornado",
+  "Nuclear bomb",
+  "Black hole",
 ] as const;
 const LAND_POWERS = ["Raise land", "Lower land", "Flatten", "Smooth", "Forest", "Paint ground"] as const;
 const LIFE_POWERS = powersInCategory("life").map((powerId) => {
@@ -82,6 +84,26 @@ describe("power dock", () => {
     await expect
       .element(screen.getByRole("button", { exact: true, name: "Smooth" }))
       .toHaveAttribute("aria-pressed", "true");
+  });
+
+  it("reveals the equipped power on a narrow dock after a guide action", async () => {
+    await page.viewport(390, 844);
+
+    const screen = await render(<PowerDock />);
+
+    usePowerStore.getState().selectPower("abundance");
+
+    await expect
+      .element(screen.getByRole("button", { exact: true, name: "Life" }))
+      .toHaveAttribute("aria-pressed", "true");
+    const equipped = screen.getByRole("button", { exact: true, name: "Abundance" });
+
+    await expect.element(equipped).toHaveAttribute("aria-pressed", "true");
+    await expect
+      .poll(() => {
+        return equipped.element().getBoundingClientRect().right;
+      })
+      .toBeLessThanOrEqual(window.innerWidth);
   });
 
   it("shows icons alone and names each power with its key in its tooltip", async () => {

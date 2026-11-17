@@ -46,7 +46,7 @@ function createRingGeometry(): BufferGeometry {
 }
 
 export class GroundRing {
-  readonly mesh: Mesh;
+  readonly mesh: Mesh<BufferGeometry, MeshBasicNodeMaterial>;
   readonly #center = uniform(new Vector2());
   readonly #color = uniform(new Color(0xff_ff_ff));
   readonly #floor = uniform(NO_FLOOR);
@@ -92,5 +92,6 @@ export class GroundRing {
 
   dispose(): void {
     this.mesh.geometry.dispose();
+    this.mesh.material.dispose();
   }
 }

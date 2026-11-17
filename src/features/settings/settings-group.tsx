@@ -6,7 +6,7 @@ export const FIELD_GRID = "grid gap-x-6 gap-y-4 sm:grid-cols-2";
 
 interface GroupHeadingProps {
   readonly action?: ReactNode;
-  readonly description: string;
+  readonly description?: string | undefined;
   readonly title: string;
 }
 
@@ -14,9 +14,9 @@ export function GroupHeading({ action, description, title }: GroupHeadingProps) 
   return (
     <div className="flex items-start justify-between gap-3">
       <div className="flex min-w-0 flex-col gap-0.5">
-        <h3 className="text-ink text-sm font-semibold">{title}</h3>
+        <h3 className="text-ink text-base font-bold">{title}</h3>
 
-        <p className="text-ink-soft text-xs leading-relaxed">{description}</p>
+        {description === undefined ? null : <p className="text-ink-soft text-sm leading-snug">{description}</p>}
       </div>
 
       {action}
@@ -25,7 +25,7 @@ export function GroupHeading({ action, description, title }: GroupHeadingProps) 
 }
 
 interface SettingsGroupProps extends GroupHeadingProps {
-  readonly children: ReactNode;
+  readonly children?: ReactNode;
 }
 
 export function SettingsGroup({ action, children, description, title }: SettingsGroupProps) {

@@ -1,98 +1,56 @@
 import { describe, expect, it } from "vitest";
 import { FINISHED_INTRO } from "../testing/guide-fixtures.ts";
-import {
-  applyGuideEvent,
-  currentTip,
-  dismissTip,
-  FRESH_GUIDE,
-  type GuideEvent,
-  type GuideProgress,
-  isGuideTipId,
-  suggestedPowerId,
-} from "./guide-tips.ts";
+import { applyGuideEvent, currentTip, FRESH_GUIDE, INTRO_TIPS, isGuideTipId, suggestedPowerId } from "./guide-tips.ts";
 
-function applyAll(progress: GuideProgress, events: readonly GuideEvent[]): GuideProgress {
-  return events.reduce(applyGuideEvent, progress);
-}
+describe("guide steps", () => {
+  it("leads from a camp to the chronicle and remembers each task", () => {
+    let progress = FRESH_GUIDE;
 
-describe("guide tips", () => {
-  it("walks the intro in order as the player acts", () => {
-    expect(currentTip(FRESH_GUIDE)).toBe("look");
+    for (const step of INTRO_TIPS) {
+      expect(currentTip(progress)).toBe(step);
 
-    const looked = applyGuideEvent(FRESH_GUIDE, { kind: "cameraMoved" });
+      const event = { kind: "step", step } as const;
 
-    expect(currentTip(looked)).toBe("pick");
-    expect(suggestedPowerId(looked)).toBe("lightning");
-
-    const finished = applyAll(looked, [
-      { kind: "powerPicked" },
-      { kind: "powerUsed" },
-      { kind: "speedChanged", speed: 4 },
-      { kind: "selected" },
-    ]);
-
-    expect(currentTip(finished)).toBeNull();
-  });
-
-  it("counts a step the player takes out of order", () => {
-    const progress = applyGuideEvent(FRESH_GUIDE, { kind: "speedChanged", speed: 2 });
-
-    expect(progress.done).toEqual(["speed"]);
-    expect(currentTip(progress)).toBe("look");
-  });
-
-  it("does not count slowing time as a faster speed", () => {
-    expect(applyGuideEvent(FRESH_GUIDE, { kind: "speedChanged", speed: 1 }).done).toEqual([]);
-  });
-
-  it("keeps the same progress when an event changes nothing", () => {
-    const looked = applyGuideEvent(FRESH_GUIDE, { kind: "cameraMoved" });
-
-    expect(applyGuideEvent(looked, { kind: "cameraMoved" })).toBe(looked);
-    expect(applyGuideEvent(FINISHED_INTRO, { kind: "season", name: "Summer" })).toBe(FINISHED_INTRO);
-  });
-
-  it("skips the intro tip on dismiss", () => {
-    expect(currentTip(dismissTip(FRESH_GUIDE))).toBe("pick");
-  });
-
-  it("waits for the intro before tips about moments", () => {
-    const progress = applyGuideEvent(FRESH_GUIDE, { category: "fire", kind: "chronicle" });
-
-    expect(progress.shown).toBeNull();
-    expect(currentTip(progress)).toBe("look");
-  });
-
-  it("shows a moment tip once and points at its power", () => {
-    const shown = applyGuideEvent(FINISHED_INTRO, { category: "fire", kind: "chronicle" });
-
-    expect(currentTip(shown)).toBe("fire");
-    expect(suggestedPowerId(shown)).toBe("rain");
-
-    const again = applyGuideEvent(dismissTip(shown), { category: "fire", kind: "chronicle" });
-
-    expect(currentTip(again)).toBeNull();
-  });
-
-  it("keeps a shown tip until the player acts or dismisses it", () => {
-    const shown = applyGuideEvent(FINISHED_INTRO, { kind: "season", name: "Winter" });
-    const later = applyGuideEvent(shown, { category: "era", kind: "chronicle" });
-
-    expect(currentTip(later)).toBe("winter");
-    expect(currentTip(applyGuideEvent(later, { kind: "powerUsed" }))).toBeNull();
-  });
-
-  it("ignores other seasons and quiet chronicle entries", () => {
-    const progress = applyAll(FINISHED_INTRO, [
-      { kind: "season", name: "Summer" },
-      { category: "birth", kind: "chronicle" },
-    ]);
+      progress = applyGuideEvent(progress, event);
+      expect(applyGuideEvent(progress, event)).toBe(progress);
+    }
 
     expect(currentTip(progress)).toBeNull();
   });
 
-  it("shows nothing while tips are off", () => {
-    expect(currentTip({ ...FRESH_GUIDE, isOff: true })).toBeNull();
+  it("credits something the player discovered ahead of time", () => {
+    const progress = applyGuideEvent(FRESH_GUIDE, { kind: "step", step: "speed" });
+
+    expect(progress.done).toEqual(["speed"]);
+    expect(currentTip(progress)).toBe("follow");
+    expect(suggestedPowerId(applyGuideEvent(progress, { kind: "step", step: "follow" }))).toBe("abundance");
+  });
+
+  it("keeps the current lesson when a fire starts", () => {
+    const progress = applyGuideEvent(FRESH_GUIDE, { category: "fire", kind: "chronicle" });
+
+    expect(progress).toBe(FRESH_GUIDE);
+  });
+
+  it("shows a moment once and closes it when the suggested power is used", () => {
+    const event = { category: "fire", kind: "chronicle" } as const;
+    const shown = applyGuideEvent(FINISHED_INTRO, event);
+
+    expect(currentTip(shown)).toBe("fire");
+    expect(suggestedPowerId(shown)).toBe("rain");
+    expect(applyGuideEvent(shown, { kind: "cast", powerId: "lightning" })).toBe(shown);
+
+    const cleared = applyGuideEvent(shown, { kind: "cast", powerId: "rain" });
+
+    expect(currentTip(cleared)).toBeNull();
+    expect(applyGuideEvent(cleared, event)).toBe(cleared);
+  });
+
+  it("stops tracking progress after skipping", () => {
+    const skipped = { ...FRESH_GUIDE, isOff: true };
+
+    expect(currentTip(skipped)).toBeNull();
+    expect(applyGuideEvent(skipped, { kind: "step", step: "use" })).toBe(skipped);
   });
 
   it("recognizes only known tip ids", () => {
