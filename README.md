@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="public/logo.svg" alt="" width="96" height="96">
+  <img src="public/icon-192.png" alt="" width="96" height="96">
 </p>
 
 <h1 align="center">Ashfolk</h1>
