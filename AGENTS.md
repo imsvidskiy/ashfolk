@@ -62,8 +62,9 @@ bun run test       # unit tests in Node, browser tests in Chromium
 - Shaders are TSL node graphs. Keep large numbers out of float hashes: float32 loses precision past 16 million.
 - The engine project compiles with `noUncheckedIndexedAccess` off for typed arrays; the app and the tooling keep it on.
 - Game things (powers, resources, buildings, weather, events) use `design/game-icon.tsx` with the painted WebP icons
-  in `design/icons`; commit only the final WebP, not masters. Interface controls use `lucide-react` in the text
-  color.
+  in `design/icons`. Use `forest.webp` (the three spruces) as the drawing reference. Keep the broad painted
+  shapes, upper-left light and transparent silhouette legible at 24 px. Commit only the final WebP.
+  Interface controls use `lucide-react` in the text color.
 - Panels are islands from `design/island.tsx`: solid paper, no glass or blur. Islands in one row have the same height.
 - Saves store technology ids, plant species names and snapshot fields. Renaming one breaks old saves unless loading
   maps it.
