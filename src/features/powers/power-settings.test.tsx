@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { page, userEvent } from "vitest/browser";
 import { render } from "vitest-browser-react";
 import { defaultPowerParameters, POWERS } from "../../content/powers.ts";
+import { PowerDock } from "./power-dock.tsx";
 import { PowerSettings } from "./power-settings.tsx";
 import { usePowerStore } from "./power-store.ts";
 
@@ -133,6 +134,52 @@ describe("power settings", () => {
 describe("power settings on a phone", () => {
   beforeEach(async () => {
     await page.viewport(390, 844);
+  });
+
+  it("switches from one meteor to a shower without opening the phone sliders", async () => {
+    const screen = await render(
+      <>
+        <PowerDock />
+
+        <PowerSettings />
+      </>
+    );
+
+    const dock = screen.getByRole("toolbar", { name: "Powers" });
+    const meteor = dock.getByRole("button", { exact: true, name: "Meteor" });
+
+    await meteor.click();
+    await screen.getByRole("button", { exact: true, name: "Meteor shower" }).click();
+
+    expect(usePowerStore.getState().selectedPowerId).toBe("meteor-shower");
+    await expect.element(screen.getByRole("region", { name: "Meteor shower settings" })).toBeVisible();
+    await expect.element(meteor).toHaveAttribute("aria-pressed", "true");
+
+    await screen.getByRole("button", { name: "Adjust settings" }).click();
+    await expect.element(screen.getByRole("slider", { name: "Meteors" })).toBeVisible();
+
+    await meteor.click();
+
+    expect(usePowerStore.getState().selectedPowerId).toBeNull();
+  });
+
+  it("keeps cast mode in the header on a short landscape phone", async () => {
+    await page.viewport(667, 375);
+    usePowerStore.getState().selectPower("lightning");
+
+    const screen = await render(<PowerSettings />);
+    const mode = screen.getByRole("group", { name: "Cast mode" });
+    const adjust = screen.getByRole("button", { name: "Adjust settings" });
+
+    await expect.element(adjust).toHaveAttribute("aria-expanded", "false");
+    await mode.getByRole("button", { name: "Lightning storm" }).click();
+
+    expect(usePowerStore.getState().selectedPowerId).toBe("lightning-storm");
+
+    await adjust.click();
+
+    expect(mode.elements()).toHaveLength(1);
+    await expect.element(mode.getByRole("button", { name: "Lightning storm" })).toHaveAttribute("aria-pressed", "true");
   });
 
   it("keeps to one line until the settings are asked for", async () => {

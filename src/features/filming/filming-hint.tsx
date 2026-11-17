@@ -4,7 +4,7 @@ import { TextButton } from "../../design/buttons.tsx";
 import { Island } from "../../design/island.tsx";
 import { useIsTouch } from "../../design/use-media-query.ts";
 import type { Filming } from "../../game/filming.ts";
-import { isTypingTarget } from "../../game/input/keyboard-controls.ts";
+import { canUseGameShortcut } from "../../game/input/keyboard-controls.ts";
 import { TAP_TOLERANCE } from "../../game/input/pointer-controls.ts";
 import { useInterfaceStore } from "../interface/interface-store.ts";
 import { usePowerStore } from "../powers/power-store.ts";
@@ -19,11 +19,7 @@ interface TouchTap {
 }
 
 function isToggleKey(event: KeyboardEvent): boolean {
-  if (event.code !== "KeyH" || event.repeat || event.ctrlKey || event.metaKey || event.altKey) {
-    return false;
-  }
-
-  return !isTypingTarget(event.target);
+  return event.code === "KeyH" && !event.repeat && canUseGameShortcut(event);
 }
 
 function useInterfaceKey(): void {

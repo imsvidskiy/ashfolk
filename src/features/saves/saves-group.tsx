@@ -33,9 +33,6 @@ function useLastSave(): number | null {
 }
 
 function useSaveDescription(): string {
-  const hasFailed = useSavesStore((state) => {
-    return state.hasFailed;
-  });
   const isSaving = useSavesStore((state) => {
     return state.isSaving;
   });
@@ -44,10 +41,6 @@ function useSaveDescription(): string {
 
   if (isSaving) {
     return "Saving the world…";
-  }
-
-  if (hasFailed) {
-    return "The last save failed. This browser may block saving, for example in a private window.";
   }
 
   if (lastSave === null) {

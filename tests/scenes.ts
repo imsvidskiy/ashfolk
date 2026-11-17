@@ -13,6 +13,12 @@ export interface Scene {
 }
 
 export const SCENES: readonly Scene[] = [
+  {
+    cast: { parameters: { duration: 20, radius: 150 }, powerId: "black-hole", x: 0, z: 0 },
+    name: "black-hole-over-lake",
+    query: "seed=7&shape=round&quality=high&hours=11&camera=0,0,900,0.62,0.6",
+    seconds: 1,
+  },
   { name: "far-round", query: "seed=7&shape=round&quality=high&paused=1&hours=11&camera=0,0,1800,0.8,0" },
   { name: "far-small", query: "seed=7&shape=round&size=small&quality=high&paused=1&hours=11&camera=0,0,1800,0.8,0" },
   { name: "far-large", query: "seed=7&shape=round&size=large&quality=high&paused=1&hours=11&camera=0,0,1800,0.8,0" },

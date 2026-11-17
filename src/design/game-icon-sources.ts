@@ -6,6 +6,7 @@ import berries from "./icons/berries.webp";
 import berryBush from "./icons/berry-bush.webp";
 import birch from "./icons/birch.webp";
 import birth from "./icons/birth.webp";
+import blackHole from "./icons/black-hole.webp";
 import bows from "./icons/bows.webp";
 import bronze from "./icons/bronze.webp";
 import campfire from "./icons/campfire.webp";
@@ -53,6 +54,7 @@ import mine from "./icons/mine.webp";
 import mixedGrove from "./icons/mixed-grove.webp";
 import moon from "./icons/moon.webp";
 import neutral from "./icons/neutral.webp";
+import nuclear from "./icons/nuclear.webp";
 import oak from "./icons/oak.webp";
 import overcast from "./icons/overcast.webp";
 import paint from "./icons/paint.webp";
@@ -109,6 +111,7 @@ export const GAME_ICON_SOURCES = {
   "berry-bush": berryBush,
   birch,
   birth,
+  "black-hole": blackHole,
   bows,
   bronze,
   campfire,
@@ -156,6 +159,7 @@ export const GAME_ICON_SOURCES = {
   "mixed-grove": mixedGrove,
   moon,
   neutral,
+  nuclear,
   oak,
   overcast,
   paint,

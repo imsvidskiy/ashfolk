@@ -2,6 +2,7 @@ import { isShrubSpecies, isTreeSpecies } from "../../content/plants.ts";
 import { FULL_TURN, hashToUnit, lerp } from "../../shared/math.ts";
 import type { Mover } from "../agents/movement.ts";
 import type { Waypoint } from "../agents/navigation.ts";
+import type { EffectLog } from "../effects.ts";
 import { cellsInArea } from "../world/terrain-editing.ts";
 import type { WorldState } from "../world/world-state.ts";
 import type { PowerServices } from "./power-handler.ts";
@@ -34,7 +35,7 @@ interface Twister {
   z: number;
 }
 
-interface Tornado {
+export interface Tornado {
   age: number;
   readonly path: readonly number[];
   readonly radius: number;
@@ -206,8 +207,17 @@ export class TornadoSystem {
     return this.#tornadoes.length > 0;
   }
 
-  clear(): void {
+  snapshot(): Tornado[] {
+    return structuredClone(this.#tornadoes);
+  }
+
+  restore(tornadoes: readonly Tornado[], effects: EffectLog): void {
     this.#tornadoes.length = 0;
+
+    for (const tornado of tornadoes) {
+      this.#tornadoes.push(structuredClone(tornado));
+      effects.add({ elapsedSeconds: tornado.age, kind: "tornado", path: tornado.path, radius: tornado.radius });
+    }
   }
 
   touchDown(twister: Twister, services: PowerServices): void {

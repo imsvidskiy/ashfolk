@@ -186,6 +186,7 @@ export class WorldRenderer {
     this.#weather = new WeatherParticles(this.#axes, this.#textures, mirror.grid);
     this.#splashes = new RainSplashes(this.#axes, this.#textures, mirror.grid);
 
+    this.#output = createRenderOutput(renderer, this.scene, camera, quality);
     this.#effects = new EffectView({
       axes: this.#axes,
       createRing: () => {
@@ -194,6 +195,7 @@ export class WorldRenderer {
       heightAt: (x, z) => {
         return mirror.heightAt(x, z);
       },
+      sceneColor: this.#output.sceneColor,
       shake: onShake,
     });
 
@@ -227,7 +229,6 @@ export class WorldRenderer {
       this.#weather.group
     );
 
-    this.#output = createRenderOutput(renderer, this.scene, camera, quality);
     this.#pipelines = new BackgroundPipelines(renderer, this.scene);
   }
 

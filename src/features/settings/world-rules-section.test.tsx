@@ -35,8 +35,15 @@ describe("world rules section", () => {
     const fire = screen.getByRole("group", { name: "Fire" });
     const storms = screen.getByRole("group", { name: "Storms" });
 
+    await fire.getByText("Fire", { exact: true }).click();
+
+    await expect.element(fire).toHaveAttribute("open");
     await expect.element(fire.getByRole("slider", { name: "Spread speed" })).toBeInTheDocument();
     await expect.element(fire.getByRole("slider", { name: "Embers" })).toBeInTheDocument();
+    await storms.getByText("Storms", { exact: true }).click();
+
+    await expect.element(fire).not.toHaveAttribute("open");
+    await expect.element(storms).toHaveAttribute("open");
     await expect.element(storms.getByRole("slider", { name: "Strike fires" })).toBeInTheDocument();
   });
 
@@ -47,8 +54,12 @@ describe("world rules section", () => {
 
     const fire = screen.getByRole("group", { name: "Fire" });
 
+    await fire.getByText("Fire", { exact: true }).click();
+
     await expect.element(fire.getByRole("slider", { name: "Spread speed" })).toHaveValue("2.5");
     await expect.element(fire.getByText("×2.5")).toBeVisible();
+    await screen.getByText("Storms", { exact: true }).click();
+
     await expect.element(screen.getByRole("group", { name: "Storms" }).getByText("75%")).toBeVisible();
   });
 });
@@ -62,6 +73,8 @@ describe("world rules section in a running game", () => {
     const screen = await render(<WorldRulesSection />);
 
     const fire = screen.getByRole("group", { name: "Fire" });
+
+    await fire.getByText("Fire", { exact: true }).click();
 
     fire.getByRole("slider", { name: "Spread speed" }).element().focus();
     await userEvent.keyboard("{ArrowRight}");
@@ -81,6 +94,7 @@ describe("world rules section in a running game", () => {
 
     const screen = await render(<WorldRulesSection />);
 
+    await screen.getByText("Fire", { exact: true }).click();
     await screen.getByRole("button", { name: "Reset all" }).click();
 
     expect(send).toHaveBeenLastCalledWith({ rules: DEFAULT_WORLD_RULES, type: "setWorldRules" });

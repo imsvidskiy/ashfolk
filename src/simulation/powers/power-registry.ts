@@ -11,6 +11,13 @@ import {
   tornadoPower,
   volcanoPower,
 } from "./element-powers.ts";
+import {
+  blackHolePower,
+  lightningStormPower,
+  meteorShowerPower,
+  nuclearPower,
+  tornadoSwarmPower,
+} from "./great-elements.ts";
 import { flattenPower, forestPower, lowerPower, paintPower, raisePower, smoothPower } from "./land-powers.ts";
 import {
   abundancePower,
@@ -29,6 +36,7 @@ type PowerHandlers = { readonly [Id in PowerId]: PowerHandler<Id> };
 
 const POWER_HANDLERS: PowerHandlers = {
   abundance: abundancePower,
+  "black-hole": blackHolePower,
   deer: deerPower,
   earthquake: earthquakePower,
   explosion: explosionPower,
@@ -40,51 +48,30 @@ const POWER_HANDLERS: PowerHandlers = {
   ibex: ibexPower,
   inspiration: inspirationPower,
   lightning: lightningPower,
+  "lightning-storm": lightningStormPower,
   lower: lowerPower,
   mammoth: mammothPower,
   meteor: meteorPower,
+  "meteor-shower": meteorShowerPower,
+  nuclear: nuclearPower,
   paint: paintPower,
   rain: rainPower,
   raise: raisePower,
   smooth: smoothPower,
   snow: snowPower,
   tornado: tornadoPower,
+  "tornado-swarm": tornadoSwarmPower,
   tribe: tribePower,
   volcano: volcanoPower,
   wolf: wolfPower,
 };
 
-type PowerSchemas = { readonly [Id in PowerId]: z.ZodType<PowerParameters<Id>> };
+type PowerDefinitions = { readonly [Id in PowerId]: { readonly parameters: z.ZodType<PowerParameters<Id>> } };
 
-const POWER_SCHEMAS: PowerSchemas = {
-  abundance: POWERS.abundance.parameters,
-  deer: POWERS.deer.parameters,
-  earthquake: POWERS.earthquake.parameters,
-  explosion: POWERS.explosion.parameters,
-  fire: POWERS.fire.parameters,
-  flatten: POWERS.flatten.parameters,
-  forest: POWERS.forest.parameters,
-  hare: POWERS.hare.parameters,
-  healing: POWERS.healing.parameters,
-  ibex: POWERS.ibex.parameters,
-  inspiration: POWERS.inspiration.parameters,
-  lightning: POWERS.lightning.parameters,
-  lower: POWERS.lower.parameters,
-  mammoth: POWERS.mammoth.parameters,
-  meteor: POWERS.meteor.parameters,
-  paint: POWERS.paint.parameters,
-  rain: POWERS.rain.parameters,
-  raise: POWERS.raise.parameters,
-  smooth: POWERS.smooth.parameters,
-  snow: POWERS.snow.parameters,
-  tornado: POWERS.tornado.parameters,
-  tribe: POWERS.tribe.parameters,
-  volcano: POWERS.volcano.parameters,
-  wolf: POWERS.wolf.parameters,
-};
+const POWER_DEFINITIONS: PowerDefinitions = POWERS;
 
 export function parsePowerParameters<Id extends PowerId>(powerId: Id, values: unknown): PowerParameters<Id> | null {
-  const schema: z.ZodType<PowerParameters<Id>> = POWER_SCHEMAS[powerId];
+  const schema: z.ZodType<PowerParameters<Id>> = POWER_DEFINITIONS[powerId].parameters;
 
   const result = schema.safeParse(values);
 

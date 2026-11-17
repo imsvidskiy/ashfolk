@@ -1,10 +1,12 @@
-import { Group, PointLight, type Vector3 } from "three/webgpu";
+import { Group, PointLight, type Texture, type Vector3 } from "three/webgpu";
 import type { SimulationEffect } from "../../simulation/effects.ts";
 import { ArrowFlight, ArrowParts } from "./arrow-flight.ts";
 import { type CameraAxes, createBillboardBatch } from "./billboards.ts";
+import { BlackHoleLens } from "./black-hole.ts";
 import { EffectMeshes } from "./effect-meshes.ts";
 import type { GroundRing } from "./ground-ring.ts";
 import { MeteorFall } from "./meteor-fall.ts";
+import { NuclearCloud } from "./nuclear-cloud.ts";
 import { createDustMaterial, createGlowMaterial } from "./sprite-materials.ts";
 import { TornadoFunnel } from "./tornado-funnel.ts";
 import {
@@ -29,6 +31,7 @@ interface EffectViewOptions {
   readonly axes: CameraAxes;
   readonly createRing: () => GroundRing;
   readonly heightAt: (x: number, z: number) => number;
+  readonly sceneColor: Texture;
   readonly shake: (amount: number, x: number, z: number) => void;
 }
 
@@ -41,12 +44,14 @@ export class EffectView {
   readonly #idleRings: GroundRing[] = [];
   readonly #light = new PointLight(0xff_ff_ff, 0, LIGHT_DISTANCE, LIGHT_FALLOFF);
   readonly #meshes = new EffectMeshes();
+  readonly #sceneColor: Texture;
   readonly #sinks: SpriteSinks;
   #flash = 0;
   #lightStrength = 0;
 
   constructor(options: EffectViewOptions) {
     this.#createRing = options.createRing;
+    this.#sceneColor = options.sceneColor;
     this.#sinks = {
       dust: createBillboardBatch(createDustMaterial(options.axes), 5),
       glow: createBillboardBatch(createGlowMaterial(options.axes), 9),
@@ -130,6 +135,10 @@ export class EffectView {
     switch (effect.kind) {
       case "arrow":
         return new ArrowFlight(this.#context, effect, this.#arrowParts);
+      case "black-hole":
+        return new BlackHoleLens(effect, this.#sceneColor);
+      case "nuclear-cloud":
+        return new NuclearCloud(this.#context, effect);
       case "blessing":
         return new Blessing(this.#context, effect);
       case "earthquake":

@@ -1,14 +1,12 @@
 import { describe, expect, it, onTestFinished } from "vitest";
 import type { SimulationCommand } from "../../simulation/commands.ts";
 import type { SimulationFrame } from "../../simulation/frame.ts";
-import { usePowerStore } from "../powers/power-store.ts";
-import { addCanvas } from "../testing/canvas-fixtures.ts";
+import { useInterfaceStore } from "../interface/interface-store.ts";
 import { FINISHED_INTRO } from "../testing/guide-fixtures.ts";
 import { createListeners } from "../testing/listener-fixtures.ts";
 import { createCalendar, createChronicleEntry, createFrame } from "../testing/world-fixtures.ts";
 import { connectGuide } from "./connect-guide.ts";
 import { useGuideStore } from "./guide-store.ts";
-import { FRESH_GUIDE } from "./guide-tips.ts";
 
 const CAST = { parameters: {}, powerId: "rain", x: 0, z: 0 } as const;
 
@@ -40,68 +38,44 @@ function doneTips(): readonly string[] {
 }
 
 describe("connecting the guide", () => {
-  it.each([
-    ["a cast", "usePower"],
-    ["a brush stroke", "beginStroke"],
-  ] as const)("counts %s as using a power", (_, type) => {
-    const { send } = connectSession();
+  it("credits the gift when a tribe receives it, including while paused", () => {
+    const { receive, send } = connectSession();
 
-    send({ ...CAST, type });
+    send({ ...CAST, powerId: "abundance", type: "usePower" });
+    receive({ effects: [{ kind: "blessing", radius: 10, style: "abundance", x: 0, z: 0 }] });
+
+    expect(doneTips()).toEqual([]);
+
+    receive({ chronicle: [createChronicleEntry({ category: "gift" })], isPaused: true });
 
     expect(doneTips()).toEqual(["use"]);
   });
 
-  it("counts selecting something but not clearing the selection", () => {
+  it("credits a camp visit when a tribe is inspected", () => {
     const { send } = connectSession();
 
+    send({ selection: { kind: "cell", x: 10, z: 20 }, type: "setSelection" });
     send({ selection: null, type: "setSelection" });
 
     expect(doneTips()).toEqual([]);
 
-    send({ selection: { id: 1, kind: "tribe" }, type: "setSelection" });
+    send({ selection: { id: 3, kind: "tribe" }, type: "setSelection" });
 
     expect(doneTips()).toEqual(["follow"]);
   });
 
-  it("counts a faster speed", () => {
+  it("credits speeding up and opening the chronicle through the regular HUD", () => {
     const { send } = connectSession();
 
+    send({ speed: 1, type: "setSpeed" });
+    useInterfaceStore.getState().openJournal("tribes");
+
+    expect(doneTips()).toEqual([]);
+
     send({ speed: 4, type: "setSpeed" });
+    useInterfaceStore.getState().setJournalTab("chronicle");
 
-    expect(doneTips()).toEqual(["speed"]);
-  });
-
-  it("counts picking a power but not the hand or putting the power away", () => {
-    connectSession();
-
-    usePowerStore.getState().selectHand();
-    usePowerStore.getState().selectPower(null);
-
-    expect(doneTips()).toEqual([]);
-
-    usePowerStore.getState().selectPower("rain");
-
-    expect(doneTips()).toEqual(["pick"]);
-  });
-
-  it("counts a drag or a wheel over the island but not a hover or a drag over the interface", () => {
-    connectSession();
-
-    const canvas = addCanvas();
-
-    canvas.dispatchEvent(new PointerEvent("pointermove", { bubbles: true, buttons: 0 }));
-    document.body.dispatchEvent(new PointerEvent("pointermove", { bubbles: true, buttons: 1 }));
-
-    expect(doneTips()).toEqual([]);
-
-    canvas.dispatchEvent(new WheelEvent("wheel", { bubbles: true, deltaY: 100 }));
-
-    expect(doneTips()).toEqual(["look"]);
-
-    useGuideStore.setState({ progress: FRESH_GUIDE });
-    canvas.dispatchEvent(new PointerEvent("pointermove", { bubbles: true, buttons: 1 }));
-
-    expect(doneTips()).toEqual(["look"]);
+    expect(doneTips()).toEqual(["speed", "chronicle"]);
   });
 
   it("shows the tip of a chronicle entry once the intro is done", () => {
@@ -140,8 +114,7 @@ describe("connecting the guide", () => {
 
     disconnect();
     send({ ...CAST, type: "usePower" });
-    usePowerStore.getState().selectPower("rain");
-    addCanvas().dispatchEvent(new WheelEvent("wheel", { bubbles: true, deltaY: 100 }));
+    useInterfaceStore.getState().openJournal("chronicle");
 
     expect(doneTips()).toEqual([]);
 

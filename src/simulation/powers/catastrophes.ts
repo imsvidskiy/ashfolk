@@ -182,6 +182,7 @@ export function explode(blast: Blast, services: PowerServices): void {
   const { buildings, fauna, hazards, people, world } = services;
 
   const reach = blast.radius * BLAST_REACH;
+  const surfaceY = world.surfaceAt(blast.x, blast.z);
 
   const isInWater = isMostlyWater(blast, services);
   const hasBurningDebris = blast.hasBurningDebris && !isInWater;
@@ -213,6 +214,12 @@ export function explode(blast: Blast, services: PowerServices): void {
     x: blast.x,
     z: blast.z,
   });
+  if (blast.catastrophe === "nuclear") {
+    services.effects.add({ kind: "nuclear-cloud", radius: blast.radius, surfaceY, x: blast.x, z: blast.z });
+
+    return;
+  }
+
   services.effects.add({
     isInWater,
     kind: "explosion",

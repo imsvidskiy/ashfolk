@@ -127,9 +127,16 @@ export class GameSession {
     }
   }
 
-  saveWorld(): Promise<SavedWorldState | null> {
+  async saveWorld(): Promise<SavedWorldState | null> {
+    await this.whenIdle();
+
+    if (this.#commandsSinceRequest > 0) {
+      this.update(0);
+      await this.whenIdle();
+    }
+
     if (this.#status.kind !== "running") {
-      return Promise.resolve(null);
+      return null;
     }
 
     return this.#connection.saveWorld();

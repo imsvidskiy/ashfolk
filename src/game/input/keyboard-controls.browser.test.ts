@@ -74,6 +74,22 @@ describe("keyboard controls", () => {
     expect(rig.camera.state.targetZ).toBeCloseTo(0, 3);
   });
 
+  it("preserves focus and camera position while a dialog handles the keyboard", () => {
+    const rig = createRig();
+    const dialog = document.createElement("dialog");
+    const button = document.createElement("button");
+
+    dialog.append(button);
+    document.body.append(dialog);
+    dialog.showModal();
+    button.focus();
+    press(button, "KeyW");
+    applyHeldKeys(rig);
+
+    expect(document.activeElement).toBe(button);
+    expect(rig.camera.state.targetZ).toBeCloseTo(0, 3);
+  });
+
   it("leaves arrows alone while someone types", () => {
     const rig = createRig();
     const field = document.createElement("input");

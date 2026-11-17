@@ -104,6 +104,18 @@ describe("loading a world whose land grows differently now", () => {
 });
 
 describe("saved worlds", () => {
+  it("loads earlier version-one snapshots without active sky powers", () => {
+    const state = savedState(generateSimulation());
+    const { blackHoles: _blackHoles, tornadoes: _tornadoes, ...simulation } = state.simulation;
+    const legacy = savedWorldStateSchema.parse({ ...state, simulation });
+    const loaded = generateSimulation();
+
+    restoreSavedWorld(loaded, legacy);
+
+    expect(loaded.initialWorld().frame.effects).toEqual([]);
+    expect(loaded.snapshot()?.tick).toBe(state.simulation.tick);
+  });
+
   it("finds each plant species by name when the list order changes", () => {
     const original = generateSimulation();
     const state = savedState(original);

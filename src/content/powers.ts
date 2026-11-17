@@ -35,6 +35,16 @@ export const POWERS = {
     }),
     usage: "point",
   },
+  "black-hole": {
+    category: "elements",
+    description: "Bends the view of the island and draws nearby people and animals toward its dark center.",
+    name: "Black hole",
+    parameters: z.object({
+      duration: lifetime(10, 20),
+      radius: brushRadius(180, 350),
+    }),
+    usage: "point",
+  },
   deer: {
     category: "life",
     description: "Brings a herd of deer, quick prey for hunters.",
@@ -205,6 +215,16 @@ export const POWERS = {
     }),
     usage: "point",
   },
+  "lightning-storm": {
+    category: "elements",
+    description: "Calls down a rolling series of bolts across the selected area.",
+    name: "Lightning storm",
+    parameters: z.object({
+      count: groupCount("Bolts", 5, 8),
+      radius: brushRadius(140, 400),
+    }),
+    usage: "point",
+  },
   lower: {
     category: "land",
     description: "Digs the land down. Rain fills a basin dug in a valley.",
@@ -256,6 +276,25 @@ export const POWERS = {
         unit: "seconds",
       }),
       ignites: toggleParameter({ defaultValue: true, description: "The impact starts fires.", label: "Starts fires" }),
+    }),
+    usage: "point",
+  },
+  "meteor-shower": {
+    category: "elements",
+    description: "Drops a train of smaller meteors, each leaving a burning crater.",
+    name: "Meteor shower",
+    parameters: z.object({
+      count: groupCount("Meteors", 5, 8),
+      radius: brushRadius(220, 480),
+    }),
+    usage: "point",
+  },
+  nuclear: {
+    category: "elements",
+    description: "Opens a wide burning crater beneath a rising mushroom cloud.",
+    name: "Nuclear bomb",
+    parameters: z.object({
+      radius: brushRadius(160, 300),
     }),
     usage: "point",
   },
@@ -342,6 +381,17 @@ export const POWERS = {
     }),
     usage: "point",
   },
+  "tornado-swarm": {
+    category: "elements",
+    description: "Sets several funnels down across the island. Each follows its own path in the wind.",
+    name: "Tornado swarm",
+    parameters: z.object({
+      count: groupCount("Funnels", 3, 5),
+      duration: lifetime(15, 40),
+      radius: brushRadius(160, 360),
+    }),
+    usage: "point",
+  },
   tribe: {
     category: "life",
     description: "Brings a new tribe that settles near water and food.",
@@ -403,6 +453,7 @@ export type PowerParameters<Id extends PowerId> = z.output<(typeof POWERS)[Id]["
 export const POWER_GROUPS: readonly (readonly PowerId[])[] = [
   ["fire", "lightning", "rain", "snow"],
   ["explosion", "meteor", "earthquake", "volcano", "tornado"],
+  ["nuclear", "black-hole"],
   ["raise", "lower", "flatten", "smooth"],
   ["forest", "paint"],
   ["tribe"],
@@ -410,7 +461,23 @@ export const POWER_GROUPS: readonly (readonly PowerId[])[] = [
   ["abundance", "inspiration", "healing"],
 ];
 
-export const POWER_ORDER: readonly PowerId[] = POWER_GROUPS.flat();
+const POWER_FAMILIES: readonly (readonly [PowerId, PowerId])[] = [
+  ["lightning", "lightning-storm"],
+  ["meteor", "meteor-shower"],
+  ["tornado", "tornado-swarm"],
+];
+
+export const POWER_ORDER: readonly PowerId[] = POWER_GROUPS.flat().flatMap((powerId) => {
+  const family = powerFamily(powerId);
+
+  return family === undefined ? [powerId] : family;
+});
+
+export function powerFamily(powerId: PowerId) {
+  return POWER_FAMILIES.find((family) => {
+    return family.includes(powerId);
+  });
+}
 
 function brushRadius(defaultValue: number, maximum: number) {
   return rangeParameter({
@@ -421,6 +488,30 @@ function brushRadius(defaultValue: number, maximum: number) {
     minimum: 5,
     step: 1,
     unit: "meters",
+  });
+}
+
+function groupCount(label: string, defaultValue: number, maximum: number) {
+  return rangeParameter({
+    defaultValue,
+    description: "How many appear with each cast.",
+    label,
+    maximum,
+    minimum: 2,
+    step: 1,
+    unit: "count",
+  });
+}
+
+function lifetime(defaultValue: number, maximum: number) {
+  return rangeParameter({
+    defaultValue,
+    description: "How long the power stays on the island.",
+    label: "Lifetime",
+    maximum,
+    minimum: 5,
+    step: 1,
+    unit: "seconds",
   });
 }
 
@@ -447,9 +538,7 @@ export function powerGroupsInCategory(category: PowerCategory): readonly (readon
 }
 
 export function powersInCategory(category: PowerCategory): readonly PowerId[] {
-  return POWER_ORDER.filter((powerId) => {
-    return POWERS[powerId].category === category;
-  });
+  return powerGroupsInCategory(category).flat();
 }
 
 export function defaultPowerParameters(powerId: PowerId): ParameterValueMap {

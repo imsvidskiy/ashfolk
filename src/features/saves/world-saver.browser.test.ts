@@ -54,6 +54,23 @@ describe("world saver", () => {
     expect(saveWorld).toHaveBeenCalledOnce();
   });
 
+  it("saves edits made after an autosave started before leaving", async () => {
+    const { saver, session } = await createSaver();
+    const autosave = saver.save();
+
+    session.send({ isPaused: true, type: "setPaused" });
+    session.update(0);
+
+    const leaveSave = saver.saveSoon();
+
+    expect(await autosave).toBe("saved");
+    expect(await leaveSave).toBe("saved");
+
+    const stored = await readSavedWorld(IDENTITY.id);
+
+    expect(stored?.state.simulation.isPaused).toBe(true);
+  });
+
   it("tries again while the simulation is busy", async () => {
     const { saver, session } = await createSaver();
 

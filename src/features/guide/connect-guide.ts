@@ -1,49 +1,31 @@
 import type { GameSession } from "../../game/game-session.ts";
 import type { SimulationCommand } from "../../simulation/commands.ts";
 import type { SimulationFrame } from "../../simulation/frame.ts";
-import { isPowerPicked, usePowerStore } from "../powers/power-store.ts";
+import { useInterfaceStore } from "../interface/interface-store.ts";
 import { useGuideStore } from "./guide-store.ts";
-import type { GuideEvent } from "./guide-tips.ts";
 
 type GuideSession = Pick<GameSession, "frame" | "subscribe" | "subscribeToCommands">;
 
-function record(event: GuideEvent): void {
-  useGuideStore.getState().record(event);
-}
+function handleCommand(command: SimulationCommand): void {
+  const { record } = useGuideStore.getState();
 
-function eventOfCommand(command: SimulationCommand): GuideEvent | null {
   switch (command.type) {
     case "beginStroke":
     case "usePower":
-      return { kind: "powerUsed" };
+      record({ kind: "cast", powerId: command.powerId });
+      break;
     case "setSelection":
-      return command.selection === null ? null : { kind: "selected" };
+      if (command.selection?.kind === "tribe") {
+        record({ kind: "step", step: "follow" });
+      }
+      break;
     case "setSpeed":
-      return { kind: "speedChanged", speed: command.speed };
+      if (command.speed > 1) {
+        record({ kind: "step", step: "speed" });
+      }
+      break;
     default:
-      return null;
-  }
-}
-
-function handleCommand(command: SimulationCommand): void {
-  const event = eventOfCommand(command);
-
-  if (event !== null) {
-    record(event);
-  }
-}
-
-function isCanvasGesture(event: PointerEvent | WheelEvent): boolean {
-  if (!(event.target instanceof HTMLCanvasElement)) {
-    return false;
-  }
-
-  return event instanceof WheelEvent || event.buttons !== 0;
-}
-
-function handleGesture(event: PointerEvent | WheelEvent): void {
-  if (isCanvasGesture(event)) {
-    record({ kind: "cameraMoved" });
+      break;
   }
 }
 
@@ -51,8 +33,14 @@ export function connectGuide(session: GuideSession): () => void {
   let { seasonName } = session.frame.calendar;
 
   function handleFrame(frame: SimulationFrame): void {
+    const { record } = useGuideStore.getState();
+
     for (const entry of frame.chronicle) {
-      record({ category: entry.category, kind: "chronicle" });
+      if (entry.category === "gift") {
+        record({ kind: "step", step: "use" });
+      } else {
+        record({ category: entry.category, kind: "chronicle" });
+      }
     }
 
     if (frame.calendar.seasonName !== seasonName) {
@@ -63,20 +51,19 @@ export function connectGuide(session: GuideSession): () => void {
 
   const unsubscribeFrames = session.subscribe(handleFrame);
   const unsubscribeCommands = session.subscribeToCommands(handleCommand);
-  const unsubscribePowers = usePowerStore.subscribe((state, previous) => {
-    if (isPowerPicked(state, previous)) {
-      record({ kind: "powerPicked" });
+  const unsubscribeJournal = useInterfaceStore.subscribe((state, previous) => {
+    if (
+      state.isJournalOpen &&
+      state.journalTab === "chronicle" &&
+      (!previous.isJournalOpen || previous.journalTab !== "chronicle")
+    ) {
+      useGuideStore.getState().record({ kind: "step", step: "chronicle" });
     }
   });
-
-  window.addEventListener("pointermove", handleGesture);
-  window.addEventListener("wheel", handleGesture);
 
   return () => {
     unsubscribeFrames();
     unsubscribeCommands();
-    unsubscribePowers();
-    window.removeEventListener("pointermove", handleGesture);
-    window.removeEventListener("wheel", handleGesture);
+    unsubscribeJournal();
   };
 }

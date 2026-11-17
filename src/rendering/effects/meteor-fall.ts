@@ -15,8 +15,10 @@ const TUMBLE = new Vector3(1.3, 0.8, 0.45);
 
 interface TrailPuff {
   readonly age: number;
-  readonly index: number;
+  readonly driftX: number;
+  readonly driftZ: number;
   readonly position: Vector3;
+  readonly swell: number;
 }
 
 interface Spark {
@@ -40,6 +42,7 @@ export class MeteorFall implements ActiveEffect {
   readonly #sparks: Spark[] = [];
   readonly #to: Vector3;
   #age = 0;
+  #firstPuff = 0;
   #sparkCount = 0;
   #sparkDebt = 0;
   #traveled = 0;
@@ -111,7 +114,15 @@ export class MeteorFall implements ActiveEffect {
 
       const behind = this.#head.clone().addScaledVector(this.#direction, -this.#traveled);
 
-      this.#puffs.push({ age: this.#age, index: this.#puffs.length, position: behind });
+      const index = this.#puffs.length;
+
+      this.#puffs.push({
+        age: this.#age,
+        driftX: (hashToUnit(index, 8) - 0.5) * this.#size * 1.4,
+        driftZ: (hashToUnit(index, 9) - 0.5) * this.#size * 1.4,
+        position: behind,
+        swell: 0.7 + hashToUnit(index, 7) * 0.7,
+      });
     }
   }
 
@@ -140,16 +151,15 @@ export class MeteorFall implements ActiveEffect {
   #drawTrail(sinks: SpriteSinks): void {
     const size = this.#size;
 
-    for (const puff of this.#puffs) {
+    for (let index = this.#firstPuff; index < this.#puffs.length; index += 1) {
+      const puff = this.#puffs[index];
       const age = this.#age - puff.age;
 
       if (age >= SMOKE_SECONDS) {
+        this.#firstPuff = index + 1;
+
         continue;
       }
-
-      const swell = 0.7 + hashToUnit(puff.index, 7) * 0.7;
-      const driftX = (hashToUnit(puff.index, 8) - 0.5) * size * 1.4 * age;
-      const driftZ = (hashToUnit(puff.index, 9) - 0.5) * size * 1.4 * age;
 
       const { x, y, z } = puff.position;
       const smoke = 1 - smoothstep(0.3, SMOKE_SECONDS, age);
@@ -157,7 +167,7 @@ export class MeteorFall implements ActiveEffect {
       const shade = 0.3 + smoothstep(0, 2.5, age) * 0.28;
 
       sinks.dust.add(
-        [x + driftX, y + age * 6, z + driftZ, size * swell * (1.6 + age * 2.6)],
+        [x + puff.driftX * age, y + age * 6, z + puff.driftZ * age, size * puff.swell * (1.6 + age * 2.6)],
         [shade, shade * 0.95, shade * 0.9, smoke * 0.5]
       );
 

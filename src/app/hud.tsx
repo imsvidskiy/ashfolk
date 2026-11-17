@@ -27,6 +27,8 @@ function WideHud() {
         <div className="flex min-w-0 flex-1 flex-col items-start gap-3">
           <StatusCard />
 
+          <GuideCard className="w-full max-w-80" />
+
           <NoticeFeed className="items-start" />
         </div>
 
@@ -44,11 +46,7 @@ function WideHud() {
           <MinimapIsland />
         </div>
 
-        <div className="flex min-w-0 flex-col gap-3">
-          <GuideCard className="w-0 min-w-full" />
-
-          <PowerDock className="max-w-full min-w-0" />
-        </div>
+        <PowerDock className="max-w-full min-w-0" />
 
         <div className="flex flex-1 justify-end">
           <Island className="px-1.5 py-1">
@@ -65,14 +63,14 @@ function CompactHud() {
     <div className={cn(HUD_FRAME, "gap-2")}>
       <CompactTopBar />
 
+      <GuideCard className="w-full max-w-96 self-start" />
+
       <NoticeFeed />
 
       <div className="mt-auto flex min-h-0 flex-col gap-2">
         <MinimapIsland className="self-start" />
 
         <PowerSettings className="max-h-details min-h-0" />
-
-        <GuideCard />
 
         <PowerDock />
       </div>

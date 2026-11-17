@@ -62,7 +62,7 @@ const MOST_SMALL_GAME_GROUPS_PER_SQUARE_KILOMETER = 1.3;
 const DISPERSAL_PER_DAY = 0.8;
 const DISPERSING_MEMBERS = 2;
 
-type AnimalDeathCause = "age" | "blast" | "fire" | "hunt" | "lightning" | "prey" | "tornado";
+type AnimalDeathCause = "age" | "blast" | "fire" | "gravity" | "hunt" | "lightning" | "prey" | "tornado";
 
 export interface Animal {
   appearanceSeed: number;

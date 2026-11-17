@@ -1,3 +1,4 @@
+import { Texture } from "three/webgpu";
 import { describe, expect, it, vi } from "vitest";
 import { ignore } from "../../shared/ignore.ts";
 import type { ArrowEffect, EmberEffect, ExplosionEffect, LightningEffect } from "../../simulation/effects.ts";
@@ -26,6 +27,7 @@ function createEffects() {
     heightAt: () => {
       return 0;
     },
+    sceneColor: new Texture(),
     shake: ignore,
   });
 

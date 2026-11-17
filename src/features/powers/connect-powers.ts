@@ -1,4 +1,5 @@
 import type { EngineHandle } from "../../game/engine-handle.ts";
+import { canUseGameShortcut } from "../../game/input/keyboard-controls.ts";
 import { TAP_TOLERANCE } from "../../game/input/pointer-controls.ts";
 import type { PowerSelection } from "../../game/tools/power-tool.ts";
 import { type PowerStore, parametersOf, usePowerStore } from "./power-store.ts";
@@ -16,7 +17,7 @@ function selectionOf(state: PowerStore): PowerSelection | null {
 }
 
 function clearOnEscape(event: KeyboardEvent): void {
-  if (event.key === "Escape") {
+  if (event.key === "Escape" && canUseGameShortcut(event)) {
     usePowerStore.getState().selectPower(null);
   }
 }

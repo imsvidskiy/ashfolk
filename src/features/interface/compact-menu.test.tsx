@@ -45,7 +45,7 @@ describe("compact menu", () => {
     await expect.element(screen.getByRole("menuitem", { name: "Hide the map" })).toBeVisible();
   });
 
-  it("opens the world settings", async () => {
+  it("reopens the last settings section", async () => {
     useInterfaceStore.setState({ settingsTab: "island" });
 
     const screen = await render(<CompactMenu />);
@@ -56,7 +56,7 @@ describe("compact menu", () => {
     const state = useInterfaceStore.getState();
 
     expect(state.isSettingsOpen).toBe(true);
-    expect(state.settingsTab).toBe("world");
+    expect(state.settingsTab).toBe("island");
   });
 
   it("offers full screen when the page is not in full screen", async () => {

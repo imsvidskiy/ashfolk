@@ -188,6 +188,17 @@ describe("advancing", () => {
     expect(listener).not.toHaveBeenCalled();
   });
 
+  it("applies commands queued during a worker request before saving", async () => {
+    const { session } = await createSession();
+
+    session.update(0.1);
+    session.send({ speed: 4, type: "setSpeed" });
+
+    const saved = await session.saveWorld();
+
+    expect(saved?.simulation.speed).toBe(4);
+  });
+
   it("delivers commands with the next request", async () => {
     const { session } = await createSession();
 
