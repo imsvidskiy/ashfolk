@@ -78,7 +78,7 @@ function facetsWhere(faceted: Shape, keep: (triangle: number) => boolean): Shape
   return { along, around, indices, normals, positions };
 }
 
-export function addStreakedRock(context: StructureContext, shape: Shape, look: OreLook, style: VertexStyle): void {
+function addStreakedRock(context: StructureContext, shape: Shape, look: OreLook, style: VertexStyle): void {
   const faceted = facetShape(shape);
   const streaks = Array.from({ length: faceted.indices.length / 3 }, (_, triangle) => {
     return isStreak(centroidAt(faceted, triangle), look.richness);

@@ -143,6 +143,7 @@ export interface SimulationFrame {
   chronicle: ChronicleEntry[];
   effects: SimulationEffect[];
   groundRows: PackedRows[];
+  hasRealTimeWork: boolean;
   heightPatch: RegionPatch | null;
   held: HeldView | null;
   inspection: Inspection | null;

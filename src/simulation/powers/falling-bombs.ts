@@ -3,10 +3,12 @@ import { TICK_SECONDS } from "../tick.ts";
 import { explode } from "./catastrophes.ts";
 import type { PowerServices } from "./power-handler.ts";
 
-export const BOMB_FALL_TICKS = 28;
+export const BOMB_FALL_TICKS = 44;
+export const ORIGINAL_BOMB_FALL_TICKS = 28;
 
 export interface FallingBomb {
   dropId: number;
+  durationTicks?: number;
   radius: number;
   remainingTicks: number;
   surfaceY: number;
@@ -15,12 +17,12 @@ export interface FallingBomb {
 }
 
 function showFall(effects: EffectLog, bomb: FallingBomb): void {
-  const { dropId, radius, remainingTicks, surfaceY, x, z } = bomb;
+  const { dropId, durationTicks = ORIGINAL_BOMB_FALL_TICKS, radius, remainingTicks, surfaceY, x, z } = bomb;
 
   effects.add({
     dropId,
-    durationSeconds: BOMB_FALL_TICKS * TICK_SECONDS,
-    elapsedSeconds: (BOMB_FALL_TICKS - remainingTicks) * TICK_SECONDS,
+    durationSeconds: durationTicks * TICK_SECONDS,
+    elapsedSeconds: (durationTicks - remainingTicks) * TICK_SECONDS,
     kind: "nuclear-fall",
     radius,
     surfaceY,
@@ -51,6 +53,7 @@ export class FallingBombs {
   drop(services: PowerServices, x: number, z: number, radius: number): void {
     const bomb = {
       dropId: services.identifiers.next(),
+      durationTicks: BOMB_FALL_TICKS,
       radius,
       remainingTicks: BOMB_FALL_TICKS,
       surfaceY: services.world.surfaceAt(x, z),

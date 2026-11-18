@@ -1,8 +1,11 @@
 import { describe, expect, it, onTestFinished, vi } from "vitest";
+import { deleteSavedWorld, readSavedWorld } from "../features/saves/save-database.ts";
 import { createTestSession } from "../features/testing/engine-fixtures.ts";
+import { saveWorld } from "../features/testing/save-fixtures.ts";
 import type { GameSession } from "../game/game-session.ts";
 import type { GenerationProgress } from "../generation/generation-options.ts";
 import { ignore } from "../shared/ignore.ts";
+import { islandSizeOf } from "../world/island-size.ts";
 import { EngineLauncher, type EngineStatus, worldSourceFor } from "./engine-launcher.ts";
 import { createWorldId, type LaunchOptions } from "./launch-options.ts";
 
@@ -51,6 +54,44 @@ describe("engine launcher", () => {
       kind: "new",
       request: { options: { dimensions: { cellSize: 10, cellsPerSide: 768 }, shape: "round" }, seed: 7 },
     });
+  });
+
+  it("restores the saved island name and generation settings when the address gives other values", async () => {
+    const id = createWorldId();
+    const restoreChoice = vi.fn();
+
+    await saveWorld(id, "Remembered Coast");
+
+    onTestFinished(async () => {
+      await deleteSavedWorld(id);
+    });
+
+    const saved = await readSavedWorld(id);
+
+    if (saved === null) {
+      throw new Error("Expected a saved island");
+    }
+
+    const { options, seed } = saved.state.request;
+    const source = await worldSourceFor({ ...LAUNCH, name: "Wrong island", seed: seed + 1 }, id, restoreChoice);
+
+    expect(source.kind).toBe("saved");
+    expect(restoreChoice).toHaveBeenCalledWith({
+      name: "Remembered Coast",
+      seed,
+      shape: options.shape,
+      size: islandSizeOf(options.dimensions),
+    });
+  });
+
+  it("opens a fresh seed without storage and stops a saved launch on a failed read", async () => {
+    const transaction = vi.spyOn(IDBDatabase.prototype, "transaction").mockImplementation(() => {
+      throw new DOMException("The island could not be read", "InvalidStateError");
+    });
+
+    expect((await worldSourceFor(LAUNCH, null)).kind).toBe("new");
+    expect(transaction).not.toHaveBeenCalled();
+    await expect(worldSourceFor(LAUNCH, createWorldId())).rejects.toThrow("could not be read");
   });
 
   it("fetches the engine once the world starts growing and says it is lit once it has grown", async () => {

@@ -92,6 +92,42 @@ describe("launch store", () => {
     });
   });
 
+  it("corrects the display and address without starting the engine a second time", () => {
+    const initial = { name: "Wrong island", seed: 2, shape: "square", size: "large" } as const;
+    const saved = { name: "Remembered Coast", seed: 7, shape: "round", size: "small" } as const;
+
+    useLaunchStore.getState().continueWorld("remembered-coast", initial);
+    window.history.replaceState(null, "", "?world=remembered-coast&camera=0,0,400,1,0&paused=1");
+
+    const { request, restoreChoice } = useLaunchStore.getState();
+
+    restoreChoice(request, saved);
+
+    expect(useLaunchStore.getState().launch).toMatchObject(saved);
+    expect(useLaunchStore.getState().request).toBe(request);
+
+    const address = new URLSearchParams(window.location.search);
+
+    expect(address.get("name")).toBe(saved.name);
+    expect(address.get("seed")).toBe("7");
+    expect(address.get("camera")).toBe("0,0,400,1,0");
+    expect(address.get("paused")).toBe("1");
+  });
+
+  it("ignores late storage reads from a previous launch", () => {
+    const store = useLaunchStore.getState();
+
+    store.continueWorld("first", store.launch);
+
+    const { request } = useLaunchStore.getState();
+
+    store.createWorld({ ...store.launch, name: "Second" });
+    store.restoreChoice(request, { ...store.launch, name: "First" });
+
+    expect(useLaunchStore.getState().launch.name).toBe("Second");
+    expect(new URLSearchParams(window.location.search).get("name")).toBe("Second");
+  });
+
   it("writes the world into the address so a reload keeps it", () => {
     useLaunchStore.getState().relaunch({ name: "Old Ford", quality: "high", seed: 42, shape: "square", size: "small" });
 

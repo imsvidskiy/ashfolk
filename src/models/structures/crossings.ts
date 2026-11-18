@@ -31,6 +31,7 @@ const STONE_SHAPES: readonly (readonly [number, number])[] = [
 ];
 
 const WORN_TOP = 0.82;
+
 const TRUNK_SEGMENTS: Readonly<Record<CrossingDetailLevel, number>> = { high: 28, low: 6, medium: 14 };
 const TRUNK_SIDES: Readonly<Record<CrossingDetailLevel, number>> = { high: 12, low: 5, medium: 8 };
 const STUB_SIDES: Readonly<Record<CrossingDetailLevel, number>> = { high: 6, low: 4, medium: 5 };

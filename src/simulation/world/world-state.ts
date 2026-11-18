@@ -473,6 +473,10 @@ export class WorldState {
     const previous = this.terrain.height[cell];
     const next = clamp(height, this.#lowestHeight - LOWEST_EDIT_BELOW_ORIGINAL, MAXIMUM_TERRAIN_HEIGHT);
 
+    if (previous === next) {
+      return;
+    }
+
     this.terrain.height[cell] = next;
     this.terrain.baseTemperature[cell] += altitudeChill(previous) - altitudeChill(next);
   }

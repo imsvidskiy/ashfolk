@@ -13,6 +13,7 @@ import {
   X,
 } from "lucide-react";
 import type { ChangeEvent } from "react";
+import { version } from "../../../package.json";
 import { useLaunchStore } from "../../app/launch-store.ts";
 import { IconButton } from "../../design/buttons.tsx";
 import { cn } from "../../design/cn.ts";
@@ -21,6 +22,7 @@ import { DIALOG_BACKDROP, DIALOG_POPUP, DIALOG_VIEWPORT, FOCUS_RING } from "../.
 import { useIsCompact } from "../../design/use-media-query.ts";
 import { FilmingSection } from "../filming/filming-section.tsx";
 import { type SettingsTab, useInterfaceStore } from "../interface/interface-store.ts";
+import { ProjectLinks } from "../project/project-links.tsx";
 import { useSavesStore } from "../saves/saves-store.ts";
 import { GeneralSection } from "./general-section.tsx";
 import { IslandSection } from "./island-section.tsx";
@@ -220,7 +222,7 @@ export function SettingsDialog() {
         <Dialog.Viewport className={DIALOG_VIEWPORT}>
           <Dialog.Popup className={cn(DIALOG_POPUP, "w-full max-w-3xl")}>
             <Island className="max-h-dialog flex h-[36rem] flex-col">
-              <header className="border-line flex items-center justify-between gap-3 border-b px-4 py-3 sm:px-6">
+              <header className="border-line flex shrink-0 items-center justify-between gap-3 border-b px-4 py-3 sm:px-6">
                 <Dialog.Title className="text-ink text-xl font-bold">Settings</Dialog.Title>
 
                 <Dialog.Description className="text-ink-soft ml-auto flex min-w-0 items-center gap-1.5 text-sm">
@@ -237,6 +239,12 @@ export function SettingsDialog() {
               <SaveNotice />
 
               <SettingsBody />
+
+              <footer className="border-line bg-paper flex shrink-0 flex-wrap items-center justify-between gap-x-2 gap-y-1 border-t px-3 py-2 sm:px-5">
+                <ProjectLinks className="justify-start max-sm:gap-0 max-sm:[&_a]:gap-1 max-sm:[&_a]:px-1.5 max-sm:[&_a>span]:hidden" />
+
+                <span className="text-ink-muted ml-auto text-xs font-semibold tabular-nums">v{version}</span>
+              </footer>
             </Island>
           </Dialog.Popup>
         </Dialog.Viewport>

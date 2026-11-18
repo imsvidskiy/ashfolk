@@ -2,6 +2,7 @@ import type { PowerParameters } from "../../content/powers.ts";
 import { FULL_TURN } from "../../shared/math.ts";
 import type { RandomSource } from "../../shared/random.ts";
 import { isDryLand } from "../agents/navigation.ts";
+import { SKY_ENTRY_HEIGHT } from "../effects.ts";
 import { cellsInArea } from "../world/terrain-editing.ts";
 import { SNOW_CAPACITY } from "../world/world-state.ts";
 import { explode, shakeLand, strikeLightning } from "./catastrophes.ts";
@@ -17,7 +18,6 @@ const SNOW_DOUSING = 3;
 const DEFAULT_SNOW_INTENSITY = 0.6;
 const DEFAULT_BLAST_POWER = 0.8;
 const METEOR_DISTANCE = 2600;
-const METEOR_ALTITUDE = 3200;
 const METEOR_REFERENCE_CRATER = 140;
 const METEOR_POWER = 2.4;
 const METEOR_HEADING_SPREAD = 0.45;
@@ -159,7 +159,7 @@ export function meteorPower(
   services.effects.add({
     durationSeconds: parameters.fallTime,
     fromX: target.x + Math.cos(fromWindward) * METEOR_DISTANCE,
-    fromY: ground + METEOR_ALTITUDE,
+    fromY: ground + SKY_ENTRY_HEIGHT,
     fromZ: target.z + Math.sin(fromWindward) * METEOR_DISTANCE,
     kind: "meteor",
     radius: parameters.craterRadius,

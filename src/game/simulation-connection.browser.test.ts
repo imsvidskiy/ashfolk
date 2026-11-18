@@ -8,7 +8,7 @@ const SMALL_WORLD = {
   seed: 3,
 } as const;
 
-function connectToStalledWorker(): { connection: WorkerSimulationConnection; worker: EventTarget } {
+function connectToStalledWorker() {
   const createWorker = vi.fn(StalledWorker);
 
   vi.stubGlobal("Worker", createWorker);
@@ -28,8 +28,8 @@ function connectToStalledWorker(): { connection: WorkerSimulationConnection; wor
 }
 
 class StalledWorker extends EventTarget {
-  readonly postMessage = ignore;
-  readonly terminate = ignore;
+  readonly postMessage = vi.fn();
+  readonly terminate = vi.fn();
 }
 
 describe("worker simulation connection", () => {
@@ -84,6 +84,35 @@ describe("worker simulation connection", () => {
         return expect(request).rejects.toThrow("boom");
       })
     );
+  });
+
+  it("settles pending calls when disposed and sends no more requests", async () => {
+    const { connection, worker } = connectToStalledWorker();
+
+    const advancing = connection.advance(0.2);
+    const saving = connection.saveWorld();
+
+    connection.dispose();
+
+    await expect(advancing).rejects.toThrow("closed");
+    await expect(saving).rejects.toThrow("closed");
+
+    worker.postMessage.mockClear();
+    connection.dispose();
+
+    await expect(connection.advance(0)).rejects.toThrow("closed");
+    expect(worker.postMessage).not.toHaveBeenCalled();
+    expect(worker.terminate).toHaveBeenCalledOnce();
+  });
+
+  it("keeps the original worker error for future requests", async () => {
+    const { connection, worker } = connectToStalledWorker();
+
+    worker.dispatchEvent(new ErrorEvent("error", { message: "worker crashed" }));
+    worker.postMessage.mockClear();
+
+    await expect(connection.saveWorld()).rejects.toThrow("worker crashed");
+    expect(worker.postMessage).not.toHaveBeenCalled();
   });
 
   it("rejects with a message of its own when the worker cannot load", async () => {

@@ -3,7 +3,7 @@ import type { SimulationEffect } from "../../simulation/effects.ts";
 import { ArrowFlight, ArrowParts } from "./arrow-flight.ts";
 import { type CameraAxes, createBillboardBatch } from "./billboards.ts";
 import { BlackHoleLens } from "./black-hole.ts";
-import type { InflowSurface } from "./black-hole-debris.ts";
+import { BlackHoleDebris } from "./black-hole-debris.ts";
 import { EffectMeshes } from "./effect-meshes.ts";
 import type { GroundRing } from "./ground-ring.ts";
 import { MeteorFall } from "./meteor-fall.ts";
@@ -16,6 +16,7 @@ import {
   Blessing,
   Earthquake,
   type EffectContext,
+  type EffectSurface,
   EmberFlight,
   Explosion,
   LightningStrike,
@@ -34,7 +35,7 @@ interface EffectViewOptions {
   readonly createRing: () => GroundRing;
   readonly sceneColor: Texture;
   readonly shake: (amount: number, x: number, z: number) => void;
-  readonly surface: InflowSurface & Pick<EffectContext, "heightAt">;
+  readonly surface: EffectSurface;
 }
 
 export class EffectView {
@@ -48,7 +49,6 @@ export class EffectView {
   readonly #light = new PointLight(0xff_ff_ff, 0, LIGHT_DISTANCE, LIGHT_FALLOFF);
   readonly #meshes = new EffectMeshes();
   readonly #sceneColor: Texture;
-  readonly #surface: InflowSurface;
   readonly #sinks: SpriteSinks;
   #flash = 0;
   #lightStrength = 0;
@@ -57,7 +57,6 @@ export class EffectView {
     this.#axes = options.axes;
     this.#createRing = options.createRing;
     this.#sceneColor = options.sceneColor;
-    this.#surface = options.surface;
     this.#sinks = {
       dust: createBillboardBatch(createDustMaterial(options.axes), 5),
       glow: createBillboardBatch(createGlowMaterial(options.axes), 9),
@@ -67,9 +66,6 @@ export class EffectView {
       flash: (amount) => {
         this.#flash = Math.max(this.#flash, amount);
       },
-      heightAt: (x, z) => {
-        return options.surface.heightAt(x, z);
-      },
       light: (position, color, intensity) => {
         this.#lightUp(position, color, intensity);
       },
@@ -78,6 +74,7 @@ export class EffectView {
         this.#releaseRing(ring);
       },
       shake: options.shake,
+      surface: options.surface,
       takeRing: () => {
         return this.#takeRing();
       },
@@ -92,6 +89,11 @@ export class EffectView {
 
   add(effects: readonly SimulationEffect[]): void {
     for (const effect of effects) {
+      if (effect.kind === "black-hole-collapse") {
+        this.#collapseWell(effect.wellId);
+        continue;
+      }
+
       const active = this.#start(effect);
 
       this.#active.push(active);
@@ -139,12 +141,29 @@ export class EffectView {
     this.#arrowParts.dispose();
   }
 
-  #start(effect: SimulationEffect): ActiveEffect {
+  #start(effect: Exclude<SimulationEffect, { kind: "black-hole-collapse" }>): ActiveEffect {
     switch (effect.kind) {
       case "arrow":
         return new ArrowFlight(this.#context, effect, this.#arrowParts);
       case "black-hole":
-        return new BlackHoleLens(effect, this.#sceneColor, this.#surface);
+        return new BlackHoleLens(effect, this.#sceneColor);
+      case "black-hole-inflow": {
+        const lens = this.#active.find((active): active is BlackHoleLens => {
+          return active instanceof BlackHoleLens && active.wellId === effect.wellId;
+        });
+
+        if (lens === undefined) {
+          return new BlackHoleDebris(effect);
+        }
+
+        const { elapsedSeconds = 0, startedAt } = effect;
+
+        lens.synchronize(startedAt + elapsedSeconds);
+
+        return new BlackHoleDebris(effect, () => {
+          return lens.age;
+        });
+      }
       case "nuclear-fall":
         return new NuclearFall(this.#context, effect);
       case "nuclear-cloud":
@@ -168,6 +187,16 @@ export class EffectView {
         return new TornadoFunnel(this.#context, effect);
       default:
         return effect satisfies never;
+    }
+  }
+
+  #collapseWell(id: number): void {
+    for (let index = this.#active.length - 1; index >= 0; index -= 1) {
+      const active = this.#active[index];
+
+      if ((active instanceof BlackHoleLens || active instanceof BlackHoleDebris) && active.wellId === id) {
+        this.#finish(index, active);
+      }
     }
   }
 

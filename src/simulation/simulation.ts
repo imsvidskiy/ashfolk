@@ -211,8 +211,16 @@ export class Simulation {
     );
   }
 
+  get hasRealTimeWork(): boolean {
+    return this.#hasTimedEdits || this.waterRecomputation.hasUnobservedHeightEdit;
+  }
+
   get #hasPendingEdits(): boolean {
-    return this.#tasks.length > 0 || this.#stroke !== null || this.#grab !== null || this.waterRecomputation.isPending;
+    return this.#hasTimedEdits || this.#grab !== null;
+  }
+
+  get #hasTimedEdits(): boolean {
+    return this.#tasks.length > 0 || this.#stroke !== null || this.waterRecomputation.isPending;
   }
 
   get held(): HeldView | null {
@@ -342,7 +350,7 @@ export class Simulation {
     this.#notices = [];
     this.#waterUpdate = null;
     this.effects.takeEffects();
-    this.#blackHoles.restore(snapshot.blackHoles === undefined ? [] : snapshot.blackHoles, this.effects);
+    this.#blackHoles.restore(snapshot.blackHoles === undefined ? [] : snapshot.blackHoles, this.services);
     this.#fallingBombs.restore(snapshot.fallingBombs === undefined ? [] : snapshot.fallingBombs, this.effects);
     this.#tornadoes.restore(snapshot.tornadoes === undefined ? [] : snapshot.tornadoes, this.effects);
   }
@@ -513,23 +521,40 @@ export class Simulation {
     return update;
   }
 
-  advance(realSeconds: number): SimulationFrame {
-    const seconds = clamp(realSeconds, 0, MAXIMUM_REAL_SECONDS);
+  advance(
+    realSeconds: number,
+    commands: readonly unknown[] = [],
+    commandTimes: readonly number[] = []
+  ): SimulationFrame {
+    const duration = Math.max(0, realSeconds);
+    let wallTimeLeft = MAXIMUM_REAL_SECONDS;
+    let playingTimeLeft = MAXIMUM_REAL_SECONDS;
+    let elapsed = 0;
 
-    this.#recomputeWaterWhenSettled(seconds);
-    this.#applyStroke(seconds);
-    this.#runTasks(seconds);
-    this.#tickBacklog += this.#gameSeconds(seconds);
+    for (let index = 0; index <= commands.length; index += 1) {
+      const isLast = index === commands.length;
+      const at = commandTimes[index];
+      const end = isLast ? duration : clamp(at === undefined ? elapsed : at, elapsed, duration);
+      const interval = end - elapsed;
 
-    let ticks = 0;
+      if (interval > 0 || isLast) {
+        const wallSeconds = Math.min(interval, wallTimeLeft);
+        const playingSeconds = this.#isPaused ? 0 : Math.min(interval, playingTimeLeft);
 
-    while (this.#tickBacklog >= TICK_SECONDS && ticks < MAXIMUM_TICKS_PER_ADVANCE) {
-      this.step();
-      this.#tickBacklog -= TICK_SECONDS;
-      ticks += 1;
+        if (this.hasRealTimeWork) {
+          wallTimeLeft -= wallSeconds;
+        }
+
+        playingTimeLeft -= playingSeconds;
+        this.#advanceClocks(wallSeconds, playingSeconds * this.#speed);
+      }
+
+      if (!isLast) {
+        this.execute(commands[index]);
+      }
+
+      elapsed = end;
     }
-
-    this.#tickBacklog = Math.min(this.#tickBacklog, TICK_SECONDS);
 
     return this.#frameBuilder.build();
   }
@@ -562,12 +587,21 @@ export class Simulation {
     return this.#frameBuilder.initialWorld();
   }
 
-  #gameSeconds(realSeconds: number): number {
-    if (this.#isPaused) {
-      return 0;
+  #advanceClocks(seconds: number, gameSeconds: number): void {
+    this.#recomputeWaterWhenSettled(seconds);
+    this.#applyStroke(seconds);
+    this.#runTasks(seconds);
+    this.#tickBacklog += gameSeconds;
+
+    let ticks = 0;
+
+    while (this.#tickBacklog >= TICK_SECONDS && ticks < MAXIMUM_TICKS_PER_ADVANCE) {
+      this.step();
+      this.#tickBacklog -= TICK_SECONDS;
+      ticks += 1;
     }
 
-    return realSeconds * this.#speed;
+    this.#tickBacklog = Math.min(this.#tickBacklog, TICK_SECONDS);
   }
 
   #schedule(delaySeconds: number, run: () => void): void {

@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { DEFAULT_WORLD_REQUEST } from "../../generation/testing/world-request.ts";
 import { ignore } from "../../shared/ignore.ts";
 import { SAVE_VERSION, type SavedWorldState } from "../../simulation/saved-world.ts";
@@ -105,7 +105,7 @@ describe("saved worlds", () => {
     await writeSavedWorld(createSavedRecord("old", state, { version: SAVE_VERSION + 1 }), state, []);
 
     expect(await listSavedWorlds()).toMatchObject([{ id: "old", isLoadable: false }]);
-    expect(await readSavedWorld("old")).toBeNull();
+    await expect(readSavedWorld("old")).rejects.toThrow("saved island");
   });
 
   it("lists a world whose record cannot be read without loading it", async () => {
@@ -115,7 +115,28 @@ describe("saved worlds", () => {
     await putRawRecord({ ...createSavedRecord("broken", state), shape: "triangle" });
 
     expect(await listSavedWorlds()).toMatchObject([{ id: "broken", isLoadable: false, shape: "round" }]);
-    expect(await readSavedWorld("broken")).toBeNull();
+    await expect(readSavedWorld("broken")).rejects.toThrow("saved island");
+  });
+
+  it("retains an island when a read fails and loads it on retry", async () => {
+    const state = savedState();
+    const record = createSavedRecord("retry", state);
+
+    await writeSavedWorld(record, state, []);
+    vi.spyOn(IDBDatabase.prototype, "transaction").mockImplementationOnce(() => {
+      throw new DOMException("Storage is temporarily unavailable", "InvalidStateError");
+    });
+
+    await expect(readSavedWorld("retry")).rejects.toThrow("temporarily unavailable");
+    expect((await readSavedWorld("retry"))?.state.simulation.tick).toBe(state.simulation.tick);
+  });
+
+  it("refuses to replace an island when only its listing survives", async () => {
+    const state = savedState();
+
+    await putRawRecord(createSavedRecord("orphan", state));
+    await expect(readSavedWorld("orphan")).rejects.toThrow("saved island");
+    expect(await listSavedWorlds()).toMatchObject([{ id: "orphan" }]);
   });
 
   it("loads a saved world back into a simulation", async () => {

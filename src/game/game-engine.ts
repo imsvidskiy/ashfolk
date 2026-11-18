@@ -115,15 +115,19 @@ export class GameEngine implements EngineHandle {
       return mirror.heightAt(x, z);
     }
 
+    function surfaceAt(x: number, z: number): number {
+      return mirror.surfaceAt(x, z);
+    }
+
     function send(command: SimulationCommand): void {
       session.send(command);
     }
 
     const perspective = new PerspectiveCamera(FIELD_OF_VIEW, 1, NEAR_PLANE, FAR_PLANE);
-    const groundPicker = new GroundPicker(perspective, heightAt, halfSize);
+    const groundPicker = new GroundPicker(perspective, surfaceAt, halfSize);
 
     this.#resolution = new ResolutionGovernor(quality.maximumPixelRatio);
-    this.camera = new GodCamera(perspective, heightAt, halfSize);
+    this.camera = new GodCamera(perspective, surfaceAt, halfSize);
     this.#world = new WorldRenderer({
       camera: perspective,
       mirror,
@@ -143,16 +147,7 @@ export class GameEngine implements EngineHandle {
         return this.#world.drawnHeading(kind, id);
       }
     );
-    this.#labels = new LabelProjector(
-      perspective,
-      {
-        heightAt,
-        surfaceAt: (x, z) => {
-          return mirror.surfaceAt(x, z);
-        },
-      },
-      halfSize
-    );
+    this.#labels = new LabelProjector(perspective, { heightAt, surfaceAt }, halfSize);
     this.powers = new PowerTool(send, {
       hide: () => {
         this.#world.cursor.hide();
@@ -405,7 +400,9 @@ export class GameEngine implements EngineHandle {
   #showCursor(point: Vector3, radius: number, isPressed: boolean): void {
     const color = isPressed ? PRESSED_CURSOR_COLOR : CURSOR_COLOR;
 
-    this.#world.cursor.show(point.x, point.z, radius, color, CURSOR_OPACITY);
+    const waterLevel = this.session.mirror.isWaterAt(point.x, point.z) ? point.y : undefined;
+
+    this.#world.cursor.show(point.x, point.z, radius, color, CURSOR_OPACITY, waterLevel);
   }
 
   #selectAt(point: Vector3 | null, screen: ScreenPoint): void {

@@ -19,8 +19,8 @@ const FALLING_BOMB = { ...FOREST_TARGET, parameters: { radius: 160 }, powerId: "
 const FOREST_WELL = { ...FOREST_TARGET, parameters: { duration: 6, radius: 180 }, powerId: "black-hole" };
 
 export const SCENES: readonly Scene[] = [
-  { cast: FALLING_BOMB, name: "bomb-in-flight", query: FOREST_VIEW, ticksAfterCast: 18 },
-  { cast: FALLING_BOMB, name: "bomb-impact", query: FOREST_VIEW, ticksAfterCast: 43 },
+  { cast: FALLING_BOMB, name: "bomb-in-flight", query: FOREST_VIEW, ticksAfterCast: 34 },
+  { cast: FALLING_BOMB, name: "bomb-impact", query: FOREST_VIEW, ticksAfterCast: 60 },
   { cast: FOREST_WELL, name: "black-hole-in-forest", query: FOREST_VIEW, ticksAfterCast: 28 },
   { cast: FOREST_WELL, name: "black-hole-basin", query: FOREST_VIEW, ticksAfterCast: 65 },
   {
@@ -28,6 +28,12 @@ export const SCENES: readonly Scene[] = [
     name: "black-hole-over-lake",
     query: "seed=7&shape=round&quality=high&hours=11&camera=0,0,900,0.62,0.6",
     seconds: 1,
+  },
+  {
+    cast: { parameters: { lifetime: 20, radius: 45, strength: 70 }, powerId: "tornado", x: 0, z: 0 },
+    name: "waterspout-over-lake",
+    query: "seed=7&shape=round&quality=high&paused=1&hours=11&camera=0,0,500,0.62,0.6",
+    ticksAfterCast: 15,
   },
   { name: "far-round", query: "seed=7&shape=round&quality=high&paused=1&hours=11&camera=0,0,1800,0.8,0" },
   { name: "far-small", query: "seed=7&shape=round&size=small&quality=high&paused=1&hours=11&camera=0,0,1800,0.8,0" },

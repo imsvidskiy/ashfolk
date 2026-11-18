@@ -7,7 +7,9 @@ import type { PlayOptions, SoundEngine, SoundLoop, SoundPoint } from "./sound-en
 const SPEED_OF_SOUND = 343;
 const LONGEST_THUNDER_DELAY = 4;
 const CLOSE_LIGHTNING = 250;
+
 const TORNADO_FADE_SECONDS = 1.5;
+
 const METEOR_WHISTLE_SECONDS = 2.4;
 
 const BLESSINGS = {

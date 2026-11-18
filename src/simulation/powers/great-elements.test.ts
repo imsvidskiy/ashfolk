@@ -102,6 +102,7 @@ describe("greater elements", () => {
       kind: "black-hole",
       radius: 100,
       surfaceY: simulation.world.surfaceAt(x, z),
+      wellId: expect.any(Number),
       x,
       z,
     });
@@ -158,9 +159,13 @@ describe("greater elements", () => {
     const restored = loaded.initialWorld().frame;
 
     expect(restored.isPaused).toBe(true);
-    expect(restored.effects).toHaveLength(4);
+    const mainEffects = restored.effects.filter((effect) => {
+      return effect.kind !== "black-hole-inflow";
+    });
 
-    for (const effect of restored.effects) {
+    expect(mainEffects).toHaveLength(4);
+
+    for (const effect of mainEffects) {
       expect(effect).toMatchObject({ elapsedSeconds: expect.closeTo(1, 6) });
     }
 

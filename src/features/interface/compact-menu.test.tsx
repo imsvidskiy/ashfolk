@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
+import { userEvent } from "vitest/browser";
 import { render } from "vitest-browser-react";
 import { CompactMenu } from "./compact-menu.tsx";
 import { useInterfaceStore } from "./interface-store.ts";
@@ -14,6 +15,24 @@ describe("compact menu", () => {
 
     await expect.element(screen.getByRole("button", { name: "Menu" })).toBeVisible();
     expect(screen.getByRole("menu").elements()).toHaveLength(0);
+  });
+
+  it("separates both groups and restores keyboard focus to the compact trigger", async () => {
+    const screen = await render(<CompactMenu />);
+    const trigger = screen.getByRole("button", { name: "Menu" });
+
+    await trigger.click();
+
+    const views = screen.getByRole("group", { name: "World views" });
+    const controls = screen.getByRole("group", { name: "Game controls" });
+
+    await expect.element(views.getByRole("menuitem", { name: "Journal" })).toBeVisible();
+    await expect.element(controls.getByRole("menuitem", { name: "Settings" })).toBeVisible();
+
+    await userEvent.keyboard("{Escape}");
+
+    await expect.element(screen.getByRole("menu")).not.toBeInTheDocument();
+    await expect.element(trigger).toHaveFocus();
   });
 
   it("opens the journal on the tribes", async () => {
@@ -36,13 +55,13 @@ describe("compact menu", () => {
     const screen = await render(<CompactMenu />);
 
     await screen.getByRole("button", { name: "Menu" }).click();
-    await screen.getByRole("menuitem", { name: "Show the map" }).click();
+    await screen.getByRole("menuitemcheckbox", { checked: false, name: "Map" }).click();
 
     expect(useInterfaceStore.getState().isMapOpen).toBe(true);
 
     await screen.getByRole("button", { name: "Menu" }).click();
 
-    await expect.element(screen.getByRole("menuitem", { name: "Hide the map" })).toBeVisible();
+    await expect.element(screen.getByRole("menuitemcheckbox", { checked: true, name: "Map" })).toBeVisible();
   });
 
   it("reopens the last settings section", async () => {

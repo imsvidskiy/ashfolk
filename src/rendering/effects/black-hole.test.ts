@@ -1,22 +1,13 @@
 import { Texture } from "three/webgpu";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 import type { BlackHoleEffect } from "../../simulation/effects.ts";
 import { BlackHoleLens } from "./black-hole.ts";
 
 const HOLE: BlackHoleEffect = { durationSeconds: 6, kind: "black-hole", radius: 140, surfaceY: 20, x: 30, z: 90 };
-const SURFACE = {
-  isWaterAt: (x: number) => {
-    return x > HOLE.x;
-  },
-  surfaceAt: (x: number) => {
-    return x > HOLE.x ? 20 : 14;
-  },
-};
-
 describe("black hole lens", () => {
   it("opens above its surface, holds while paused, and restores the final collapse at its saved age", () => {
     const scene = new Texture();
-    const active = new BlackHoleLens(HOLE, scene, SURFACE);
+    const active = new BlackHoleLens(HOLE, scene);
     const [lens] = active.meshes;
     const opening = lens.scale.x;
 
@@ -34,7 +25,7 @@ describe("black hole lens", () => {
     expect(lens.position.equals(position)).toBe(true);
     expect(lens.scale.x).toBe(scale);
 
-    const restored = new BlackHoleLens({ ...HOLE, elapsedSeconds: 5.6 }, scene, SURFACE);
+    const restored = new BlackHoleLens({ ...HOLE, elapsedSeconds: 5.6 }, scene);
 
     expect(restored.meshes[0].position.y).toBeCloseTo(position.y);
     expect(restored.meshes[0].scale.x).toBeCloseTo(scale);
@@ -46,32 +37,16 @@ describe("black hole lens", () => {
     scene.dispose();
   });
 
-  it("sources each stream from its land or water surface only once", () => {
-    const surface = { isWaterAt: vi.fn(SURFACE.isWaterAt), surfaceAt: vi.fn(SURFACE.surfaceAt) };
+  it("waits at a small visible horizon for its simulation collapse and resynchronizes arriving matter", () => {
     const scene = new Texture();
-    const active = new BlackHoleLens(HOLE, scene, surface);
-    const [, debris] = active.meshes;
-    const pieces = debris.geometry.getAttribute("inflowPiece");
+    const active = new BlackHoleLens({ ...HOLE, wellId: 1 }, scene);
 
-    for (const [index, [x]] of surface.surfaceAt.mock.calls.entries()) {
-      expect(pieces.getX(index)).toBeCloseTo((SURFACE.surfaceAt(x) - HOLE.surfaceY) / HOLE.radius);
-      expect(pieces.getW(index)).toBe(Number(SURFACE.isWaterAt(x)));
-    }
-
-    active.update(2);
-    active.update(1);
-    expect(surface.surfaceAt).toHaveBeenCalledTimes(pieces.count);
-    expect(surface.isWaterAt).toHaveBeenCalledTimes(pieces.count);
-    expect(
-      surface.surfaceAt.mock.calls.some(([x]) => {
-        return SURFACE.isWaterAt(x);
-      })
-    ).toBe(true);
-    expect(
-      surface.surfaceAt.mock.calls.some(([x]) => {
-        return !SURFACE.isWaterAt(x);
-      })
-    ).toBe(true);
+    expect(active.update(8)).toBe(true);
+    expect(active.meshes[0].scale.x).toBeGreaterThan(0);
+    expect(active.meshes[0].scale.x).toBeLessThan(HOLE.radius * 0.25);
+    active.synchronize(3);
+    expect(active.age).toBe(3);
+    expect(active.meshes[0].scale.x).toBe(HOLE.radius);
 
     active.finish();
     scene.dispose();

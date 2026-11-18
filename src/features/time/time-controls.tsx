@@ -2,9 +2,10 @@ import { Button } from "@base-ui/react/button";
 import { Toggle } from "@base-ui/react/toggle";
 import { ToggleGroup } from "@base-ui/react/toggle-group";
 import { Pause } from "lucide-react";
+import type { ChangeEvent } from "react";
 import { useSendCommand } from "../../app/use-engine.ts";
 import { cn } from "../../design/cn.ts";
-import { SEGMENT, SEGMENT_CHOSEN, SEGMENT_TRACK } from "../../design/styles.ts";
+import { FOCUS_RING, SEGMENT, SEGMENT_CHOSEN, SEGMENT_TRACK } from "../../design/styles.ts";
 import { SIMULATION_SPEEDS } from "../../simulation/tick.ts";
 import { useWorldStore } from "../world/world-store.ts";
 
@@ -21,9 +22,7 @@ function useTimeControls() {
     send({ isPaused: !isPaused, type: "setPaused" });
   }
 
-  function handleSpeedChange(values: string[]): void {
-    const [selected] = values;
-
+  function selectSpeed(selected: string | undefined): void {
     if (selected === undefined) {
       return;
     }
@@ -35,7 +34,15 @@ function useTimeControls() {
     }
   }
 
-  return { handlePauseToggle, handleSpeedChange, isPaused, speed };
+  function handleSpeedChange(values: string[]): void {
+    selectSpeed(values[0]);
+  }
+
+  function handleSelectChange(event: ChangeEvent<HTMLSelectElement>): void {
+    selectSpeed(event.currentTarget.value);
+  }
+
+  return { handlePauseToggle, handleSelectChange, handleSpeedChange, isPaused, speed };
 }
 
 function SpeedOption({ speed }: { readonly speed: number }) {
@@ -51,7 +58,7 @@ function SpeedOption({ speed }: { readonly speed: number }) {
 }
 
 export function TimeControls() {
-  const { handlePauseToggle, handleSpeedChange, isPaused, speed } = useTimeControls();
+  const { handlePauseToggle, handleSelectChange, handleSpeedChange, isPaused, speed } = useTimeControls();
 
   const pressedSpeeds = isPaused || speed === undefined ? [] : [String(speed)];
 
@@ -69,7 +76,7 @@ export function TimeControls() {
 
       <ToggleGroup
         aria-label="Game speed"
-        className="flex flex-1 justify-between gap-0.5"
+        className="flex flex-1 justify-between gap-0.5 max-[23rem]:hidden"
         onValueChange={handleSpeedChange}
         value={pressedSpeeds}
       >
@@ -77,6 +84,25 @@ export function TimeControls() {
           return <SpeedOption key={option} speed={option} />;
         })}
       </ToggleGroup>
+
+      <select
+        aria-label="Game speed"
+        className={cn(FOCUS_RING, "text-ink hidden h-9 rounded-full px-2 text-sm font-semibold max-[23rem]:block")}
+        onChange={handleSelectChange}
+        value={isPaused || speed === undefined ? "" : speed}
+      >
+        <option disabled value="">
+          Speed
+        </option>
+
+        {SIMULATION_SPEEDS.map((option) => {
+          return (
+            <option key={option} value={option}>
+              {option}×
+            </option>
+          );
+        })}
+      </select>
     </div>
   );
 }

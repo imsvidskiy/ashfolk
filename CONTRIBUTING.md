@@ -70,6 +70,7 @@ Biome formats and lints at a line width of 120, and TypeScript runs under
 - Put every `if` and loop body in braces, even a single `return`.
 - Don't use `??`, don't use `&&` to pick values or render conditionally, and
   don't use `as` casts or `!` assertions.
+- Keep constants for each species, material or effect together, with a blank line between groups.
 - Separate the steps of a function with one blank line: the destructuring, the
   values it prepares, the work, and the result. Statements of one kind stay
   together.

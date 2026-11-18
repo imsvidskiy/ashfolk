@@ -119,7 +119,7 @@ function createMeteorMaterial(): MeshBasicNodeMaterial {
   const shape = mx_noise_float(positionLocal.mul(1.6));
   const veins = mx_noise_float(positionLocal.mul(3.2).add(vec3(0, time.mul(0.6), 0)));
 
-  const glow = smoothstep(0.16, 0, abs(veins));
+  const glow = smoothstep(0, 0.16, abs(veins)).oneMinus();
 
   material.positionNode = positionLocal.mul(shape.mul(0.3).add(1));
   material.colorNode = mix(vec3(0.2, 0.12, 0.08), vec3(2.6, 1.05, 0.25), glow.mul(0.85).add(0.15));

@@ -24,8 +24,10 @@ import { createQuadrupedSkeleton, LEG_ENDS, legBones, QuadrupedBone } from "./qu
 import { addRuff, addWolfBody, WOLF_FRAME, WOLF_GAIT } from "./wolf-model.ts";
 
 const LARGE_ANTLERS = 0.95;
+
 const SHORTEST_HORNS = 0.2;
 const LONG_HORNS = 0.8;
+
 const SHORTEST_TUSKS = 0.3;
 const LONG_TUSKS = 0.8;
 

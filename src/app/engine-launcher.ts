@@ -14,8 +14,9 @@ import {
 } from "../generation/generation-options.ts";
 import { toError } from "../shared/errors.ts";
 import { ignore } from "../shared/ignore.ts";
-import { islandDimensions } from "../world/island-size.ts";
+import { islandDimensions, islandSizeOf } from "../world/island-size.ts";
 import type { LaunchOptions } from "./launch-options.ts";
+import type { WorldChoice } from "./launch-store.ts";
 
 export type LoadingStage = GenerationStage | "lighting" | "waking";
 
@@ -82,8 +83,12 @@ export function reportGraphicsLost(
   });
 }
 
-export async function worldSourceFor(launch: LaunchOptions, worldId: string): Promise<WorldSource> {
-  const saved = await readSavedWorld(worldId);
+export async function worldSourceFor(
+  launch: LaunchOptions,
+  worldId: string | null,
+  onSavedChoice: (choice: WorldChoice) => void = ignore
+): Promise<WorldSource> {
+  const saved = worldId === null ? null : await readSavedWorld(worldId);
 
   if (saved === null) {
     return {
@@ -94,6 +99,10 @@ export async function worldSourceFor(launch: LaunchOptions, worldId: string): Pr
       },
     };
   }
+
+  const { options, seed } = saved.state.request;
+
+  onSavedChoice({ name: saved.record.name, seed, shape: options.shape, size: islandSizeOf(options.dimensions) });
 
   return { journal: saved.journal, kind: "saved", state: saved.state };
 }
@@ -121,6 +130,7 @@ function applyLaunchTime(engine: GameEngine, launch: LaunchOptions): void {
 
 export class EngineLauncher {
   readonly #canvas: HTMLCanvasElement;
+  readonly #onSavedChoice: (choice: WorldChoice) => void;
   readonly #onStatus: EngineStatusListener;
   readonly #opening = new AbortController();
   #engine: GameEngine | null = null;
@@ -128,8 +138,15 @@ export class EngineLauncher {
   #session: Promise<GameSession> | null = null;
   #state: "canceled" | "running" | "starting" = "starting";
 
-  constructor(container: HTMLElement, launch: LaunchOptions, worldId: string, onStatus: EngineStatusListener) {
+  constructor(
+    container: HTMLElement,
+    launch: LaunchOptions,
+    worldId: string | null,
+    onStatus: EngineStatusListener,
+    onSavedChoice: (choice: WorldChoice) => void = ignore
+  ) {
     this.#canvas = createCanvas(container);
+    this.#onSavedChoice = onSavedChoice;
     this.#onStatus = onStatus;
     this.#onStatus(WAKING_STATUS);
     queueMicrotask(() => {
@@ -142,6 +159,10 @@ export class EngineLauncher {
     this.#opening.abort();
 
     if (this.#engine !== null) {
+      if (import.meta.env.DEV && Reflect.get(window, "ashfolk") === this.#engine) {
+        Reflect.deleteProperty(window, "ashfolk");
+      }
+
       this.#engine.dispose();
       this.#engine = null;
     }
@@ -149,7 +170,7 @@ export class EngineLauncher {
     this.#canvas.remove();
   }
 
-  #startUnlessCanceled(launch: LaunchOptions, worldId: string): void {
+  #startUnlessCanceled(launch: LaunchOptions, worldId: string | null): void {
     if (this.#state === "canceled") {
       return;
     }
@@ -159,8 +180,11 @@ export class EngineLauncher {
     });
   }
 
-  async #start(launch: LaunchOptions, worldId: string): Promise<void> {
-    const [{ openSession }, world] = await Promise.all([loadSessionOpener(), worldSourceFor(launch, worldId)]);
+  async #start(launch: LaunchOptions, worldId: string | null): Promise<void> {
+    const [{ openSession }, world] = await Promise.all([
+      loadSessionOpener(),
+      worldSourceFor(launch, worldId, this.#onSavedChoice),
+    ]);
 
     let markGrowing = ignore;
     const growing = new Promise<void>((resolve) => {

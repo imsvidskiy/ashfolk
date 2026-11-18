@@ -6,7 +6,8 @@ import type { MeshData } from "../mesh/mesh-data.ts";
 import { facetShape } from "../mesh/shape.ts";
 import { card, cylinder } from "../mesh/shapes.ts";
 import { transformOf } from "../mesh/transforms.ts";
-import { addOreChunk, addOreHeap, addStreakedRock, type OreLook } from "./ore-rock.ts";
+import { addVeinedHill } from "./mine-veins.ts";
+import { addOreChunk, addOreHeap, type OreLook } from "./ore-rock.ts";
 import {
   addBlock,
   addLog,
@@ -48,7 +49,7 @@ function oreLook(ore: MineOre, richness: number): OreLook {
 function addHill(context: StructureContext, ore: MineOre): void {
   const mound = moundShape(context, [0, 0, MOUND_CENTER], MOUND_RADIUS, [1.15, 1.3, 0.92]);
 
-  addStreakedRock(context, mound, oreLook(ore, ORE_RICHNESS[ore]), {
+  addVeinedHill(context, mound, ORE_SLOTS[ore], ORE_RICHNESS[ore], {
     buildOrder: rising(0.05, 0.35, 0, 2.9),
     shade: (point) => {
       return 0.72 + 0.12 * Math.min(1, point.position.y / 2.6);

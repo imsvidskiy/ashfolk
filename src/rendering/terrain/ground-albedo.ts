@@ -1,7 +1,9 @@
 import {
   clamp,
+  Fn,
   float,
   floor,
+  If,
   int,
   ivec2,
   max,
@@ -36,9 +38,11 @@ import {
 import { GROUNDS, Ground, seasonalGroundColor } from "../../content/grounds.ts";
 import type { WorldMirror } from "../../game/world-mirror.ts";
 import { lerp, saturate } from "../../shared/math.ts";
+import type { RowRun } from "../../world/change-tracking.ts";
 import { cellByteTexture, floatDataTexture } from "../data-textures.ts";
 
 const BYTE = 255;
+
 const COVER_REACH = 2;
 
 interface AlbedoSources {
@@ -97,25 +101,32 @@ function albedoNode({ ground, lushness, palette, size }: AlbedoSources): Node<"v
     return { color: vec4(color, cover), isOpen: select(groundIndex.equal(int(Ground.Farm)), float(0), float(1)) };
   }
 
-  const own = lookAt(0, 0);
+  return Fn(() => {
+    const own = lookAt(0, 0);
+    const result = own.color.toVar();
 
-  let around: Node<"vec4"> = vec4(0);
-  let weight: Node<"float"> = float(0);
+    If(own.isOpen.equal(0), () => {
+      let around: Node<"vec4"> = vec4(0);
+      let weight: Node<"float"> = float(0);
 
-  for (let row = -COVER_REACH; row <= COVER_REACH; row += 1) {
-    for (let column = -COVER_REACH; column <= COVER_REACH; column += 1) {
-      const neighbor = column === 0 && row === 0 ? own : lookAt(column, row);
+      for (let row = -COVER_REACH; row <= COVER_REACH; row += 1) {
+        for (let column = -COVER_REACH; column <= COVER_REACH; column += 1) {
+          if (column !== 0 || row !== 0) {
+            const neighbor = lookAt(column, row);
 
-      around = around.add(neighbor.color.mul(neighbor.isOpen));
-      weight = weight.add(neighbor.isOpen);
-    }
-  }
+            around = around.add(neighbor.color.mul(neighbor.isOpen));
+            weight = weight.add(neighbor.isOpen);
+          }
+        }
+      }
 
-  const borrowed = select(weight.greaterThan(0), around.div(max(weight, 1)), own.color);
-  const result = select(own.isOpen.greaterThan(0), own.color, borrowed);
-  const levels = floor(result.mul(BYTE).add(0.5)).div(BYTE);
+      result.assign(select(weight.greaterThan(0), around.div(max(weight, 1)), own.color));
+    });
 
-  return vec4(linearFromSrgb(levels.rgb), levels.a);
+    const levels = floor(result.mul(BYTE).add(0.5)).div(BYTE);
+
+    return vec4(linearFromSrgb(levels.rgb), levels.a);
+  })();
 }
 
 export class GroundAlbedo {
@@ -129,10 +140,12 @@ export class GroundAlbedo {
   });
   readonly #quad = new QuadMesh(this.#material);
   readonly #target: RenderTarget;
+  #hasPainted: boolean;
 
   constructor(mirror: WorldMirror) {
     const size = mirror.grid.cellsPerSide;
 
+    this.#hasPainted = false;
     this.#ground = cellByteTexture(mirror.ground, size, RGBAFormat);
     this.#lushness = floatDataTexture(lushnessData(mirror), size, size, RGFormat);
     this.#target = new RenderTarget(size, size, {
@@ -162,21 +175,40 @@ export class GroundAlbedo {
     this.#ground.needsUpdate = true;
   }
 
-  paint(renderer: WebGPURenderer, season: number): void {
+  paint(renderer: WebGPURenderer, season: number, changedRows: readonly RowRun[]): void {
+    const hasPaletteChanged = this.#updatePalette(season);
+    const shouldPaintAll = !this.#hasPainted || hasPaletteChanged;
+
+    const target = this.#target;
     const previousTarget = renderer.getRenderTarget();
+    const previousClear = renderer.autoClear;
 
-    for (const [index, color] of this.#palette.entries()) {
-      const [red, green, blue] = seasonalGroundColor(index, season);
+    if (!shouldPaintAll) {
+      const last = changedRows.at(-1);
 
-      color.set(red, green, blue, GROUNDS[index].grass);
+      if (last === undefined) {
+        return;
+      }
+
+      const first = Math.max(0, changedRows[0].firstRow - COVER_REACH);
+      const end = Math.min(target.height, last.firstRow + last.rowCount + COVER_REACH);
+
+      target.scissor.set(0, first, target.width, end - first);
+      target.scissorTest = true;
     }
 
-    this.soil.value.setRGB(...seasonalGroundColor(Ground.Farm, season), SRGBColorSpace);
-    this.earth.value.setRGB(...seasonalGroundColor(Ground.Dirt, season), SRGBColorSpace);
+    this.#hasPainted = false;
 
-    renderer.setRenderTarget(this.#target);
-    this.#quad.render(renderer);
-    renderer.setRenderTarget(previousTarget);
+    try {
+      renderer.autoClear = false;
+      renderer.setRenderTarget(target);
+      this.#quad.render(renderer);
+      this.#hasPainted = true;
+    } finally {
+      target.scissorTest = false;
+      renderer.setRenderTarget(previousTarget);
+      renderer.autoClear = previousClear;
+    }
   }
 
   dispose(): void {
@@ -184,5 +216,24 @@ export class GroundAlbedo {
     this.#material.dispose();
     this.#ground.dispose();
     this.#lushness.dispose();
+  }
+
+  #updatePalette(season: number): boolean {
+    let hasChanged = false;
+
+    for (const [index, color] of this.#palette.entries()) {
+      const [red, green, blue] = seasonalGroundColor(index, season);
+
+      if (color.x !== red || color.y !== green || color.z !== blue) {
+        hasChanged = true;
+      }
+
+      color.set(red, green, blue, GROUNDS[index].grass);
+    }
+
+    this.soil.value.setRGB(...seasonalGroundColor(Ground.Farm, season), SRGBColorSpace);
+    this.earth.value.setRGB(...seasonalGroundColor(Ground.Dirt, season), SRGBColorSpace);
+
+    return hasChanged;
   }
 }

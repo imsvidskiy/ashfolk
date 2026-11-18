@@ -8,7 +8,6 @@ import { ToggleField } from "../../design/toggle-field.tsx";
 import { isQualityLevel, QUALITY_LEVELS, type QualityLevel } from "../../rendering/render-quality.ts";
 import { useGuideStore } from "../guide/guide-store.ts";
 import { useInterfaceStore } from "../interface/interface-store.ts";
-import { ProjectLinks } from "../project/project-links.tsx";
 import { useLeaveWorld } from "../saves/use-leave-world.ts";
 import { SettingsGroup } from "./settings-group.tsx";
 
@@ -121,8 +120,6 @@ export function GeneralSection() {
       <DisplayChoice />
 
       <QualityChoice />
-
-      <ProjectLinks className="border-line justify-start border-t pt-3" />
     </>
   );
 }

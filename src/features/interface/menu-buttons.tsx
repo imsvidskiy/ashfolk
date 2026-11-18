@@ -1,12 +1,18 @@
 import { BookOpen, Download, Map as MapIcon, Settings } from "lucide-react";
-import { IconButton } from "../../design/buttons.tsx";
+import { IconButton, TextButton } from "../../design/buttons.tsx";
 import { cn } from "../../design/cn.ts";
+import { Island } from "../../design/island.tsx";
 import { WithTooltip } from "../../design/tooltip.tsx";
 import { useInstall } from "../install/install-store.ts";
 import { useSidePanel } from "../journal/use-side-panel.ts";
 import { useSoundToggle } from "../sound/use-sound-toggle.ts";
 import { useInterfaceStore } from "./interface-store.ts";
 import { useFullscreen } from "./use-fullscreen.ts";
+
+const ROW = "flex h-12 items-center gap-0.5 px-1.5 pointer-coarse:h-13";
+
+const VIEW_BUTTON =
+  "h-10 gap-1.5 px-3 font-semibold aria-pressed:bg-dawn-soft aria-pressed:text-dawn-strong pointer-coarse:h-11";
 
 function useMenuActions() {
   const { isJournalOpen, toggleJournal } = useSidePanel();
@@ -65,34 +71,47 @@ export function MenuButtons({ className }: { readonly className?: string | undef
   const { isJournalOpen, isMapOpen, openSettings, toggleJournal, toggleMap } = useMenuActions();
 
   return (
-    <nav aria-label="Panels" className={cn("flex items-center gap-1", className)}>
-      <WithTooltip content="Tribes, relations and chronicle" side="bottom">
-        <IconButton
-          icon={<BookOpen aria-hidden="true" size={18} />}
-          isPressed={isJournalOpen}
-          label="Journal"
-          onClick={toggleJournal}
-        />
-      </WithTooltip>
+    <nav aria-label="Panels" className={cn("flex items-center gap-2", className)}>
+      <Island>
+        <fieldset aria-label="World views" className={ROW}>
+          <WithTooltip content="Tribes, relations and chronicle" side="bottom">
+            <TextButton aria-pressed={isJournalOpen} className={VIEW_BUTTON} onClick={toggleJournal} tone="quiet">
+              <BookOpen aria-hidden="true" size={17} />
+              Journal
+            </TextButton>
+          </WithTooltip>
 
-      <WithTooltip content="Map of the island" side="bottom">
-        <IconButton
-          icon={<MapIcon aria-hidden="true" size={18} />}
-          isPressed={isMapOpen}
-          label="Map"
-          onClick={toggleMap}
-        />
-      </WithTooltip>
+          <WithTooltip content="Map of the island" side="bottom">
+            <TextButton aria-pressed={isMapOpen} className={VIEW_BUTTON} onClick={toggleMap} tone="quiet">
+              <MapIcon aria-hidden="true" size={17} />
+              Map
+            </TextButton>
+          </WithTooltip>
+        </fieldset>
+      </Island>
 
-      <SoundButton />
+      <Island>
+        <fieldset aria-label="Game controls" className={ROW}>
+          <SoundButton />
 
-      <WithTooltip content="World, weather, time, graphics and sound" side="bottom">
-        <IconButton icon={<Settings aria-hidden="true" size={18} />} label="Settings" onClick={openSettings} />
-      </WithTooltip>
+          <WithTooltip content="World, weather, time, graphics and sound" side="bottom">
+            <TextButton
+              aria-label="Settings"
+              className="size-10 gap-1.5 p-0 font-semibold xl:w-auto xl:px-3 pointer-coarse:size-11"
+              onClick={openSettings}
+              tone="quiet"
+            >
+              <Settings aria-hidden="true" size={18} />
 
-      <InstallButton />
+              <span className="hidden xl:inline">Settings</span>
+            </TextButton>
+          </WithTooltip>
 
-      <FullscreenButton />
+          <InstallButton />
+
+          <FullscreenButton />
+        </fieldset>
+      </Island>
     </nav>
   );
 }

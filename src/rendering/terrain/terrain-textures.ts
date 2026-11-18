@@ -146,7 +146,7 @@ export class TerrainTextures {
     const hasSeasonChanged = Math.abs(season - this.#albedoSeason) >= SEASON_STEP;
 
     if (hasSeasonChanged || changes.groundRuns.length > 0) {
-      this.groundAlbedo.paint(renderer, season);
+      this.groundAlbedo.paint(renderer, season, changes.groundRuns);
       this.#albedoSeason = season;
     }
   }

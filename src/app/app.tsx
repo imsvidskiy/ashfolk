@@ -9,22 +9,22 @@ import { ReadyHud } from "./ready-hud.tsx";
 import { StartScreen } from "./start-screen.tsx";
 
 function GameScreen() {
-  const launch = useLaunchStore((state) => {
-    return state.launch;
+  const name = useLaunchStore((state) => {
+    return state.launch.name;
   });
-  const worldId = useLaunchStore((state) => {
-    return state.worldId;
+  const request = useLaunchStore((state) => {
+    return state.request;
   });
 
   useEffect(() => {
-    document.title = `${launch.name} · Ashfolk`;
-  }, [launch.name]);
+    document.title = `${name} · Ashfolk`;
+  }, [name]);
 
   return (
     <>
       <h1 className="sr-only">Ashfolk</h1>
 
-      <GameView launch={launch} worldId={worldId} />
+      <GameView request={request} />
 
       <ReadyHud />
 

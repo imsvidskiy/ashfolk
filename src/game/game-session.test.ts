@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import type { GenerationProgress } from "../generation/generation-options.ts";
 import { ignore } from "../shared/ignore.ts";
 import type { ChronicleEntry } from "../simulation/chronicle.ts";
+import { BOMB_FALL_TICKS } from "../simulation/powers/falling-bombs.ts";
 import { Simulation } from "../simulation/simulation.ts";
 import { createVegetatedWorld } from "../simulation/testing/test-world.ts";
 import { createSimulationWorkerApi } from "../workers/simulation-worker-api.ts";
@@ -35,6 +36,13 @@ async function advanceSession(session: GameSession, seconds: number): Promise<vo
   session.update(seconds);
 
   await session.whenIdle();
+}
+
+async function advanceFrames(session: GameSession, frames: number, seconds: number): Promise<void> {
+  if (frames > 0) {
+    await advanceSession(session, seconds);
+    await advanceFrames(session, frames - 1, seconds);
+  }
 }
 
 describe("creating a session", () => {
@@ -97,8 +105,8 @@ describe("advancing", () => {
 
     expect(session.isAdvancing).toBe(false);
     expect(advance).toHaveBeenCalledTimes(2);
-    expect(advance).toHaveBeenNthCalledWith(1, expect.closeTo(0.1));
-    expect(advance).toHaveBeenNthCalledWith(2, expect.closeTo(0.15));
+    expect(advance).toHaveBeenNthCalledWith(1, expect.closeTo(0.1), []);
+    expect(advance).toHaveBeenNthCalledWith(2, expect.closeTo(0.15), []);
   });
 
   it("waits for a whole tick before asking the worker for a frame", async () => {
@@ -114,7 +122,7 @@ describe("advancing", () => {
     session.update(0.04);
     await session.whenIdle();
 
-    expect(advance).toHaveBeenCalledWith(expect.closeTo(0.12));
+    expect(advance).toHaveBeenCalledWith(expect.closeTo(0.12), []);
   });
 
   it("stays quiet while paused until a command arrives", async () => {
@@ -136,6 +144,137 @@ describe("advancing", () => {
     await session.whenIdle();
 
     expect(advance).toHaveBeenCalledOnce();
+  });
+
+  it("keeps the old speed for time that passed before a speed change", async () => {
+    const { session } = await createSession();
+
+    session.update(0.09);
+    session.send({ speed: 16, type: "setSpeed" });
+    await advanceSession(session, 0);
+
+    expect(session.frame.tick).toBe(0);
+    expect(session.frame.secondsSinceTick).toBeCloseTo(0.09);
+
+    await advanceSession(session, 0.01);
+
+    expect(session.frame.tick).toBe(2);
+    expect(session.frame.secondsSinceTick).toBeCloseTo(0.05);
+  });
+
+  it("keeps speed changes, a new power and a short pause in time order during a slow worker reply", async () => {
+    const { session } = await createSession();
+
+    session.update(0.1);
+    session.update(0.08);
+    session.send({ speed: 16, type: "setSpeed" });
+    session.update(0.04);
+    session.send({ parameters: {}, powerId: "nuclear", type: "usePower", x: 0, z: 0 });
+    session.send({ isPaused: true, type: "setPaused" });
+    session.update(0.4);
+    session.send({ speed: 2, type: "setSpeed" });
+    session.send({ isPaused: false, type: "setPaused" });
+    session.update(0.06);
+
+    const saved = await session.saveWorld();
+
+    expect(session.frame.tick).toBe(9);
+    expect(session.frame.secondsSinceTick).toBeCloseTo(0.04);
+    expect(saved?.simulation.fallingBombs).toEqual([expect.objectContaining({ remainingTicks: BOMB_FALL_TICKS - 1 })]);
+  });
+
+  it("resumes at high speed without playing the time spent paused or waiting for the pause reply", async () => {
+    const { session } = await createSession();
+
+    session.send({ speed: 16, type: "setSpeed" });
+    session.send({ isPaused: true, type: "setPaused" });
+    session.update(0);
+    session.update(0.6);
+    session.send({ isPaused: false, type: "setPaused" });
+    await session.whenIdle();
+    await advanceSession(session, 0);
+
+    expect(session.frame.tick).toBe(0);
+    expect(session.frame.secondsSinceTick).toBe(0);
+
+    await advanceSession(session, 0.025);
+
+    expect(session.frame.tick).toBe(4);
+  });
+
+  it.each(["black-hole", "nuclear", "tornado-swarm"] as const)(
+    "uses the idle heartbeat for a paused %s and advances it after resuming",
+    async (powerId) => {
+      const { connection, session } = await createSession();
+
+      session.send({ isPaused: true, type: "setPaused" });
+      session.send({ parameters: {}, powerId, type: "usePower", x: 0, z: 0 });
+      await advanceSession(session, 0);
+
+      expect(session.frame.isBusy).toBe(true);
+
+      const advance = vi.spyOn(connection, "advance");
+
+      await advanceFrames(session, 120, 1 / 60);
+
+      expect(advance).toHaveBeenCalledTimes(2);
+      expect(session.frame.tick).toBe(0);
+
+      session.send({ isPaused: false, type: "setPaused" });
+      await advanceSession(session, 0);
+      advance.mockClear();
+
+      await advanceFrames(session, 30, 0.02);
+
+      expect(advance).toHaveBeenCalledTimes(6);
+      expect(session.frame.tick).toBe(6);
+    }
+  );
+
+  it("keeps a delayed impact on wall time when a slow reply straddles unpausing", async () => {
+    const { session } = await createSession();
+
+    session.send({ speed: 16, type: "setSpeed" });
+    session.send({ isPaused: true, type: "setPaused" });
+    session.send({ parameters: { fallTime: 0.5 }, powerId: "meteor", type: "usePower", x: 0, z: 0 });
+    await advanceSession(session, 0);
+
+    session.update(0.1);
+    session.update(0.2);
+    session.send({ isPaused: false, type: "setPaused" });
+    await session.whenIdle();
+    await advanceSession(session, 0);
+
+    expect(session.frame.tick).toBe(0);
+    expect(session.takeEffects()).not.toContainEqual(expect.objectContaining({ kind: "explosion" }));
+
+    await advanceSession(session, 0.21);
+
+    expect(session.takeEffects()).toContainEqual(expect.objectContaining({ kind: "explosion" }));
+  });
+
+  it("finishes a delayed meteor and settles its crater on a paused island", async () => {
+    const { session, simulation } = await createSession();
+
+    session.send({ isPaused: true, type: "setPaused" });
+    await advanceSession(session, 0);
+    await advanceSession(session, 0.6);
+
+    session.send({ parameters: { fallTime: 0.5 }, powerId: "meteor", type: "usePower", x: 0, z: 0 });
+    await advanceSession(session, 0);
+    session.takeEffects();
+
+    await advanceFrames(session, 4, 0.1);
+
+    expect(session.takeEffects()).toEqual([]);
+
+    const recompute = vi.spyOn(simulation.waterRecomputation, "recompute");
+
+    await advanceFrames(session, 12, 0.1);
+
+    expect(session.takeEffects()).toContainEqual(expect.objectContaining({ kind: "explosion" }));
+    expect(recompute).toHaveBeenCalledOnce();
+    expect(session.frame.tick).toBe(0);
   });
 
   it("sends the view focus with the next regular request instead of asking for a frame", async () => {

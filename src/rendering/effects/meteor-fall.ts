@@ -51,7 +51,7 @@ export class MeteorFall implements ActiveEffect {
     this.#context = context;
     this.#effect = effect;
     this.#from = new Vector3(effect.fromX, effect.fromY, effect.fromZ);
-    this.#to = new Vector3(effect.toX, context.heightAt(effect.toX, effect.toZ), effect.toZ);
+    this.#to = new Vector3(effect.toX, context.surface.surfaceAt(effect.toX, effect.toZ), effect.toZ);
     this.#direction = this.#to.clone().sub(this.#from).normalize();
     this.#size = 6 + effect.radius * 0.03;
     this.#rock = context.meshes.createMeteor();

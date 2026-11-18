@@ -7,6 +7,7 @@ import type { ActiveEffect, EffectContext, SpriteSinks } from "./transient-effec
 
 const GROWING_SECONDS = 1.5;
 const FADING_SECONDS = 2.5;
+
 const HEIGHT_PER_RADIUS = 6;
 const LAYERS = 30;
 const PUFFS_PER_LAYER = 9;
@@ -15,18 +16,42 @@ const WIDEST_SHARE = 2.4;
 const FLARE = 2.6;
 const SPIN = 5;
 const SWAY = 0.35;
+
 const CAP_PUFFS = 26;
 const CAP_SPREAD = 3.4;
+
 const DUST_PUFFS = 28;
+
 const DEBRIS = 40;
 const DEBRIS_ORBIT_SECONDS = 2.6;
+
 const FUNNEL_SHADE: Color = [0.5, 0.52, 0.55];
 const CAP_SHADE: Color = [0.36, 0.38, 0.42];
+
+const SPRAY_SHADE: Color = [0.75, 0.86, 0.91];
+const FOAM_SHADE: Color = [0.85, 0.93, 0.96];
+
 const DUST_SHADE: Color = [0.42, 0.36, 0.29];
 const DEBRIS_SHADE: Color = [0.2, 0.16, 0.12];
 
+const FUNNEL_LAYERS = Array.from({ length: LAYERS }, (_, layer) => {
+  const share = layer / (LAYERS - 1);
+  const puffs = Array.from({ length: PUFFS_PER_LAYER }, (_value, puff) => {
+    return { angle: hashToUnit(layer, puff, 1) * FULL_TURN, wobble: 0.75 + hashToUnit(layer, puff, 2) * 0.5 };
+  });
+
+  return {
+    puffs,
+    reach: lerp(NARROWEST_SHARE, WIDEST_SHARE, share ** FLARE),
+    shade: lerp(1.08, 0.88, share),
+    share,
+    spin: lerp(1.6, 0.6, share),
+  };
+});
+
 interface Base {
   ground: number;
+  isInWater: boolean;
   presence: number;
   x: number;
   z: number;
@@ -55,7 +80,8 @@ export class TornadoFunnel implements ActiveEffect {
     const { x, z } = tornadoPositionAt(this.#effect.path, this.#age);
 
     const base = {
-      ground: this.#context.heightAt(x, z),
+      ground: this.#context.surface.surfaceAt(x, z),
+      isInWater: this.#context.surface.isWaterAt(x, z),
       presence:
         smoothstep(0, GROWING_SECONDS, this.#age) *
         (1 - smoothstep(this.#duration, this.#duration + FADING_SECONDS, this.#age)),
@@ -78,18 +104,19 @@ export class TornadoFunnel implements ActiveEffect {
   #drawFunnel(base: Base, sinks: SpriteSinks): void {
     const { radius } = this.#effect;
 
-    for (let layer = 0; layer < LAYERS; layer += 1) {
-      const share = layer / (LAYERS - 1);
-      const reach = radius * lerp(NARROWEST_SHARE, WIDEST_SHARE, share ** FLARE) * lerp(0.4, 1, base.presence);
-      const spin = this.#age * SPIN * lerp(1.6, 0.6, share);
-      const shade = lerp(1.08, 0.88, share);
+    const growing = lerp(0.4, 1, base.presence);
+
+    for (const layer of FUNNEL_LAYERS) {
+      const { shade, share } = layer;
+      const reach = radius * layer.reach * growing;
+      const spin = this.#age * SPIN * layer.spin;
       const look = [FUNNEL_SHADE[0] * shade, FUNNEL_SHADE[1] * shade, FUNNEL_SHADE[2] * shade, 0.5 * base.presence];
       const sway = this.#sway(share);
       const height = base.ground + share * this.#height * base.presence;
 
-      for (let puff = 0; puff < PUFFS_PER_LAYER; puff += 1) {
-        const angle = hashToUnit(layer, puff, 1) * FULL_TURN + spin;
-        const wobble = 0.75 + hashToUnit(layer, puff, 2) * 0.5;
+      for (const puff of layer.puffs) {
+        const angle = puff.angle + spin;
+        const { wobble } = puff;
 
         sinks.dust.add(
           [
@@ -128,7 +155,8 @@ export class TornadoFunnel implements ActiveEffect {
   #drawDust(base: Base, sinks: SpriteSinks): void {
     const { radius } = this.#effect;
 
-    const look = [...DUST_SHADE, 0.55 * base.presence];
+    const shade = base.isInWater ? SPRAY_SHADE : DUST_SHADE;
+    const look = [...shade, 0.55 * base.presence];
 
     for (let puff = 0; puff < DUST_PUFFS; puff += 1) {
       const angle = hashToUnit(puff, 31) * FULL_TURN + this.#age * SPIN * 0.8;
@@ -150,7 +178,8 @@ export class TornadoFunnel implements ActiveEffect {
   #drawDebris(base: Base, sinks: SpriteSinks): void {
     const { radius } = this.#effect;
 
-    const look = [...DEBRIS_SHADE, 0.9 * base.presence];
+    const shade = base.isInWater ? FOAM_SHADE : DEBRIS_SHADE;
+    const look = [...shade, 0.9 * base.presence];
 
     for (let piece = 0; piece < DEBRIS; piece += 1) {
       const lift = (this.#age / DEBRIS_ORBIT_SECONDS + hashToUnit(piece, 41)) % 1;
