@@ -116,6 +116,10 @@ export interface FaunaTick {
   threats: FaunaThreats;
 }
 
+function hasRemains(animal: Animal): boolean {
+  return animal.isAlive || (animal.causeOfDeath !== "gravity" && animal.deathSeconds <= CORPSE_SECONDS);
+}
+
 function settleFall(animal: Animal): void {
   if (animal.pose === "fall" && animal.deathSeconds > FALL_SECONDS) {
     animal.pose = "dead";
@@ -860,7 +864,7 @@ export class FaunaSystem {
 
   #removeRemains(): void {
     const hasExpired = this.#animals.some((animal) => {
-      return !animal.isAlive && animal.deathSeconds > CORPSE_SECONDS;
+      return !hasRemains(animal);
     });
 
     if (!hasExpired) {
@@ -868,7 +872,7 @@ export class FaunaSystem {
     }
 
     for (const animal of this.#animals) {
-      if (!animal.isAlive && animal.deathSeconds > CORPSE_SECONDS) {
+      if (!hasRemains(animal)) {
         this.#animalsById.delete(animal.id);
       }
     }
@@ -881,7 +885,7 @@ export class FaunaSystem {
     }
 
     this.#animals = this.#animals.filter((animal) => {
-      return animal.isAlive || animal.deathSeconds <= CORPSE_SECONDS;
+      return hasRemains(animal);
     });
     this.#herds = this.#herds.filter((herd) => {
       return herd.memberIds.length > 0;

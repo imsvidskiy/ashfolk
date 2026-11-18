@@ -45,6 +45,23 @@ describe("effect sounds", () => {
     ]);
   });
 
+  it("plays one local impact when the bomb reaches land or water", () => {
+    const { engine, play } = createTestSoundEngine();
+    const effects = new EffectSounds(engine, flatGroundPoint);
+    const site = { dropId: 15, radius: 150, surfaceY: 0, x: 5, z: 10 };
+    const point = { x: 5, y: 0, z: 10 };
+
+    effects.hear({ ...site, durationSeconds: 2.8, kind: "nuclear-fall" }, VIEW);
+    expect(play).not.toHaveBeenCalled();
+
+    effects.hear({ ...site, isInWater: false, kind: "nuclear-cloud" }, VIEW);
+    effects.hear({ ...site, isInWater: true, kind: "nuclear-cloud" }, VIEW);
+    expect(play.mock.calls).toEqual([
+      [SOUNDS.explosion, point, {}],
+      [SOUNDS.explosionWater, point, {}],
+    ]);
+  });
+
   it("holds the tornado roar in place while the game is paused", () => {
     const { engine, loops } = createTestSoundEngine();
     const effects = new EffectSounds(engine, flatGroundPoint);

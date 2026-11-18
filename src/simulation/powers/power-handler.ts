@@ -2,6 +2,7 @@ import type { PowerId, PowerParameters } from "../../content/powers.ts";
 import type { EmberSystem } from "../nature/embers.ts";
 import type { SocietyContext } from "../society/society-context.ts";
 import type { BlackHoleSystem } from "./black-holes.ts";
+import type { FallingBombs } from "./falling-bombs.ts";
 import type { TornadoSystem } from "./tornadoes.ts";
 import type { VolcanoSystem } from "./volcanoes.ts";
 
@@ -15,6 +16,7 @@ export interface PowerTarget {
 export interface PowerServices extends SocietyContext {
   blackHoles: BlackHoleSystem;
   embers: EmberSystem;
+  fallingBombs: FallingBombs;
   schedule: (delaySeconds: number, task: () => void) => void;
   tornadoes: TornadoSystem;
   volcanoes: VolcanoSystem;

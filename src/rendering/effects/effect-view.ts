@@ -3,10 +3,12 @@ import type { SimulationEffect } from "../../simulation/effects.ts";
 import { ArrowFlight, ArrowParts } from "./arrow-flight.ts";
 import { type CameraAxes, createBillboardBatch } from "./billboards.ts";
 import { BlackHoleLens } from "./black-hole.ts";
+import type { InflowSurface } from "./black-hole-debris.ts";
 import { EffectMeshes } from "./effect-meshes.ts";
 import type { GroundRing } from "./ground-ring.ts";
 import { MeteorFall } from "./meteor-fall.ts";
 import { NuclearCloud } from "./nuclear-cloud.ts";
+import { NuclearFall } from "./nuclear-fall.ts";
 import { createDustMaterial, createGlowMaterial } from "./sprite-materials.ts";
 import { TornadoFunnel } from "./tornado-funnel.ts";
 import {
@@ -30,14 +32,15 @@ const LIGHT_POWER = 400;
 interface EffectViewOptions {
   readonly axes: CameraAxes;
   readonly createRing: () => GroundRing;
-  readonly heightAt: (x: number, z: number) => number;
   readonly sceneColor: Texture;
   readonly shake: (amount: number, x: number, z: number) => void;
+  readonly surface: InflowSurface & Pick<EffectContext, "heightAt">;
 }
 
 export class EffectView {
   readonly group = new Group();
   readonly #active: ActiveEffect[] = [];
+  readonly #axes: CameraAxes;
   readonly #arrowParts = new ArrowParts();
   readonly #context: EffectContext;
   readonly #createRing: () => GroundRing;
@@ -45,13 +48,16 @@ export class EffectView {
   readonly #light = new PointLight(0xff_ff_ff, 0, LIGHT_DISTANCE, LIGHT_FALLOFF);
   readonly #meshes = new EffectMeshes();
   readonly #sceneColor: Texture;
+  readonly #surface: InflowSurface;
   readonly #sinks: SpriteSinks;
   #flash = 0;
   #lightStrength = 0;
 
   constructor(options: EffectViewOptions) {
+    this.#axes = options.axes;
     this.#createRing = options.createRing;
     this.#sceneColor = options.sceneColor;
+    this.#surface = options.surface;
     this.#sinks = {
       dust: createBillboardBatch(createDustMaterial(options.axes), 5),
       glow: createBillboardBatch(createGlowMaterial(options.axes), 9),
@@ -61,7 +67,9 @@ export class EffectView {
       flash: (amount) => {
         this.#flash = Math.max(this.#flash, amount);
       },
-      heightAt: options.heightAt,
+      heightAt: (x, z) => {
+        return options.surface.heightAt(x, z);
+      },
       light: (position, color, intensity) => {
         this.#lightUp(position, color, intensity);
       },
@@ -136,9 +144,12 @@ export class EffectView {
       case "arrow":
         return new ArrowFlight(this.#context, effect, this.#arrowParts);
       case "black-hole":
-        return new BlackHoleLens(effect, this.#sceneColor);
+        return new BlackHoleLens(effect, this.#sceneColor, this.#surface);
+      case "nuclear-fall":
+        return new NuclearFall(this.#context, effect);
       case "nuclear-cloud":
-        return new NuclearCloud(this.#context, effect);
+        this.#landBomb(effect.dropId);
+        return new NuclearCloud(this.#context, effect, this.#axes);
       case "blessing":
         return new Blessing(this.#context, effect);
       case "earthquake":
@@ -157,6 +168,16 @@ export class EffectView {
         return new TornadoFunnel(this.#context, effect);
       default:
         return effect satisfies never;
+    }
+  }
+
+  #landBomb(dropId: number): void {
+    const index = this.#active.findIndex((effect) => {
+      return effect instanceof NuclearFall && effect.dropId === dropId;
+    });
+
+    if (index >= 0) {
+      this.#finish(index, this.#active[index]);
     }
   }
 

@@ -37,7 +37,8 @@ export const POWERS = {
   },
   "black-hole": {
     category: "elements",
-    description: "Bends the view of the island and draws nearby people and animals toward its dark center.",
+    description:
+      "Pulls people and wildlife into its core, swallows trees and buildings, and leaves a hollow in the island.",
     name: "Black hole",
     parameters: z.object({
       duration: lifetime(10, 20),
@@ -291,7 +292,8 @@ export const POWERS = {
   },
   nuclear: {
     category: "elements",
-    description: "Opens a wide burning crater beneath a rising mushroom cloud.",
+    description:
+      "Drops a bomb on the chosen spot. On impact, a shockwave spreads from the crater and a mushroom cloud rises.",
     name: "Nuclear bomb",
     parameters: z.object({
       radius: brushRadius(160, 300),

@@ -3,7 +3,7 @@ import { clamp, FULL_TURN, hashToUnit, lerp, smoothstep } from "../../shared/mat
 import { isDryLand, type Waypoint } from "../agents/navigation.ts";
 import { setAlight } from "../society/buildings.ts";
 import { discover } from "../society/progress.ts";
-import { type Catastrophe, ruinText, type Shock, shakeMonuments } from "../world/monument-damage.ts";
+import { ruinText, type Shock, shakeMonuments } from "../world/monument-damage.ts";
 import { carveCrater, cellsInArea, shakeTerrain } from "../world/terrain-editing.ts";
 import type { WorldState } from "../world/world-state.ts";
 import type { PowerServices } from "./power-handler.ts";
@@ -69,14 +69,13 @@ interface Strike {
   z: number;
 }
 
-interface Blast {
-  catastrophe: Catastrophe;
+type Blast = ({ catastrophe: "meteor" | "explosion" } | { catastrophe: "nuclear"; dropId: number }) & {
   hasBurningDebris: boolean;
   power: number;
   radius: number;
   x: number;
   z: number;
-}
+};
 
 interface Quake {
   magnitude: number;
@@ -215,7 +214,15 @@ export function explode(blast: Blast, services: PowerServices): void {
     z: blast.z,
   });
   if (blast.catastrophe === "nuclear") {
-    services.effects.add({ kind: "nuclear-cloud", radius: blast.radius, surfaceY, x: blast.x, z: blast.z });
+    services.effects.add({
+      dropId: blast.dropId,
+      isInWater,
+      kind: "nuclear-cloud",
+      radius: blast.radius,
+      surfaceY,
+      x: blast.x,
+      z: blast.z,
+    });
 
     return;
   }
