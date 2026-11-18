@@ -38,11 +38,19 @@ export const POWERS = {
   "black-hole": {
     category: "elements",
     description:
-      "Pulls people and wildlife into its core, swallows trees and buildings, and leaves a hollow in the island.",
+      "Draws people and wildlife into its core. Forests and settlements fall inward as the land breaks into deep, uneven terraces.",
     name: "Black hole",
     parameters: z.object({
       duration: lifetime(10, 20),
-      radius: brushRadius(180, 350),
+      radius: rangeParameter({
+        defaultValue: 500,
+        description: "How far gravity draws in people and wildlife. Faults and falling trees reach the outer edge.",
+        label: "Gravity radius",
+        maximum: 1100,
+        minimum: 5,
+        step: 1,
+        unit: "meters",
+      }),
     }),
     usage: "point",
   },

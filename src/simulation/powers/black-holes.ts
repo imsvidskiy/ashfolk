@@ -4,21 +4,22 @@ import { lerp } from "../../shared/math.ts";
 import { NO_PLANT } from "../../world/vegetation-store.ts";
 import type { Mover } from "../agents/movement.ts";
 import { BLACK_HOLE_CORE_SHARE, type BlackHoleEffect, type BlackHoleInflowEffect } from "../effects.ts";
-import { cellsInArea, raiseTerrain } from "../world/terrain-editing.ts";
+import { shiftBlackHoleTerrain, visitBlackHoleFaults } from "./black-hole-faults.ts";
 import { BlackHoleInflow } from "./black-hole-inflow.ts";
 import type { PowerServices } from "./power-handler.ts";
 
-const BASIN_SHARE = 0.55;
-const FELLING_FRINGE = 0.15;
-const OPENING_SHARE = 0.2;
-const COLLAPSE_DEPTH = 0.65;
+const FELLING_FRINGE = 0.16;
+const OPENING_SHARE = 0.32;
+const FRACTURE_LEAD_SECONDS = 0.55;
 const EROSION_STAGES = 4;
-const EDGE_PULL_PER_SECOND = 0.22;
-const CORE_PULL_PER_SECOND = 0.84;
+
+const EDGE_PULL_PER_SECOND = 0.48;
+const CORE_PULL_PER_SECOND = 1.15;
 
 export interface BlackHole {
   capturedPeople?: number;
   effect: BlackHoleEffect;
+  hasFractured?: boolean;
   inflow?: BlackHoleInflowEffect;
   remaining: number;
   wellId?: number;
@@ -62,13 +63,6 @@ function attract(hole: BlackHoleEffect, seconds: number, services: PowerServices
   return captured;
 }
 
-function clearedRadius(services: PowerServices, effect: BlackHoleEffect, stage: number): number {
-  return Math.max(
-    services.world.grid.cellSize * Math.SQRT1_2,
-    effect.radius * lerp(OPENING_SHARE, BASIN_SHARE, stage / EROSION_STAGES)
-  );
-}
-
 function consumeCell(services: PowerServices, samples: BlackHoleInflow, cell: number): void {
   const { buildings, environment, fire, world } = services;
   const { vegetation } = world;
@@ -101,26 +95,39 @@ function stripGround(hole: ActiveHole, previousStage: number, stage: number, ser
   const { vegetation } = world;
   const { effect } = hole;
   const samples = new BlackHoleInflow(world);
-  const cleared = clearedRadius(services, effect, stage);
-  const previous = previousStage < 0 ? -1 : clearedRadius(services, effect, previousStage);
-  const reach = cleared + effect.radius * FELLING_FRINGE;
+  const progress = lerp(OPENING_SHARE, 1, stage / EROSION_STAGES);
+  const lastProgress = lerp(OPENING_SHARE, 1, previousStage / EROSION_STAGES);
+  const minimum = world.grid.cellSize * Math.SQRT1_2;
 
-  for (const { cell, column, distance, row } of cellsInArea(world, { ...effect, radius: reach })) {
-    if (!world.isOnIsland(cell)) {
-      continue;
-    }
+  const reach = Math.max(minimum, effect.radius * Math.min(1, progress + FELLING_FRINGE));
+
+  visitBlackHoleFaults(world, effect, reach, (cell, x, z, distance, frontRadius) => {
+    const cleared = Math.max(minimum, frontRadius * progress);
 
     if (distance <= cleared) {
-      if (distance > previous) {
-        samples.ground(cell, world.grid.centerX(column), world.grid.centerZ(row));
+      if (previousStage < 0 || distance > Math.max(minimum, frontRadius * lastProgress)) {
+        samples.ground(cell, x, z);
+      } else if (
+        world.occupancy[cell] < 0 &&
+        !vegetation.hasPlantsInCell(cell) &&
+        !world.isBurning(cell) &&
+        world.fields.fuel[cell] === 0 &&
+        world.fields.snow[cell] === 0 &&
+        (world.terrain.ground[cell] === Ground.Rock || world.isWater(cell) || world.isPool(cell))
+      ) {
+        return;
       }
 
       consumeCell(services, samples, cell);
 
-      continue;
+      return;
     }
 
-    for (const plant of vegetation.plantsInCell(cell)) {
+    if (distance > cleared + effect.radius * FELLING_FRINGE) {
+      return;
+    }
+
+    for (let plant = vegetation.firstPlantInCell(cell); plant !== NO_PLANT; plant = vegetation.nextPlantInCell(plant)) {
       if (vegetation.isAlive(plant) && isTreeSpecies(vegetation.species[plant])) {
         world.fellPlant(
           plant,
@@ -130,7 +137,7 @@ function stripGround(hole: ActiveHole, previousStage: number, stage: number, ser
         world.markDisturbed(cell, environment.day);
       }
     }
-  }
+  });
 
   const interval = effect.durationSeconds / (EROSION_STAGES + 1);
   const inflow = samples.effect(
@@ -153,10 +160,9 @@ function erosionStage(remaining: number, duration: number): number {
 function collapse(hole: ActiveHole, services: PowerServices): void {
   const { effect, capturedPeople = 0 } = hole;
   const { x, z } = effect;
-  const radius = Math.max(services.world.grid.cellSize, effect.radius * BASIN_SHARE);
 
   services.effects.add({ kind: "black-hole-collapse", wellId: hole.wellId });
-  raiseTerrain(services.world, { radius, x, z }, -radius * COLLAPSE_DEPTH);
+  shiftBlackHoleTerrain(services.world, effect, "collapse");
 
   const losses = capturedPeople === 1 ? "1 person" : `${capturedPeople} people`;
   const text =
@@ -207,7 +213,7 @@ export class BlackHoleSystem {
 
   open(effect: BlackHoleEffect, services: PowerServices): void {
     const wellId = services.identifiers.next();
-    const hole = { capturedPeople: 0, effect, remaining: effect.durationSeconds, wellId };
+    const hole = { capturedPeople: 0, effect, hasFractured: false, remaining: effect.durationSeconds, wellId };
 
     this.#holes.push(hole);
     services.effects.add({ ...effect, wellId });
@@ -225,8 +231,17 @@ export class BlackHoleSystem {
 
       const stage = erosionStage(hole.remaining, effect.durationSeconds);
 
-      if (stage > previousStage) {
+      if (hole.hasFractured === undefined) {
+        // Older saves cleared a smaller circle. Catch up its fault front when the game clock resumes.
+        stripGround(hole, -1, stage, services);
+        hole.hasFractured = false;
+      } else if (stage > previousStage) {
         stripGround(hole, previousStage, stage, services);
+      }
+
+      if (!hole.hasFractured && hole.remaining <= FRACTURE_LEAD_SECONDS) {
+        shiftBlackHoleTerrain(services.world, effect, "fracture");
+        hole.hasFractured = true;
       }
 
       if (hole.remaining <= 0) {

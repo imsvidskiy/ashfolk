@@ -7,15 +7,15 @@ import { snapshotOf } from "../testing/test-simulation.ts";
 import { floodCells, plantInCell } from "../testing/test-world.ts";
 
 describe("black-hole destruction", () => {
-  it("strips trees and buildings in widening rings, fells outer trees inward and lowers the basin once", () => {
+  it("swallows trees and buildings along advancing faults, fells outer trees inward and then drops the shelves", () => {
     const simulation = createPowerSimulation();
     const { world } = simulation;
     const { grid, vegetation } = world;
     const center = grid.cellAt(5, 5);
     const inner = plantInCell(world, center, PlantSpecies.Oak);
     const middle = plantInCell(world, grid.cellAt(45, 5), PlantSpecies.Oak);
-    const edge = plantInCell(world, grid.cellAt(65, 5), PlantSpecies.Oak);
-    const outside = plantInCell(world, grid.cellAt(85, 5), PlantSpecies.Oak);
+    const edge = plantInCell(world, grid.cellAt(95, 5), PlantSpecies.Oak);
+    const outside = plantInCell(world, grid.cellAt(115, 5), PlantSpecies.Oak);
     const hut = simulation.buildings.add({ kind: "tent", rotation: 0, tribeId: 0, x: 45, z: 5 }, simulation.random);
     const before = world.terrain.height[center];
     const version = world.heightVersion;
@@ -32,14 +32,104 @@ describe("black-hole destruction", () => {
     expect(simulation.buildings.all).not.toContain(hut);
     expect(world.heightVersion).toBe(version);
 
-    simulation.runTicks(10);
+    simulation.runTicks(4);
+
+    expect(world.heightVersion).toBe(version + 1);
+    expect(world.terrain.height[center]).toBe(before);
+
+    simulation.runTicks(6);
 
     expect(world.terrain.height[center]).toBeLessThan(before - 25);
-    expect(world.heightVersion).toBe(version + 1);
+    expect(world.heightVersion).toBe(version + 2);
     expect(vegetation.state[edge]).toBe(PlantState.Fallen);
     expect(Math.sin(vegetation.rotation[edge])).toBeCloseTo(-1);
     expect(vegetation.isAlive(outside)).toBe(true);
-    expect(world.terrain.height[grid.cellAt(85, 5)]).toBe(before);
+    expect(world.terrain.height[grid.cellAt(115, 5)]).toBe(before);
+  });
+
+  it("pulls a distant inhabitant and shatters a settlement near the edge of the default footprint", () => {
+    const simulation = createPowerSimulation();
+    const { world } = simulation;
+    const x = -165;
+    const z = 5;
+
+    simulation.usePower("tribe", -5, 5, { people: 3 });
+    const [near, beyond] = simulation.society.people;
+
+    near.mover.x = x + 485;
+    near.mover.z = z;
+    beyond.mover.x = x + 535;
+    beyond.mover.z = z;
+    const hut = simulation.buildings.add({ kind: "tent", rotation: 0, tribeId: 0, x: x + 300, z }, simulation.random);
+    const before = world.terrain.height.slice();
+
+    simulation.usePower("black-hole", x, z, { duration: 5 });
+
+    const opening = simulation.advance(0).effects.find((effect) => {
+      return effect.kind === "black-hole";
+    });
+
+    expect(opening?.radius).toBe(500);
+    simulation.runTicks(30);
+    expect(near.causeOfDeath).toBe("gravity");
+    expect(beyond.causeOfDeath).toBeNull();
+    simulation.runTicks(21);
+    expect(simulation.buildings.all).not.toContain(hut);
+
+    const north = world.grid.cellAt(x, z + 300);
+    const south = world.grid.cellAt(x, z - 300);
+    const untouched = world.grid.cellAt(x + 535, z);
+
+    expect(Math.abs(world.terrain.height[north] - world.terrain.height[south])).toBeGreaterThan(10);
+    expect(world.terrain.height[untouched]).toBe(before[untouched]);
+    expect(
+      world.terrain.height.some((height, cell) => {
+        return height > before[cell] + 10;
+      })
+    ).toBe(true);
+  });
+
+  it("keeps a coastal collapse on the island and the protected map rim intact at maximum radius", () => {
+    const simulation = createPowerSimulation();
+    const { world } = simulation;
+    const { grid } = world;
+    const before = world.terrain.height.slice();
+
+    for (let cell = 0; cell < grid.cellCount; cell += 1) {
+      if (grid.cellCenterX(cell) > 100) {
+        world.terrain.coastDistance[cell] = -1;
+      }
+    }
+
+    simulation.usePower("black-hole", 95, 5, { duration: 5, radius: 1100 });
+    simulation.runTicks(51);
+
+    expect(world.heightAt(85, 5)).toBeLessThan(75);
+
+    const protectedHeightChanged = world.terrain.height.some((height, cell) => {
+      const isEditable = world.isOnIsland(cell) && grid.isInside(grid.cellCenterX(cell), grid.cellCenterZ(cell), 20);
+
+      return !isEditable && height !== before[cell];
+    });
+
+    expect(protectedHeightChanged).toBe(false);
+  });
+
+  it("resumes after the first fracture without lifting the same shoulder twice", () => {
+    const original = createPowerSimulation();
+    const loaded = createPowerSimulation();
+
+    original.usePower("black-hole", 5, 5, { duration: 5, radius: 240 });
+    original.runTicks(46);
+    const snapshot = snapshotOf(original);
+
+    expect(snapshot.blackHoles?.[0]?.hasFractured).toBe(true);
+    loaded.restore(snapshot);
+    original.runTicks(6);
+    loaded.runTicks(6);
+
+    expect(loaded.world.terrain.height).toEqual(original.world.terrain.height);
+    expect(loaded.world.terrain.ground).toEqual(original.world.terrain.ground);
   });
 
   it("emits the real swallowed wood and roof from their ground positions and restores a partial wave", () => {
@@ -182,6 +272,7 @@ describe("black-hole destruction", () => {
 
   it("collapses a well from a 0.12 save with no capture count", () => {
     const original = createPowerSimulation();
+    const hut = original.buildings.add({ kind: "tent", rotation: 0, tribeId: 0, x: 85, z: 5 }, original.random);
     const snapshot = snapshotOf(original);
     const loaded = createPowerSimulation();
 
@@ -199,11 +290,14 @@ describe("black-hole destruction", () => {
     });
 
     expect(legacy?.wellId).toBeDefined();
+    expect(legacy?.radius).toBe(100);
+    expect(loaded.buildings.find(hut.id)).not.toBeNull();
     expect(fresh?.wellId).toBeDefined();
     expect(fresh?.wellId).not.toBe(legacy?.wellId);
     loaded.runTicks(5);
 
     expect(loaded.world.heightAt(5, 5)).toBeLessThan(75);
+    expect(loaded.buildings.find(hut.id)).toBeNull();
     expect(loaded.advance(0).chronicle).toContainEqual(
       expect.objectContaining({ text: "The black hole collapsed, leaving a hollow in the island" })
     );

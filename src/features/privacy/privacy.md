@@ -1,6 +1,6 @@
 # Privacy
 
-Last updated October 31, 2026
+Last updated November 18, 2026
 
 Ashfolk is a free god simulator that runs in your browser. It has no accounts, no ads, no analytics and no cookies. Your worlds and settings stay on your device. This page lists every place where data about you goes, and why.
 
@@ -24,12 +24,6 @@ None of this is sent to me or anyone else. Delete a world from the start screen,
 Cloudflare serves ashfolk.com. Like any web host, its servers receive your IP address, browser and device type, the address you open and the time, so they can deliver the game and block attacks. Request logs and analytics are turned off for the site; I see only total traffic, such as requests per country, and never single visitors or IP addresses. Cloudflare handles this data under its [privacy policy](https://www.cloudflare.com/privacypolicy/) and may process it outside your country.
 
 The legal basis is legitimate interest: the game can't reach you without it.
-
-### Star count from GitHub
-
-The start screen, the game and Settings show how many stars Ashfolk has on GitHub. Your browser asks the GitHub API for that number directly, so GitHub receives your IP address and browser type. The request carries no cookies or GitHub sign-in. GitHub handles it under the [GitHub Privacy Statement](https://docs.github.com/site-policy/privacy-policies/github-general-privacy-statement).
-
-The legal basis is legitimate interest in showing the project's current star count.
 
 ### Links you follow
 

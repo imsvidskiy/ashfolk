@@ -32,7 +32,7 @@ export function useEngineBridges(): void {
     const disconnectPowers = connectPowers(engine);
     const disconnectGuide = connectGuide(engine.session);
     const disconnectWorldSounds = connectWorldSounds(engine, sound);
-    const disconnectInterfaceSounds = connectInterfaceSounds(document);
+    const disconnectInterfaceSounds = connectInterfaceSounds();
 
     return () => {
       disconnectWorld();

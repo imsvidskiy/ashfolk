@@ -1,5 +1,6 @@
 import { ignore } from "../shared/ignore.ts";
 import type { SoundBus, SoundDefinition } from "./sound-catalog.ts";
+import { SoundVariations } from "./sound-variations.ts";
 import { heardLoudness, ROLLOFF, voiceToReplace } from "./voices.ts";
 
 const MAXIMUM_VOICES = 24;
@@ -40,10 +41,13 @@ export interface SoundPoint {
 
 export interface PlayOptions {
   readonly delaySeconds?: number;
+  readonly offsetSeconds?: number;
+  readonly signal?: AbortSignal;
   readonly volume?: number;
 }
 
 export interface LoopFade {
+  readonly offsetSeconds?: number;
   readonly seconds: number;
   readonly volume: number;
 }
@@ -66,7 +70,7 @@ interface Voice {
   readonly source: AudioBufferSourceNode;
 }
 
-interface Playback {
+interface Playback extends PlayOptions {
   readonly buffer: AudioBuffer | null;
   readonly point: SoundPoint | null;
   readonly sound: SoundDefinition;
@@ -83,10 +87,6 @@ interface AudioGraph {
 
 function gainFromLevel(level: number): number {
   return level * level;
-}
-
-function pickFile(sound: SoundDefinition): string {
-  return sound.files[Math.floor(Math.random() * sound.files.length)];
 }
 
 function createAudioGraph(): AudioGraph {
@@ -164,6 +164,7 @@ function placePanner(panner: PannerNode, point: SoundPoint, now: number): void {
 export class SoundEngine {
   readonly #buffers = new Map<string, Promise<AudioBuffer | null>>();
   readonly #voices: Voice[] = [];
+  readonly #variations = new SoundVariations();
   #graph: AudioGraph | null = null;
   #isHidden = false;
   #levels: SoundLevels = DEFAULT_SOUND_LEVELS;
@@ -281,7 +282,7 @@ export class SoundEngine {
   play(sound: SoundDefinition, point: SoundPoint | null, options: PlayOptions = {}): void {
     const graph = this.#graph;
 
-    if (graph === null || !this.isAudible) {
+    if (graph === null || !this.isAudible || options.signal?.aborted) {
       return;
     }
 
@@ -293,8 +294,8 @@ export class SoundEngine {
 
     const startAt = graph.context.currentTime + delaySeconds;
 
-    this.#buffer(pickFile(sound)).then((buffer) => {
-      this.#start(graph, { buffer, point, sound, startAt, volume });
+    this.#buffer(this.#variations.pick(sound)).then((buffer) => {
+      this.#start(graph, { ...options, buffer, point, sound, startAt, volume });
     });
   }
 
@@ -307,6 +308,7 @@ export class SoundEngine {
 
     const { context } = graph;
     const gain = context.createGain();
+    const requestedAt = context.currentTime;
     let source: AudioBufferSourceNode | null = null;
     let isStopped = false;
 
@@ -315,7 +317,7 @@ export class SoundEngine {
 
     const panner = route(graph, sound, point, gain);
 
-    this.#buffer(pickFile(sound)).then((buffer) => {
+    this.#buffer(this.#variations.pick(sound)).then((buffer) => {
       if (buffer === null || isStopped) {
         return;
       }
@@ -324,7 +326,12 @@ export class SoundEngine {
       source.buffer = buffer;
       source.loop = true;
       source.connect(gain);
-      source.start(context.currentTime, Math.random() * buffer.duration);
+      const offset =
+        fade.offsetSeconds === undefined
+          ? Math.random() * buffer.duration
+          : (fade.offsetSeconds + context.currentTime - requestedAt) % buffer.duration;
+
+      source.start(context.currentTime, offset);
     });
 
     return {
@@ -357,9 +364,16 @@ export class SoundEngine {
   }
 
   #start(graph: AudioGraph, playback: Playback): void {
-    const { buffer, point, sound, startAt, volume } = playback;
+    const { buffer, offsetSeconds, point, signal, sound, startAt, volume } = playback;
 
-    if (buffer === null || !this.isAudible) {
+    if (buffer === null || !this.isAudible || signal?.aborted) {
+      return;
+    }
+
+    const { context } = graph;
+    const offset = offsetSeconds === undefined ? 0 : offsetSeconds + Math.max(0, context.currentTime - startAt);
+
+    if (offset >= buffer.duration) {
       return;
     }
 
@@ -374,24 +388,33 @@ export class SoundEngine {
       this.#release(graph, this.#voices[slot]);
     }
 
-    const { context } = graph;
     const source = context.createBufferSource();
     const gain = context.createGain();
 
     source.buffer = buffer;
-    source.playbackRate.value = sound.bus === "effects" ? 1 + (Math.random() * 2 - 1) * EFFECT_PITCH_SPREAD : 1;
+    if (sound.bus === "effects" && offsetSeconds === undefined) {
+      source.playbackRate.value = 1 + (Math.random() * 2 - 1) * EFFECT_PITCH_SPREAD;
+    }
     gain.gain.value = sound.volume * volume;
     source.connect(gain);
     route(graph, sound, point, gain);
 
     const voice: Voice = { gain, loudness, priority: sound.priority, source };
 
+    const cancel = () => {
+      if (this.#voices.includes(voice)) {
+        this.#release(graph, voice);
+      }
+    };
+
     this.#voices.push(voice);
+    signal?.addEventListener("abort", cancel, { once: true });
     source.addEventListener("ended", () => {
+      signal?.removeEventListener("abort", cancel);
       this.#forget(voice);
       gain.disconnect();
     });
-    source.start(Math.max(startAt, context.currentTime));
+    source.start(Math.max(startAt, context.currentTime), offset);
   }
 
   #release(graph: AudioGraph, voice: Voice): void {

@@ -5,6 +5,7 @@ import { FilmingHint } from "../features/filming/filming-hint.tsx";
 import { useFilming } from "../features/filming/use-filming.ts";
 import { GuideCard } from "../features/guide/guide-card.tsx";
 import { InstallGuideDialog } from "../features/install/install-guide-dialog.tsx";
+import { useInterfaceStore } from "../features/interface/interface-store.ts";
 import { CompactTopBar, PanelBar, StatusCard } from "../features/interface/top-bar.tsx";
 import { JournalSheet } from "../features/journal/journal-sheet.tsx";
 import { SidePanel } from "../features/journal/side-panel.tsx";
@@ -21,6 +22,10 @@ import { useEngineBridges } from "./use-engine-bridges.ts";
 const HUD_FRAME = "pointer-events-none fixed inset-0 z-10 flex flex-col p-safe";
 
 function WideHud() {
+  const isSettingsOpen = useInterfaceStore((state) => {
+    return state.isSettingsOpen;
+  });
+
   return (
     <div className={cn(HUD_FRAME, "gap-3")}>
       <div className="flex min-h-0 flex-1 gap-3">
@@ -49,9 +54,11 @@ function WideHud() {
         <PowerDock className="max-w-full min-w-0" />
 
         <div className="flex flex-1 justify-end">
-          <Island className="px-1.5 py-1">
-            <ProjectLinks hasPrivacy={false} />
-          </Island>
+          {isSettingsOpen ? null : (
+            <Island className="px-1.5 py-1">
+              <ProjectLinks hasPrivacy={false} />
+            </Island>
+          )}
         </div>
       </div>
     </div>

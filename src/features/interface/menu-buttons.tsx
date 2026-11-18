@@ -5,7 +5,6 @@ import { Island } from "../../design/island.tsx";
 import { WithTooltip } from "../../design/tooltip.tsx";
 import { useInstall } from "../install/install-store.ts";
 import { useSidePanel } from "../journal/use-side-panel.ts";
-import { useSoundToggle } from "../sound/use-sound-toggle.ts";
 import { useInterfaceStore } from "./interface-store.ts";
 import { useFullscreen } from "./use-fullscreen.ts";
 
@@ -69,16 +68,6 @@ function InstallButton() {
   );
 }
 
-function SoundButton() {
-  const { icon: Icon, label, toggleSound } = useSoundToggle();
-
-  return (
-    <WithTooltip content={label} side="bottom">
-      <IconButton icon={<Icon aria-hidden="true" size={18} />} label={label} onClick={toggleSound} />
-    </WithTooltip>
-  );
-}
-
 export function MenuButtons({ className }: { readonly className?: string | undefined }) {
   const { isJournalOpen, isMapOpen, openSettings, toggleJournal, toggleMap } = useMenuActions();
 
@@ -105,8 +94,6 @@ export function MenuButtons({ className }: { readonly className?: string | undef
 
         <Island>
           <fieldset aria-label="Game controls" className={ROW}>
-            <SoundButton />
-
             <WithTooltip content="World, weather, time, graphics and sound" side="bottom">
               <TextButton
                 aria-label="Settings"

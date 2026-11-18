@@ -8,7 +8,7 @@ import { connectInterfaceSounds } from "./connect-interface-sounds.ts";
 
 function connectSounds() {
   const request = vi.spyOn(InterfaceSounds.prototype, "request").mockImplementation(ignore);
-  const disconnect = connectInterfaceSounds(document);
+  const disconnect = connectInterfaceSounds();
 
   onTestFinished(disconnect);
 

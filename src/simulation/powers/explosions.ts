@@ -265,6 +265,7 @@ export function explode(blast: Blast, services: PowerServices): void {
   }
 
   services.effects.add({
+    ...(blast.catastrophe === "meteor" ? { isMeteor: true } : {}),
     isInWater,
     kind: "explosion",
     power: blast.power,

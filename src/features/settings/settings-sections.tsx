@@ -1,5 +1,14 @@
 import { Tabs } from "@base-ui/react/tabs";
-import { Camera, ChevronDown, Clock3, CloudSun, FolderOpen, SlidersHorizontal, Sprout, Volume2 } from "lucide-react";
+import {
+  Camera,
+  ChevronDown,
+  Clock3,
+  CloudSun,
+  FolderOpen,
+  ListChecks,
+  SlidersHorizontal,
+  Volume2,
+} from "lucide-react";
 import type { ChangeEvent } from "react";
 import { cn } from "../../design/cn.ts";
 import { FOCUS_RING } from "../../design/styles.ts";
@@ -20,7 +29,7 @@ const SECTIONS = {
   sound: { Content: SoundSection, Icon: Volume2, label: "Sound" },
   time: { Content: TimeSection, Icon: Clock3, label: "Time & seasons" },
   weather: { Content: WeatherSection, Icon: CloudSun, label: "Weather" },
-  world: { Content: WorldRulesSection, Icon: Sprout, label: "World rules" },
+  world: { Content: WorldRulesSection, Icon: ListChecks, label: "World rules" },
 };
 
 const GROUPS: readonly { readonly label: string; readonly tabs: readonly SettingsTab[] }[] = [

@@ -7,7 +7,6 @@ import { useGuideStore } from "../guide/guide-store.ts";
 import { useInstallStore } from "../install/install-store.ts";
 import { useInterfaceStore } from "../interface/interface-store.ts";
 import { usePowerStore } from "../powers/power-store.ts";
-import { useStarStore } from "../project/github-stars.ts";
 import { useSavesStore } from "../saves/saves-store.ts";
 import { useSoundStore } from "../sound/sound-store.ts";
 import { useWorldStore } from "../world/world-store.ts";
@@ -21,7 +20,6 @@ const initialPowers = usePowerStore.getState();
 const initialSaves = useSavesStore.getState();
 const initialSound = useSoundStore.getState();
 const initialWorld = useWorldStore.getState();
-const initialStars = useStarStore.getState();
 const initialAddress = window.location.href;
 
 beforeEach(() => {
@@ -43,7 +41,6 @@ afterEach(() => {
   useSavesStore.setState(initialSaves, true);
   useSoundStore.setState(initialSound, true);
   useWorldStore.setState(initialWorld, true);
-  useStarStore.setState(initialStars, true);
 
   localStorage.clear();
 

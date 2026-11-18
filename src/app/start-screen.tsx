@@ -1,35 +1,12 @@
-import { Pause, Play } from "lucide-react";
-import { useCallback, useEffect, useState } from "react";
-import { IconButton } from "../design/buttons.tsx";
+import { useEffect } from "react";
 import { GameIcon } from "../design/game-icon.tsx";
 import { Island } from "../design/island.tsx";
-import { WithTooltip } from "../design/tooltip.tsx";
-import { useShouldReduceMotion } from "../design/use-media-query.ts";
 import { ProjectLinks } from "../features/project/project-links.tsx";
 import { preloadGame } from "./engine-launcher.ts";
 import { StartBackdrop } from "./start-backdrop.tsx";
 import { WorldMenu } from "./world-menu.tsx";
 
-function useFilmPlayback() {
-  const shouldReduceMotion = useShouldReduceMotion();
-  const [playback, setPlayback] = useState<boolean | null>(null);
-  const isPlaying = playback === null ? !shouldReduceMotion : playback;
-
-  const handleBlocked = useCallback(() => {
-    setPlayback(false);
-  }, []);
-
-  function handleToggle(): void {
-    setPlayback(!isPlaying);
-  }
-
-  return { handleBlocked, handleToggle, isPlaying, shouldShowPoster: shouldReduceMotion && playback === null };
-}
-
 export function StartScreen() {
-  const { handleBlocked, handleToggle, isPlaying, shouldShowPoster } = useFilmPlayback();
-  const filmLabel = isPlaying ? "Pause island film" : "Play island film";
-
   useEffect(() => {
     preloadGame().catch((error: unknown) => {
       console.warn("The game could not be loaded ahead", error);
@@ -38,47 +15,31 @@ export function StartScreen() {
 
   return (
     <div className="bg-canvas absolute inset-0 isolate">
-      <StartBackdrop isPlaying={isPlaying} onBlocked={handleBlocked} shouldShowPoster={shouldShowPoster} />
+      <StartBackdrop />
 
-      <div className="absolute inset-0 overflow-y-auto">
-        <div className="p-safe flex min-h-full flex-col items-center justify-center">
-          <div className="flex w-full max-w-96 flex-col items-center gap-2.5 py-2">
-            <Island className="w-full px-5 sm:px-6">
-              <header className="border-line flex items-center gap-3 border-b py-4 sm:py-5">
-                <GameIcon className="size-13 shrink-0 sm:size-15" name="population" size={60} />
+      <div className="p-safe absolute inset-0 flex flex-col justify-end overflow-y-auto md:items-start md:justify-start lg:p-5">
+        <Island className="mx-auto flex max-h-full w-full max-w-md flex-col overflow-hidden md:mx-0 md:h-full md:w-[clamp(18rem,25vw,25rem)]">
+          <header className="flex shrink-0 items-center justify-center gap-2.5 px-5 pt-4 pb-3 md:flex-col md:gap-1 md:pt-7 md:pb-5 lg:pt-10">
+            <GameIcon className="size-12 md:size-23 lg:size-27" name="population" size={108} />
 
-                <div>
-                  <h1 className="text-ink text-3xl leading-none font-extrabold tracking-tight">Ashfolk</h1>
+            <h1 className="text-ink text-3xl leading-none font-extrabold tracking-tight md:text-4xl lg:text-5xl">
+              Ashfolk
+            </h1>
+          </header>
 
-                  <p className="text-ink-soft mt-1 text-sm leading-snug">
-                    Shape a floating island and guide its first tribes.
-                  </p>
-                </div>
-              </header>
+          <section
+            aria-label="World selection"
+            className="flex min-h-0 flex-col overflow-y-auto overscroll-contain px-4 py-4 sm:px-6 md:flex-1 md:py-5 lg:px-7"
+          >
+            <div className="my-auto w-full shrink-0">
+              <WorldMenu />
+            </div>
+          </section>
 
-              <section aria-label="World selection" className="py-4 sm:py-5">
-                <WorldMenu />
-              </section>
-            </Island>
-
-            <footer className="flex max-w-full items-center justify-center gap-2">
-              <Island className="min-w-0 px-1 py-0.5">
-                <ProjectLinks className="gap-0 max-sm:[&_a]:px-2 max-[23rem]:[&_a]:px-1 max-sm:[&_a>span]:hidden" />
-              </Island>
-
-              <Island className="shrink-0 p-0.5">
-                <WithTooltip content={filmLabel} side="top">
-                  <IconButton
-                    className="size-9 pointer-coarse:size-10"
-                    icon={isPlaying ? <Pause aria-hidden="true" size={16} /> : <Play aria-hidden="true" size={16} />}
-                    label={filmLabel}
-                    onClick={handleToggle}
-                  />
-                </WithTooltip>
-              </Island>
-            </footer>
-          </div>
-        </div>
+          <footer className="border-line mx-4 flex shrink-0 justify-center border-t py-1.5 sm:mx-6 md:py-3">
+            <ProjectLinks className="flex-nowrap gap-0 [&_a]:h-11 [&_a]:px-2.5" />
+          </footer>
+        </Island>
       </div>
     </div>
   );

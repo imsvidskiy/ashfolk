@@ -125,6 +125,28 @@ describe("settings dialog", () => {
       .toHaveTextContent("Your changes could not be saved. Check browser storage and try again.");
   });
 
+  it("keeps the newly opened rule heading in view on a phone after a taller group closes", async () => {
+    await page.viewport(320, 700);
+    showWorld();
+    useInterfaceStore.setState({ isSettingsOpen: true, settingsTab: "world" });
+
+    const screen = await render(<SettingsDialog />);
+    const section = screen.getByRole("region", { name: "World rules" }).element();
+    const people = screen.getByRole("group", { name: "People" });
+    const heading = people.getByText("People", { exact: true });
+
+    await screen.getByText("Fire", { exact: true }).click();
+    heading.element().scrollIntoView({ block: "center" });
+    await heading.click();
+
+    await expect.element(people).toHaveAttribute("open");
+    await expect
+      .poll(() => {
+        return heading.element().getBoundingClientRect().top;
+      })
+      .toBeGreaterThanOrEqual(section.getBoundingClientRect().top);
+  });
+
   it("closes from its close button", async () => {
     useInterfaceStore.getState().openSettings();
 

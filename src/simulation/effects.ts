@@ -98,6 +98,7 @@ export interface EmberEffect {
 
 export interface ExplosionEffect {
   isInWater: boolean;
+  isMeteor?: true;
   kind: "explosion";
   power: number;
   radius: number;

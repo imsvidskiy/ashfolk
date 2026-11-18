@@ -1,4 +1,5 @@
 import { ChevronDown } from "lucide-react";
+import type { ToggleEvent } from "react";
 import { useSendCommand } from "../../app/use-engine.ts";
 import {
   describeParameterGroups,
@@ -85,17 +86,26 @@ function RuleControl({ field, group, onChange, rules }: RuleControlProps) {
   return <ParameterControl field={field} onChange={handleChange} value={ruleValue(rules, group.key, field.key)} />;
 }
 
+function handleGroupToggle(event: ToggleEvent<HTMLDetailsElement>): void {
+  const group = event.currentTarget;
+
+  if (group.open) {
+    group.querySelector("summary")?.scrollIntoView({ block: "nearest" });
+  }
+}
+
 function RuleGroup({ group, onChange, rules }: RuleGroupProps) {
   return (
     <details
       aria-label={group.metadata.label}
       className="group border-line border-b last:border-b-0"
       name="world-rules"
+      onToggle={handleGroupToggle}
     >
       <summary
         className={cn(
           FOCUS_RING,
-          "hover:bg-paper-hover flex cursor-pointer list-none items-center justify-between gap-3 rounded-lg py-3 [&::-webkit-details-marker]:hidden"
+          "hover:bg-paper-hover flex cursor-pointer scroll-my-1 list-none items-center justify-between gap-3 rounded-lg px-3 py-3 sm:px-4 [&::-webkit-details-marker]:hidden"
         )}
       >
         <span>
@@ -104,10 +114,10 @@ function RuleGroup({ group, onChange, rules }: RuleGroupProps) {
           <span className="text-ink-soft block text-sm">{group.metadata.description}</span>
         </span>
 
-        <ChevronDown aria-hidden="true" className="text-ink-muted mr-1 shrink-0 group-open:rotate-180" size={16} />
+        <ChevronDown aria-hidden="true" className="text-ink-muted shrink-0 group-open:rotate-180" size={16} />
       </summary>
 
-      <div className={cn(FIELD_GRID, "pt-2 pb-4")}>
+      <div className={cn(FIELD_GRID, "px-3 pt-2 pb-4 sm:px-4")}>
         {group.fields.map((field) => {
           return <RuleControl field={field} group={group} key={field.key} onChange={onChange} rules={rules} />;
         })}
@@ -125,17 +135,15 @@ export function WorldRulesSection() {
 
   return (
     <>
-      <div className="flex items-center justify-between gap-3 pb-4">
-        <p className="text-ink-soft text-sm">Choose a group to change its rules.</p>
-
-        <TextButton className="-mr-3 h-8 px-3" onClick={handleReset} tone="quiet">
-          Reset all
-        </TextButton>
-      </div>
-
       {RULE_GROUPS.map((group) => {
         return <RuleGroup group={group} key={group.key} onChange={handleRuleChange} rules={rules} />;
       })}
+
+      <div className="flex justify-end pt-3">
+        <TextButton onClick={handleReset} tone="quiet">
+          Reset all rules
+        </TextButton>
+      </div>
     </>
   );
 }

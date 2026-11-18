@@ -2,7 +2,6 @@ import { formatPercent } from "../../design/format.ts";
 import { RangeField } from "../../design/range-field.tsx";
 import { ToggleField } from "../../design/toggle-field.tsx";
 import { useSoundStore, type VolumeKey } from "../sound/sound-store.ts";
-import { useSoundToggle } from "../sound/use-sound-toggle.ts";
 import { FIELD_GRID, SettingsGroup } from "./settings-group.tsx";
 
 interface VolumeField {
@@ -16,6 +15,10 @@ const MIX: readonly VolumeField[] = [
   { key: "effects", label: "Effects" },
   { key: "interface", label: "Interface" },
 ];
+
+function handleSoundChange(isEnabled: boolean): void {
+  useSoundStore.getState().setMuted(!isEnabled);
+}
 
 function useVolume(key: VolumeKey) {
   const volume = useSoundStore((state) => {
@@ -49,22 +52,24 @@ function VolumeRange({ field }: { readonly field: VolumeField }) {
 }
 
 export function SoundSection() {
-  const { isMuted, toggleSound } = useSoundToggle();
+  const isMuted = useSoundStore((state) => {
+    return state.levels.isMuted;
+  });
 
   return (
     <>
-      <SettingsGroup description="Turn the sound on or off and set how loud it plays." title="Sound">
+      <SettingsGroup title="Playback">
         <ToggleField
           description="Music, nature and the sounds of the world."
           isChecked={!isMuted}
           label="Play sound"
-          onChange={toggleSound}
+          onChange={handleSoundChange}
         />
 
         <VolumeRange field={{ key: "master", label: "Volume" }} />
       </SettingsGroup>
 
-      <SettingsGroup description="Balance the parts of the mix." title="Mix">
+      <SettingsGroup title="Mix">
         <div className={FIELD_GRID}>
           {MIX.map((field) => {
             return <VolumeRange field={field} key={field.key} />;

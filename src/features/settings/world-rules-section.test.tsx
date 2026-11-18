@@ -95,7 +95,7 @@ describe("world rules section in a running game", () => {
     const screen = await render(<WorldRulesSection />);
 
     await screen.getByText("Fire", { exact: true }).click();
-    await screen.getByRole("button", { name: "Reset all" }).click();
+    await screen.getByRole("button", { name: "Reset all rules" }).click();
 
     expect(send).toHaveBeenLastCalledWith({ rules: DEFAULT_WORLD_RULES, type: "setWorldRules" });
     await expect.element(screen.getByRole("slider", { name: "Spread speed" })).toHaveValue("1");

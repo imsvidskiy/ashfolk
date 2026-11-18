@@ -99,6 +99,7 @@ const snapshotShapeSchema = z.looseObject({
           x: z.number(),
           z: z.number(),
         }),
+        hasFractured: z.boolean().optional(),
         inflow: z
           .object({
             durationSeconds: z.number().positive(),

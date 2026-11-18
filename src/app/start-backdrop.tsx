@@ -1,5 +1,4 @@
-import { useEffect, useRef } from "react";
-import { useIsPortrait } from "../design/use-media-query.ts";
+import { useIsPortrait, useShouldReduceMotion } from "../design/use-media-query.ts";
 import tallVideo from "./start-backdrop/tall.mp4";
 import tallPoster from "./start-backdrop/tall.webp";
 import tallCompactVideo from "./start-backdrop/tall-av1.mp4";
@@ -34,51 +33,24 @@ const WIDE: Backdrop = {
   width: 1920,
 };
 
-interface StartBackdropProps {
-  readonly isPlaying: boolean;
-  readonly onBlocked: () => void;
-  readonly shouldShowPoster: boolean;
-}
-
-export function StartBackdrop({ isPlaying, onBlocked, shouldShowPoster }: StartBackdropProps) {
+export function StartBackdrop() {
   const isPortrait = useIsPortrait();
-  const video = useRef<HTMLVideoElement>(null);
-
+  const shouldReduceMotion = useShouldReduceMotion();
   const backdrop = isPortrait ? TALL : WIDE;
 
-  useEffect(() => {
-    const film = video.current;
-
-    if (film === null) {
-      return;
-    }
-
-    if (!isPlaying) {
-      film.pause();
-      return;
-    }
-
-    film.play().catch((error: unknown) => {
-      if (error instanceof DOMException && error.name === "NotAllowedError") {
-        onBlocked();
-      }
-    });
-  }, [isPlaying, onBlocked]);
-
   return (
-    <div className="bg-canvas absolute inset-0">
-      {shouldShowPoster ? (
+    <div aria-hidden="true" className="bg-canvas absolute inset-0">
+      {shouldReduceMotion ? (
         <img alt="" className={BACKDROP_CLASS} height={backdrop.height} src={backdrop.poster} width={backdrop.width} />
       ) : (
         <video
-          autoPlay={isPlaying}
+          autoPlay
           className={BACKDROP_CLASS}
           key={backdrop.video}
           loop
           muted
           playsInline
           poster={backdrop.poster}
-          ref={video}
           tabIndex={-1}
         >
           <source src={backdrop.compactVideo} type={COMPACT_TYPE} />
