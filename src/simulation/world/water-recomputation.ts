@@ -1,5 +1,5 @@
 import { refreshCrossings } from "../../generation/crossings.ts";
-import { RESHAPED_LAND_HYDROLOGY } from "../../generation/drainage.ts";
+import { NO_CELL, RESHAPED_LAND_HYDROLOGY } from "../../generation/drainage.ts";
 import { computeHydrology } from "../../generation/hydrology.ts";
 import { type CellRegion, regionOfCells } from "../../world/change-tracking.ts";
 import { hasWater, type Lake, NO_WATER } from "../../world/water.ts";
@@ -68,6 +68,10 @@ export class WaterRecomputation {
     this.#settledHeights = this.#uncarvedHeights();
   }
 
+  get hasUnobservedHeightEdit(): boolean {
+    return this.#world.heightVersion !== this.#observedHeightVersion;
+  }
+
   get isPending(): boolean {
     return this.#quietSeconds !== null || this.#filling !== null;
   }
@@ -94,7 +98,7 @@ export class WaterRecomputation {
   }
 
   update(realSeconds: number): WaterChange {
-    if (this.#world.heightVersion !== this.#observedHeightVersion) {
+    if (this.hasUnobservedHeightEdit) {
       return this.#noticeHeightEdit();
     }
 
@@ -216,10 +220,10 @@ export class WaterRecomputation {
     });
 
     for (let cell = 0; cell < lakeIds.length; cell += 1) {
-      const cells = cellsOfLakes[lakeIds[cell]];
+      const lake = lakeIds[cell];
 
-      if (cells !== undefined) {
-        cells.push(cell);
+      if (lake !== NO_CELL) {
+        cellsOfLakes[lake].push(cell);
       }
     }
 
@@ -368,16 +372,13 @@ export class WaterRecomputation {
     const world = this.#world;
 
     for (let cell = 0; cell < world.grid.cellCount; cell += 1) {
-      if (!world.touchesWater(cell)) {
-        continue;
-      }
-
       const isWater = world.isWater(cell);
 
-      world.clearPlants(cell, isWater);
-
       if (isWater) {
+        world.clearPlants(cell, true);
         this.#calmCell(cell);
+      } else if (world.vegetation.hasPlantsInCell(cell) && world.touchesWater(cell)) {
+        world.clearPlants(cell, false);
       }
     }
   }

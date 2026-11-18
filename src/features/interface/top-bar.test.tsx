@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { render } from "vitest-browser-react";
 import { createCalendar, createWeather, showWorld } from "../testing/world-fixtures.ts";
+import { useInterfaceStore } from "./interface-store.ts";
 import { CompactTopBar, PanelBar, StatusCard } from "./top-bar.tsx";
 
 function showMorning(): void {
@@ -26,10 +27,20 @@ describe("status card and top bar", () => {
     await expect.element(card.getByRole("group", { name: "Game speed" })).toBeVisible();
   });
 
-  it("keeps the panel buttons apart from the status", async () => {
+  it("groups labelled world views apart from game controls and marks the active view", async () => {
+    useInterfaceStore.setState({ isJournalOpen: false, isMapOpen: false });
+
     const screen = await render(<PanelBar />);
 
-    await expect.element(screen.getByRole("navigation", { name: "Panels" })).toBeVisible();
+    const panels = screen.getByRole("navigation", { name: "Panels" });
+    const views = panels.getByRole("group", { name: "World views" });
+    const controls = panels.getByRole("group", { name: "Game controls" });
+
+    await expect.element(views.getByText("Journal")).toBeVisible();
+    await expect.element(views.getByText("Map")).toBeVisible();
+    await views.getByRole("button", { name: "Journal", pressed: false }).click();
+    await expect.element(views.getByRole("button", { name: "Journal", pressed: true })).toBeVisible();
+    await expect.element(controls.getByRole("button", { name: "Settings" })).toBeVisible();
     await expect.element(screen.getByRole("banner")).not.toBeInTheDocument();
   });
 

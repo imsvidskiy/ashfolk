@@ -4,8 +4,9 @@ import { PlantSpecies } from "../content/plants.ts";
 import { POWERS } from "../content/powers.ts";
 import type { WorldRequest } from "../generation/generation-options.ts";
 import { ISLAND_SHAPES } from "../world/island-shape.ts";
+import { INFLOW_MATERIALS } from "./effects.ts";
 import type { InitialWorld } from "./frame.ts";
-import { BOMB_FALL_TICKS } from "./powers/falling-bombs.ts";
+import { BOMB_FALL_TICKS, ORIGINAL_BOMB_FALL_TICKS } from "./powers/falling-bombs.ts";
 import type { Simulation, SimulationSnapshot } from "./simulation.ts";
 import type { WorldState } from "./world/world-state.ts";
 
@@ -98,7 +99,34 @@ const snapshotShapeSchema = z.looseObject({
           x: z.number(),
           z: z.number(),
         }),
+        inflow: z
+          .object({
+            durationSeconds: z.number().positive(),
+            holeDuration: z.number().positive(),
+            kind: z.literal("black-hole-inflow"),
+            radius: z.number().positive(),
+            sources: z
+              .array(
+                z.object({
+                  isFallen: z.boolean(),
+                  material: z.enum(INFLOW_MATERIALS),
+                  rotation: z.number(),
+                  size: z.number().positive(),
+                  x: z.number(),
+                  y: z.number(),
+                  z: z.number(),
+                })
+              )
+              .max(32),
+            startedAt: z.number().nonnegative(),
+            surfaceY: z.number(),
+            wellId: z.number().int().positive(),
+            x: z.number(),
+            z: z.number(),
+          })
+          .optional(),
         remaining: z.number().positive(),
+        wellId: z.number().int().positive().optional(),
       })
     )
     .optional(),
@@ -108,14 +136,19 @@ const snapshotShapeSchema = z.looseObject({
   embers: z.array(z.unknown()),
   fallingBombs: z
     .array(
-      z.object({
-        dropId: z.number().int().positive(),
-        radius: POWERS.nuclear.parameters.shape.radius.unwrap(),
-        remainingTicks: z.number().int().positive().max(BOMB_FALL_TICKS),
-        surfaceY: z.number(),
-        x: z.number(),
-        z: z.number(),
-      })
+      z
+        .object({
+          dropId: z.number().int().positive(),
+          durationTicks: z.literal(BOMB_FALL_TICKS).optional(),
+          radius: POWERS.nuclear.parameters.shape.radius.unwrap(),
+          remainingTicks: z.number().int().positive().max(BOMB_FALL_TICKS),
+          surfaceY: z.number(),
+          x: z.number(),
+          z: z.number(),
+        })
+        .refine(({ durationTicks = ORIGINAL_BOMB_FALL_TICKS, remainingTicks }) => {
+          return remainingTicks <= durationTicks;
+        })
     )
     .optional(),
   fauna: z.looseObject({ animals: z.array(z.looseObject({ id: z.number() })), herds: z.array(z.unknown()) }),

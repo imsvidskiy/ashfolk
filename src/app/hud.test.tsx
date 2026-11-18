@@ -89,10 +89,16 @@ describe("wide hud", () => {
 
     await expect.element(screen.getByRole("region", { name: "Meteor settings" })).toBeVisible();
 
-    const panels = screen.getByRole("navigation", { name: "Panels" }).element();
-    const island = islandAround(panels);
+    const panels = screen.getByRole("navigation", { name: "Panels" });
+    const worldViews = islandAround(
+      panels.getByRole("group", { name: "World views" }).element()
+    ).getBoundingClientRect();
+    const gameControls = islandAround(
+      panels.getByRole("group", { name: "Game controls" }).element()
+    ).getBoundingClientRect();
 
-    expect(island.getBoundingClientRect().height).toBeGreaterThanOrEqual(panels.getBoundingClientRect().height);
+    expect(worldViews.height).toBe(gameControls.height);
+    expect(worldViews.right).toBeLessThan(gameControls.left);
     expect(brokenIslands()).toEqual([]);
   });
 
@@ -113,6 +119,31 @@ describe("wide hud", () => {
 });
 
 describe("short hud", () => {
+  it("keeps every speed and the whole clock visible on a narrow phone", async () => {
+    await page.viewport(320, 680);
+
+    const { send } = await startTestEngine();
+
+    const screen = await render(<Hud />);
+
+    showWorld({ isPaused: true, speed: 2 });
+
+    await expect.element(screen.getByRole("button", { name: "Resume" })).toBeVisible();
+
+    const speed = screen.getByRole("combobox", { name: "Game speed" });
+    const pause = screen.getByRole("button", { name: "Resume" }).element().getBoundingClientRect();
+    const clock = screen.getByText("10:00").element().getBoundingClientRect();
+
+    expect(clock.right).toBeLessThan(pause.left);
+    await expect.element(speed.getByRole("option", { name: "16×" })).toBeInTheDocument();
+
+    await speed.selectOptions("4");
+
+    expect(send).toHaveBeenCalledWith({ speed: 4, type: "setSpeed" });
+    expect(send).toHaveBeenCalledWith({ isPaused: false, type: "setPaused" });
+    expect(brokenIslands()).toEqual([]);
+  });
+
   it("switches to the compact bar when the window is too short for side panels", async () => {
     await page.viewport(844, 390);
 

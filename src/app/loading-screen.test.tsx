@@ -5,7 +5,7 @@ import { createLocalSession } from "../game/testing/local-session.ts";
 import { ignore } from "../shared/ignore.ts";
 import { Simulation } from "../simulation/simulation.ts";
 import { createVegetatedWorld } from "../simulation/testing/test-world.ts";
-import { reportStop } from "./engine-launcher.ts";
+import { reportStop, worldSourceFor } from "./engine-launcher.ts";
 import { useEngineStore } from "./engine-store.ts";
 import { useLaunchStore } from "./launch-store.ts";
 import { LoadingScreen } from "./loading-screen.tsx";
@@ -34,6 +34,31 @@ describe("loading screen", () => {
 
     await expect.element(screen.getByRole("alert").getByText("The island could not rise")).toBeVisible();
     await expect.element(screen.getByText("WebGPU is not available")).toBeVisible();
+  });
+
+  it("retries a failed fresh launch without opening browser storage", async () => {
+    const launchStore = useLaunchStore.getState();
+
+    launchStore.createWorld(launchStore.launch);
+
+    const before = useLaunchStore.getState();
+
+    useEngineStore.setState({ status: { kind: "failed", message: "Graphics initialization failed" } });
+
+    const transaction = vi.spyOn(IDBDatabase.prototype, "transaction").mockImplementation(() => {
+      throw new Error("Storage blocked");
+    });
+    const screen = await render(<LoadingScreen />);
+
+    await screen.getByRole("button", { name: "Start again" }).click();
+
+    const after = useLaunchStore.getState();
+    const source = await worldSourceFor(after.request.options, after.request.savedWorldId);
+
+    expect(after.request).not.toBe(before.request);
+    expect(after.worldId).toBe(before.worldId);
+    expect(source.kind).toBe("new");
+    expect(transaction).not.toHaveBeenCalled();
   });
 
   it.each([

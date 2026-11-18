@@ -46,8 +46,12 @@ export class ArrowFlight implements ActiveEffect {
 
   constructor(context: EffectContext, effect: ArrowEffect, parts: ArrowParts) {
     this.#effect = effect;
-    this.#from = new Vector3(effect.fromX, context.heightAt(effect.fromX, effect.fromZ) + RELEASE_HEIGHT, effect.fromZ);
-    this.#to = new Vector3(effect.toX, context.heightAt(effect.toX, effect.toZ) + TARGET_HEIGHT, effect.toZ);
+    this.#from = new Vector3(
+      effect.fromX,
+      context.surface.heightAt(effect.fromX, effect.fromZ) + RELEASE_HEIGHT,
+      effect.fromZ
+    );
+    this.#to = new Vector3(effect.toX, context.surface.heightAt(effect.toX, effect.toZ) + TARGET_HEIGHT, effect.toZ);
     this.#arc = this.#from.distanceTo(this.#to) * ARC_PER_METER;
 
     const shaft = new Mesh(parts.shaft, parts.shaftMaterial);

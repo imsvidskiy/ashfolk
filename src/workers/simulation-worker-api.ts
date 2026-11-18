@@ -17,7 +17,7 @@ import { VEGETATION_CHANNELS, type VegetationChannels } from "../world/vegetatio
 import { withSmallSketches } from "./island-sketch.ts";
 
 export interface SimulationWorkerApi {
-  advance: (realSeconds: number, commands: readonly unknown[]) => SimulationFrame;
+  advance: (realSeconds: number, commands: readonly unknown[], commandTimes?: readonly number[]) => SimulationFrame;
   createWorld: (request: WorldRequest, onProgress: (progress: GenerationProgress) => void) => InitialWorld;
   loadWorld: (saved: unknown, onProgress: (progress: GenerationProgress) => void) => LoadedWorld;
   saveWorld: () => SavedWorldState | null;
@@ -132,18 +132,14 @@ export function createSimulationWorkerApi(
   }
 
   return {
-    advance: (realSeconds, commands) => {
+    advance: (realSeconds, commands, commandTimes) => {
       if (running === null) {
         throw new Error("The world has not been created yet");
       }
 
       const { simulation } = running;
 
-      for (const command of commands) {
-        simulation.execute(command);
-      }
-
-      const frame = simulation.advance(realSeconds);
+      const frame = simulation.advance(realSeconds, commands, commandTimes);
 
       return transfer(frame, uniqueArrayBuffers(frameBuffers(frame)));
     },

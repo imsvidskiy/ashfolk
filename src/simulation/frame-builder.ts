@@ -45,6 +45,7 @@ export class FrameBuilder {
       chronicle: simulation.chronicle.takeEntries(),
       effects: simulation.effects.takeEffects(),
       groundRows: packGroundRows(world, world.groundChanges.takeRuns()),
+      hasRealTimeWork: simulation.hasRealTimeWork,
       heightPatch: packRegion(world, world.terrain.height, world.heightChanges.takeRegion()),
       held: simulation.held,
       inspection: this.#inspection(tribes, environment),

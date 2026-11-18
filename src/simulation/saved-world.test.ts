@@ -121,6 +121,27 @@ describe("saved worlds", () => {
     expect(loaded.snapshot()?.tick).toBe(state.simulation.tick);
   });
 
+  it("keeps the remaining flight time of a bomb saved in 0.12.1", () => {
+    const state = savedState(generateSimulation());
+    const legacy = savedWorldStateSchema.parse({
+      ...state,
+      simulation: {
+        ...state.simulation,
+        fallingBombs: [{ dropId: 9, radius: 50, remainingTicks: 7, surfaceY: 30, x: 0, z: 0 }],
+      },
+    });
+    const loaded = generateSimulation();
+
+    restoreSavedWorld(loaded, legacy);
+    expect(loaded.initialWorld().frame.effects).toMatchObject([
+      { durationSeconds: expect.closeTo(2.8), elapsedSeconds: expect.closeTo(2.1), kind: "nuclear-fall" },
+    ]);
+    loaded.runTicks(6);
+    expect(loaded.advance(0).effects).toEqual([]);
+    loaded.step();
+    expect(loaded.advance(0).effects).toContainEqual(expect.objectContaining({ dropId: 9, kind: "nuclear-cloud" }));
+  });
+
   it("finds each plant species by name when the list order changes", () => {
     const original = generateSimulation();
     const state = savedState(original);

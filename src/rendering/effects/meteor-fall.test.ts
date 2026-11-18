@@ -31,13 +31,21 @@ function createMeteor() {
   const meteor = new MeteorFall(
     {
       flash: ignore,
-      heightAt: () => {
-        return 0;
-      },
       light: ignore,
       meshes: new EffectMeshes(),
       releaseRing: ignore,
       shake: ignore,
+      surface: {
+        heightAt: () => {
+          return -40;
+        },
+        isWaterAt: () => {
+          return true;
+        },
+        surfaceAt: () => {
+          return 0;
+        },
+      },
       takeRing: vi.fn(),
     },
     METEOR
@@ -65,6 +73,17 @@ function opacities(sinks: SpriteSinks): number[] {
 }
 
 describe("meteor fall", () => {
+  it("aims at the water surface over a deep lake", () => {
+    const { meteor, sinks } = createMeteor();
+
+    meteor.update(METEOR.durationSeconds - 0.0001, sinks);
+
+    const [rock] = meteor.meshes;
+
+    expect(rock.position.y).toBeGreaterThan(0);
+    expect(rock.position.y).toBeLessThan(1);
+  });
+
   it("leaves a smoke trail behind the falling rock", () => {
     const { meteor, sinks } = createMeteor();
 

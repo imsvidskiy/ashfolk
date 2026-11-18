@@ -90,11 +90,12 @@ export class AgentMarkers {
   readonly #reach = new Sphere();
   readonly #staged: StagedMarker[] = [];
   #count = 0;
-  #isHidden = false;
+  #isHidden: boolean;
   #pixelScale = 0;
   #stagedCount = 0;
 
   constructor(axes: CameraAxes, ground: SightGround) {
+    this.#isHidden = false;
     this.#ground = ground;
     this.#geometry = createQuadGeometry();
     this.#instances = new InterleavedInstances(this.#geometry, MARKER_FIELDS, 256);
@@ -119,10 +120,20 @@ export class AgentMarkers {
 
   setHidden(isHidden: boolean): void {
     this.#isHidden = isHidden;
-    this.group.visible = this.#count > 0 && !isHidden;
+
+    if (isHidden) {
+      this.#count = 0;
+      this.#stagedCount = 0;
+      this.#herds.clear();
+      this.#upload();
+    }
   }
 
   begin(camera: PerspectiveCamera, frustum: Frustum, viewportHeight: number): void {
+    if (this.#isHidden) {
+      return;
+    }
+
     this.#eye.setFromMatrixPosition(camera.matrixWorld);
     camera.getWorldDirection(this.#forward);
     this.#pixelScale = 2 / (camera.projectionMatrix.elements[5] * Math.max(1, viewportHeight));
@@ -131,6 +142,10 @@ export class AgentMarkers {
   }
 
   add(anchor: Vector3, style: MarkerStyle, handover: number, isSelected: boolean, herd = NO_HERD): void {
+    if (this.#isHidden) {
+      return;
+    }
+
     if (this.#stagedCount === this.#staged.length) {
       this.#staged.push({ anchor: new Vector3(), handover, herd, isSelected, style });
     }
@@ -146,6 +161,10 @@ export class AgentMarkers {
   }
 
   commit(): void {
+    if (this.#isHidden) {
+      return;
+    }
+
     this.#gatherHerds();
     this.#count = 0;
 

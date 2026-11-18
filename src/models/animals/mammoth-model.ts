@@ -96,6 +96,7 @@ const FUR_NOISE = createVolumeNoise(createRandom(7171));
 const FUR_DEPTH = 0.035;
 const HEM_DEPTH = 0.1;
 const STRAND_DEPTH = 0.13;
+
 const BOXINESS = 2.5;
 const BODY_SEAM = 0.3;
 const HEAD_SEAM = 0.22;

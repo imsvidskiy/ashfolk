@@ -1,9 +1,9 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, onTestFinished, vi } from "vitest";
 import type { ChronicleEntry } from "../../simulation/chronicle.ts";
 import type { SimulationFrame } from "../../simulation/frame.ts";
 import { createListeners } from "../testing/listener-fixtures.ts";
 import { createChronicleEntry, createFrame, resetWorld } from "../testing/world-fixtures.ts";
-import { connectWorldStore, dismissNotice, useWorldStore, type WorldFeed } from "./world-store.ts";
+import { connectWorldStore, useWorldStore, type WorldFeed } from "./world-store.ts";
 
 interface FakeFeed extends WorldFeed {
   readonly emit: (frame: SimulationFrame) => void;
@@ -37,6 +37,14 @@ function createFeed({ chronicle = [], frame = createFrame() }: FeedOptions = {})
   };
 }
 
+function connect(feed: WorldFeed): () => void {
+  const disconnect = connectWorldStore(feed);
+
+  onTestFinished(disconnect);
+
+  return disconnect;
+}
+
 function noticeTexts(): string[] {
   return useWorldStore.getState().notices.map((notice) => {
     return notice.text;
@@ -53,7 +61,7 @@ describe("world store", () => {
     const entry = createChronicleEntry();
     const frame = createFrame({ isPaused: true, speed: 4 });
 
-    connectWorldStore(createFeed({ chronicle: [entry], frame }));
+    connect(createFeed({ chronicle: [entry], frame }));
 
     const state = useWorldStore.getState();
 
@@ -75,7 +83,7 @@ describe("world store", () => {
     const clock = vi.spyOn(performance, "now").mockReturnValue(1000);
     const feed = createFeed();
 
-    connectWorldStore(feed);
+    connect(feed);
     feed.emit(createFrame({ speed: 2 }));
     clock.mockReturnValue(1100);
     feed.emit(createFrame({ speed: 4 }));
@@ -94,7 +102,7 @@ describe("world store", () => {
     const clock = vi.spyOn(performance, "now").mockReturnValue(1000);
     const feed = createFeed();
 
-    connectWorldStore(feed);
+    connect(feed);
     feed.emit(createFrame());
     clock.mockReturnValue(1010);
     feed.emit(createFrame({ isPaused: true }));
@@ -113,7 +121,7 @@ describe("world store", () => {
     const clock = vi.spyOn(performance, "now").mockReturnValue(1000);
     const feed = createFeed();
 
-    const disconnect = connectWorldStore(feed);
+    const disconnect = connect(feed);
 
     feed.emit(createFrame());
     clock.mockReturnValue(1010);
@@ -127,7 +135,7 @@ describe("world store", () => {
     const clock = vi.spyOn(performance, "now").mockReturnValue(1000);
     const feed = createFeed();
 
-    connectWorldStore(feed);
+    connect(feed);
     feed.emit(createFrame({ speed: 2 }));
     clock.mockReturnValue(1010);
     feed.emit(createFrame({ notices: ["Rain is coming."], speed: 4 }));
@@ -139,7 +147,7 @@ describe("world store", () => {
     const frame = createFrame();
     const feed = createFeed({ frame });
 
-    connectWorldStore(feed);
+    connect(feed);
     feed.emit(createFrame({ notices: ["Rain is coming."], rules: structuredClone(frame.rules) }));
 
     expect(useWorldStore.getState().snapshot?.rules).toBe(frame.rules);
@@ -155,7 +163,7 @@ describe("world store", () => {
     const entry = createChronicleEntry({ category: "birth", text: "A child is born to the Bear Clan." });
     const feed = createFeed();
 
-    connectWorldStore(feed);
+    connect(feed);
     feed.emit(createFrame({ chronicle: [entry] }));
 
     expect(useWorldStore.getState().chronicle).toEqual([entry]);
@@ -164,11 +172,11 @@ describe("world store", () => {
   it("turns plain notices into notices", () => {
     const feed = createFeed();
 
-    connectWorldStore(feed);
+    connect(feed);
     feed.emit(createFrame({ notices: ["Rain is coming."] }));
 
     expect(useWorldStore.getState().notices).toEqual([
-      { category: "notice", id: expect.any(Number), text: "Rain is coming." },
+      { category: "notice", expiresAt: expect.any(Number), id: expect.any(Number), text: "Rain is coming." },
     ]);
   });
 
@@ -183,7 +191,7 @@ describe("world store", () => {
       createChronicleEntry({ category: "warning", id: 6, text: "The Wolf Clan is starving." }),
     ];
 
-    connectWorldStore(feed);
+    connect(feed);
     feed.emit(createFrame({ chronicle }));
 
     const announced = useWorldStore.getState().notices.map((notice) => {
@@ -208,7 +216,7 @@ describe("world store", () => {
       createChronicleEntry({ category: "beast", id: 5, text: "Wolves attacked Tor near the river." }),
     ];
 
-    connectWorldStore(feed);
+    connect(feed);
     feed.emit(createFrame({ chronicle }));
 
     expect(
@@ -222,7 +230,7 @@ describe("world store", () => {
     const feed = createFeed();
     const arrival = createChronicleEntry({ category: "arrival", text: "The Bear Clan arrives." });
 
-    connectWorldStore(feed);
+    connect(feed);
     feed.emit(createFrame({ chronicle: [arrival], notices: ["Rain is coming."] }));
 
     expect(noticeTexts()).toEqual(["Rain is coming.", "The Bear Clan arrives."]);
@@ -231,7 +239,7 @@ describe("world store", () => {
   it("keeps only the four latest notices", () => {
     const feed = createFeed();
 
-    connectWorldStore(feed);
+    connect(feed);
     feed.emit(createFrame({ notices: ["First", "Second"] }));
     feed.emit(createFrame({ notices: ["Third", "Fourth"] }));
     feed.emit(createFrame({ notices: ["Fifth", "Sixth"] }));
@@ -242,7 +250,7 @@ describe("world store", () => {
   it("gives every notice its own id", () => {
     const feed = createFeed();
 
-    connectWorldStore(feed);
+    connect(feed);
     feed.emit(createFrame({ notices: ["First", "Second", "Third"] }));
 
     const noticeIds = useWorldStore.getState().notices.map((notice) => {
@@ -255,7 +263,7 @@ describe("world store", () => {
   it("stops listening after disconnecting", () => {
     const feed = createFeed();
 
-    const disconnect = connectWorldStore(feed);
+    const disconnect = connect(feed);
 
     disconnect();
     feed.emit(createFrame({ notices: ["Nobody hears this."] }));
@@ -264,20 +272,40 @@ describe("world store", () => {
     expect(useWorldStore.getState().notices).toEqual([]);
   });
 
-  it("dismisses one notice and keeps the others", () => {
+  it("expires notices from their arrival even without a mounted HUD", () => {
+    vi.useFakeTimers();
+
     const feed = createFeed();
 
-    connectWorldStore(feed);
+    connect(feed);
+
     feed.emit(createFrame({ notices: ["First", "Second"] }));
+    vi.advanceTimersByTime(1000);
+    feed.emit(createFrame({ notices: ["Third"] }));
 
-    const [first] = useWorldStore.getState().notices;
+    vi.advanceTimersByTime(5999);
+    expect(noticeTexts()).toEqual(["First", "Second", "Third"]);
 
-    if (first === undefined) {
-      throw new Error("Expected a notice to dismiss");
-    }
+    vi.advanceTimersByTime(1);
+    expect(noticeTexts()).toEqual(["Third"]);
 
-    dismissNotice(first.id);
+    vi.advanceTimersByTime(1000);
+    expect(noticeTexts()).toEqual([]);
+    expect(vi.getTimerCount()).toBe(0);
+  });
 
-    expect(noticeTexts()).toEqual(["Second"]);
+  it("cancels the notice timeout when the world disconnects", () => {
+    vi.useFakeTimers();
+
+    const feed = createFeed();
+    const disconnect = connect(feed);
+
+    feed.emit(createFrame({ notices: ["First"] }));
+
+    expect(vi.getTimerCount()).toBe(1);
+
+    disconnect();
+
+    expect(vi.getTimerCount()).toBe(0);
   });
 });

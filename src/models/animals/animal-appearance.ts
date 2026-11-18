@@ -1,21 +1,24 @@
-import type { AnimalKind } from "../../content/animals.ts";
+import { ADULT_YOUTH, type AnimalKind } from "../../content/animals.ts";
 import { colorFromPalette, mixColors, scaleColor } from "../../shared/color.ts";
 import { lerp } from "../../shared/math.ts";
 import { type RandomSource, randomFromUnitSeed } from "../../shared/random.ts";
 
 const DEER_COATS: readonly number[] = [0x6e_4a_2e, 0x7a_4e_30, 0x8a_5a_36, 0x9a_6a_40, 0xa8_7a_4c];
 const DEER_BELLY = 0xe0_cc_aa;
+const SPOTTED_FAWN = 0.35;
+
 const MAMMOTH_COATS: readonly number[] = [0x3e_2a_1e, 0x4a_34_24, 0x5c_3e_28, 0x6a_4a_30, 0x7a_58_3a];
+
 const IBEX_COATS: readonly number[] = [0x6e_5c_48, 0x7e_68_50, 0x8e_76_5a, 0x9c_86_66];
 const IBEX_BELLY = 0xdc_d0_b8;
+
 const HARE_COATS: readonly number[] = [0x6e_5a_44, 0x7e_66_4c, 0x8c_74_58, 0x96_80_64, 0x84_78_68];
 const HARE_WHITE = 0xf2_ee_e6;
 const HARE_STATURE = 1.3;
+
 const WOLF_COATS: readonly number[] = [0x5a_56_52, 0x7a_74_6c, 0x8c_84_78, 0x96_86_6c, 0xb8_b2_a8];
 const WOLF_BLACK = 0x2e_2a_28;
 const WOLF_BELLY = 0xd8_d0_c2;
-const FULL_GROWN = 0.3;
-const SPOTTED_FAWN = 0.35;
 
 const APPEARANCES: Readonly<Record<AnimalKind, (random: RandomSource, youth: number) => AnimalAppearance>> = {
   deer: deerAppearance,
@@ -69,7 +72,7 @@ function antlerChoice(random: RandomSource, youth: number): Pick<AnimalAppearanc
   const isStag = random.chance(0.45);
   const antlerSize = random.between(0.7, 1.2);
 
-  return { antlerSize, hasAntlers: isStag && youth < FULL_GROWN };
+  return { antlerSize, hasAntlers: isStag && youth < ADULT_YOUTH };
 }
 
 function deerAppearance(random: RandomSource, youth: number): AnimalAppearance {
@@ -149,7 +152,7 @@ function wolfAppearance(random: RandomSource, youth: number): AnimalAppearance {
     ...PLAIN_FEATURES,
     coat,
     coatLight: mixColors(WOLF_BELLY, coat, random.between(0.1, 0.35)),
-    hasRuff: youth < FULL_GROWN && random.chance(0.7),
+    hasRuff: youth < ADULT_YOUTH && random.chance(0.7),
     headScale: lerp(1, 1.35, youth),
     legScale: lerp(1, 1.1, youth),
     size,

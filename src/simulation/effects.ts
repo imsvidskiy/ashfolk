@@ -1,3 +1,5 @@
+export const SKY_ENTRY_HEIGHT = 3200;
+
 type BlessingStyle = "abundance" | "healing" | "inspiration";
 
 export interface ArrowEffect {
@@ -16,6 +18,33 @@ export interface BlackHoleEffect {
   kind: "black-hole";
   radius: number;
   surfaceY: number;
+  wellId?: number;
+  x: number;
+  z: number;
+}
+
+export const INFLOW_MATERIALS = ["conifer", "broadleaf", "wood", "roof", "masonry", "rock", "earth", "water"] as const;
+
+export interface InflowSource {
+  isFallen: boolean;
+  material: (typeof INFLOW_MATERIALS)[number];
+  rotation: number;
+  size: number;
+  x: number;
+  y: number;
+  z: number;
+}
+
+export interface BlackHoleInflowEffect {
+  durationSeconds: number;
+  elapsedSeconds?: number;
+  holeDuration: number;
+  kind: "black-hole-inflow";
+  radius: number;
+  sources: readonly InflowSource[];
+  startedAt: number;
+  surfaceY: number;
+  wellId: number;
   x: number;
   z: number;
 }
@@ -71,6 +100,7 @@ export interface ExplosionEffect {
   kind: "explosion";
   power: number;
   radius: number;
+  surfaceY: number;
   x: number;
   z: number;
 }
@@ -109,7 +139,9 @@ export interface TornadoEffect {
 
 export type SimulationEffect =
   | ArrowEffect
+  | { kind: "black-hole-collapse"; wellId: number }
   | BlackHoleEffect
+  | BlackHoleInflowEffect
   | BlessingEffect
   | NuclearFallEffect
   | NuclearCloudEffect

@@ -235,6 +235,7 @@ export function createFrame(overrides: Partial<SimulationFrame> = {}): Simulatio
     chronicle: [],
     effects: [],
     groundRows: [],
+    hasRealTimeWork: false,
     heightPatch: null,
     held: null,
     inspection: null,

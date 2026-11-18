@@ -234,30 +234,27 @@ export function writeSavedWorld(
   );
 }
 
-export function readSavedWorld(id: string): Promise<StoredWorld | null> {
-  return attempt(
-    async () => {
-      const database = await openDatabase();
+export async function readSavedWorld(id: string): Promise<StoredWorld | null> {
+  const database = await openDatabase();
+  const transaction = database.transaction([WORLDS, STATES]);
 
-      const transaction = database.transaction([WORLDS, STATES]);
+  const [recordValue, storedValue] = await Promise.all([
+    settleRequest(transaction.objectStore(WORLDS).get(id)),
+    settleRequest(transaction.objectStore(STATES).get(id)),
+  ]);
 
-      const [recordValue, storedValue] = await Promise.all([
-        settleRequest(transaction.objectStore(WORLDS).get(id)),
-        settleRequest(transaction.objectStore(STATES).get(id)),
-      ]);
+  if (recordValue === undefined && storedValue === undefined) {
+    return null;
+  }
 
-      const record = recordSchema.safeParse(recordValue);
-      const stored = storedStateSchema.safeParse(storedValue);
+  const record = recordSchema.safeParse(recordValue);
+  const stored = storedStateSchema.safeParse(storedValue);
 
-      if (!(record.success && stored.success)) {
-        return null;
-      }
+  if (!(record.success && stored.success)) {
+    throw new Error("This saved island is incomplete or was saved by an incompatible version of Ashfolk.");
+  }
 
-      return { journal: stored.data.journal, record: record.data, state: stored.data.state };
-    },
-    null,
-    "The saved world could not be read"
-  );
+  return { journal: stored.data.journal, record: record.data, state: stored.data.state };
 }
 
 export function markLandChanged(id: string): Promise<boolean> {

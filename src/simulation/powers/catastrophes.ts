@@ -18,6 +18,7 @@ const STRIKE_BUILDING_RADIUS = 18;
 const STRIKE_SCARE_RADIUS = 200;
 const TEACHING_DISTANCE = 300;
 const SOAKED = 0.5;
+
 const NATURAL_STRIKE_ATTEMPTS = 6;
 const ANY_LAND_STRIKE_ATTEMPT = 4;
 const NEAREST_NATURAL_STRIKE = 300;
@@ -25,17 +26,20 @@ const FARTHEST_NATURAL_STRIKE = 2500;
 const HIGH_GROUND = 700;
 const TALL_FOREST = 1;
 const ISLAND_MARGIN = 60;
+
 const CRATER_CORE = 0.85;
 const CRATER_DEPTH_SHARE = 0.3;
 const DEEP_BLAST_POWER = 1.5;
 const DEEP_CRATER_SCALE = 1.25;
 const WATERY_CORE = 0.5;
+
 const FELLING_REACH = 1.45;
 const FELLING_FRINGE = 0.3;
 const FALLING_SWAY = 0.5;
 const SHATTERING_REACH = 0.6;
 const SHATTERING_HEIGHT = 1.4;
 const SHARDS = 3;
+
 const IGNITION_REACH = 2;
 const NEAR_IGNITION = 0.9;
 const FAR_IGNITION = 0.12;
@@ -43,6 +47,7 @@ const DEBRIS_REACH = 3.2;
 const DEBRIS_PER_METER = 0.35;
 const FEWEST_DEBRIS = 6;
 const MOST_DEBRIS = 120;
+
 const BLAST_REACH = 1.8;
 const MONUMENT_REACH = 3.2;
 const BLAST_BUILDING_DAMAGE = 120;
@@ -51,6 +56,7 @@ const BLAST_ANIMAL_DAMAGE = 3;
 const BLAST_SCARE_REACH = 8;
 const BLAST_DANGER_REACH = 4;
 const BLAST_DANGER_SECONDS = 6;
+
 const QUAKE_TOPPLING = 0.08;
 const QUAKE_MONUMENT_STRENGTH = 0.6;
 const QUAKE_BUILDING_DAMAGE = 45;
@@ -58,6 +64,7 @@ const QUAKE_PEOPLE_REACH = 0.6;
 const QUAKE_PEOPLE_DAMAGE = 0.35;
 const QUAKE_SCARE_REACH = 1.5;
 const QUAKE_DANGER_SECONDS = 5;
+
 const FALL_SALT = 97;
 const SHARD_SALT = 53;
 const TOPPLE_SALT = 31;
@@ -232,6 +239,7 @@ export function explode(blast: Blast, services: PowerServices): void {
     kind: "explosion",
     power: blast.power,
     radius: blast.radius,
+    surfaceY,
     x: blast.x,
     z: blast.z,
   });

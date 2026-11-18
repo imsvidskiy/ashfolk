@@ -1,5 +1,4 @@
 import { cn } from "../../design/cn.ts";
-import { Divider } from "../../design/divider.tsx";
 import { Island } from "../../design/island.tsx";
 import { TimeControls } from "../time/time-controls.tsx";
 import { CompactClock, WorldStatus } from "../time/world-status.tsx";
@@ -21,25 +20,25 @@ export function StatusCard() {
 }
 
 export function PanelBar() {
-  return (
-    <Island>
-      <MenuButtons className={cn(BAR_CLASS, "px-1.5")} />
-    </Island>
-  );
+  return <MenuButtons className="max-w-full justify-end" />;
 }
 
 export function CompactTopBar() {
   return (
-    <Island>
-      <header className={cn(BAR_CLASS, "gap-2 pr-1 pl-3")}>
-        <CompactClock />
+    <header className="flex items-start gap-2">
+      <Island className="min-w-0 flex-1">
+        <div className={cn(BAR_CLASS, "gap-2 pr-2 pl-3")}>
+          <CompactClock />
 
-        <TimeControls />
+          <TimeControls />
+        </div>
+      </Island>
 
-        <Divider />
-
-        <CompactMenu />
-      </header>
-    </Island>
+      <Island className="shrink-0">
+        <div className={cn(BAR_CLASS, "justify-center px-1")}>
+          <CompactMenu />
+        </div>
+      </Island>
+    </header>
   );
 }

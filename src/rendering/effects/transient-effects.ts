@@ -11,25 +11,27 @@ import type {
 } from "../../simulation/effects.ts";
 import type { InstanceBatch } from "../instancing.ts";
 import type { EffectMeshes, RibbonPoint } from "./effect-meshes.ts";
-import type { GroundRing } from "./ground-ring.ts";
+import { type GroundRing, NO_FLOOR } from "./ground-ring.ts";
 
 const BOLT_HEIGHT = 1100;
 const BOLT_SUBDIVISIONS = 6;
 const BOLT_SECONDS = 0.55;
-const EXPLOSION_SECONDS = 3;
-const EARTHQUAKE_SECONDS = 3.2;
-const BLESSING_SECONDS = 3;
-const DUST_PUFFS = 26;
-const SPARKLES = 70;
-const RING_COLOR = 0xff_f0_d8;
-const SPLASH_SECONDS = 0.55;
-const SPLASH_DROPS = 9;
 
-const SPLASH_COLOR: Color = [0.86, 0.93, 0.97];
+const EXPLOSION_SECONDS = 3;
+const RING_COLOR = 0xff_f0_d8;
 const WATER_DUST: Color = [0.85, 0.9, 0.95];
 const LAND_DUST: Color = [0.3, 0.27, 0.24];
+const DUST_PUFFS = 26;
+
+const EARTHQUAKE_SECONDS = 3.2;
 const EARTHQUAKE_DUST: Color = [0.55, 0.47, 0.38];
 
+const SPLASH_SECONDS = 0.55;
+const SPLASH_DROPS = 9;
+const SPLASH_COLOR: Color = [0.86, 0.93, 0.97];
+
+const BLESSING_SECONDS = 3;
+const SPARKLES = 70;
 const BLESSING_COLORS: Readonly<Record<BlessingEffect["style"], Color>> = {
   abundance: [1, 0.78, 0.3],
   healing: [0.45, 1, 0.55],
@@ -41,13 +43,19 @@ export interface SpriteSinks {
   readonly glow: InstanceBatch;
 }
 
+export interface EffectSurface {
+  readonly heightAt: (x: number, z: number) => number;
+  readonly isWaterAt: (x: number, z: number) => boolean;
+  readonly surfaceAt: (x: number, z: number) => number;
+}
+
 export interface EffectContext {
   readonly flash: (amount: number) => void;
-  readonly heightAt: (x: number, z: number) => number;
   readonly light: (position: Vector3, color: number, intensity: number) => void;
   readonly meshes: EffectMeshes;
   readonly releaseRing: (ring: GroundRing) => void;
   readonly shake: (amount: number, x: number, z: number) => void;
+  readonly surface: EffectSurface;
   readonly takeRing: () => GroundRing;
 }
 
@@ -134,7 +142,7 @@ export class LightningStrike implements ActiveEffect {
   #age = 0;
 
   constructor(context: EffectContext, effect: LightningEffect) {
-    const ground = new Vector3(effect.x, context.heightAt(effect.x, effect.z), effect.z);
+    const ground = new Vector3(effect.x, context.surface.surfaceAt(effect.x, effect.z), effect.z);
     const skyOffset = new Vector3((Math.random() - 0.5) * 300, BOLT_HEIGHT, (Math.random() - 0.5) * 300);
 
     const trunk = jaggedPath(ground.clone().add(skyOffset), ground, 0.42);
@@ -179,7 +187,7 @@ export class Explosion implements ActiveEffect {
   constructor(context: EffectContext, effect: ExplosionEffect) {
     this.#context = context;
     this.#effect = effect;
-    this.#center = new Vector3(effect.x, context.heightAt(effect.x, effect.z), effect.z);
+    this.#center = new Vector3(effect.x, effect.surfaceY, effect.z);
     this.#fireball = context.meshes.createFireball();
     this.#fireball.position.copy(this.#center);
     this.#fireball.visible = !effect.isInWater;
@@ -205,7 +213,8 @@ export class Explosion implements ActiveEffect {
       this.#center.z,
       radius * 3.6 * smoothstep(0, 1, this.#age),
       RING_COLOR,
-      1 - smoothstep(0.2, 1, this.#age)
+      1 - smoothstep(0.2, 1, this.#age),
+      this.#effect.isInWater ? this.#center.y : NO_FLOOR
     );
 
     addPuffs(sinks, this.#center, radius, this.#age, this.#effect.isInWater ? WATER_DUST : LAND_DUST);
@@ -229,8 +238,8 @@ export class EmberFlight implements ActiveEffect {
 
   constructor(context: EffectContext, effect: EmberEffect) {
     this.#effect = effect;
-    this.#from = new Vector3(effect.fromX, context.heightAt(effect.fromX, effect.fromZ) + 10, effect.fromZ);
-    this.#to = new Vector3(effect.toX, context.heightAt(effect.toX, effect.toZ) + 0.5, effect.toZ);
+    this.#from = new Vector3(effect.fromX, context.surface.heightAt(effect.fromX, effect.fromZ) + 10, effect.fromZ);
+    this.#to = new Vector3(effect.toX, context.surface.heightAt(effect.toX, effect.toZ) + 0.5, effect.toZ);
   }
 
   update(seconds: number, sinks: SpriteSinks): boolean {
@@ -277,7 +286,7 @@ export class Earthquake implements ActiveEffect {
       const x = this.#effect.x + Math.cos(angle) * reach;
       const z = this.#effect.z + Math.sin(angle) * reach;
 
-      sinks.dust.add([x, this.#context.heightAt(x, z) + 2 + this.#age * 3, z, 9 + this.#age * 5], look);
+      sinks.dust.add([x, this.#context.surface.heightAt(x, z) + 2 + this.#age * 3, z, 9 + this.#age * 5], look);
     }
 
     return this.#age < EARTHQUAKE_SECONDS;
@@ -312,7 +321,7 @@ export class Blessing implements ActiveEffect {
       const z = this.#effect.z + Math.sin(angle) * reach;
 
       sinks.glow.add(
-        [x, this.#context.heightAt(x, z) + 1 + rise, z, 1.2 + twinkle],
+        [x, this.#context.surface.heightAt(x, z) + 1 + rise, z, 1.2 + twinkle],
         [red, green, blue, fade * twinkle]
       );
     }

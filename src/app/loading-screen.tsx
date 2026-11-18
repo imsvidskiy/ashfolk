@@ -40,6 +40,10 @@ interface FailureMessageProps {
   readonly title: string;
 }
 
+function retryLaunch(): void {
+  useLaunchStore.getState().retryLaunch();
+}
+
 function startAgain(): void {
   useLaunchStore.getState().relaunch({});
 }
@@ -97,15 +101,25 @@ function FailureMessage({ message, title }: FailureMessageProps) {
   );
 }
 
-function StoppedMessage({ message }: { readonly message: string }) {
+function RecoveryMessage({ message, onRetry, title }: FailureMessageProps & { readonly onRetry: () => void }) {
+  const chooseWorld = useLaunchStore((state) => {
+    return state.chooseWorld;
+  });
+
   return (
     <div className="flex flex-col items-center gap-5">
-      <FailureMessage message={message} title="The simulation stopped" />
+      <FailureMessage message={message} title={title} />
 
-      <TextButton onClick={startAgain} tone="accent">
-        <RotateCcw aria-hidden="true" size={16} />
-        Start again
-      </TextButton>
+      <div className="flex gap-2">
+        <TextButton onClick={onRetry} tone="accent">
+          <RotateCcw aria-hidden="true" size={16} />
+          Start again
+        </TextButton>
+
+        <TextButton onClick={chooseWorld} tone="outline">
+          Worlds
+        </TextButton>
+      </div>
     </div>
   );
 }
@@ -135,13 +149,13 @@ function StatusMessage({ status }: { readonly status: Exclude<EngineStatus, { ki
 
   switch (status.kind) {
     case "failed":
-      return <FailureMessage message={status.message} title="The island could not rise" />;
+      return <RecoveryMessage message={status.message} onRetry={retryLaunch} title="The island could not rise" />;
     case "graphicsLost":
       return <GraphicsLostMessage saved={status.saved} />;
     case "loading":
       return <LoadingScene island={status.island} name={name} seed={seed} stage={status.stage} />;
     case "stopped":
-      return <StoppedMessage message={status.message} />;
+      return <RecoveryMessage message={status.message} onRetry={startAgain} title="The simulation stopped" />;
     default:
       return status satisfies never;
   }

@@ -1,5 +1,5 @@
 import { Menu } from "@base-ui/react/menu";
-import { BookOpen, Download, Map as MapIcon, Menu as MenuIcon, Settings } from "lucide-react";
+import { BookOpen, Check, Download, Map as MapIcon, Menu as MenuIcon, Settings } from "lucide-react";
 import type { ReactNode } from "react";
 import { IconButton } from "../../design/buttons.tsx";
 import { cn } from "../../design/cn.ts";
@@ -9,6 +9,8 @@ import { useSidePanel } from "../journal/use-side-panel.ts";
 import { useSoundToggle } from "../sound/use-sound-toggle.ts";
 import { useInterfaceStore } from "./interface-store.ts";
 import { useFullscreen } from "./use-fullscreen.ts";
+
+const GROUP_LABEL = "text-ink-muted px-2.5 pt-1.5 pb-1 text-xs font-semibold";
 
 interface MenuEntryProps {
   readonly children: ReactNode;
@@ -92,24 +94,40 @@ export function CompactMenu() {
 
       <Menu.Portal>
         <Menu.Positioner align="end" className="z-50" sideOffset={10}>
-          <Menu.Popup className={cn(MENU_POPUP, "min-w-52")}>
-            <MenuEntry icon={<BookOpen aria-hidden="true" size={17} />} onClick={handleJournal}>
-              Journal
-            </MenuEntry>
+          <Menu.Popup
+            className={cn(MENU_POPUP, "max-h-(--available-height) min-w-52 overflow-y-auto overscroll-contain")}
+          >
+            <Menu.Group>
+              <Menu.GroupLabel className={GROUP_LABEL}>World views</Menu.GroupLabel>
 
-            <MenuEntry icon={<MapIcon aria-hidden="true" size={17} />} onClick={toggleMap}>
-              {isMapOpen ? "Hide the map" : "Show the map"}
-            </MenuEntry>
+              <MenuEntry icon={<BookOpen aria-hidden="true" size={17} />} onClick={handleJournal}>
+                Journal
+              </MenuEntry>
 
-            <MenuEntry icon={<Settings aria-hidden="true" size={17} />} onClick={openSettings}>
-              Settings
-            </MenuEntry>
+              <Menu.CheckboxItem checked={isMapOpen} className={MENU_ITEM} closeOnClick onCheckedChange={toggleMap}>
+                <MapIcon aria-hidden="true" className="text-ink-soft" size={17} />
+                Map
+                <Menu.CheckboxItemIndicator className="text-dawn-strong ml-auto">
+                  <Check aria-hidden="true" size={16} />
+                </Menu.CheckboxItemIndicator>
+              </Menu.CheckboxItem>
+            </Menu.Group>
 
-            <SoundEntry />
+            <Menu.Separator className="border-line mx-2 my-1.5 border-t" />
 
-            <InstallEntry />
+            <Menu.Group>
+              <Menu.GroupLabel className={GROUP_LABEL}>Game controls</Menu.GroupLabel>
 
-            <FullscreenEntry />
+              <SoundEntry />
+
+              <MenuEntry icon={<Settings aria-hidden="true" size={17} />} onClick={openSettings}>
+                Settings
+              </MenuEntry>
+
+              <InstallEntry />
+
+              <FullscreenEntry />
+            </Menu.Group>
           </Menu.Popup>
         </Menu.Positioner>
       </Menu.Portal>

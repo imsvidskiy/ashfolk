@@ -41,6 +41,7 @@ export class GameSession {
   readonly mirror: WorldMirror;
   readonly #chronicle: ChronicleEntry[] = [];
   readonly #commandListeners = new Set<CommandListener>();
+  readonly #commandTimes: number[] = [];
   readonly #connection: SimulationConnection;
   readonly #effects: SimulationEffect[] = [];
   readonly #frameListeners = new Set<FrameListener>();
@@ -112,6 +113,7 @@ export class GameSession {
       return;
     }
 
+    this.#commandTimes.push(this.#pendingSeconds);
     this.#connection.send(command);
 
     if (!VIEW_COMMANDS.has(command.type)) {
@@ -154,10 +156,11 @@ export class GameSession {
     }
 
     const seconds = this.#pendingSeconds;
+    const commandTimes = this.#commandTimes.splice(0);
 
     this.#pendingSeconds = 0;
     this.#commandsSinceRequest = 0;
-    this.#request = this.#advance(seconds);
+    this.#request = this.#advance(seconds, commandTimes);
   }
 
   whenIdle(): Promise<void> {
@@ -214,7 +217,7 @@ export class GameSession {
     const hasCommands = this.#commandsSinceRequest > 0;
     const isQuietTooLong = this.#pendingSeconds >= LONGEST_QUIET_SECONDS;
 
-    if (hasCommands || frame.isBusy || isQuietTooLong) {
+    if (hasCommands || frame.hasRealTimeWork || isQuietTooLong) {
       return true;
     }
 
@@ -225,9 +228,9 @@ export class GameSession {
     return frame.secondsSinceTick + this.#pendingSeconds * frame.speed >= TICK_SECONDS;
   }
 
-  async #advance(seconds: number): Promise<void> {
+  async #advance(seconds: number, commandTimes: readonly number[]): Promise<void> {
     try {
-      const frame = await this.#connection.advance(seconds);
+      const frame = await this.#connection.advance(seconds, commandTimes);
 
       this.#receive(frame);
     } catch (error) {

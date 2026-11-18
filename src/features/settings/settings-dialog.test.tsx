@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, onTestFinished } from "vitest";
 import { page, userEvent } from "vitest/browser";
 import { render } from "vitest-browser-react";
+import { version } from "../../../package.json";
 import { FilmingHint } from "../filming/filming-hint.tsx";
 import { useInterfaceStore } from "../interface/interface-store.ts";
 import { connectPowers } from "../powers/connect-powers.ts";
@@ -13,6 +14,23 @@ import { SettingsDialog } from "./settings-dialog.tsx";
 describe("settings dialog", () => {
   beforeEach(async () => {
     await page.viewport(1280, 800);
+  });
+
+  it("keeps project links and the installed version visible when a long section scrolls", async () => {
+    showWorld();
+    await startTestEngine();
+    useInterfaceStore.setState({ isSettingsOpen: true, settingsTab: "photo" });
+    const screen = await render(<SettingsDialog />);
+
+    const project = screen.getByRole("navigation", { name: "Project" }).element();
+    const panel = screen.getByRole("tabpanel").element();
+    const { top } = project.getBoundingClientRect();
+
+    panel.scrollTop = panel.scrollHeight;
+    expect(panel.scrollTop).toBeGreaterThan(0);
+    expect(project.getBoundingClientRect().top).toBe(top);
+    await expect.element(screen.getByText(`v${version}`)).toBeVisible();
+    await expect.element(screen.getByRole("link", { name: "Privacy" })).toBeVisible();
   });
 
   it("stays closed until the settings are opened", async () => {

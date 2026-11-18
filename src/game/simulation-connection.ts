@@ -1,4 +1,4 @@
-import { proxy, type Remote, transfer, wrap } from "comlink";
+import { proxy, type Remote, releaseProxy, transfer, wrap } from "comlink";
 import type { GenerationProgress, WorldRequest } from "../generation/generation-options.ts";
 import { buffersWithin } from "../shared/buffers.ts";
 import { ignore } from "../shared/ignore.ts";
@@ -8,7 +8,7 @@ import type { LoadedWorld, SavedWorldState } from "../simulation/saved-world.ts"
 import type { SimulationWorkerApi } from "../workers/simulation-worker-api.ts";
 
 export interface SimulationConnection {
-  advance: (realSeconds: number) => Promise<SimulationFrame>;
+  advance: (realSeconds: number, commandTimes?: readonly number[]) => Promise<SimulationFrame>;
   createWorld: (request: WorldRequest, onProgress: (progress: GenerationProgress) => void) => Promise<InitialWorld>;
   dispose: () => void;
   loadWorld: (saved: SavedWorldState, onProgress: (progress: GenerationProgress) => void) => Promise<LoadedWorld>;
@@ -16,27 +16,12 @@ export interface SimulationConnection {
   send: (command: SimulationCommand) => void;
 }
 
-function failureOf(worker: Worker): Promise<never> {
-  const failure = new Promise<never>((_resolve, reject) => {
-    worker.addEventListener(
-      "error",
-      (event) => {
-        reject(new Error(event instanceof ErrorEvent ? event.message : "The simulation worker could not load"));
-      },
-      { once: true }
-    );
-  });
-
-  failure.catch(ignore);
-
-  return failure;
-}
-
 export class WorkerSimulationConnection implements SimulationConnection {
   readonly #commands: SimulationCommand[] = [];
-  readonly #failure: Promise<never>;
+  readonly #pending = new Set<(error: Error) => void>();
   readonly #remote: Remote<SimulationWorkerApi>;
   readonly #worker: Worker;
+  #failure: Error | null = null;
 
   constructor() {
     this.#worker = new Worker(new URL("../workers/simulation-worker.ts", import.meta.url), {
@@ -44,40 +29,93 @@ export class WorkerSimulationConnection implements SimulationConnection {
       type: "module",
     });
     this.#remote = wrap<SimulationWorkerApi>(this.#worker);
-    this.#failure = failureOf(this.#worker);
+
+    this.#worker.addEventListener(
+      "error",
+      (event) => {
+        const message = event instanceof ErrorEvent ? event.message : "The simulation worker could not load";
+
+        this.#stop(new Error(message));
+      },
+      { once: true }
+    );
   }
 
-  advance(realSeconds: number): Promise<SimulationFrame> {
-    return this.#raceFailure(this.#remote.advance(realSeconds, this.#commands.splice(0)));
+  advance(realSeconds: number, commandTimes?: readonly number[]): Promise<SimulationFrame> {
+    return this.#request(() => {
+      return this.#remote.advance(realSeconds, this.#commands.splice(0), commandTimes);
+    });
   }
 
   createWorld(request: WorldRequest, onProgress: (progress: GenerationProgress) => void): Promise<InitialWorld> {
-    this.#commands.splice(0);
+    return this.#request(() => {
+      this.#commands.length = 0;
 
-    return this.#raceFailure(this.#remote.createWorld(request, proxy(onProgress)));
+      return this.#remote.createWorld(request, proxy(onProgress));
+    });
   }
 
   loadWorld(saved: SavedWorldState, onProgress: (progress: GenerationProgress) => void): Promise<LoadedWorld> {
-    this.#commands.splice(0);
+    return this.#request(() => {
+      const sent = transfer(saved, buffersWithin(saved));
 
-    const sent = transfer(saved, buffersWithin(saved));
+      this.#commands.length = 0;
 
-    return this.#raceFailure(this.#remote.loadWorld(sent, proxy(onProgress)));
+      return this.#remote.loadWorld(sent, proxy(onProgress));
+    });
   }
 
   saveWorld(): Promise<SavedWorldState | null> {
-    return this.#raceFailure(this.#remote.saveWorld());
+    return this.#request(() => {
+      return this.#remote.saveWorld();
+    });
   }
 
   dispose(): void {
-    this.#worker.terminate();
+    this.#stop(new Error("The simulation connection was closed"));
   }
 
   send(command: SimulationCommand): void {
-    this.#commands.push(command);
+    if (this.#failure === null) {
+      this.#commands.push(command);
+    }
   }
 
-  #raceFailure<Value>(request: Promise<Value>): Promise<Value> {
-    return Promise.race([request, this.#failure]);
+  async #request<Value>(start: () => Promise<Value>): Promise<Value> {
+    if (this.#failure !== null) {
+      throw this.#failure;
+    }
+
+    let stop: (error: Error) => void = ignore;
+
+    const response = new Promise<Value>((resolve, reject) => {
+      stop = reject;
+      this.#pending.add(stop);
+
+      start().then(resolve, reject);
+    });
+
+    try {
+      return await response;
+    } finally {
+      this.#pending.delete(stop);
+    }
+  }
+
+  #stop(error: Error): void {
+    if (this.#failure !== null) {
+      return;
+    }
+
+    this.#failure = error;
+    this.#commands.length = 0;
+
+    for (const reject of this.#pending) {
+      reject(error);
+    }
+
+    this.#pending.clear();
+    this.#remote[releaseProxy]();
+    this.#worker.terminate();
   }
 }

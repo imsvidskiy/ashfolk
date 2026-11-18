@@ -31,11 +31,11 @@ function mixed(hash: number, value: number): number {
   return Math.imul(hash + clamp(step, -LARGEST_STEP, LARGEST_STEP), MULTIPLIER);
 }
 
-function mixedAll(hash: number, values: ArrayLike<number> & Iterable<number>): number {
-  let next = mixed(hash, values.length);
+function mixedAll(hash: number, values: ArrayLike<number>, count = values.length): number {
+  let next = mixed(hash, count);
 
-  for (const value of values) {
-    next = mixed(next, value);
+  for (let index = 0; index < count; index += 1) {
+    next = mixed(next, values[index]);
   }
 
   return next;
@@ -83,7 +83,7 @@ export function generationFingerprint(world: GeneratedWorld): number {
   }
 
   for (const channel of FINGERPRINT_PLANT_CHANNELS) {
-    hash = mixedAll(hash, vegetation[channel].subarray(0, vegetation.count));
+    hash = mixedAll(hash, vegetation[channel], vegetation.count);
   }
 
   const fingerprint = mixedAll(hash, features);

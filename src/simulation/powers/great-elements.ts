@@ -6,8 +6,10 @@ import { meteorPower } from "./element-powers.ts";
 import { APPLIED, type PowerOutcome, type PowerServices, type PowerTarget, refused } from "./power-handler.ts";
 
 const BOLT_INTERVAL = 0.42;
+
 const METEOR_INTERVAL = 0.55;
 const SHOWER_CRATER_RADIUS = 52;
+
 const SWARM_FUNNEL_RADIUS = 36;
 
 interface Cluster {

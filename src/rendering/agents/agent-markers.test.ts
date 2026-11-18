@@ -6,7 +6,7 @@ import {
   PerspectiveCamera,
   Vector3,
 } from "three/webgpu";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { CameraAxes } from "../effects/billboards.ts";
 import { type CameraView, frustumOf } from "../testing/camera-above.ts";
 import { AgentMarkers, NO_HERD } from "./agent-markers.ts";
@@ -112,6 +112,36 @@ describe("agent markers", () => {
 
     expect(drawnBefore).toBe(1);
     expect(markers.count).toBe(0);
+  });
+
+  it("skips terrain sight and drops stale positions while markers are hidden", () => {
+    const heightAt = vi.fn(FLAT_GROUND.heightAt);
+    const markers = markersSeenFrom(2000, { ...FLAT_GROUND, heightAt });
+    const { camera, frustum } = viewFrom(2000);
+
+    addDeerHerd(markers, 5);
+    markers.commit();
+    expect(markers.count).toBeGreaterThan(0);
+
+    heightAt.mockClear();
+    markers.setHidden(true);
+    markers.begin(camera, frustum, VIEWPORT_HEIGHT);
+    addDeerHerd(markers, 5);
+    markers.commit();
+
+    expect(heightAt).not.toHaveBeenCalled();
+    expect(markers.count).toBe(0);
+    expect(markers.group.visible).toBe(false);
+
+    markers.setHidden(false);
+    expect(markers.group.visible).toBe(false);
+    markers.begin(camera, frustum, VIEWPORT_HEIGHT);
+    markers.add(new Vector3(80, 2, 40), BEAR_CLAN, HANDOVER, false);
+    markers.commit();
+
+    expect(drawnSpots(markers)).toEqual([{ x: 80, z: 40 }]);
+    expect(heightAt).toHaveBeenCalled();
+    markers.dispose();
   });
 
   it("leaves out agents off screen", () => {

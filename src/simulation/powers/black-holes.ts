@@ -1,9 +1,11 @@
 import { Ground } from "../../content/grounds.ts";
 import { isTreeSpecies } from "../../content/plants.ts";
 import { lerp } from "../../shared/math.ts";
+import { NO_PLANT } from "../../world/vegetation-store.ts";
 import type { Mover } from "../agents/movement.ts";
-import type { BlackHoleEffect, EffectLog } from "../effects.ts";
+import type { BlackHoleEffect, BlackHoleInflowEffect } from "../effects.ts";
 import { cellsInArea, raiseTerrain } from "../world/terrain-editing.ts";
+import { BlackHoleInflow } from "./black-hole-inflow.ts";
 import type { PowerServices } from "./power-handler.ts";
 
 export const BLACK_HOLE_CORE_SHARE = 0.25;
@@ -19,8 +21,12 @@ const CORE_PULL_PER_SECOND = 0.84;
 export interface BlackHole {
   capturedPeople?: number;
   effect: BlackHoleEffect;
+  inflow?: BlackHoleInflowEffect;
   remaining: number;
+  wellId?: number;
 }
+
+type ActiveHole = BlackHole & { wellId: number };
 
 function pull(mover: Mover, hole: BlackHoleEffect, seconds: number): boolean {
   const deltaX = hole.x - mover.x;
@@ -58,61 +64,100 @@ function attract(hole: BlackHoleEffect, seconds: number, services: PowerServices
   return captured;
 }
 
-function stripGround(hole: BlackHoleEffect, stage: number, services: PowerServices): void {
+function clearedRadius(services: PowerServices, effect: BlackHoleEffect, stage: number): number {
+  return Math.max(
+    services.world.grid.cellSize * Math.SQRT1_2,
+    effect.radius * lerp(OPENING_SHARE, BASIN_SHARE, stage / EROSION_STAGES)
+  );
+}
+
+function consumeCell(services: PowerServices, samples: BlackHoleInflow, cell: number): void {
   const { buildings, environment, fire, world } = services;
   const { vegetation } = world;
+  const building = buildings.find(world.occupancy[cell]);
 
-  const cleared = Math.max(
-    world.grid.cellSize * Math.SQRT1_2,
-    hole.radius * lerp(OPENING_SHARE, BASIN_SHARE, stage / EROSION_STAGES)
-  );
-  const reach = cleared + hole.radius * FELLING_FRINGE;
+  if (building !== null) {
+    samples.building(building);
+    buildings.remove(building, "swallowed");
+  }
 
-  for (const { cell, distance } of cellsInArea(world, { ...hole, radius: reach })) {
+  for (let plant = vegetation.firstPlantInCell(cell); plant !== NO_PLANT; plant = vegetation.nextPlantInCell(plant)) {
+    samples.plant(plant);
+  }
+
+  world.clearPlants(cell, true);
+  fire.douse(cell, 1);
+
+  if (!(world.isWater(cell) || world.isPool(cell))) {
+    world.setGround(cell, Ground.Rock);
+  }
+
+  world.fields.fuel[cell] = 0;
+  world.fields.snow[cell] = 0;
+  world.markSurfaceCell(cell);
+  world.markDisturbed(cell, environment.day);
+}
+
+function stripGround(hole: ActiveHole, previousStage: number, stage: number, services: PowerServices): void {
+  const { environment, world } = services;
+  const { vegetation } = world;
+  const { effect } = hole;
+  const samples = new BlackHoleInflow(world);
+  const cleared = clearedRadius(services, effect, stage);
+  const previous = previousStage < 0 ? -1 : clearedRadius(services, effect, previousStage);
+  const reach = cleared + effect.radius * FELLING_FRINGE;
+
+  for (const { cell, column, distance, row } of cellsInArea(world, { ...effect, radius: reach })) {
     if (!world.isOnIsland(cell)) {
       continue;
     }
 
     if (distance <= cleared) {
-      const building = buildings.find(world.occupancy[cell]);
-
-      if (building !== null) {
-        buildings.remove(building, "swallowed");
+      if (distance > previous) {
+        samples.ground(cell, world.grid.centerX(column), world.grid.centerZ(row));
       }
 
-      world.clearPlants(cell, true);
-      fire.douse(cell, 1);
-
-      if (!(world.isWater(cell) || world.isPool(cell))) {
-        world.setGround(cell, Ground.Rock);
-      }
-
-      world.fields.fuel[cell] = 0;
-      world.fields.snow[cell] = 0;
-      world.markSurfaceCell(cell);
-      world.markDisturbed(cell, environment.day);
+      consumeCell(services, samples, cell);
 
       continue;
     }
 
     for (const plant of vegetation.plantsInCell(cell)) {
       if (vegetation.isAlive(plant) && isTreeSpecies(vegetation.species[plant])) {
-        world.fellPlant(plant, environment.day, Math.atan2(hole.x - vegetation.x[plant], hole.z - vegetation.z[plant]));
+        world.fellPlant(
+          plant,
+          environment.day,
+          Math.atan2(effect.x - vegetation.x[plant], effect.z - vegetation.z[plant])
+        );
         world.markDisturbed(cell, environment.day);
       }
     }
   }
+
+  const interval = effect.durationSeconds / (EROSION_STAGES + 1);
+  const inflow = samples.effect(
+    effect,
+    hole.wellId,
+    effect.durationSeconds - hole.remaining,
+    Math.min(hole.remaining, interval)
+  );
+
+  if (inflow !== null) {
+    hole.inflow = inflow;
+    services.effects.add(inflow);
+  }
 }
 
 function erosionStage(remaining: number, duration: number): number {
-  return Math.floor((1 - Math.max(0, remaining) / duration) * EROSION_STAGES);
+  return Math.min(EROSION_STAGES, Math.floor((1 - Math.max(0, remaining) / duration) * (EROSION_STAGES + 1)));
 }
 
-function collapse(hole: BlackHole, services: PowerServices): void {
+function collapse(hole: ActiveHole, services: PowerServices): void {
   const { effect, capturedPeople = 0 } = hole;
   const { x, z } = effect;
   const radius = Math.max(services.world.grid.cellSize, effect.radius * BASIN_SHARE);
 
+  services.effects.add({ kind: "black-hole-collapse", wellId: hole.wellId });
   raiseTerrain(services.world, { radius, x, z }, -radius * COLLAPSE_DEPTH);
 
   const losses = capturedPeople === 1 ? "1 person" : `${capturedPeople} people`;
@@ -125,7 +170,7 @@ function collapse(hole: BlackHole, services: PowerServices): void {
 }
 
 export class BlackHoleSystem {
-  readonly #holes: BlackHole[] = [];
+  readonly #holes: ActiveHole[] = [];
 
   get isActive(): boolean {
     return this.#holes.length > 0;
@@ -135,19 +180,40 @@ export class BlackHoleSystem {
     return structuredClone(this.#holes);
   }
 
-  restore(holes: readonly BlackHole[], effects: EffectLog): void {
+  restore(holes: readonly BlackHole[], { effects, identifiers }: PowerServices): void {
     this.#holes.length = 0;
 
+    for (const { wellId = 0 } of holes) {
+      if (wellId >= identifiers.upcoming) {
+        identifiers.restore(wellId + 1);
+      }
+    }
+
     for (const hole of holes) {
-      this.#holes.push(structuredClone(hole));
-      effects.add({ ...hole.effect, elapsedSeconds: hole.effect.durationSeconds - hole.remaining });
+      const { wellId = identifiers.next() } = hole;
+
+      const elapsedSeconds = hole.effect.durationSeconds - hole.remaining;
+
+      this.#holes.push({ ...structuredClone(hole), wellId });
+      effects.add({ ...hole.effect, elapsedSeconds, wellId });
+
+      if (hole.inflow !== undefined) {
+        const age = elapsedSeconds - hole.inflow.startedAt;
+
+        if (age < hole.inflow.durationSeconds) {
+          effects.add({ ...hole.inflow, elapsedSeconds: age, wellId });
+        }
+      }
     }
   }
 
   open(effect: BlackHoleEffect, services: PowerServices): void {
-    this.#holes.push({ capturedPeople: 0, effect, remaining: effect.durationSeconds });
-    stripGround(effect, 0, services);
-    services.effects.add(effect);
+    const wellId = services.identifiers.next();
+    const hole = { capturedPeople: 0, effect, remaining: effect.durationSeconds, wellId };
+
+    this.#holes.push(hole);
+    services.effects.add({ ...effect, wellId });
+    stripGround(hole, -1, 0, services);
   }
 
   update(seconds: number, services: PowerServices): void {
@@ -162,7 +228,7 @@ export class BlackHoleSystem {
       const stage = erosionStage(hole.remaining, effect.durationSeconds);
 
       if (stage > previousStage) {
-        stripGround(effect, stage, services);
+        stripGround(hole, previousStage, stage, services);
       }
 
       if (hole.remaining <= 0) {

@@ -22,9 +22,9 @@ export class LocalSimulationConnection implements SimulationConnection {
     this.#api = api;
   }
 
-  advance(realSeconds: number): Promise<SimulationFrame> {
+  advance(realSeconds: number, commandTimes?: readonly number[]): Promise<SimulationFrame> {
     return settle(() => {
-      return this.#api.advance(realSeconds, this.#commands.splice(0));
+      return this.#api.advance(realSeconds, this.#commands.splice(0), commandTimes);
     });
   }
 
