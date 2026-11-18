@@ -31,8 +31,8 @@ import {
 import { Mesh, MeshBasicNodeMaterial, type Node, PlaneGeometry, type Texture } from "three/webgpu";
 import { smoothstep as ease } from "../../shared/math.ts";
 import { BLACK_HOLE_CORE_SHARE, type BlackHoleEffect } from "../../simulation/effects.ts";
-import { createBlackHoleDust } from "./black-hole-dust.ts";
-import type { ActiveEffect, EffectSurface } from "./effect-context.ts";
+import { type BlackHoleGround, createBlackHoleDust } from "./black-hole-dust.ts";
+import type { ActiveEffect } from "./effect-context.ts";
 
 function rotate(point: Node<"vec2">, angle: Node<"float">) {
   return vec2(
@@ -143,11 +143,11 @@ export class BlackHoleLens implements ActiveEffect {
   readonly #effect: BlackHoleEffect;
   readonly #lens: Mesh<PlaneGeometry, MeshBasicNodeMaterial>;
 
-  constructor(surface: EffectSurface, effect: BlackHoleEffect, sceneColor: Texture) {
+  constructor(ground: BlackHoleGround, effect: BlackHoleEffect, sceneColor: Texture) {
     this.#effect = effect;
     this.#lens = new Mesh(new PlaneGeometry(2, 2), createLensMaterial(sceneColor, this.#clock, this.#collapse));
     this.#lens.renderOrder = 4;
-    this.#dust = createBlackHoleDust(surface, effect, this.#clock, this.#strength);
+    this.#dust = createBlackHoleDust(ground, effect, this.#clock, this.#strength);
     this.meshes = [this.#lens, this.#dust];
 
     this.update(effect.elapsedSeconds === undefined ? 0 : effect.elapsedSeconds);

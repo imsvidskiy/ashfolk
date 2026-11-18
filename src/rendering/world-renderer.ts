@@ -192,6 +192,7 @@ export class WorldRenderer {
       createRing: () => {
         return new GroundRing(this.#textures, mirror.grid);
       },
+      outline: this.#textures.outline,
       sceneColor: this.#output.sceneColor,
       shake: onShake,
       surface: mirror,

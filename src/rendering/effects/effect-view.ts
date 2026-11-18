@@ -4,6 +4,7 @@ import { ArrowFlight, ArrowParts } from "./arrow-flight.ts";
 import { type CameraAxes, createBillboardBatch } from "./billboards.ts";
 import { BlackHoleLens } from "./black-hole.ts";
 import { BlackHoleDebris } from "./black-hole-debris.ts";
+import type { BlackHoleGround } from "./black-hole-dust.ts";
 import { Blessing } from "./blessing.ts";
 import { Earthquake } from "./earthquake.ts";
 import type { ActiveEffect, EffectContext, EffectSurface, SpriteSinks } from "./effect-context.ts";
@@ -25,7 +26,7 @@ const LIGHT_DISTANCE = 900;
 const LIGHT_FALLOFF = 1.4;
 const LIGHT_POWER = 400;
 
-interface EffectViewOptions {
+interface EffectViewOptions extends BlackHoleGround {
   readonly axes: CameraAxes;
   readonly createRing: () => GroundRing;
   readonly sceneColor: Texture;
@@ -39,6 +40,7 @@ export class EffectView {
   readonly #axes: CameraAxes;
   readonly #arrowParts = new ArrowParts();
   readonly #context: EffectContext;
+  readonly #ground: BlackHoleGround;
   readonly #createRing: () => GroundRing;
   readonly #idleRings: GroundRing[] = [];
   readonly #light = new PointLight(0xff_ff_ff, 0, LIGHT_DISTANCE, LIGHT_FALLOFF);
@@ -49,6 +51,7 @@ export class EffectView {
 
   constructor(options: EffectViewOptions) {
     this.#axes = options.axes;
+    this.#ground = { outline: options.outline, surface: options.surface };
     this.#createRing = options.createRing;
     this.#sceneColor = options.sceneColor;
     this.#sinks = {
@@ -140,7 +143,7 @@ export class EffectView {
       case "arrow":
         return new ArrowFlight(this.#context.surface, effect, this.#arrowParts);
       case "black-hole":
-        return new BlackHoleLens(this.#context.surface, effect, this.#sceneColor);
+        return new BlackHoleLens(this.#ground, effect, this.#sceneColor);
       case "black-hole-inflow": {
         const lens = this.#active.find((active): active is BlackHoleLens => {
           return active instanceof BlackHoleLens && active.wellId === effect.wellId;

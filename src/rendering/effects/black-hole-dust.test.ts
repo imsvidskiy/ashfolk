@@ -1,5 +1,5 @@
 import { uniform } from "three/tsl";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 import type { BlackHoleEffect } from "../../simulation/effects.ts";
 import { createBlackHoleDust } from "./black-hole-dust.ts";
 
@@ -10,15 +10,32 @@ function hillside(x: number, z: number): number {
 }
 
 describe("black hole dust", () => {
-  it("takes off on the local slope and switches to spray at water sources", () => {
+  it("follows the slope and shoreline while crossing the air over an inlet", () => {
+    let crossings = 0;
+    const outline = {
+      isInside: (x: number, z: number) => {
+        const shore = z > HOLE.z + HOLE.radius * 0.3 ? HOLE.x + HOLE.radius * 0.18 : HOLE.x + HOLE.radius;
+
+        const inside = x < shore;
+
+        if (!inside && Math.hypot(x - HOLE.x, z - HOLE.z) < HOLE.radius * 0.9) {
+          crossings += 1;
+        }
+
+        return inside;
+      },
+    };
     const surface = {
-      heightAt: hillside,
       isWaterAt: (x: number) => {
         return x < HOLE.x;
       },
-      surfaceAt: vi.fn(hillside),
+      surfaceAt: (x: number, z: number) => {
+        expect(outline.isInside(x, z)).toBe(true);
+
+        return hillside(x, z);
+      },
     };
-    const mesh = createBlackHoleDust(surface, HOLE, uniform(0), uniform(1));
+    const mesh = createBlackHoleDust({ outline, surface }, HOLE, uniform(0), uniform(1));
     const { geometry } = mesh;
     const routes = geometry.getAttribute("dustRoute");
     const ground = geometry.getAttribute("dustGround");
@@ -31,12 +48,14 @@ describe("black hole dust", () => {
       const x = HOLE.x + reach * Math.cos(angle);
       const z = HOLE.z + reach * Math.sin(angle);
 
+      expect(outline.isInside(x, z)).toBe(true);
       expect(ground.getX(index) * HOLE.radius + HOLE.surfaceY).toBeCloseTo(hillside(x, z), 3);
       expect(ground.getW(index)).toBe(Number(x < HOLE.x));
       spray += ground.getW(index);
       farthest = Math.max(farthest, reach);
     }
 
+    expect(crossings).toBeGreaterThan(0);
     expect(spray).toBeGreaterThan(0);
     expect(spray).toBeLessThan(geometry.instanceCount);
     expect(farthest).toBeGreaterThan(HOLE.radius * 1.4);

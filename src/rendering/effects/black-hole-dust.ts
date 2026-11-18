@@ -23,6 +23,7 @@ import { InstancedBufferAttribute, Mesh, MeshBasicNodeMaterial, type Node, Spher
 import { FULL_TURN, hashToUnit, lerp } from "../../shared/math.ts";
 import type { BlackHoleEffect } from "../../simulation/effects.ts";
 import { writeVec4 } from "../instancing.ts";
+import type { IslandOutline } from "../terrain/island-outline.ts";
 import { billboardNodes, createQuadGeometry } from "./billboards.ts";
 import type { EffectSurface } from "./effect-context.ts";
 
@@ -36,6 +37,11 @@ const PARTICLES = STREAMS * PER_STREAM;
 const END_REACH = 0.13;
 const FIRST_TURN = 0.56;
 const LAST_TURN = 2.1;
+
+export interface BlackHoleGround {
+  readonly outline: Pick<IslandOutline, "isInside">;
+  readonly surface: Pick<EffectSurface, "surfaceAt" | "isWaterAt">;
+}
 
 function dustMaterial(age: Node<"float">, strength: Node<"float">) {
   const material = new MeshBasicNodeMaterial({ depthWrite: false, transparent: true });
@@ -108,32 +114,41 @@ function dustMaterial(age: Node<"float">, strength: Node<"float">) {
 }
 
 function groundAt(
-  surface: EffectSurface,
+  { outline, surface }: BlackHoleGround,
   effect: BlackHoleEffect,
   heading: number,
   outerReach: number,
   turn: number,
-  travel: number
+  travel: number,
+  fallback: number
 ): number {
   const angle = heading + travel * (FIRST_TURN + LAST_TURN * travel) * turn;
   const reach = lerp(outerReach, END_REACH, travel) * effect.radius;
-  const y = surface.surfaceAt(effect.x + Math.cos(angle) * reach, effect.z + Math.sin(angle) * reach);
+  const x = effect.x + Math.cos(angle) * reach;
+  const z = effect.z + Math.sin(angle) * reach;
 
-  return (y - effect.surfaceY) / effect.radius;
+  if (!outline.isInside(x, z)) {
+    return fallback;
+  }
+
+  return (surface.surfaceAt(x, z) - effect.surfaceY) / effect.radius;
 }
 
 export function createBlackHoleDust(
-  surface: EffectSurface,
+  ground: BlackHoleGround,
   effect: BlackHoleEffect,
   age: Node<"float">,
   strength: Node<"float">
 ) {
+  const { outline, surface } = ground;
+
   const geometry = createQuadGeometry();
   const routes = new Float32Array(PARTICLES * 4);
-  const ground = new Float32Array(PARTICLES * 4);
+  const profiles = new Float32Array(PARTICLES * 4);
   const grains = new Float32Array(PARTICLES * 4);
   const rotation = hashToUnit(effect.x, effect.z) * FULL_TURN;
   let highestGround = 0;
+  let count = 0;
 
   for (let stream = 0; stream < STREAMS; stream += 1) {
     const heading = rotation + ((stream + hashToUnit(stream, 1) * 0.54) * FULL_TURN) / STREAMS;
@@ -145,38 +160,43 @@ export function createBlackHoleDust(
       const seed = hashToUnit(index, 4);
       const angle = heading + (hashToUnit(index, 5) - 0.5) * 0.35;
       const radius = reach * (0.87 + hashToUnit(index, 6) * 0.28);
+      const x = effect.x + Math.cos(angle) * radius * effect.radius;
+      const z = effect.z + Math.sin(angle) * radius * effect.radius;
+
+      if (!outline.isInside(x, z)) {
+        continue;
+      }
+
       const bend = turn + (hashToUnit(index, 7) - 0.5) * 0.15;
       const lift = 0.11 + hashToUnit(index, 8) * 0.25;
-      const start = groundAt(surface, effect, angle, radius, bend, 0);
-      const near = groundAt(surface, effect, angle, radius, bend, 1 / 3);
-      const middle = groundAt(surface, effect, angle, radius, bend, 2 / 3);
-      const wet = surface.isWaterAt(
-        effect.x + Math.cos(angle) * radius * effect.radius,
-        effect.z + Math.sin(angle) * radius * effect.radius
-      );
+      const start = (surface.surfaceAt(x, z) - effect.surfaceY) / effect.radius;
+      const near = groundAt(ground, effect, angle, radius, bend, 1 / 3, start * (2 / 3));
+      const middle = groundAt(ground, effect, angle, radius, bend, 2 / 3, near * 0.5);
+      const wet = surface.isWaterAt(x, z);
       const isCloud = piece < CLOUDS_PER_STREAM;
       const isStrand = !isCloud && piece < CLOUDS_PER_STREAM + STRANDS_PER_STREAM;
       const phase = (piece * 0.618_034 + seed * 0.17) % 1;
 
       highestGround = Math.max(highestGround, Math.abs(start), Math.abs(near), Math.abs(middle));
-      writeVec4(routes, index * 4, angle, radius, bend, lift);
-      writeVec4(ground, index * 4, start, near, middle, Number(wet));
+      writeVec4(routes, count * 4, angle, radius, bend, lift);
+      writeVec4(profiles, count * 4, start, near, middle, Number(wet));
       writeVec4(
         grains,
-        index * 4,
+        count * 4,
         phase,
         0.31 + hashToUnit(index, 9) * 0.2,
         seed,
         Number(isCloud) + Number(isStrand) * 2
       );
+      count += 1;
     }
   }
 
   geometry.setAttribute("dustRoute", new InstancedBufferAttribute(routes, 4));
-  geometry.setAttribute("dustGround", new InstancedBufferAttribute(ground, 4));
+  geometry.setAttribute("dustGround", new InstancedBufferAttribute(profiles, 4));
   geometry.setAttribute("dustGrain", new InstancedBufferAttribute(grains, 4));
   geometry.boundingSphere = new Sphere(new Vector3(), Math.hypot(2.1, highestGround + 0.85));
-  geometry.instanceCount = PARTICLES;
+  geometry.instanceCount = count;
 
   const mesh = new Mesh(geometry, dustMaterial(age, strength));
 

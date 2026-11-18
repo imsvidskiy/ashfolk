@@ -4,22 +4,26 @@ import type { BlackHoleEffect } from "../../simulation/effects.ts";
 import { BlackHoleLens } from "./black-hole.ts";
 
 const HOLE: BlackHoleEffect = { durationSeconds: 6, kind: "black-hole", radius: 140, surfaceY: 20, x: 30, z: 90 };
-const SURFACE = {
-  heightAt: () => {
-    return 20;
+const GROUND = {
+  outline: {
+    isInside: () => {
+      return true;
+    },
   },
-  isWaterAt: () => {
-    return false;
-  },
-  surfaceAt: () => {
-    return 20;
+  surface: {
+    isWaterAt: () => {
+      return false;
+    },
+    surfaceAt: () => {
+      return 20;
+    },
   },
 };
 
 describe("black hole lens", () => {
   it("opens above its surface, holds while paused, and restores the final collapse at its saved age", () => {
     const scene = new Texture();
-    const active = new BlackHoleLens(SURFACE, HOLE, scene);
+    const active = new BlackHoleLens(GROUND, HOLE, scene);
     const [lens] = active.meshes;
     const opening = lens.scale.x;
 
@@ -37,7 +41,7 @@ describe("black hole lens", () => {
     expect(lens.position.equals(position)).toBe(true);
     expect(lens.scale.x).toBe(scale);
 
-    const restored = new BlackHoleLens(SURFACE, { ...HOLE, elapsedSeconds: 5.6 }, scene);
+    const restored = new BlackHoleLens(GROUND, { ...HOLE, elapsedSeconds: 5.6 }, scene);
 
     expect(restored.meshes[0].position.y).toBeCloseTo(position.y);
     expect(restored.meshes[0].scale.x).toBeCloseTo(scale);
@@ -51,7 +55,7 @@ describe("black hole lens", () => {
 
   it("waits at a small visible horizon for its simulation collapse and resynchronizes arriving matter", () => {
     const scene = new Texture();
-    const active = new BlackHoleLens(SURFACE, { ...HOLE, wellId: 1 }, scene);
+    const active = new BlackHoleLens(GROUND, { ...HOLE, wellId: 1 }, scene);
 
     expect(active.update(8)).toBe(true);
     expect(active.meshes[0].scale.x).toBeGreaterThan(0);
