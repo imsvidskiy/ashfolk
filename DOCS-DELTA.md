@@ -2,7 +2,7 @@
 
 The architecture plan describes main after [#243](https://github.com/imsvidskiy/ashfolk/pull/243).
 The roadmap records progress through 0.10.0. Later edits corrected names and added a recording list for the
-0.12 powers. This inventory follows the shipped game through 0.12.3.
+0.12 powers. This inventory follows the shipped game through 0.12.4.
 
 ## Changes since the plan
 
@@ -15,6 +15,7 @@ The roadmap records progress through 0.10.0. Later edits corrected names and add
 | 0.12.1 | Bombs fall on the simulation clock, freeze on pause and survive saving in midair. The drop and impact share an ID. A black hole pulls inhabitants across obstacles, clears buildings and vegetation in stages and lowers the terrain once on collapse. |
 | 0.12.2 | The worker advances the clock up to each queued command before applying speed and pause changes. Stationary powers on pause need only the ordinary heartbeat. RPC failure tracking lasts for the lifetime of each request. A damaged or temporarily unreadable save enters recovery before generation or autosave can replace it. The title screen shows the island film beside its launch controls. The HUD groups world views and game controls. Settings keeps project links and the build version visible while the section scrolls. |
 | 0.12.3 | The model catalog dispatches to dedicated builders for dwellings, the storehouse and camp landmarks. Catastrophe simulation, visual effects, title-screen navigation and settings sections have separate modules. The home menu uses floating paper panels with an orange main action. Installation is a separate action when the browser offers it. Phone power buttons wrap into rows, and the minimap and parameter panels share the available height. Loading, recovery and Privacy use the same paper and text colours as the HUD. The black hole draws dust and fine particles in from the surrounding surface. |
+| 0.12.4 | On the narrowest phones the power categories use text labels. The hand and selection tools keep their full touch targets when the browser falls back to a system font. |
 
 ## Implementation details to carry forward
 

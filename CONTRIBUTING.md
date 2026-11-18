@@ -116,16 +116,16 @@ Commits follow
 ## Pull requests
 
 - One pull request is one standalone change, and CI has to pass.
-- GitHub merges a pull request with a merge commit whose subject is its title
-  and whose body is its body. Write the title in commit form and the body as a
-  commit body, then end it with `Verified:` and the checks you ran, and
+- Squash each pull request into one commit on `main`. Use its title as the
+  commit subject and its body as the commit message. End the message with
+  `Verified:` and the checks you ran, and
   `Fixes #N` when it closes an issue.
 - Attach screenshots for visible changes in a comment, so they stay out of the
   merge commit.
 
 ## Releases
 
-A release is a version bump on `main`, a tag on its merge commit, and notes on
+A release is a version bump on `main`, a tag on the resulting commit, and notes on
 GitHub. Merging the bump deploys it like any other change.
 
 1. Pick the version. While Ashfolk is below 1.0, raise the minor version when
@@ -134,8 +134,8 @@ GitHub. Merging the bump deploys it like any other change.
 2. On a `release/X.Y.Z` branch, set `version` in `package.json` and commit it
    as `chore(release): bump version to X.Y.Z`. Open a pull request with that
    title and merge it once CI passes.
-3. Tag the merge commit and publish the notes in one step:
-   `gh release create vX.Y.Z --target <merge commit> --title vX.Y.Z --notes-file <notes>`.
+3. Tag that commit and publish the notes in one step:
+   `gh release create vX.Y.Z --target <release commit> --title vX.Y.Z --notes-file <notes>`.
 
 Write the notes for players, from the pull requests merged since the last
 release, and check each line against them:

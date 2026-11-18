@@ -136,6 +136,8 @@ describe("power dock", () => {
   });
 
   it("shows icons alone and names each power with its key in its tooltip", async () => {
+    await page.viewport(1440, 900);
+
     const screen = await render(<PowerDock />);
 
     const rain = screen.getByRole("button", { exact: true, name: "Rain" });
@@ -281,12 +283,15 @@ describe("power dock", () => {
   });
 
   it("takes the hand in place of a power and names it in its tooltip", async () => {
+    await page.viewport(1440, 900);
+
     usePowerStore.getState().selectPower("fire");
 
     const screen = await render(<PowerDock />);
 
     const hand = screen.getByRole("button", { exact: true, name: "Hand" });
 
+    await screen.getByRole("button", { exact: true, name: "Select" }).hover();
     await hand.hover();
 
     await expect
