@@ -19,12 +19,14 @@ import {
 } from "./wetlands.ts";
 
 const MAXIMUM_WATER_DISTANCE = 64;
+
 const LAPSE_PER_METER = 0.0095;
 const SUMMIT_CHILL = 5.5;
 const SUMMIT_CHILL_START = 800;
 const SUMMIT_CHILL_FULL = 1150;
 const GLACIER_TEMPERATURE = -2.4;
 const ICE_CLIFF_SLOPE = 1.2;
+
 const BARE_ROCK_SLOPE = 0.9;
 const WEAK_ROCK_SLOPE = 1.15;
 const STRONG_ROCK_SLOPE = 0.86;
@@ -32,14 +34,17 @@ const WEAK_COLD_ROCK_SLOPE = 0.75;
 const STRONG_COLD_ROCK_SLOPE = 0.45;
 const ROCK_ECOTONE_TEMPERATURE = 3;
 const ESCARPMENT_SLOPE = 0.62;
+
 const TREE_LINE_TEMPERATURE = 1.6;
 const ALPINE_SLOPE = 0.42;
 const SHORE_TEMPERATURE = 3;
+
 const WIDE_RIVER_STRENGTH = 130;
 const BROAD_RIVER_STRENGTH = 85;
 const RIVER_BANK_RISE = 1.4;
 const RIVER_BANK_RISE_PER_CELL = 0.9;
 const STEEPEST_RIVER_BANK = 0.36;
+
 const BOG_TEMPERATURE = 3;
 
 const BIOME_GROUND: Readonly<Record<BiomeIndex, GroundIndex>> = {

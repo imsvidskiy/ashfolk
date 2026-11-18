@@ -25,9 +25,8 @@ import {
   Vector3,
 } from "three/webgpu";
 import { hashToUnit, lerp, saturate, smoothstep } from "../../shared/math.ts";
-import type { BlackHoleInflowEffect, InflowSource } from "../../simulation/effects.ts";
-import { BLACK_HOLE_CORE_SHARE } from "../../simulation/powers/black-holes.ts";
-import type { ActiveEffect } from "./transient-effects.ts";
+import { BLACK_HOLE_CORE_SHARE, type BlackHoleInflowEffect, type InflowSource } from "../../simulation/effects.ts";
+import type { ActiveEffect } from "./effect-context.ts";
 
 const UP = new Vector3(0, 1, 0);
 

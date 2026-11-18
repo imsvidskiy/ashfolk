@@ -17,6 +17,7 @@ const CAVE_SLOPE = 0.35;
 const SLOPE_REACHES = [10, 20, 30] as const;
 const DIRECTION_REACH = 25;
 const LAKE_REACH_CELLS = 2;
+
 const SMALLEST_POND = 12.5;
 const SMALLEST_DRAWN_POND = 16;
 const POND_SIZE_SPAN = 72;
@@ -27,18 +28,22 @@ const POND_FLOW_SCALE = { least: 0.8, most: 1.3 } as const;
 const POND_FLAT_BONUS = 1.2;
 const POND_FLAT_SLOPE = { flat: 0.03, steep: 0.12 } as const;
 const POND_OUTLET_SHARE = 0.85;
+
 const SEAT_STEP = 40;
 const SEAT_REACH = 200;
 const SEAT_RIVER_SHARE = 0.4;
 const JOIN_REACH_CELLS = 2;
+
 const POND_SHRINK = 0.86;
 const POND_SHAPES = 10;
 const POND_RIM = 5;
 const POND_COAST_CLEARANCE = 30;
 const POND_LAKE_CLEARANCE = 30;
+
 const RIVER_CLEARANCE = 12;
 const HEAD_CLEARANCE = 30;
 const SPRING_CLEARANCE = 15;
+
 const NARROWEST_CAVE = 6.5;
 const WIDEST_CAVE = 10;
 const CAVE_SETBACK = 3;
@@ -46,6 +51,7 @@ const CAVE_DEPTH = 3;
 const CAVE_FLOOR_DEPTH = 1.2;
 const CAVE_MASS_SETBACK = 3;
 const CAVE_MASS_MARGIN = 6;
+
 const SPRING_SALT = 83.1;
 const SIZE_SALT = 17.3;
 const SHAPE_SALT = 29.9;

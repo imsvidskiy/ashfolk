@@ -25,15 +25,19 @@ import { type HandCursor, HandTool } from "./tools/hand-tool.ts";
 import { type PowerSelection, PowerTool } from "./tools/power-tool.ts";
 
 const LONGEST_FRAME_SECONDS = 0.1;
+
 const FIELD_OF_VIEW = 45;
 const NEAR_PLANE = 0.5;
 const FAR_PLANE = 40_000;
+
 const CURSOR_COLOR = 0xff_ff_ff;
 const CURSOR_OPACITY = 0.9;
 const PRESSED_CURSOR_COLOR = 0xff_d8_8a;
+
 const FOLLOW_DISTANCE = 45;
 const SHAKE_REACH = 400;
 const VIEW_FOCUS_STEP = 50;
+
 const ACTIVITY_EVENTS = ["keydown", "pointerdown", "pointermove", "wheel"] as const;
 
 interface EngineOptions {

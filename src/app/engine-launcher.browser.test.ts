@@ -36,12 +36,6 @@ const LAUNCH: LaunchOptions = {
   size: "large",
 };
 
-function waitAWhile(): Promise<void> {
-  return new Promise((resolve) => {
-    setTimeout(resolve, 50);
-  });
-}
-
 function stageOf(status: EngineStatus): string {
   return status.kind === "loading" ? status.stage : status.kind;
 }
@@ -99,6 +93,13 @@ describe("engine launcher", () => {
     let grow: (progress: GenerationProgress) => void = ignore;
     let open: (opened: GameSession) => void = ignore;
     const statuses: EngineStatus[] = [];
+    const engineRequested = new Promise<void>((resolve) => {
+      startEngine.mockImplementation(() => {
+        resolve();
+
+        return new Promise(ignore);
+      });
+    });
 
     openSession.mockImplementation((_world: unknown, onProgress: (progress: GenerationProgress) => void) => {
       grow = onProgress;
@@ -107,7 +108,6 @@ describe("engine launcher", () => {
         open = resolve;
       });
     });
-    startEngine.mockReturnValue(new Promise(ignore));
 
     const launcher = new EngineLauncher(document.body, LAUNCH, createWorldId(), (status) => {
       statuses.push(status);
@@ -121,15 +121,14 @@ describe("engine launcher", () => {
     await vi.waitFor(() => {
       expect(openSession).toHaveBeenCalledOnce();
     });
-    await waitAWhile();
+    await vi.dynamicImportSettled();
 
     expect(startEngine).not.toHaveBeenCalled();
 
     grow({ island: null, stage: "relief" });
 
-    await vi.waitFor(() => {
-      expect(startEngine).toHaveBeenCalledOnce();
-    });
+    await engineRequested;
+    expect(startEngine).toHaveBeenCalledOnce();
 
     open(session);
 

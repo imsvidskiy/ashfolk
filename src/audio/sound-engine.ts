@@ -5,10 +5,12 @@ import { heardLoudness, ROLLOFF, voiceToReplace } from "./voices.ts";
 const MAXIMUM_VOICES = 24;
 const QUIETEST_HEARD = 0.01;
 const STEAL_FADE_SECONDS = 0.04;
+
 const LEVEL_SMOOTHING_SECONDS = 0.08;
 const LISTENER_SMOOTHING_SECONDS = 0.03;
 const EFFECT_PITCH_SPREAD = 0.05;
 const MAXIMUM_DISTANCE = 20_000;
+
 const GESTURES = ["pointerdown", "pointerup", "touchend", "keydown"] as const;
 const BUSES: readonly SoundBus[] = ["ambience", "effects", "interface", "music"];
 
@@ -72,14 +74,14 @@ interface Playback {
   readonly volume: number;
 }
 
-interface Graph {
+interface AudioGraph {
   readonly buses: Readonly<Record<SoundBus, GainNode>>;
   readonly context: AudioContext;
   readonly master: GainNode;
   readonly music: MusicOutput;
 }
 
-function perceived(level: number): number {
+function gainFromLevel(level: number): number {
   return level * level;
 }
 
@@ -87,7 +89,7 @@ function pickFile(sound: SoundDefinition): string {
   return sound.files[Math.floor(Math.random() * sound.files.length)];
 }
 
-function createGraph(): Graph {
+function createAudioGraph(): AudioGraph {
   const context = new AudioContext({ latencyHint: "interactive" });
   const master = context.createGain();
 
@@ -132,7 +134,7 @@ function isPlaced(sound: SoundDefinition, point: SoundPoint | null): point is So
   return point !== null && sound.referenceDistance > 0;
 }
 
-function route(graph: Graph, sound: SoundDefinition, point: SoundPoint | null, gain: GainNode): PannerNode | null {
+function route(graph: AudioGraph, sound: SoundDefinition, point: SoundPoint | null, gain: GainNode): PannerNode | null {
   const bus = graph.buses[sound.bus];
 
   if (!isPlaced(sound, point)) {
@@ -162,7 +164,7 @@ function placePanner(panner: PannerNode, point: SoundPoint, now: number): void {
 export class SoundEngine {
   readonly #buffers = new Map<string, Promise<AudioBuffer | null>>();
   readonly #voices: Voice[] = [];
-  #graph: Graph | null = null;
+  #graph: AudioGraph | null = null;
   #isHidden = false;
   #levels: SoundLevels = DEFAULT_SOUND_LEVELS;
   #listener: SoundPoint = { x: 0, y: 0, z: 0 };
@@ -221,10 +223,10 @@ export class SoundEngine {
 
     const now = graph.context.currentTime;
 
-    graph.master.gain.setTargetAtTime(levels.isMuted ? 0 : perceived(levels.master), now, LEVEL_SMOOTHING_SECONDS);
+    graph.master.gain.setTargetAtTime(levels.isMuted ? 0 : gainFromLevel(levels.master), now, LEVEL_SMOOTHING_SECONDS);
 
     for (const bus of BUSES) {
-      graph.buses[bus].gain.setTargetAtTime(perceived(levels[bus]), now, LEVEL_SMOOTHING_SECONDS);
+      graph.buses[bus].gain.setTargetAtTime(gainFromLevel(levels[bus]), now, LEVEL_SMOOTHING_SECONDS);
     }
 
     this.#applyRunning();
@@ -354,7 +356,7 @@ export class SoundEngine {
     };
   }
 
-  #start(graph: Graph, playback: Playback): void {
+  #start(graph: AudioGraph, playback: Playback): void {
     const { buffer, point, sound, startAt, volume } = playback;
 
     if (buffer === null || !this.isAudible) {
@@ -392,7 +394,7 @@ export class SoundEngine {
     source.start(Math.max(startAt, context.currentTime));
   }
 
-  #release(graph: Graph, voice: Voice): void {
+  #release(graph: AudioGraph, voice: Voice): void {
     const now = graph.context.currentTime;
 
     this.#forget(voice);
@@ -465,7 +467,7 @@ export class SoundEngine {
       return;
     }
 
-    this.#graph = createGraph();
+    this.#graph = createAudioGraph();
     this.setLevels(this.#levels);
 
     // Mobile browsers let a media element play later only after it first plays inside a gesture.

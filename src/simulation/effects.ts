@@ -1,3 +1,4 @@
+export const BLACK_HOLE_CORE_SHARE = 0.25;
 export const SKY_ENTRY_HEIGHT = 3200;
 
 type BlessingStyle = "abundance" | "healing" | "inspiration";

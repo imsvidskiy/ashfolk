@@ -40,6 +40,8 @@ describe("filming hint", () => {
   });
 
   it("shows the interface again from its button", async () => {
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+
     const { engine } = await startTestEngine();
 
     const screen = await render(<FilmingHint />);

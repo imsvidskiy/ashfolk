@@ -2,9 +2,9 @@ import { type Mesh, Vector3 } from "three/webgpu";
 import { FULL_TURN, hashToUnit, smoothstep } from "../../shared/math.ts";
 import type { NuclearCloudEffect } from "../../simulation/effects.ts";
 import type { CameraAxes } from "./billboards.ts";
+import type { ActiveEffect, EffectContext, SpriteSinks } from "./effect-context.ts";
 import { type GroundRing, NO_FLOOR } from "./ground-ring.ts";
 import { NuclearPlume } from "./nuclear-plume.ts";
-import type { ActiveEffect, EffectContext, SpriteSinks } from "./transient-effects.ts";
 
 const CLOUD_SECONDS = 9.7;
 const SHOCK_SECONDS = 2.2;

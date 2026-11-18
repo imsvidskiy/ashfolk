@@ -4,25 +4,20 @@ import { ArrowFlight, ArrowParts } from "./arrow-flight.ts";
 import { type CameraAxes, createBillboardBatch } from "./billboards.ts";
 import { BlackHoleLens } from "./black-hole.ts";
 import { BlackHoleDebris } from "./black-hole-debris.ts";
+import { Blessing } from "./blessing.ts";
+import { Earthquake } from "./earthquake.ts";
+import type { ActiveEffect, EffectContext, EffectSurface, SpriteSinks } from "./effect-context.ts";
 import { EffectMeshes } from "./effect-meshes.ts";
+import { EmberFlight } from "./ember-flight.ts";
+import { Explosion } from "./explosion.ts";
 import type { GroundRing } from "./ground-ring.ts";
+import { LightningStrike } from "./lightning-strike.ts";
 import { MeteorFall } from "./meteor-fall.ts";
 import { NuclearCloud } from "./nuclear-cloud.ts";
 import { NuclearFall } from "./nuclear-fall.ts";
+import { Splash } from "./splash.ts";
 import { createDustMaterial, createGlowMaterial } from "./sprite-materials.ts";
 import { TornadoFunnel } from "./tornado-funnel.ts";
-import {
-  type ActiveEffect,
-  Blessing,
-  Earthquake,
-  type EffectContext,
-  type EffectSurface,
-  EmberFlight,
-  Explosion,
-  LightningStrike,
-  Splash,
-  type SpriteSinks,
-} from "./transient-effects.ts";
 
 const FLASH_DECAY = 7;
 const LIGHT_DECAY = 5;
@@ -47,7 +42,6 @@ export class EffectView {
   readonly #createRing: () => GroundRing;
   readonly #idleRings: GroundRing[] = [];
   readonly #light = new PointLight(0xff_ff_ff, 0, LIGHT_DISTANCE, LIGHT_FALLOFF);
-  readonly #meshes = new EffectMeshes();
   readonly #sceneColor: Texture;
   readonly #sinks: SpriteSinks;
   #flash = 0;
@@ -69,7 +63,7 @@ export class EffectView {
       light: (position, color, intensity) => {
         this.#lightUp(position, color, intensity);
       },
-      meshes: this.#meshes,
+      meshes: new EffectMeshes(),
       releaseRing: (ring) => {
         this.#releaseRing(ring);
       },
@@ -137,14 +131,14 @@ export class EffectView {
       batch.mesh.material.dispose();
     }
 
-    this.#meshes.dispose();
+    this.#context.meshes.dispose();
     this.#arrowParts.dispose();
   }
 
   #start(effect: Exclude<SimulationEffect, { kind: "black-hole-collapse" }>): ActiveEffect {
     switch (effect.kind) {
       case "arrow":
-        return new ArrowFlight(this.#context, effect, this.#arrowParts);
+        return new ArrowFlight(this.#context.surface, effect, this.#arrowParts);
       case "black-hole":
         return new BlackHoleLens(effect, this.#sceneColor);
       case "black-hole-inflow": {
@@ -170,11 +164,11 @@ export class EffectView {
         this.#landBomb(effect.dropId);
         return new NuclearCloud(this.#context, effect, this.#axes);
       case "blessing":
-        return new Blessing(this.#context, effect);
+        return new Blessing(this.#context.surface, effect);
       case "earthquake":
         return new Earthquake(this.#context, effect);
       case "ember":
-        return new EmberFlight(this.#context, effect);
+        return new EmberFlight(this.#context.surface, effect);
       case "explosion":
         return new Explosion(this.#context, effect);
       case "lightning":
@@ -184,7 +178,7 @@ export class EffectView {
       case "splash":
         return new Splash(effect);
       case "tornado":
-        return new TornadoFunnel(this.#context, effect);
+        return new TornadoFunnel(this.#context.surface, effect);
       default:
         return effect satisfies never;
     }

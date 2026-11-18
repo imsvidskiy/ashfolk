@@ -1,11 +1,11 @@
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 import { ignore } from "../../shared/ignore.ts";
 import type { MeteorEffect } from "../../simulation/effects.ts";
 import { CameraAxes, createBillboardBatch } from "./billboards.ts";
+import type { SpriteSinks } from "./effect-context.ts";
 import { EffectMeshes } from "./effect-meshes.ts";
 import { MeteorFall } from "./meteor-fall.ts";
 import { createDustMaterial, createGlowMaterial } from "./sprite-materials.ts";
-import type { SpriteSinks } from "./transient-effects.ts";
 
 const METEOR: MeteorEffect = {
   durationSeconds: 2,
@@ -30,23 +30,13 @@ function createMeteor() {
 
   const meteor = new MeteorFall(
     {
-      flash: ignore,
       light: ignore,
       meshes: new EffectMeshes(),
-      releaseRing: ignore,
-      shake: ignore,
       surface: {
-        heightAt: () => {
-          return -40;
-        },
-        isWaterAt: () => {
-          return true;
-        },
         surfaceAt: () => {
           return 0;
         },
       },
-      takeRing: vi.fn(),
     },
     METEOR
   );

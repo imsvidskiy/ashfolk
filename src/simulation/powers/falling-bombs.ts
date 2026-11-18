@@ -1,6 +1,6 @@
 import type { EffectLog } from "../effects.ts";
 import { TICK_SECONDS } from "../tick.ts";
-import { explode } from "./catastrophes.ts";
+import { explode } from "./explosions.ts";
 import type { PowerServices } from "./power-handler.ts";
 
 export const BOMB_FALL_TICKS = 44;

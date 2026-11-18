@@ -3,12 +3,10 @@ import { isTreeSpecies } from "../../content/plants.ts";
 import { lerp } from "../../shared/math.ts";
 import { NO_PLANT } from "../../world/vegetation-store.ts";
 import type { Mover } from "../agents/movement.ts";
-import type { BlackHoleEffect, BlackHoleInflowEffect } from "../effects.ts";
+import { BLACK_HOLE_CORE_SHARE, type BlackHoleEffect, type BlackHoleInflowEffect } from "../effects.ts";
 import { cellsInArea, raiseTerrain } from "../world/terrain-editing.ts";
 import { BlackHoleInflow } from "./black-hole-inflow.ts";
 import type { PowerServices } from "./power-handler.ts";
-
-export const BLACK_HOLE_CORE_SHARE = 0.25;
 
 const BASIN_SHARE = 0.55;
 const FELLING_FRINGE = 0.15;

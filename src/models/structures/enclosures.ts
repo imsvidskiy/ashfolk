@@ -21,14 +21,18 @@ export const ENCLOSURE_FOOTING_DEPTH = 0.3;
 const HALF_SEGMENT = ENCLOSURE_SEGMENT_LENGTH / 2;
 const STAKE_SALT = 23.7;
 const STONE_SALT = 31.1;
+
 const RAIL_GRIP = 0.065;
 const PALISADE_RAILS: readonly number[] = [1.1, 2.3];
+
 const GATE_POST_X = 1.25;
 const GATE_POST_HEIGHT = 4.3;
 const GATE_LINTEL_HEIGHT = 4;
+
 const WALL_THICKNESS = 0.9;
 const WALL_TOP = 2.1;
 const COURSE_HEIGHT = 0.4;
+
 const PILLAR_X = 1.35;
 const PILLAR_WIDTH = 0.9;
 const PILLAR_TOP = 3.1;

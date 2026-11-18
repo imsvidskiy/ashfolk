@@ -5,7 +5,9 @@ import { isDryLand } from "../agents/navigation.ts";
 import { SKY_ENTRY_HEIGHT } from "../effects.ts";
 import { cellsInArea } from "../world/terrain-editing.ts";
 import { SNOW_CAPACITY } from "../world/world-state.ts";
-import { explode, shakeLand, strikeLightning } from "./catastrophes.ts";
+import { shakeLand } from "./earthquakes.ts";
+import { explode } from "./explosions.ts";
+import { strikeLightning } from "./lightning.ts";
 import { APPLIED, type PowerOutcome, type PowerServices, type PowerTarget, percent, refused } from "./power-handler.ts";
 
 const FIRE_BRUSH_STRENGTH = 0.75;

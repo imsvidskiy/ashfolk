@@ -30,9 +30,8 @@ import {
 } from "three/tsl";
 import { Mesh, MeshBasicNodeMaterial, type Node, PlaneGeometry, type Texture } from "three/webgpu";
 import { smoothstep as ease } from "../../shared/math.ts";
-import type { BlackHoleEffect } from "../../simulation/effects.ts";
-import { BLACK_HOLE_CORE_SHARE } from "../../simulation/powers/black-holes.ts";
-import type { ActiveEffect } from "./transient-effects.ts";
+import { BLACK_HOLE_CORE_SHARE, type BlackHoleEffect } from "../../simulation/effects.ts";
+import type { ActiveEffect } from "./effect-context.ts";
 
 function rotate(point: Node<"vec2">, angle: Node<"float">) {
   return vec2(
