@@ -69,9 +69,15 @@ function InstallEntry() {
   }
 
   return (
-    <MenuEntry icon={<Download aria-hidden="true" size={17} />} onClick={install}>
-      Install the app
-    </MenuEntry>
+    <>
+      <Menu.Separator className="border-line mx-2 my-1.5 border-t" />
+
+      <Menu.Group aria-label="App installation">
+        <MenuEntry icon={<Download aria-hidden="true" size={17} />} onClick={install}>
+          Install the app
+        </MenuEntry>
+      </Menu.Group>
+    </>
   );
 }
 
@@ -124,10 +130,10 @@ export function CompactMenu() {
                 Settings
               </MenuEntry>
 
-              <InstallEntry />
-
               <FullscreenEntry />
             </Menu.Group>
+
+            <InstallEntry />
           </Menu.Popup>
         </Menu.Positioner>
       </Menu.Portal>

@@ -155,7 +155,11 @@ describe("power settings on a phone", () => {
     await expect.element(screen.getByRole("region", { name: "Meteor shower settings" })).toBeVisible();
     await expect.element(meteor).toHaveAttribute("aria-pressed", "true");
 
+    const reset = screen.getByRole("button", { name: "Reset to defaults" });
+
+    await expect.element(reset).not.toBeInTheDocument();
     await screen.getByRole("button", { name: "Adjust settings" }).click();
+    await expect.element(reset).toBeVisible();
     await expect.element(screen.getByRole("slider", { name: "Meteors" })).toBeVisible();
 
     await meteor.click();

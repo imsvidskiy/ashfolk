@@ -1,6 +1,9 @@
-import { ArrowLeft, ArrowRight, Layers3, Plus } from "lucide-react";
+import { ArrowLeft, ArrowRight, ChevronDown, Layers3, Plus } from "lucide-react";
 import { type ReactNode, useEffect, useRef } from "react";
 import { IconButton, TextButton } from "../design/buttons.tsx";
+import { cn } from "../design/cn.ts";
+import { FOCUS_RING } from "../design/styles.ts";
+import { LARGEST_SEED, readSeed } from "../features/new-world/seeds.ts";
 import { useWorldDraft } from "../features/new-world/use-world-draft.ts";
 import { NameField, SeedField, ShapeChoice, SizeChoice } from "../features/new-world/world-fields.tsx";
 import type { SavedWorldListing } from "../features/saves/save-database.ts";
@@ -10,11 +13,7 @@ import { useNow } from "../features/saves/use-now.ts";
 import { useLaunchStore } from "./launch-store.ts";
 import { useWorldMenu } from "./use-world-menu.ts";
 
-const PRIMARY_ACTION =
-  "h-12 gap-4 bg-[#304b3a] px-7 text-base font-extrabold text-white hover:bg-[#21392c] pointer-coarse:h-12";
-
-const SECONDARY_ACTION =
-  "h-12 gap-2 border-[#c7c3ad] px-5 font-bold text-[#33493a] hover:bg-[#ede9db] pointer-coarse:h-12";
+const ACTION = "h-11 gap-2 px-4 font-bold pointer-coarse:h-11";
 
 const SAVE_CLOCK_MILLISECONDS = 30_000;
 
@@ -47,7 +46,7 @@ function Subview({ children, onBack, title }: SubviewProps) {
         )}
 
         <h2
-          className="text-2xl leading-tight font-extrabold tracking-tight text-[#273d31] outline-none sm:text-3xl"
+          className="text-ink text-xl leading-tight font-bold tracking-tight outline-none"
           ref={heading}
           tabIndex={-1}
         >
@@ -70,25 +69,40 @@ function NewWorldForm() {
   const draft = useWorldDraft(launch, createWorld);
 
   return (
-    <form
-      aria-label="New world"
-      className="grid items-end gap-x-7 gap-y-4 sm:grid-cols-2 xl:grid-cols-[1fr_0.76fr_1fr_0.8fr_auto]"
-      onSubmit={draft.handleSubmit}
-    >
+    <form aria-label="New world" className="flex flex-col gap-3" onSubmit={draft.handleSubmit}>
       <NameField onChange={draft.handleNameChange} onRoll={draft.handleNameRoll} value={draft.nameText} />
 
-      <ShapeChoice onChange={draft.handleShapeChange} value={draft.shape} />
+      <details className="group/options">
+        <summary
+          className={cn(
+            FOCUS_RING,
+            "text-ink-soft hover:bg-paper-hover flex min-h-10 cursor-pointer list-none items-center gap-2 rounded-xl px-2 text-sm font-semibold [&::-webkit-details-marker]:hidden"
+          )}
+        >
+          <span>Island options</span>
 
-      <SizeChoice onChange={draft.handleSizeChange} value={draft.size} />
+          <span className="text-ink-muted ml-auto text-xs font-medium capitalize">
+            {draft.shape} · {draft.size}
+          </span>
+          <ChevronDown aria-hidden="true" className="group-open/options:rotate-180" size={16} />
+        </summary>
 
-      <SeedField onChange={draft.handleSeedChange} onRoll={draft.handleSeedRoll} value={draft.seedText} />
+        <div className="border-line mt-1 mb-2 flex flex-col gap-4 border-t pt-4">
+          <ShapeChoice onChange={draft.handleShapeChange} value={draft.shape} />
 
-      <TextButton
-        className={`${PRIMARY_ACTION} mt-1 sm:col-span-2 sm:justify-self-start xl:col-span-1 xl:mt-0`}
-        disabled={draft.choice === null}
-        tone="accent"
-        type="submit"
-      >
+          <SizeChoice onChange={draft.handleSizeChange} value={draft.size} />
+
+          <SeedField onChange={draft.handleSeedChange} onRoll={draft.handleSeedRoll} value={draft.seedText} />
+        </div>
+      </details>
+
+      {readSeed(draft.seedText) === null ? (
+        <p className="text-ember text-sm" role="status">
+          Use a seed from 1 to {LARGEST_SEED.toLocaleString("en")} in Island options.
+        </p>
+      ) : null}
+
+      <TextButton className={ACTION} disabled={draft.choice === null} tone="accent" type="submit">
         Grow the island
         <ArrowRight aria-hidden="true" size={19} />
       </TextButton>
@@ -103,20 +117,18 @@ function LatestWorld({ onContinue, world }: { readonly onContinue: () => void; r
   const details = world.hasLandChanged ? "The land has changed" : population;
 
   return (
-    <div className="flex min-w-0 flex-1 flex-col gap-4 sm:flex-row sm:items-center sm:gap-8">
-      <div className="min-w-0 sm:max-w-[72%]">
-        <p className="text-xs font-extrabold tracking-widest text-[#696d56] uppercase">Last played</p>
+    <div className="flex min-w-0 flex-col gap-4">
+      <div className="min-w-0">
+        <p className="text-ink-muted text-xs font-semibold">Last played</p>
 
-        <h2 className="mt-1 truncate text-[2rem] leading-tight font-extrabold tracking-tight text-[#273d31] sm:text-4xl">
-          {world.name}
-        </h2>
+        <h2 className="text-ink mt-0.5 text-2xl leading-tight font-bold tracking-tight wrap-anywhere">{world.name}</h2>
 
-        <p className="mt-1 text-sm text-[#5c6354]">
+        <p className="text-ink-soft mt-1 text-sm">
           {details === "" ? null : `${details} · `}Saved {savedAt}
         </p>
       </div>
 
-      <TextButton aria-label={`Continue ${world.name}`} className={PRIMARY_ACTION} onClick={onContinue} tone="accent">
+      <TextButton aria-label={`Continue ${world.name}`} className={ACTION} onClick={onContinue} tone="accent">
         Continue
         <ArrowRight aria-hidden="true" size={19} />
       </TextButton>
@@ -140,7 +152,7 @@ export function WorldMenu() {
 
   if (!hasListedWorlds) {
     return (
-      <p className="text-sm font-bold text-[#52634f]" role="status">
+      <p className="text-ink-soft text-sm" role="status">
         Finding your worlds…
       </p>
     );
@@ -159,28 +171,26 @@ export function WorldMenu() {
   if (view === "worlds") {
     return (
       <Subview onBack={handleBack} title="Your worlds">
-        <div className="max-w-3xl">
-          <SavedWorldList />
-        </div>
+        <SavedWorldList />
       </Subview>
     );
   }
 
   return (
-    <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center lg:gap-10">
+    <div className="flex flex-col gap-2">
       {latest === undefined ? (
         <div>
-          <h2 className="text-3xl font-extrabold tracking-tight text-[#273d31]">Your worlds</h2>
+          <h2 className="text-ink text-xl font-bold tracking-tight">Your worlds</h2>
 
-          <p className="mt-1 text-sm text-[#5c6354]">These saved worlds can’t be opened in this version.</p>
+          <p className="text-ink-soft mt-1 text-sm">These saved worlds can’t be opened in this version.</p>
         </div>
       ) : (
         <LatestWorld onContinue={handleContinue} world={latest} />
       )}
 
-      <div className="grid grid-cols-2 gap-3 lg:border-l lg:border-[#d8d1bd] lg:pl-10">
+      <div className="grid grid-cols-2 gap-2">
         <TextButton
-          className={latest === undefined ? PRIMARY_ACTION : SECONDARY_ACTION}
+          className={ACTION}
           onClick={handleNewWorld}
           ref={newWorldButton}
           tone={latest === undefined ? "accent" : "outline"}
@@ -189,7 +199,7 @@ export function WorldMenu() {
           New world
         </TextButton>
 
-        <TextButton className={SECONDARY_ACTION} onClick={handleAllWorlds} ref={worldsButton} tone="outline">
+        <TextButton className={ACTION} onClick={handleAllWorlds} ref={worldsButton} tone="outline">
           <Layers3 aria-hidden="true" size={17} />
           All worlds
         </TextButton>

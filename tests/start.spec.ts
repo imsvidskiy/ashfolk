@@ -9,6 +9,7 @@ test.describe("the start screen", () => {
     await page.goto("/");
 
     await page.getByRole("textbox", { name: "Name" }).fill("Old Ford");
+    await page.getByText("Island options", { exact: true }).click();
     await page.getByRole("button", { exact: true, name: "Square" }).click();
     await page.getByRole("button", { name: "Grow the island" }).click();
 

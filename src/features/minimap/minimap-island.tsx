@@ -1,5 +1,6 @@
 import { type PointerEvent, type RefObject, useEffect, useRef } from "react";
 import { useEngine } from "../../app/use-engine.ts";
+import { cn } from "../../design/cn.ts";
 import { Island } from "../../design/island.tsx";
 import type { EngineHandle } from "../../game/engine-handle.ts";
 import { useInterfaceStore } from "../interface/interface-store.ts";
@@ -48,7 +49,7 @@ function useMinimapNavigation(engine: EngineHandle) {
   return { handlePointerDown, handlePointerMove };
 }
 
-function MinimapCanvas({ engine }: { readonly engine: EngineHandle }) {
+function MinimapCanvas({ engine, isCompact }: { readonly engine: EngineHandle; readonly isCompact: boolean }) {
   const canvasReference = useRef<HTMLCanvasElement>(null);
   const { handlePointerDown, handlePointerMove } = useMinimapNavigation(engine);
 
@@ -57,7 +58,9 @@ function MinimapCanvas({ engine }: { readonly engine: EngineHandle }) {
   return (
     <canvas
       aria-label="Map of the island. Click to move the camera."
-      className="size-44 cursor-crosshair touch-none rounded-2xl"
+      className={cn("size-44 cursor-crosshair touch-none rounded-2xl", {
+        "size-[clamp(4.5rem,12dvh,7.5rem)]": isCompact,
+      })}
       onPointerDown={handlePointerDown}
       onPointerMove={handlePointerMove}
       ref={canvasReference}
@@ -66,7 +69,13 @@ function MinimapCanvas({ engine }: { readonly engine: EngineHandle }) {
   );
 }
 
-export function MinimapIsland({ className }: { readonly className?: string | undefined }) {
+export function MinimapIsland({
+  className,
+  isCompact = false,
+}: {
+  readonly className?: string | undefined;
+  readonly isCompact?: boolean;
+}) {
   const engine = useEngine();
   const isMapOpen = useInterfaceStore((state) => {
     return state.isMapOpen;
@@ -79,7 +88,7 @@ export function MinimapIsland({ className }: { readonly className?: string | und
   return (
     <Island className={className}>
       <div className="p-1.5">
-        <MinimapCanvas engine={engine} />
+        <MinimapCanvas engine={engine} isCompact={isCompact} />
       </div>
     </Island>
   );

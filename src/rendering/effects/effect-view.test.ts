@@ -103,12 +103,13 @@ describe("effect view", () => {
     ]);
     view.update(9, 9);
     view.add([inflow, { ...inflow, wellId: 2 }]);
-    const secondLens = view.group.children[before + 1];
-    const secondDebris = view.group.children[before + 3];
+    const secondLens = view.group.children[before + 2];
+    const secondDust = view.group.children[before + 3];
+    const secondDebris = view.group.children[before + 5];
 
-    expect(view.group.children).toHaveLength(before + 4);
+    expect(view.group.children).toHaveLength(before + 6);
     view.add([{ kind: "black-hole-collapse", wellId: 1 }]);
-    expect(view.group.children.slice(before)).toEqual([secondLens, secondDebris]);
+    expect(view.group.children.slice(before)).toEqual([secondLens, secondDust, secondDebris]);
     view.add([{ kind: "black-hole-collapse", wellId: 2 }]);
     expect(view.group.children).toHaveLength(before);
 

@@ -65,7 +65,9 @@ describe("power dock", () => {
     );
   });
 
-  it("separates the groups of the chosen kind", async () => {
+  it("separates the groups of the chosen kind in the wide dock", async () => {
+    await page.viewport(1440, 900);
+
     const screen = await render(<PowerDock />);
 
     await screen.getByRole("group", { name: "Kinds" }).getByRole("button", { name: "Life" }).click();
@@ -85,6 +87,33 @@ describe("power dock", () => {
       .element(screen.getByRole("button", { exact: true, name: "Smooth" }))
       .toHaveAttribute("aria-pressed", "true");
   });
+
+  it.each(["Elements", "Land", "Life"])(
+    "fits all %s powers on a 320 px phone with full touch targets",
+    async (name) => {
+      await page.viewport(320, 568);
+
+      const screen = await render(
+        <div className="p-safe">
+          <PowerDock />
+        </div>
+      );
+      const row = screen.getByRole("toolbar", { name: "Powers" });
+      const bounds = row.element().getBoundingClientRect();
+
+      await row.getByRole("group", { name: "Kinds" }).getByRole("button", { name }).click();
+
+      for (const button of row.getByRole("button").elements()) {
+        const tile = button.getBoundingClientRect();
+
+        expect(tile.left).toBeGreaterThanOrEqual(bounds.left);
+        expect(tile.right).toBeLessThanOrEqual(bounds.right);
+        expect(tile.bottom).toBeLessThanOrEqual(bounds.bottom);
+        expect(tile.width).toBeGreaterThanOrEqual(44);
+        expect(tile.height).toBeGreaterThanOrEqual(44);
+      }
+    }
+  );
 
   it("reveals the equipped power on a narrow dock after a guide action", async () => {
     await page.viewport(390, 844);

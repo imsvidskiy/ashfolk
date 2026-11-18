@@ -1,4 +1,5 @@
 import { describe, expect, it, onTestFinished } from "vitest";
+import { userEvent } from "vitest/browser";
 import { render } from "vitest-browser-react";
 import { connectInstall } from "../install/install-store.ts";
 import { startTestEngine } from "../testing/engine-fixtures.ts";
@@ -72,7 +73,7 @@ describe("menu buttons", () => {
     expect(screen.getByRole("button", { name: "Install the app" }).elements()).toHaveLength(0);
   });
 
-  it("opens the browser's install prompt from the menu", async () => {
+  it("gives installation its own labelled island and opens the prompt from the keyboard", async () => {
     onTestFinished(connectInstall(window));
 
     const screen = await render(<MenuButtons />);
@@ -81,7 +82,14 @@ describe("menu buttons", () => {
 
     expect(event.defaultPrevented).toBe(true);
 
-    await screen.getByRole("button", { name: "Install the app" }).click();
+    const install = screen.getByRole("button", { name: "Install the app" });
+
+    await expect.element(install.getByText("Install", { exact: true })).toBeVisible();
+    expect(install.element().closest(".island")).not.toBeNull();
+    expect(screen.getByRole("navigation", { name: "Panels" }).element().contains(install.element())).toBe(false);
+    install.element().focus();
+
+    await userEvent.keyboard("{Enter}");
 
     expect(prompt).toHaveBeenCalledOnce();
     await expect.element(screen.getByRole("button", { name: "Install the app" })).not.toBeInTheDocument();

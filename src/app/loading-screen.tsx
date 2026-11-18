@@ -1,7 +1,6 @@
 import { RefreshCw, RotateCcw } from "lucide-react";
 import { useState } from "react";
 import { TextButton } from "../design/buttons.tsx";
-import { cn } from "../design/cn.ts";
 import { Island } from "../design/island.tsx";
 import type { IslandSketch } from "../generation/generation-options.ts";
 import { CloudSeaBackdrop } from "./cloud-sea-backdrop.tsx";
@@ -11,7 +10,7 @@ import { IslandSketchView } from "./island-sketch-view.tsx";
 import { useLaunchStore } from "./launch-store.ts";
 import { reloadPage } from "./reload-page.ts";
 
-const CAPTION_GLOW = "[text-shadow:0_0_12px_rgb(255_255_255/0.9),0_0_2px_rgb(255_255_255/0.9)]";
+const RECOVERY_PANEL = "flex max-w-md flex-col items-center gap-5 p-6";
 
 const STAGE_LABELS: Readonly<Record<LoadingStage, string>> = {
   climate: "Settling the climate",
@@ -63,14 +62,16 @@ function Caption({ name, stage }: CaptionProps) {
   const label = STAGE_LABELS[stage];
 
   return (
-    <div className="p-safe absolute inset-x-0 bottom-0">
-      <div className="flex flex-col items-center gap-1 py-3 text-center" role="status">
-        <h2 className={cn("text-ink text-2xl tracking-tight wrap-break-word", CAPTION_GLOW)}>{name}</h2>
+    <div className="p-safe absolute inset-x-0 bottom-0 flex justify-center">
+      <Island className="max-w-full px-5 py-2.5">
+        <div className="flex flex-col items-center gap-0.5 text-center" role="status">
+          <h2 className="text-ink text-lg leading-tight font-bold wrap-anywhere">{name}</h2>
 
-        <p className={cn("text-ink-soft animate-stage-in italic", CAPTION_GLOW)} key={label}>
-          {label}…
-        </p>
-      </div>
+          <p className="text-ink-soft animate-stage-in text-sm" key={label}>
+            {label}…
+          </p>
+        </div>
+      </Island>
     </div>
   );
 }
@@ -107,7 +108,7 @@ function RecoveryMessage({ message, onRetry, title }: FailureMessageProps & { re
   });
 
   return (
-    <div className="flex flex-col items-center gap-5">
+    <Island className={RECOVERY_PANEL}>
       <FailureMessage message={message} title={title} />
 
       <div className="flex gap-2">
@@ -120,7 +121,7 @@ function RecoveryMessage({ message, onRetry, title }: FailureMessageProps & { re
           Worlds
         </TextButton>
       </div>
-    </div>
+    </Island>
   );
 }
 
@@ -128,7 +129,7 @@ function GraphicsLostMessage({ saved }: { readonly saved: Promise<unknown> }) {
   const { handleReload, isReloading } = useReloadAfterSave(saved);
 
   return (
-    <Island className="flex max-w-md flex-col items-center gap-5 p-6">
+    <Island className={RECOVERY_PANEL}>
       <FailureMessage
         message="Your browser's graphics stopped working. Reload to carry on from your last save, or try Chrome."
         title="The island went dark"

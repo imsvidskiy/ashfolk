@@ -27,6 +27,17 @@ async function startFailingSession(failure: Error): Promise<GameSession> {
 }
 
 describe("loading screen", () => {
+  it("keeps the stage and world name together on a paper caption", async () => {
+    useEngineStore.setState({ status: { island: null, kind: "loading", stage: "water" } });
+
+    const screen = await render(<LoadingScreen />);
+    const caption = screen.getByRole("status");
+
+    await expect.element(caption.getByText("Filling rivers and lakes…")).toBeVisible();
+    await expect.element(caption.getByRole("heading", { name: useLaunchStore.getState().launch.name })).toBeVisible();
+    expect(caption.element().closest(".island")).not.toBeNull();
+  });
+
   it("says why the island could not rise", async () => {
     useEngineStore.setState({ status: { kind: "failed", message: "WebGPU is not available" } });
 
@@ -34,6 +45,7 @@ describe("loading screen", () => {
 
     await expect.element(screen.getByRole("alert").getByText("The island could not rise")).toBeVisible();
     await expect.element(screen.getByText("WebGPU is not available")).toBeVisible();
+    expect(screen.getByRole("button", { name: "Start again" }).element().closest(".island")).not.toBeNull();
   });
 
   it("retries a failed fresh launch without opening browser storage", async () => {

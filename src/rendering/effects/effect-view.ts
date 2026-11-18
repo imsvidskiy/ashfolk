@@ -140,7 +140,7 @@ export class EffectView {
       case "arrow":
         return new ArrowFlight(this.#context.surface, effect, this.#arrowParts);
       case "black-hole":
-        return new BlackHoleLens(effect, this.#sceneColor);
+        return new BlackHoleLens(this.#context.surface, effect, this.#sceneColor);
       case "black-hole-inflow": {
         const lens = this.#active.find((active): active is BlackHoleLens => {
           return active instanceof BlackHoleLens && active.wellId === effect.wellId;

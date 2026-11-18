@@ -112,7 +112,13 @@ function PowerSettingsContent({ powerId }: { readonly powerId: PowerId }) {
           />
         ) : null}
 
-        <IconButton icon={<RotateCcw aria-hidden="true" size={16} />} label="Reset to defaults" onClick={handleReset} />
+        {areFieldsShown ? (
+          <IconButton
+            icon={<RotateCcw aria-hidden="true" size={16} />}
+            label="Reset to defaults"
+            onClick={handleReset}
+          />
+        ) : null}
       </header>
 
       {areFieldsShown ? (
