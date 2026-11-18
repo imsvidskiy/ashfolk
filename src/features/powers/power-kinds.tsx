@@ -13,7 +13,7 @@ const KIND_ICONS: Readonly<Record<PowerCategory, GameIconName>> = {
 };
 
 const COMPACT_TAB =
-  "flex h-11 min-w-11 items-center justify-center gap-1 rounded-xl px-1.5 text-xs font-semibold text-ink-soft @max-[19rem]:px-1 hover:bg-paper-hover aria-pressed:bg-dawn-soft aria-pressed:text-dawn-strong";
+  "flex h-11 min-w-11 items-center justify-center gap-1 rounded-xl px-1.5 text-xs font-semibold text-ink-soft max-[23rem]:px-1 hover:bg-paper-hover aria-pressed:bg-dawn-soft aria-pressed:text-dawn-strong";
 
 const WIDE_TAB =
   "pointer-events-auto relative mb-px flex h-9 shrink-0 items-center gap-1.5 rounded-t-xl border border-b-0 border-paper-edge bg-canvas px-3 font-medium text-xs text-ink-soft hover:text-ink after:absolute after:inset-x-0 after:bottom-0 after:h-11 aria-pressed:mb-0 aria-pressed:h-10 aria-pressed:bg-paper aria-pressed:text-ink aria-pressed:shadow-[inset_0_2px_0_var(--color-dawn)] pointer-coarse:text-sm";
@@ -44,7 +44,11 @@ function KindTab({ chosenKind, isCompact, kind, name, onKindChange, suggestedKin
       })}
       onClick={handleChoose}
     >
-      <GameIcon className={isCompact ? "size-4 @min-[20rem]:size-5" : undefined} name={KIND_ICONS[kind]} size={20} />
+      <GameIcon
+        className={isCompact ? "size-4 max-[23rem]:hidden @min-[20rem]:size-5" : undefined}
+        name={KIND_ICONS[kind]}
+        size={20}
+      />
 
       {name}
     </Toolbar.Button>
@@ -55,7 +59,7 @@ export function KindTabs(props: KindTabsProps) {
   return (
     <Toolbar.Group
       aria-label="Kinds"
-      className={props.isCompact ? "flex items-center" : "relative z-1 -mb-px flex items-end gap-1"}
+      className={props.isCompact ? "flex min-w-0 items-center" : "relative z-1 -mb-px flex items-end gap-1"}
     >
       {POWER_CATEGORIES.map(({ id, name }) => {
         return <KindTab {...props} key={id} kind={id} name={name} />;

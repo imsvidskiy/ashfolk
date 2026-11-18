@@ -310,7 +310,7 @@ export function PowerDock({ className }: { readonly className?: string | undefin
     return (
       <Toolbar.Root aria-label="Powers" className={cn("mx-auto w-full max-w-xl shrink-0", className)}>
         <Island className="@container p-1">
-          <div className="border-paper-edge flex items-center justify-between gap-1 border-b pb-1">
+          <div className="border-paper-edge grid grid-cols-[minmax(0,1fr)_auto] items-center gap-1 border-b pb-1">
             <KindTabs chosenKind={kind} isCompact onKindChange={setKind} suggestedKind={suggestedKind} />
 
             <Toolbar.Group aria-label="Tools" className="flex">

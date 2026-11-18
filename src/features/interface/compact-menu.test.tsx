@@ -42,7 +42,9 @@ describe("compact menu", () => {
 
     const screen = await render(<CompactMenu />);
 
-    await screen.getByRole("button", { name: "Menu" }).click();
+    screen.getByRole("button", { name: "Menu" }).element().focus();
+    await userEvent.keyboard("{ArrowDown}");
+    await expect.element(screen.getByRole("menuitem", { name: "Journal" })).toHaveFocus();
 
     const installer = screen.getByRole("group", { name: "App installation" });
 
