@@ -1,6 +1,8 @@
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it, onTestFinished, vi } from "vitest";
 import { userEvent } from "vitest/browser";
 import { render } from "vitest-browser-react";
+import { connectInstall } from "../install/install-store.ts";
+import { offerInstall } from "../testing/install-fixtures.ts";
 import { CompactMenu } from "./compact-menu.tsx";
 import { useInterfaceStore } from "./interface-store.ts";
 
@@ -33,6 +35,30 @@ describe("compact menu", () => {
 
     await expect.element(screen.getByRole("menu")).not.toBeInTheDocument();
     await expect.element(trigger).toHaveFocus();
+  });
+
+  it("adds installation as its own final menu section when the browser offers it", async () => {
+    onTestFinished(connectInstall(window));
+
+    const screen = await render(<CompactMenu />);
+
+    await screen.getByRole("button", { name: "Menu" }).click();
+
+    const installer = screen.getByRole("group", { name: "App installation" });
+
+    await expect.element(installer).not.toBeInTheDocument();
+
+    const { prompt } = offerInstall();
+    const entry = installer.getByRole("menuitem", { name: "Install the app" });
+
+    await expect.element(entry).toBeVisible();
+
+    await userEvent.keyboard("{End}");
+    await expect.element(entry).toHaveFocus();
+    await userEvent.keyboard("{Enter}");
+
+    expect(prompt).toHaveBeenCalledOnce();
+    await expect.element(screen.getByRole("menu")).not.toBeInTheDocument();
   });
 
   it("opens the journal on the tribes", async () => {

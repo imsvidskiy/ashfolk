@@ -51,9 +51,21 @@ function InstallButton() {
   }
 
   return (
-    <WithTooltip content="Play from your home screen or desktop" side="bottom">
-      <IconButton icon={<Download aria-hidden="true" size={18} />} label="Install the app" onClick={install} />
-    </WithTooltip>
+    <Island className="shrink-0">
+      <div className={ROW}>
+        <WithTooltip content="Play from your home screen or desktop" side="bottom">
+          <TextButton
+            aria-label="Install the app"
+            className="h-10 gap-1.5 px-2.5 font-semibold pointer-coarse:h-11"
+            onClick={install}
+            tone="quiet"
+          >
+            <Download aria-hidden="true" className="text-dawn-strong" size={17} />
+            Install
+          </TextButton>
+        </WithTooltip>
+      </div>
+    </Island>
   );
 }
 
@@ -71,47 +83,49 @@ export function MenuButtons({ className }: { readonly className?: string | undef
   const { isJournalOpen, isMapOpen, openSettings, toggleJournal, toggleMap } = useMenuActions();
 
   return (
-    <nav aria-label="Panels" className={cn("flex items-center gap-2", className)}>
-      <Island>
-        <fieldset aria-label="World views" className={ROW}>
-          <WithTooltip content="Tribes, relations and chronicle" side="bottom">
-            <TextButton aria-pressed={isJournalOpen} className={VIEW_BUTTON} onClick={toggleJournal} tone="quiet">
-              <BookOpen aria-hidden="true" size={17} />
-              Journal
-            </TextButton>
-          </WithTooltip>
+    <div className={cn("flex items-center gap-2", className)}>
+      <nav aria-label="Panels" className="flex items-center gap-2">
+        <Island>
+          <fieldset aria-label="World views" className={ROW}>
+            <WithTooltip content="Tribes, relations and chronicle" side="bottom">
+              <TextButton aria-pressed={isJournalOpen} className={VIEW_BUTTON} onClick={toggleJournal} tone="quiet">
+                <BookOpen aria-hidden="true" size={17} />
+                Journal
+              </TextButton>
+            </WithTooltip>
 
-          <WithTooltip content="Map of the island" side="bottom">
-            <TextButton aria-pressed={isMapOpen} className={VIEW_BUTTON} onClick={toggleMap} tone="quiet">
-              <MapIcon aria-hidden="true" size={17} />
-              Map
-            </TextButton>
-          </WithTooltip>
-        </fieldset>
-      </Island>
+            <WithTooltip content="Map of the island" side="bottom">
+              <TextButton aria-pressed={isMapOpen} className={VIEW_BUTTON} onClick={toggleMap} tone="quiet">
+                <MapIcon aria-hidden="true" size={17} />
+                Map
+              </TextButton>
+            </WithTooltip>
+          </fieldset>
+        </Island>
 
-      <Island>
-        <fieldset aria-label="Game controls" className={ROW}>
-          <SoundButton />
+        <Island>
+          <fieldset aria-label="Game controls" className={ROW}>
+            <SoundButton />
 
-          <WithTooltip content="World, weather, time, graphics and sound" side="bottom">
-            <TextButton
-              aria-label="Settings"
-              className="size-10 gap-1.5 p-0 font-semibold xl:w-auto xl:px-3 pointer-coarse:size-11"
-              onClick={openSettings}
-              tone="quiet"
-            >
-              <Settings aria-hidden="true" size={18} />
+            <WithTooltip content="World, weather, time, graphics and sound" side="bottom">
+              <TextButton
+                aria-label="Settings"
+                className="size-10 gap-1.5 p-0 font-semibold xl:w-auto xl:px-3 pointer-coarse:size-11"
+                onClick={openSettings}
+                tone="quiet"
+              >
+                <Settings aria-hidden="true" size={18} />
 
-              <span className="hidden xl:inline">Settings</span>
-            </TextButton>
-          </WithTooltip>
+                <span className="hidden xl:inline">Settings</span>
+              </TextButton>
+            </WithTooltip>
 
-          <InstallButton />
+            <FullscreenButton />
+          </fieldset>
+        </Island>
+      </nav>
 
-          <FullscreenButton />
-        </fieldset>
-      </Island>
-    </nav>
+      <InstallButton />
+    </div>
   );
 }

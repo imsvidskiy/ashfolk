@@ -31,7 +31,8 @@ import {
 import { Mesh, MeshBasicNodeMaterial, type Node, PlaneGeometry, type Texture } from "three/webgpu";
 import { smoothstep as ease } from "../../shared/math.ts";
 import { BLACK_HOLE_CORE_SHARE, type BlackHoleEffect } from "../../simulation/effects.ts";
-import type { ActiveEffect } from "./effect-context.ts";
+import { createBlackHoleDust } from "./black-hole-dust.ts";
+import type { ActiveEffect, EffectSurface } from "./effect-context.ts";
 
 function rotate(point: Node<"vec2">, angle: Node<"float">) {
   return vec2(
@@ -137,14 +138,17 @@ export class BlackHoleLens implements ActiveEffect {
   readonly meshes: readonly Mesh[];
   readonly #clock = uniform(0);
   readonly #collapse = uniform(0);
+  readonly #strength = uniform(0);
+  readonly #dust: ReturnType<typeof createBlackHoleDust>;
   readonly #effect: BlackHoleEffect;
   readonly #lens: Mesh<PlaneGeometry, MeshBasicNodeMaterial>;
 
-  constructor(effect: BlackHoleEffect, sceneColor: Texture) {
+  constructor(surface: EffectSurface, effect: BlackHoleEffect, sceneColor: Texture) {
     this.#effect = effect;
     this.#lens = new Mesh(new PlaneGeometry(2, 2), createLensMaterial(sceneColor, this.#clock, this.#collapse));
     this.#lens.renderOrder = 4;
-    this.meshes = [this.#lens];
+    this.#dust = createBlackHoleDust(surface, effect, this.#clock, this.#strength);
+    this.meshes = [this.#lens, this.#dust];
 
     this.update(effect.elapsedSeconds === undefined ? 0 : effect.elapsedSeconds);
   }
@@ -177,6 +181,7 @@ export class BlackHoleLens implements ActiveEffect {
     const scale = opening * (1 - collapse);
 
     this.#collapse.value = collapse;
+    this.#strength.value = scale;
     this.#lens.position.set(x, surfaceY + radius * 0.47 * scale, z);
     this.#lens.scale.setScalar(radius * scale);
 
@@ -184,6 +189,8 @@ export class BlackHoleLens implements ActiveEffect {
   }
 
   finish(): void {
+    this.#dust.geometry.dispose();
+    this.#dust.material.dispose();
     this.#lens.geometry.dispose();
     this.#lens.material.dispose();
   }

@@ -1,2 +1,12 @@
 @import "../../styles.css";
 @plugin "@tailwindcss/typography";
+
+.prose {
+  --tw-prose-body: var(--color-ink-soft);
+  --tw-prose-headings: var(--color-ink);
+  --tw-prose-links: var(--color-dawn-strong);
+  --tw-prose-bold: var(--color-ink);
+  --tw-prose-bullets: var(--color-ink-muted);
+  --tw-prose-th-borders: var(--color-line);
+  --tw-prose-td-borders: var(--color-line);
+}

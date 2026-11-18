@@ -3,7 +3,6 @@ import { Toolbar } from "@base-ui/react/toolbar";
 import { Hand, Layers2, MousePointer2 } from "lucide-react";
 import { Fragment, type ReactNode, type RefObject, useEffect, useRef, useState } from "react";
 import {
-  POWER_CATEGORIES,
   POWERS,
   type PowerCategory,
   type PowerId,
@@ -13,14 +12,15 @@ import {
 } from "../../content/powers.ts";
 import { cn } from "../../design/cn.ts";
 import { GameIcon } from "../../design/game-icon.tsx";
-import type { GameIconName } from "../../design/game-icon-sources.ts";
 import { Island } from "../../design/island.tsx";
 import { FOCUS_RING } from "../../design/styles.ts";
 import { WithTooltip } from "../../design/tooltip.tsx";
+import { useIsCompact } from "../../design/use-media-query.ts";
 import { canUseGameShortcut } from "../../game/input/keyboard-controls.ts";
 import { useGuideStore } from "../guide/guide-store.ts";
 import { suggestedPowerId } from "../guide/guide-tips.ts";
 import { POWER_ICONS } from "./power-icons.ts";
+import { KindTabs } from "./power-kinds.tsx";
 import { usePowerStore } from "./power-store.ts";
 
 const SELECT_HINT = "Tap people, animals, buildings or land to see their details.";
@@ -33,31 +33,9 @@ const CELL_CLASS = `grid size-11 shrink-0 snap-start place-items-center rounded-
 
 const TOOL_CELL_CLASS = `${CELL_CLASS} text-ink-soft hover:text-ink`;
 
-const CHOSEN_CELL_CLASS = "bg-dawn-soft text-ink ring-1 ring-dawn hover:bg-dawn-soft";
+const CHOSEN_CELL_CLASS = "bg-dawn-soft text-ink ring-1 ring-dawn ring-inset hover:bg-dawn-soft";
 
 const SUGGESTED_CLASS = "ring-2 ring-dawn/60 motion-safe:animate-pulse";
-
-const TAB_CLASS = `pointer-events-auto relative flex shrink-0 items-center gap-1.5 rounded-t-xl border border-b-0 border-paper-edge px-3 font-medium text-xs transition-[color,background-color] duration-150 after:absolute after:inset-x-0 after:bottom-0 after:h-11 pointer-coarse:text-sm ${FOCUS_RING}`;
-
-const CHOSEN_TAB_CLASS = "h-10 bg-paper text-ink shadow-[inset_0_2px_0_var(--color-dawn)]";
-
-const RESTING_TAB_CLASS = "mb-px h-9 bg-canvas text-ink-soft hover:text-ink";
-
-const KIND_ICONS: Readonly<Record<PowerCategory, GameIconName>> = {
-  elements: "sun",
-  land: "meadow",
-  life: "population",
-};
-
-interface KindChoice {
-  readonly chosenKind: PowerCategory;
-  readonly onKindChange: (kind: PowerCategory) => void;
-}
-
-interface KindTabProps extends KindChoice {
-  readonly kind: PowerCategory;
-  readonly name: string;
-}
 
 interface TileHintProps {
   readonly description: string;
@@ -151,18 +129,6 @@ function useHand() {
   });
 
   return { handleSelect: selectHand, isHandSelected };
-}
-
-function useKindTab({ chosenKind, kind, onKindChange }: KindChoice & { readonly kind: PowerCategory }) {
-  const suggested = useSuggestedPower();
-  const isChosen = kind === chosenKind;
-  const isSuggested = !isChosen && suggested !== null && POWERS[suggested].category === kind;
-
-  function handleChoose(): void {
-    onKindChange(kind);
-  }
-
-  return { handleChoose, isChosen, isSuggested };
 }
 
 function useDigitHotkeys(kind: PowerCategory): void {
@@ -302,42 +268,6 @@ function HandTile() {
   );
 }
 
-function KindTab({ chosenKind, kind, name, onKindChange }: KindTabProps) {
-  const { handleChoose, isChosen, isSuggested } = useKindTab({ chosenKind, kind, onKindChange });
-
-  return (
-    <Toolbar.Button
-      aria-pressed={isChosen}
-      className={cn(TAB_CLASS, isChosen ? CHOSEN_TAB_CLASS : RESTING_TAB_CLASS, {
-        "text-dawn-strong motion-safe:animate-pulse": isSuggested,
-      })}
-      onClick={handleChoose}
-    >
-      <GameIcon name={KIND_ICONS[kind]} size={20} />
-
-      {name}
-    </Toolbar.Button>
-  );
-}
-
-function KindTabs({ chosenKind, onKindChange }: KindChoice) {
-  return (
-    <Toolbar.Group aria-label="Kinds" className="relative z-1 -mb-px flex items-end gap-1">
-      {POWER_CATEGORIES.map((entry) => {
-        return (
-          <KindTab
-            chosenKind={chosenKind}
-            key={entry.id}
-            kind={entry.id}
-            name={entry.name}
-            onKindChange={onKindChange}
-          />
-        );
-      })}
-    </Toolbar.Group>
-  );
-}
-
 function DockSeparator() {
   return <Toolbar.Separator className="bg-ink/12 mx-1 h-7 w-px shrink-0" />;
 }
@@ -361,7 +291,9 @@ function PowerRow({ children }: { readonly children: ReactNode }) {
 
 export function PowerDock({ className }: { readonly className?: string | undefined }) {
   const [kind, setKind] = useState(initialKind);
-
+  const isCompact = useIsCompact();
+  const suggested = useSuggestedPower();
+  const suggestedKind = suggested === null ? null : POWERS[suggested].category;
   const powers = powersInCategory(kind);
 
   useEffect(() => {
@@ -374,9 +306,33 @@ export function PowerDock({ className }: { readonly className?: string | undefin
 
   useDigitHotkeys(kind);
 
+  if (isCompact) {
+    return (
+      <Toolbar.Root aria-label="Powers" className={cn("mx-auto w-full max-w-xl shrink-0", className)}>
+        <Island className="@container p-1">
+          <div className="border-paper-edge flex items-center justify-between gap-1 border-b pb-1">
+            <KindTabs chosenKind={kind} isCompact onKindChange={setKind} suggestedKind={suggestedKind} />
+
+            <Toolbar.Group aria-label="Tools" className="flex">
+              <SelectTile />
+
+              <HandTile />
+            </Toolbar.Group>
+          </div>
+
+          <div className="grid grid-cols-[repeat(auto-fit,minmax(max(2.75rem,16%),1fr))] justify-items-center pt-1 @min-[31rem]:grid-cols-[repeat(auto-fit,minmax(2.75rem,1fr))]">
+            {powers.map((powerId, index) => {
+              return <PowerTile hotkey={hotkeyOf(index)} key={powerId} powerId={powerId} />;
+            })}
+          </div>
+        </Island>
+      </Toolbar.Root>
+    );
+  }
+
   return (
     <Toolbar.Root aria-label="Powers" className={cn("flex min-w-0 flex-col", className)}>
-      <KindTabs chosenKind={kind} onKindChange={setKind} />
+      <KindTabs chosenKind={kind} onKindChange={setKind} suggestedKind={suggestedKind} />
 
       <Island className="flex items-center gap-0.5 rounded-tl-none p-1 pl-1.5">
         <SelectTile />

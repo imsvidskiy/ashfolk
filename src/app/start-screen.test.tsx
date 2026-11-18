@@ -1,4 +1,5 @@
 import { describe, expect, it, onTestFinished, vi } from "vitest";
+import { page, userEvent } from "vitest/browser";
 import { render } from "vitest-browser-react";
 import { useSavesStore } from "../features/saves/saves-store.ts";
 import { blockSavedWorlds, deleteAllSavedWorlds, saveWorld } from "../features/testing/save-fixtures.ts";
@@ -13,6 +14,10 @@ describe("start screen", () => {
     const screen = await render(<StartScreen />);
 
     await expect.element(screen.getByRole("textbox", { name: "Name" })).toHaveValue(initialLaunch.launch.name);
+    const options = screen.getByText("Island options", { exact: true });
+
+    await expect.element(screen.getByRole("button", { name: "Round" })).not.toBeInTheDocument();
+    await options.click();
     await expect.element(screen.getByRole("button", { name: "Round", pressed: true })).toBeVisible();
     await expect.element(screen.getByRole("button", { name: "Normal", pressed: true })).toBeVisible();
     await expect.element(screen.getByRole("button", { name: "Grow the island" })).toBeEnabled();
@@ -30,9 +35,29 @@ describe("start screen", () => {
     await expect.element(screen.getByRole("button", { name: "Grow the island" })).toBeEnabled();
   });
 
+  it("explains an invalid seed even after closing the island options", async () => {
+    const screen = await render(<StartScreen />);
+    const options = screen.getByText("Island options", { exact: true });
+
+    await options.click();
+    await screen.getByRole("textbox", { name: "Seed" }).fill("0");
+    await options.click();
+
+    await expect
+      .element(screen.getByRole("status"))
+      .toHaveTextContent("Use a seed from 1 to 999,999 in Island options.");
+    await expect.element(screen.getByRole("button", { name: "Grow the island" })).toBeDisabled();
+
+    await options.click();
+    await screen.getByRole("textbox", { name: "Seed" }).fill("7");
+
+    await expect.element(screen.getByRole("button", { name: "Grow the island" })).toBeEnabled();
+  });
+
   it("grows the world at the chosen size", async () => {
     const screen = await render(<StartScreen />);
 
+    await screen.getByText("Island options", { exact: true }).click();
     await screen.getByRole("button", { name: "Large" }).click();
     await screen.getByRole("button", { name: "Grow the island" }).click();
 
@@ -46,6 +71,7 @@ describe("start screen", () => {
     const screen = await render(<StartScreen />);
 
     await screen.getByRole("textbox", { name: "Name" }).fill("Old Ford");
+    await screen.getByText("Island options", { exact: true }).click();
     await screen.getByRole("button", { name: "Square" }).click();
     await screen.getByRole("textbox", { name: "Seed" }).fill("42");
     await screen.getByRole("button", { name: "Grow the island" }).click();
@@ -145,6 +171,32 @@ describe("start screen", () => {
     await screen.getByRole("button", { name: "Back" }).click();
     await screen.getByRole("button", { name: "New world" }).click();
     await expect.element(screen.getByRole("button", { name: "Grow the island" })).toBeEnabled();
+  });
+
+  it("fits a long saved name on a narrow phone and expands the island options from the keyboard", async () => {
+    await page.viewport(320, 568);
+    onTestFinished(deleteAllSavedWorlds);
+    const name = "AshfolkAshfolkAshfolkAshfolkFord";
+    await saveWorld("ashfolk", name);
+
+    const screen = await render(<StartScreen />);
+    const heading = screen.getByRole("heading", { name });
+
+    await expect.element(heading).toBeVisible();
+    expect(heading.element().scrollWidth).toBeLessThanOrEqual(heading.element().clientWidth);
+    await screen.getByRole("button", { name: "New world" }).click();
+
+    const options = screen.getByText("Island options", { exact: true });
+
+    options.element().closest("summary")?.focus();
+    await userEvent.keyboard("{Enter}");
+
+    await expect.element(screen.getByRole("textbox", { name: "Seed" })).toBeVisible();
+    const grow = screen.getByRole("button", { name: "Grow the island" }).element();
+
+    grow.scrollIntoView({ block: "end" });
+    expect(grow.getBoundingClientRect().bottom).toBeLessThanOrEqual(window.innerHeight);
+    expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(window.innerWidth);
   });
 
   it("says saved worlds are unavailable when the browser blocks them", async () => {

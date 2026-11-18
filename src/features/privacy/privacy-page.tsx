@@ -32,7 +32,7 @@ export function PrivacyPage() {
         </a>
 
         <main className={ISLAND_CLASS}>
-          <article className="prose prose-zinc prose-a:text-dawn-strong prose-headings:text-ink max-w-none p-6 sm:p-12">
+          <article className="prose max-w-none p-6 sm:p-12">
             <Markdown remarkPlugins={[remarkGfm]}>{privacyText}</Markdown>
           </article>
         </main>

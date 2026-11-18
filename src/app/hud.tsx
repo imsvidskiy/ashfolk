@@ -63,17 +63,21 @@ function CompactHud() {
     <div className={cn(HUD_FRAME, "gap-2")}>
       <CompactTopBar />
 
-      <GuideCard className="w-full max-w-96 self-start" />
+      <div className="flex min-h-0 flex-1 flex-col gap-2 landscape:grid landscape:grid-cols-[minmax(0,4fr)_minmax(0,5fr)] landscape:grid-rows-[minmax(0,1fr)]">
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col items-start gap-2 [@media(max-height:42rem)]:flex-row">
+          <div className="flex max-h-full min-h-0 min-w-0 flex-col items-start gap-2">
+            <GuideCard className="max-h-full w-full max-w-96 shrink overflow-y-auto overscroll-contain" />
 
-      <NoticeFeed />
+            <NoticeFeed className="empty:hidden" />
+          </div>
 
-      <div className="mt-auto flex min-h-0 flex-col gap-2">
-        <MinimapIsland className="self-start" />
+          <MinimapIsland className="mt-auto shrink-0 [@media(max-height:42rem)]:mt-0" isCompact />
+        </div>
 
-        <PowerSettings className="max-h-details min-h-0" />
-
-        <PowerDock />
+        <PowerSettings className="max-h-details min-h-0 landscape:max-h-full landscape:self-end" />
       </div>
+
+      <PowerDock />
 
       <JournalSheet />
     </div>

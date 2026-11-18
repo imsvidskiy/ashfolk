@@ -53,11 +53,11 @@ function brokenIslands(): string[] {
   for (const island of islands) {
     const bounds = island.getBoundingClientRect();
 
-    if (island.scrollHeight > island.clientHeight + 1) {
+    if (island.scrollHeight > island.clientHeight + 1 && getComputedStyle(island).overflowY !== "auto") {
       problems.push(`${nameOf(island)} clips its content`);
     }
 
-    if (bounds.top < 0 || bounds.bottom > window.innerHeight) {
+    if (bounds.left < 0 || bounds.right > window.innerWidth || bounds.top < 0 || bounds.bottom > window.innerHeight) {
       problems.push(`${nameOf(island)} leaves the window`);
     }
   }
@@ -142,6 +142,53 @@ describe("short hud", () => {
     expect(send).toHaveBeenCalledWith({ speed: 4, type: "setSpeed" });
     expect(send).toHaveBeenCalledWith({ isPaused: false, type: "setPaused" });
     expect(brokenIslands()).toEqual([]);
+  });
+
+  it.each([
+    [320, 568],
+    [390, 844],
+    [667, 375],
+    [844, 390],
+  ])("keeps the map, guide, powers and expanded controls usable at %i by %i", async (width, height) => {
+    await page.viewport(width, height);
+    await startTestEngine();
+
+    showManyTribes();
+    useInterfaceStore.setState({ isMapOpen: true });
+
+    const screen = await render(<Hud />);
+    const dock = screen.getByRole("toolbar", { name: "Powers" });
+    const map = screen.getByRole("img", { name: "Map of the island. Click to move the camera." });
+    const guide = screen.getByRole("region", { name: "Island guide" });
+
+    await dock.getByRole("button", { exact: true, name: "Meteor" }).click();
+    await screen.getByRole("button", { exact: true, name: "Meteor shower" }).click();
+
+    const settings = screen.getByRole("region", { name: "Meteor shower settings" });
+
+    await settings.getByRole("button", { name: "Adjust settings" }).click();
+
+    await expect.element(map).toBeVisible();
+    await expect.element(guide).toBeVisible();
+    expect(brokenIslands()).toEqual([]);
+
+    const slider = settings.getByRole("slider").last().element();
+
+    slider.scrollIntoView({ block: "nearest" });
+    const sliderBounds = slider.getBoundingClientRect();
+    const settingsBounds = settings.element().getBoundingClientRect();
+
+    expect(sliderBounds.top).toBeGreaterThanOrEqual(settingsBounds.top);
+    expect(sliderBounds.bottom).toBeLessThanOrEqual(settingsBounds.bottom);
+
+    const lesson = guide.getByRole("button", { exact: false, name: "First island" });
+
+    if (lesson.element().getAttribute("aria-expanded") === "false") {
+      await lesson.click();
+    }
+
+    await guide.getByRole("button", { name: "Skip guide" }).click();
+    await expect.element(guide).not.toBeInTheDocument();
   });
 
   it("switches to the compact bar when the window is too short for side panels", async () => {
