@@ -1,4 +1,4 @@
 {
   "$schema": "https://unpkg.com/knip@6/schema.json",
-  "entry": ["cloudflare.config.ts", "src/privacy.tsx"]
+  "entry": [".claude/workflows/ship.js", "cloudflare.config.ts", "src/privacy.tsx"]
 }
