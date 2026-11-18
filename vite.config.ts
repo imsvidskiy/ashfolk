@@ -1,4 +1,5 @@
 import { fileURLToPath } from "node:url";
+import { cloudflare } from "@cloudflare/vite-plugin";
 import babel from "@rolldown/plugin-babel";
 import tailwindcss from "@tailwindcss/vite";
 import react, { reactCompilerPreset } from "@vitejs/plugin-react";
@@ -31,23 +32,32 @@ function inlineLimit(file: string): boolean | undefined {
   return undefined;
 }
 
+const { VITEST: testRun } = process.env;
+
 export default defineConfig({
   base: "./",
   build: {
     assetsInlineLimit: inlineLimit,
     chunkSizeWarningLimit: 1600,
-    rollupOptions: {
-      input: {
-        main: fileURLToPath(new URL("index.html", import.meta.url)),
-        privacy: fileURLToPath(new URL("privacy/index.html", import.meta.url)),
-      },
-      output: {
-        assetFileNames: assetFileName,
-      },
-    },
     target: "es2023",
   },
+  environments: {
+    client: {
+      build: {
+        rollupOptions: {
+          input: {
+            main: fileURLToPath(new URL("index.html", import.meta.url)),
+            privacy: fileURLToPath(new URL("privacy/index.html", import.meta.url)),
+          },
+          output: {
+            assetFileNames: assetFileName,
+          },
+        },
+      },
+    },
+  },
   plugins: [
+    testRun === undefined ? cloudflare() : null,
     react(),
     babel({ presets: [reactCompilerPreset()] }),
     tailwindcss(),
