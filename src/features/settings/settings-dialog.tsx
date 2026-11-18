@@ -78,7 +78,7 @@ export function SettingsDialog() {
               <SettingsSections />
 
               <footer className="border-line bg-paper flex shrink-0 flex-wrap items-center justify-between gap-x-2 gap-y-1 border-t px-3 py-2 sm:px-5">
-                <ProjectLinks className="justify-start max-sm:gap-0 max-sm:[&_a]:gap-1 max-sm:[&_a]:px-1.5 max-sm:[&_a>span]:hidden" />
+                <ProjectLinks className="justify-start max-sm:gap-0 max-sm:[&_a]:gap-1 max-sm:[&_a]:px-1.5" />
 
                 <span className="text-ink-muted ml-auto text-xs font-semibold tabular-nums">v{version}</span>
               </footer>

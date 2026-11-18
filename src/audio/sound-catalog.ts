@@ -73,6 +73,31 @@ export const SOUNDS = {
     referenceDistance: 25,
     volume: QUIET,
   },
+
+  blackHoleCollapse: {
+    bus: "effects",
+    files: [new URL("./sounds/black-hole-collapse-1.webm", import.meta.url).href],
+    priority: 4,
+    referenceDistance: 350,
+    volume: 0.85,
+  },
+
+  blackHoleHum: {
+    bus: "effects",
+    files: [new URL("./sounds/black-hole-hum-1.webm", import.meta.url).href],
+    priority: 3,
+    referenceDistance: 280,
+    volume: 0.48,
+  },
+
+  blackHoleOpen: {
+    bus: "effects",
+    files: [new URL("./sounds/black-hole-open-1.webm", import.meta.url).href],
+    priority: 4,
+    referenceDistance: 300,
+    volume: 0.78,
+  },
+
   blessingAbundance: {
     bus: "effects",
     files: [
@@ -246,7 +271,10 @@ export const SOUNDS = {
   },
   meteorFall: {
     bus: "effects",
-    files: [new URL("./sounds/meteor-fall-1.webm", import.meta.url).href],
+    files: [
+      new URL("./sounds/meteor-fall-1.webm", import.meta.url).href,
+      new URL("./sounds/meteor-fall-2.webm", import.meta.url).href,
+    ],
     priority: 4,
     referenceDistance: 300,
     volume: FULL,
@@ -261,6 +289,31 @@ export const SOUNDS = {
     referenceDistance: 300,
     volume: FULL,
   },
+
+  nuclearFall: {
+    bus: "effects",
+    files: [new URL("./sounds/nuclear-fall-1.webm", import.meta.url).href],
+    priority: 4,
+    referenceDistance: 360,
+    volume: 0.78,
+  },
+
+  nuclearImpact: {
+    bus: "effects",
+    files: [new URL("./sounds/nuclear-impact-1.webm", import.meta.url).href],
+    priority: 5,
+    referenceDistance: 540,
+    volume: FULL,
+  },
+
+  nuclearTail: {
+    bus: "effects",
+    files: [new URL("./sounds/nuclear-tail-1.webm", import.meta.url).href],
+    priority: 3,
+    referenceDistance: 480,
+    volume: 0.62,
+  },
+
   paintGround: {
     bus: "effects",
     files: [new URL("./sounds/paint-ground-1.webm", import.meta.url).href],
@@ -350,6 +403,7 @@ export const SOUNDS = {
   uiPower: interfaceSound(SOFT, [
     new URL("./sounds/ui-power-1.webm", import.meta.url).href,
     new URL("./sounds/ui-power-2.webm", import.meta.url).href,
+    new URL("./sounds/ui-power-3.webm", import.meta.url).href,
   ]),
   uiRefuse: interfaceSound(SOFT, [
     new URL("./sounds/ui-refuse-1.webm", import.meta.url).href,
@@ -358,13 +412,23 @@ export const SOUNDS = {
   uiTab: interfaceSound(SOFT, [
     new URL("./sounds/ui-tab-1.webm", import.meta.url).href,
     new URL("./sounds/ui-tab-2.webm", import.meta.url).href,
+    new URL("./sounds/ui-tab-3.webm", import.meta.url).href,
   ]),
+  uiToggleOff: interfaceSound(SOFT, [new URL("./sounds/ui-toggle-off-1.webm", import.meta.url).href]),
+  uiToggleOn: interfaceSound(SOFT, [new URL("./sounds/ui-toggle-on-1.webm", import.meta.url).href]),
   volcanoRise: {
     bus: "effects",
     files: [new URL("./sounds/volcano-rise-1.webm", import.meta.url).href],
     priority: 4,
     referenceDistance: 300,
     volume: FULL,
+  },
+  waterfall: {
+    bus: "ambience",
+    files: [new URL("./sounds/waterfall-1.webm", import.meta.url).href],
+    priority: 0,
+    referenceDistance: 95,
+    volume: 0.65,
   },
   workBuild: {
     bus: "effects",

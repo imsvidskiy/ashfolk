@@ -1,4 +1,4 @@
-import { ArrowLeft, ArrowRight, ChevronDown, Layers3, Plus } from "lucide-react";
+import { ArrowLeft, ArrowRight, ChevronDown, Layers3, Play, Plus } from "lucide-react";
 import { type ReactNode, useEffect, useRef } from "react";
 import { IconButton, TextButton } from "../design/buttons.tsx";
 import { cn } from "../design/cn.ts";
@@ -84,6 +84,7 @@ function NewWorldForm() {
           <span className="text-ink-muted ml-auto text-xs font-medium capitalize">
             {draft.shape} · {draft.size}
           </span>
+
           <ChevronDown aria-hidden="true" className="group-open/options:rotate-180" size={16} />
         </summary>
 
@@ -117,20 +118,25 @@ function LatestWorld({ onContinue, world }: { readonly onContinue: () => void; r
   const details = world.hasLandChanged ? "The land has changed" : population;
 
   return (
-    <div className="flex min-w-0 flex-col gap-4">
-      <div className="min-w-0">
-        <p className="text-ink-muted text-xs font-semibold">Last played</p>
+    <div className="flex min-w-0 flex-col items-center text-center">
+      <p className="text-ink-muted text-xs font-semibold">Last played</p>
 
-        <h2 className="text-ink mt-0.5 text-2xl leading-tight font-bold tracking-tight wrap-anywhere">{world.name}</h2>
+      <h2 className="text-ink mt-1 max-w-full text-3xl leading-tight font-bold tracking-tight wrap-anywhere">
+        {world.name}
+      </h2>
 
-        <p className="text-ink-soft mt-1 text-sm">
-          {details === "" ? null : `${details} · `}Saved {savedAt}
-        </p>
-      </div>
+      <p className="text-ink-soft mt-1 text-sm">
+        {details === "" ? null : `${details} · `}Saved {savedAt}
+      </p>
 
-      <TextButton aria-label={`Continue ${world.name}`} className={ACTION} onClick={onContinue} tone="accent">
+      <TextButton
+        aria-label={`Continue ${world.name}`}
+        className={cn(ACTION, "mt-5 w-full")}
+        onClick={onContinue}
+        tone="accent"
+      >
+        <Play aria-hidden="true" fill="currentColor" size={15} />
         Continue
-        <ArrowRight aria-hidden="true" size={19} />
       </TextButton>
     </div>
   );
@@ -152,7 +158,7 @@ export function WorldMenu() {
 
   if (!hasListedWorlds) {
     return (
-      <p className="text-ink-soft text-sm" role="status">
+      <p className="text-ink-soft text-center text-sm" role="status">
         Finding your worlds…
       </p>
     );
@@ -160,7 +166,11 @@ export function WorldMenu() {
 
   if (!hasWorlds || view === "new") {
     return (
-      <Subview onBack={hasWorlds ? handleBack : null} title="New world">
+      <Subview onBack={hasWorlds ? handleBack : null} title={hasWorlds ? "New world" : "Your first island"}>
+        {hasWorlds ? null : (
+          <p className="text-ink-soft -mt-2 text-sm">Give your island a name and guide its first tribe.</p>
+        )}
+
         <NewWorldForm />
 
         <SavesUnavailableNote />
@@ -188,18 +198,18 @@ export function WorldMenu() {
         <LatestWorld onContinue={handleContinue} world={latest} />
       )}
 
-      <div className="grid grid-cols-2 gap-2">
+      <div className="flex flex-wrap items-center justify-center gap-1">
         <TextButton
-          className={ACTION}
+          className={cn(ACTION, "px-3")}
           onClick={handleNewWorld}
           ref={newWorldButton}
-          tone={latest === undefined ? "accent" : "outline"}
+          tone={latest === undefined ? "accent" : "quiet"}
         >
           <Plus aria-hidden="true" size={17} />
           New world
         </TextButton>
 
-        <TextButton className={ACTION} onClick={handleAllWorlds} ref={worldsButton} tone="outline">
+        <TextButton className={cn(ACTION, "px-3")} onClick={handleAllWorlds} ref={worldsButton} tone="quiet">
           <Layers3 aria-hidden="true" size={17} />
           All worlds
         </TextButton>

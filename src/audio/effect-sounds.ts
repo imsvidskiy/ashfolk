@@ -1,3 +1,4 @@
+import { MILLISECONDS_PER_SECOND } from "../shared/math.ts";
 import type { SimulationEffect, TornadoEffect } from "../simulation/effects.ts";
 import { tornadoDuration, tornadoPositionAt } from "../simulation/powers/tornado-path.ts";
 import type { HearingView } from "./hearing-view.ts";
@@ -7,10 +8,11 @@ import type { PlayOptions, SoundEngine, SoundLoop, SoundPoint } from "./sound-en
 const SPEED_OF_SOUND = 343;
 const LONGEST_THUNDER_DELAY = 4;
 const CLOSE_LIGHTNING = 250;
+const STRIKE_SPACING_SECONDS = 0.6;
 
 const TORNADO_FADE_SECONDS = 1.5;
 
-const METEOR_WHISTLE_SECONDS = 2.4;
+const METEOR_APPROACH_SECONDS = 2.4;
 
 const BLESSINGS = {
   abundance: SOUNDS.blessingAbundance,
@@ -28,7 +30,9 @@ interface Twister {
 export class EffectSounds {
   readonly #engine: SoundEngine;
   readonly #groundPoint: (x: number, z: number) => SoundPoint;
+  readonly #lifetime = new AbortController();
   readonly #twisters: Twister[] = [];
+  #nextPlayerStrike = 0;
 
   constructor(engine: SoundEngine, groundPoint: (x: number, z: number) => SoundPoint) {
     this.#engine = engine;
@@ -51,9 +55,12 @@ export class EffectSounds {
         return;
       case "ember":
         return;
-      case "nuclear-cloud":
       case "explosion":
-        this.#play(effect.isInWater ? SOUNDS.explosionWater : SOUNDS.explosion, effect.x, effect.z);
+        if (effect.isInWater) {
+          this.#play(SOUNDS.explosionWater, effect.x, effect.z);
+        } else {
+          this.#play(effect.isMeteor ? SOUNDS.meteorImpact : SOUNDS.explosion, effect.x, effect.z);
+        }
 
         return;
       case "lightning":
@@ -62,9 +69,9 @@ export class EffectSounds {
         return;
       case "meteor":
         this.#play(SOUNDS.meteorFall, effect.toX, effect.toZ, {
-          delaySeconds: Math.max(0, effect.durationSeconds - METEOR_WHISTLE_SECONDS),
+          delaySeconds: Math.max(0, effect.durationSeconds - METEOR_APPROACH_SECONDS),
+          offsetSeconds: Math.max(0, METEOR_APPROACH_SECONDS - effect.durationSeconds),
         });
-        this.#play(SOUNDS.meteorImpact, effect.toX, effect.toZ, { delaySeconds: effect.durationSeconds });
 
         return;
       case "splash":
@@ -99,12 +106,24 @@ export class EffectSounds {
   }
 
   dispose(): void {
+    this.#lifetime.abort();
+
     for (const twister of this.#twisters.splice(0)) {
       twister.loop.stop(TORNADO_FADE_SECONDS);
     }
   }
 
   #hearLightning(x: number, z: number, isNatural: boolean, view: HearingView): void {
+    if (!isNatural) {
+      const now = performance.now() / MILLISECONDS_PER_SECOND;
+
+      if (now < this.#nextPlayerStrike) {
+        return;
+      }
+
+      this.#nextPlayerStrike = now + STRIKE_SPACING_SECONDS;
+    }
+
     const distance = Math.hypot(x - view.focusX, z - view.focusZ);
 
     if (!isNatural || distance < CLOSE_LIGHTNING) {
@@ -132,6 +151,6 @@ export class EffectSounds {
   }
 
   #play(sound: SoundDefinition, x: number, z: number, options: PlayOptions = {}): void {
-    this.#engine.play(sound, this.#groundPoint(x, z), options);
+    this.#engine.play(sound, this.#groundPoint(x, z), { ...options, signal: this.#lifetime.signal });
   }
 }

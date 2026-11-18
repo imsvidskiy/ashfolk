@@ -1,9 +1,9 @@
-import { Heart, Star } from "lucide-react";
-import { type ReactNode, useEffect } from "react";
+import { Heart } from "lucide-react";
+import type { ReactNode } from "react";
 import { cn } from "../../design/cn.ts";
 import { FOCUS_RING } from "../../design/styles.ts";
-import { formatStars, REPOSITORY_ADDRESS, requestStars, useStarStore } from "./github-stars.ts";
 
+const REPOSITORY_ADDRESS = "https://github.com/imsvidskiy/ashfolk";
 const SUPPORT_ADDRESS = "https://whop.com/ashfolk/ashfolk-supporter/";
 
 const LINK_CLASS = cn(
@@ -39,33 +39,12 @@ function ExternalLink({ children, className, href, label }: ExternalLinkProps) {
   );
 }
 
-function StarCount() {
-  const stars = useStarStore((state) => {
-    return state.stars;
-  });
-
-  if (stars === null) {
-    return null;
-  }
-
-  return (
-    <span className="inline-flex items-center gap-1 tabular-nums">
-      <Star aria-hidden="true" size={14} />
-
-      {formatStars(stars)}
-    </span>
-  );
-}
-
 export function ProjectLinks({ className, hasPrivacy = true }: ProjectLinksProps) {
-  useEffect(requestStars, []);
-
   return (
     <nav aria-label="Project" className={cn("flex flex-wrap items-center justify-center gap-1", className)}>
       <ExternalLink href={REPOSITORY_ADDRESS} label="Ashfolk on GitHub">
         <GitHubMark />
         GitHub
-        <StarCount />
       </ExternalLink>
 
       <ExternalLink

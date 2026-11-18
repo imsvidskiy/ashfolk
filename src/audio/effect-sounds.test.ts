@@ -1,6 +1,7 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import type { TornadoEffect } from "../simulation/effects.ts";
 import { tornadoDuration } from "../simulation/powers/tornado-path.ts";
+import { createPowerSimulation } from "../simulation/testing/test-powers.ts";
 import { EffectSounds } from "./effect-sounds.ts";
 import { SOUNDS } from "./sound-catalog.ts";
 import { createTestSoundEngine, flatGroundPoint } from "./testing/test-sound-engine.ts";
@@ -37,29 +38,115 @@ describe("effect sounds", () => {
     effects.hear({ isNatural: true, kind: "lightning", x: 100, z: 0 }, VIEW);
     effects.hear({ isNatural: false, kind: "lightning", x: place.x, z: place.z }, VIEW);
 
+    const signal = play.mock.calls[0]?.[2]?.signal;
+
+    expect(signal?.aborted).toBe(false);
     expect(play.mock.calls).toEqual([
-      [SOUNDS.thunderFar, place, { delaySeconds: 2 }],
-      [SOUNDS.thunderFar, { x: 3000, y: 0, z: 0 }, { delaySeconds: 4 }],
-      [SOUNDS.lightning, { x: 100, y: 0, z: 0 }, {}],
-      [SOUNDS.lightning, place, {}],
+      [SOUNDS.thunderFar, place, { delaySeconds: 2, signal }],
+      [SOUNDS.thunderFar, { x: 3000, y: 0, z: 0 }, { delaySeconds: 4, signal }],
+      [SOUNDS.lightning, { x: 100, y: 0, z: 0 }, { signal }],
+      [SOUNDS.lightning, place, { signal }],
     ]);
+
+    effects.dispose();
+
+    expect(signal?.aborted).toBe(true);
   });
 
-  it("plays one local impact when the bomb reaches land or water", () => {
+  it("keeps a dense series of player bolts to one nearby thunder voice at a time", () => {
     const { engine, play } = createTestSoundEngine();
     const effects = new EffectSounds(engine, flatGroundPoint);
-    const site = { dropId: 15, radius: 150, surfaceY: 0, x: 5, z: 10 };
-    const point = { x: 5, y: 0, z: 10 };
+    const clock = vi.spyOn(performance, "now").mockReturnValue(2000);
+    const bolt = { isNatural: false, kind: "lightning", x: 5, z: 7 } as const;
 
-    effects.hear({ ...site, durationSeconds: 2.8, kind: "nuclear-fall" }, VIEW);
-    expect(play).not.toHaveBeenCalled();
+    effects.hear(bolt, VIEW);
+    effects.hear(bolt, VIEW);
+    clock.mockReturnValue(2420);
+    effects.hear(bolt, VIEW);
+    clock.mockReturnValue(2840);
+    effects.hear(bolt, VIEW);
 
-    effects.hear({ ...site, isInWater: false, kind: "nuclear-cloud" }, VIEW);
-    effects.hear({ ...site, isInWater: true, kind: "nuclear-cloud" }, VIEW);
-    expect(play.mock.calls).toEqual([
-      [SOUNDS.explosion, point, {}],
-      [SOUNDS.explosionWater, point, {}],
-    ]);
+    expect(
+      play.mock.calls.map(([sound]) => {
+        return sound;
+      })
+    ).toEqual([SOUNDS.lightning, SOUNDS.lightning]);
+    clock.mockRestore();
+  });
+
+  it("plays the end of a short meteor approach and one impact at contact", () => {
+    const { engine, play } = createTestSoundEngine();
+    const effects = new EffectSounds(engine, flatGroundPoint);
+
+    effects.hear(
+      { durationSeconds: 0.6, fromX: 10, fromY: 3000, fromZ: 25, kind: "meteor", radius: 50, toX: 90, toZ: 15 },
+      VIEW
+    );
+
+    expect(play.mock.calls[0]?.[0]).toBe(SOUNDS.meteorFall);
+    expect(play.mock.calls[0]?.[2]?.offsetSeconds).toBeCloseTo(1.8);
+    expect(play).toHaveBeenCalledOnce();
+
+    const blast = { isInWater: false, kind: "explosion", power: 1, radius: 50, surfaceY: 0, x: 90, z: 15 } as const;
+
+    effects.hear(blast, VIEW);
+    expect(play.mock.calls[1]?.[0]).toBe(SOUNDS.explosion);
+    effects.hear({ ...blast, isMeteor: true }, VIEW);
+    effects.hear({ ...blast, isInWater: true, isMeteor: true }, VIEW);
+    expect(
+      play.mock.calls.slice(2).map(([sound]) => {
+        return sound;
+      })
+    ).toEqual([SOUNDS.meteorImpact, SOUNDS.explosionWater]);
+    effects.dispose();
+    expect(play.mock.calls[0]?.[2]?.signal?.aborted).toBe(true);
+  });
+
+  it.each([true, false])("plays each shower hit on the worker frame that lands it at 16×, paused=%s", (isPaused) => {
+    const simulation = createPowerSimulation();
+    const { engine, play } = createTestSoundEngine();
+    const effects = new EffectSounds(engine, flatGroundPoint);
+
+    simulation.setSpeed(16);
+    simulation.setPaused(isPaused);
+    simulation.usePower("meteor-shower", 0, 0, { count: 3, radius: 80 });
+
+    let hits = 0;
+    let flights = 0;
+
+    for (let index = 0; index < 34; index += 1) {
+      const next = simulation.advance(0.1);
+
+      play.mockClear();
+
+      for (const event of next.effects) {
+        effects.hear(event, VIEW);
+      }
+
+      const landed = next.effects.filter((event) => {
+        return event.kind === "explosion" && event.isMeteor;
+      });
+      const approaches = next.effects.filter((event) => {
+        return event.kind === "meteor";
+      });
+
+      hits += landed.length;
+      flights += approaches.length;
+      expect(
+        play.mock.calls.filter(([sound]) => {
+          return sound === SOUNDS.meteorImpact;
+        })
+      ).toHaveLength(landed.length);
+      expect(
+        play.mock.calls.filter(([sound]) => {
+          return sound === SOUNDS.meteorFall;
+        })
+      ).toHaveLength(approaches.length);
+    }
+
+    expect(hits).toBe(3);
+    expect(flights).toBe(3);
+    effects.dispose();
   });
 
   it("holds the tornado roar in place while the game is paused", () => {

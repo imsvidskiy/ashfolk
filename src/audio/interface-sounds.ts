@@ -8,9 +8,11 @@ const CLICK_RANK = 1;
 const CLICKABLE = [
   "a[href]",
   "button",
+  "summary",
   '[role="button"]',
   '[role="checkbox"]',
   '[role="menuitem"]',
+  '[role="menuitemcheckbox"]',
   '[role="option"]',
   '[role="radio"]',
   '[role="switch"]',
@@ -31,6 +33,14 @@ function clickSound(target: EventTarget | null): SoundDefinition | null {
 
   if (clicked === null || clicked.matches(':disabled, [aria-disabled="true"]')) {
     return null;
+  }
+
+  if (clicked.matches("summary") && clicked.parentElement instanceof HTMLDetailsElement) {
+    return clicked.parentElement.open ? SOUNDS.uiClose : SOUNDS.uiOpen;
+  }
+
+  if (clicked.matches('[role="switch"], [role="checkbox"], [role="menuitemcheckbox"]')) {
+    return clicked.getAttribute("aria-checked") === "true" ? SOUNDS.uiToggleOff : SOUNDS.uiToggleOn;
   }
 
   return clicked.getAttribute("role") === "tab" ? SOUNDS.uiTab : SOUNDS.uiClick;
@@ -59,8 +69,28 @@ export class InterfaceSounds {
       { capture: true, signal: abort.signal }
     );
 
+    root.addEventListener(
+      "change",
+      (event) => {
+        const { target } = event;
+
+        if (target instanceof HTMLSelectElement && !target.disabled) {
+          this.request(SOUNDS.uiTab, CLICK_RANK);
+        } else if (
+          target instanceof HTMLInputElement &&
+          target.type === "checkbox" &&
+          !target.disabled &&
+          target.getAttribute("aria-hidden") !== "true"
+        ) {
+          this.request(target.checked ? SOUNDS.uiToggleOn : SOUNDS.uiToggleOff, CLICK_RANK);
+        }
+      },
+      { capture: true, signal: abort.signal }
+    );
+
     return () => {
       abort.abort();
+      this.#pending = null;
     };
   }
 

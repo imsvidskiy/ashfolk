@@ -152,14 +152,14 @@ export function createBlackHoleDust(
 
   for (let stream = 0; stream < STREAMS; stream += 1) {
     const heading = rotation + ((stream + hashToUnit(stream, 1) * 0.54) * FULL_TURN) / STREAMS;
-    const reach = 1.22 + hashToUnit(stream, 2) * 0.47;
+    const reach = 0.83 + hashToUnit(stream, 2) * 0.17;
     const turn = 0.79 + hashToUnit(stream, 3) * 0.5;
 
     for (let piece = 0; piece < PER_STREAM; piece += 1) {
       const index = stream * PER_STREAM + piece;
       const seed = hashToUnit(index, 4);
       const angle = heading + (hashToUnit(index, 5) - 0.5) * 0.35;
-      const radius = reach * (0.87 + hashToUnit(index, 6) * 0.28);
+      const radius = reach * (0.86 + hashToUnit(index, 6) * 0.14);
       const x = effect.x + Math.cos(angle) * radius * effect.radius;
       const z = effect.z + Math.sin(angle) * radius * effect.radius;
 
@@ -195,7 +195,7 @@ export function createBlackHoleDust(
   geometry.setAttribute("dustRoute", new InstancedBufferAttribute(routes, 4));
   geometry.setAttribute("dustGround", new InstancedBufferAttribute(profiles, 4));
   geometry.setAttribute("dustGrain", new InstancedBufferAttribute(grains, 4));
-  geometry.boundingSphere = new Sphere(new Vector3(), Math.hypot(2.1, highestGround + 0.85));
+  geometry.boundingSphere = new Sphere(new Vector3(), Math.hypot(1.25, highestGround + 0.85));
   geometry.instanceCount = count;
 
   const mesh = new Mesh(geometry, dustMaterial(age, strength));

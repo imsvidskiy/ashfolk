@@ -11,6 +11,7 @@ export interface Emitter {
   readonly key: string;
   readonly volume: number;
   readonly x: number;
+  readonly y?: number;
   readonly z: number;
 }
 
@@ -102,7 +103,8 @@ export class EmitterLoops {
   }
 
   #place(emitter: Emitter): void {
-    const point = this.#groundPoint(emitter.x, emitter.z);
+    const point =
+      emitter.y === undefined ? this.#groundPoint(emitter.x, emitter.z) : { x: emitter.x, y: emitter.y, z: emitter.z };
     const playing = this.#loops.get(emitter.key);
 
     if (playing !== undefined) {

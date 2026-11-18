@@ -58,7 +58,8 @@ describe("black hole dust", () => {
     expect(crossings).toBeGreaterThan(0);
     expect(spray).toBeGreaterThan(0);
     expect(spray).toBeLessThan(geometry.instanceCount);
-    expect(farthest).toBeGreaterThan(HOLE.radius * 1.4);
+    expect(farthest).toBeGreaterThan(HOLE.radius * 0.9);
+    expect(farthest).toBeLessThanOrEqual(HOLE.radius);
     expect(mesh.position.toArray()).toEqual([HOLE.x, HOLE.surfaceY, HOLE.z]);
 
     mesh.geometry.dispose();

@@ -5,6 +5,7 @@ import type { VolcanoView } from "../simulation/powers/volcanoes.ts";
 import type { WorldGrid } from "../world/world-grid.ts";
 import { AmbienceMixer, sampleAmbience } from "./ambience.ts";
 import { ambienceLevels } from "./ambience-levels.ts";
+import { DisasterSounds } from "./disaster-sounds.ts";
 import { EffectSounds } from "./effect-sounds.ts";
 import { type Emitter, EmitterLoops, groupCells } from "./emitters.ts";
 import type { HearingView } from "./hearing-view.ts";
@@ -13,6 +14,7 @@ import { PowerSounds } from "./power-sounds.ts";
 import { SOUNDS } from "./sound-catalog.ts";
 import type { SoundEngine, SoundPoint } from "./sound-engine.ts";
 import { StorySounds } from "./story-sounds.ts";
+import { waterfallEmitter } from "./waterfall-emitter.ts";
 import { WorkSounds } from "./work-sounds.ts";
 
 const AMBIENCE_INTERVAL_SECONDS = 0.5;
@@ -136,8 +138,10 @@ export function connectWorldSounds(engine: WorldEngine, sound: SoundEngine): () 
 
   const ambience = new AmbienceMixer(sound);
   const effects = new EffectSounds(sound, groundPoint);
+  const disasters = new DisasterSounds(sound);
   const fires = new EmitterLoops(sound, SOUNDS.fire, groundPoint);
   const lavas = new EmitterLoops(sound, SOUNDS.lava, groundPoint);
+  const waterfalls = new EmitterLoops(sound, SOUNDS.waterfall, groundPoint);
   const music = new MusicPlayer(sound, secondsNow());
   const powers = new PowerSounds(sound, groundPoint);
   const story = new StorySounds(sound, groundPoint);
@@ -172,6 +176,8 @@ export function connectWorldSounds(engine: WorldEngine, sound: SoundEngine): () 
       knownLava = next.lava;
     }
 
+    disasters.hear(next, view);
+
     for (const effect of next.effects) {
       effects.hear(effect, view);
     }
@@ -204,7 +210,7 @@ export function connectWorldSounds(engine: WorldEngine, sound: SoundEngine): () 
       return;
     }
 
-    if (!hasPreloaded) {
+    if (!hasPreloaded && sound.isAudible) {
       hasPreloaded = true;
       sound.preload(PRELOADED);
     }
@@ -226,12 +232,19 @@ export function connectWorldSounds(engine: WorldEngine, sound: SoundEngine): () 
       return;
     }
 
+    const view = viewOf();
+
     nextAmbienceAt = now + AMBIENCE_INTERVAL_SECONDS;
+    const canHearWaterfalls = sound.isAudible && sound.levels.ambience > 0 && sound.levels.master > 0;
+
+    waterfalls.update(canHearWaterfalls ? waterfallEmitter(mirror.water.waterfalls, view) : []);
     ambience.update(
-      ambienceLevels(sampleAmbience(mirror, { ...viewOf(), calendar: frame.calendar, weather: frame.weather })),
+      ambienceLevels(sampleAmbience(mirror, { ...view, calendar: frame.calendar, weather: frame.weather })),
       now
     );
   }
+
+  disasters.hear(frame, viewOf(), true);
 
   for (const effect of frame.effects) {
     if (effect.kind === "tornado" && effect.elapsedSeconds !== undefined) {
@@ -250,7 +263,9 @@ export function connectWorldSounds(engine: WorldEngine, sound: SoundEngine): () 
     unsubscribeCommands();
     unsubscribeRenders();
     ambience.dispose();
+    waterfalls.dispose();
     effects.dispose();
+    disasters.dispose();
     fires.dispose();
     lavas.dispose();
     music.dispose();

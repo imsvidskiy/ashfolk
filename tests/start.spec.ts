@@ -2,9 +2,45 @@ import { expect, test as it, test } from "@playwright/test";
 import { WORLD_RISING_TIMEOUT } from "./launch.ts";
 
 const SQUARE_WORLD_ADDRESS = /name=Old\+Ford.*shape=square/u;
+const FILM_FILE = /\.mp4(?:\?|$)/u;
+const POSTER_FILE = /\.webp$/u;
+
 const HUD_CHUNK = /\/assets\/hud-[\w-]+\.js$/u;
 
 test.describe("the start screen", () => {
+  it("keeps a poster when the film is unavailable and follows the reduced motion preference", async ({ page }) => {
+    let videoRequests = 0;
+
+    await page.emulateMedia({ reducedMotion: "reduce" });
+    await page.route(FILM_FILE, (route) => {
+      videoRequests += 1;
+
+      return route.abort();
+    });
+    await page.goto("/");
+
+    const film = page.locator("video");
+
+    await expect(page.getByRole("button", { name: "Grow the island" })).toBeEnabled();
+    await expect(film).toHaveCount(0);
+    expect(videoRequests).toBe(0);
+
+    await page.emulateMedia({ reducedMotion: "no-preference" });
+
+    await expect(film).toHaveJSProperty("autoplay", true);
+    await expect(film).toHaveJSProperty("muted", true);
+    await expect(film).toHaveJSProperty("controls", false);
+    await expect(film).toHaveAttribute("poster", POSTER_FILE);
+
+    const poster = await film.getAttribute("poster");
+
+    await page.emulateMedia({ reducedMotion: "reduce" });
+
+    await expect(film).toHaveCount(0);
+    await expect(page.locator(`img[src="${poster}"][alt=""]`)).toBeVisible();
+    await expect(page.getByRole("button", { name: "Grow the island" })).toBeEnabled();
+  });
+
   it("names a square world and grows it", async ({ page }) => {
     await page.goto("/");
 

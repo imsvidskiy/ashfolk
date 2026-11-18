@@ -6,7 +6,6 @@ import { cn } from "../../design/cn.ts";
 import { MENU_ITEM, MENU_POPUP } from "../../design/styles.ts";
 import { useInstall } from "../install/install-store.ts";
 import { useSidePanel } from "../journal/use-side-panel.ts";
-import { useSoundToggle } from "../sound/use-sound-toggle.ts";
 import { useInterfaceStore } from "./interface-store.ts";
 import { useFullscreen } from "./use-fullscreen.ts";
 
@@ -81,16 +80,6 @@ function InstallEntry() {
   );
 }
 
-function SoundEntry() {
-  const { icon: Icon, label, toggleSound } = useSoundToggle();
-
-  return (
-    <MenuEntry icon={<Icon aria-hidden="true" size={17} />} onClick={toggleSound}>
-      {label}
-    </MenuEntry>
-  );
-}
-
 export function CompactMenu() {
   const { handleJournal, isMapOpen, openSettings, toggleMap } = useCompactMenu();
 
@@ -123,8 +112,6 @@ export function CompactMenu() {
 
             <Menu.Group>
               <Menu.GroupLabel className={GROUP_LABEL}>Game controls</Menu.GroupLabel>
-
-              <SoundEntry />
 
               <MenuEntry icon={<Settings aria-hidden="true" size={17} />} onClick={openSettings}>
                 Settings
