@@ -50,6 +50,7 @@ function createEffects() {
   const view = new EffectView({
     axes: new CameraAxes(),
     createRing,
+    outline: textures.outline,
     sceneColor: new Texture(),
     shake: ignore,
     surface: mirror,
