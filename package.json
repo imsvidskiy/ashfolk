@@ -1,7 +1,7 @@
 {
   "$schema": "https://www.schemastore.org/package.json",
   "name": "ashfolk",
-  "version": "0.12.1",
+  "version": "0.12.2",
   "private": true,
   "description": "God simulator with tribes on a floating island",
   "type": "module",
