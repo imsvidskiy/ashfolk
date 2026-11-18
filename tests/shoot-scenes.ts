@@ -75,10 +75,33 @@ async function waitForFrames(page: Page, count: number): Promise<void> {
   }, count);
 }
 
-async function castPower(page: Page, cast: PowerCast): Promise<void> {
-  await page.evaluate((command) => {
-    Reflect.get(window, "ashfolk").session.send({ ...command, type: "usePower" });
+async function castPower(page: Page, cast: PowerCast, ticks?: number): Promise<void> {
+  const start = await page.evaluate((command) => {
+    const { session } = Reflect.get(window, "ashfolk");
+
+    session.send({ ...command, type: "usePower" });
+
+    return Number(session.frame.tick);
   }, cast);
+
+  if (ticks === undefined) {
+    return;
+  }
+
+  await page.evaluate(() => {
+    Reflect.get(window, "ashfolk").session.send({ isPaused: false, type: "setPaused" });
+  });
+  await page.waitForFunction((target) => {
+    const { session } = Reflect.get(window, "ashfolk");
+
+    if (session.frame.tick < target) {
+      return false;
+    }
+
+    session.send({ isPaused: true, type: "setPaused" });
+
+    return true;
+  }, start + ticks);
 }
 
 async function adapterName(browser: Browser, baseUrl: string): Promise<string> {
@@ -121,15 +144,16 @@ async function shoot(browser: Browser, address: string, scene: Scene, device: De
       });
     await expect(page.getByRole("status")).toBeHidden({ timeout: WORLD_RISING_TIMEOUT });
 
+    await waitForFrames(page, SETTLE_FRAMES);
+
     if (scene.cast !== undefined) {
-      await castPower(page, scene.cast);
+      await castPower(page, scene.cast, scene.ticksAfterCast);
     }
 
     if (scene.seconds !== undefined) {
       await page.waitForTimeout(scene.seconds * 1000);
     }
 
-    await waitForFrames(page, SETTLE_FRAMES);
     await page.screenshot({ path });
   } finally {
     await context.close();

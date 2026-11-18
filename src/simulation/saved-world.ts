@@ -1,9 +1,11 @@
 import { z } from "zod";
 import { ERAS } from "../content/eras.ts";
 import { PlantSpecies } from "../content/plants.ts";
+import { POWERS } from "../content/powers.ts";
 import type { WorldRequest } from "../generation/generation-options.ts";
 import { ISLAND_SHAPES } from "../world/island-shape.ts";
 import type { InitialWorld } from "./frame.ts";
+import { BOMB_FALL_TICKS } from "./powers/falling-bombs.ts";
 import type { Simulation, SimulationSnapshot } from "./simulation.ts";
 import type { WorldState } from "./world/world-state.ts";
 
@@ -87,6 +89,7 @@ const snapshotShapeSchema = z.looseObject({
   blackHoles: z
     .array(
       z.object({
+        capturedPeople: z.number().int().nonnegative().optional(),
         effect: z.object({
           durationSeconds: z.number().positive(),
           kind: z.literal("black-hole"),
@@ -103,6 +106,18 @@ const snapshotShapeSchema = z.looseObject({
   calendar: z.looseObject({ day: z.number(), daySeconds: z.number().positive(), daysPerSeason: z.number().positive() }),
   chronicle: z.looseObject({ entries: z.array(z.unknown()), nextId: z.number() }),
   embers: z.array(z.unknown()),
+  fallingBombs: z
+    .array(
+      z.object({
+        dropId: z.number().int().positive(),
+        radius: POWERS.nuclear.parameters.shape.radius.unwrap(),
+        remainingTicks: z.number().int().positive().max(BOMB_FALL_TICKS),
+        surfaceY: z.number(),
+        x: z.number(),
+        z: z.number(),
+      })
+    )
+    .optional(),
   fauna: z.looseObject({ animals: z.array(z.looseObject({ id: z.number() })), herds: z.array(z.unknown()) }),
   fire: z.object({ burning: z.instanceof(Int32Array), heated: z.instanceof(Int32Array) }),
   hazards: z.array(z.unknown()),

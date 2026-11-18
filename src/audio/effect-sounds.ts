@@ -49,6 +49,7 @@ export class EffectSounds {
         return;
       case "ember":
         return;
+      case "nuclear-cloud":
       case "explosion":
         this.#play(effect.isInWater ? SOUNDS.explosionWater : SOUNDS.explosion, effect.x, effect.z);
 

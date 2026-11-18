@@ -20,7 +20,20 @@ export interface BlackHoleEffect {
   z: number;
 }
 
+export interface NuclearFallEffect {
+  dropId: number;
+  durationSeconds: number;
+  elapsedSeconds?: number;
+  kind: "nuclear-fall";
+  radius: number;
+  surfaceY: number;
+  x: number;
+  z: number;
+}
+
 export interface NuclearCloudEffect {
+  dropId: number;
+  isInWater: boolean;
   kind: "nuclear-cloud";
   radius: number;
   surfaceY: number;
@@ -98,6 +111,7 @@ export type SimulationEffect =
   | ArrowEffect
   | BlackHoleEffect
   | BlessingEffect
+  | NuclearFallEffect
   | NuclearCloudEffect
   | EarthquakeEffect
   | EmberEffect

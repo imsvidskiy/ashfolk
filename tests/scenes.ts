@@ -10,9 +10,19 @@ export interface Scene {
   readonly name: string;
   readonly query: string;
   readonly seconds?: number;
+  readonly ticksAfterCast?: number;
 }
 
+const FOREST_TARGET = { x: 1480, z: 1360 };
+const FOREST_VIEW = "seed=7&shape=round&quality=high&paused=1&hours=11&camera=1480,1360,980,0.62,0.6";
+const FALLING_BOMB = { ...FOREST_TARGET, parameters: { radius: 160 }, powerId: "nuclear" };
+const FOREST_WELL = { ...FOREST_TARGET, parameters: { duration: 6, radius: 180 }, powerId: "black-hole" };
+
 export const SCENES: readonly Scene[] = [
+  { cast: FALLING_BOMB, name: "bomb-in-flight", query: FOREST_VIEW, ticksAfterCast: 18 },
+  { cast: FALLING_BOMB, name: "bomb-impact", query: FOREST_VIEW, ticksAfterCast: 43 },
+  { cast: FOREST_WELL, name: "black-hole-in-forest", query: FOREST_VIEW, ticksAfterCast: 28 },
+  { cast: FOREST_WELL, name: "black-hole-basin", query: FOREST_VIEW, ticksAfterCast: 65 },
   {
     cast: { parameters: { duration: 20, radius: 150 }, powerId: "black-hole", x: 0, z: 0 },
     name: "black-hole-over-lake",

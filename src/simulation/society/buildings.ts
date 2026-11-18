@@ -27,7 +27,7 @@ const ESCAPES_PER_SECOND = 0.0004;
 const GUSTY_WIND = 30;
 const ESCAPED_FIRE_INTENSITY = 0.3;
 
-type BuildingLossReason = "abandoned" | "burnt" | "destroyed" | "replaced";
+type BuildingLossReason = "abandoned" | "burnt" | "destroyed" | "replaced" | "swallowed";
 
 export type BuildingIncidentKind = "campfireEscaped" | "caughtFire";
 

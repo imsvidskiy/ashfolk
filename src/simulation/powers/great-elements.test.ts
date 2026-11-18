@@ -85,22 +85,6 @@ describe("greater elements", () => {
     ).toBe(3);
   });
 
-  it("carves a crater beneath the nuclear cloud", () => {
-    const simulation = createPowerSimulation();
-    const before = simulation.world.heightAt(0, 0);
-
-    simulation.usePower("nuclear", 0, 0, { radius: 100 });
-
-    expect(simulation.advance(0).effects).toContainEqual({
-      kind: "nuclear-cloud",
-      radius: 100,
-      surfaceY: before,
-      x: 0,
-      z: 0,
-    });
-    expect(simulation.world.heightAt(0, 0)).toBeLessThan(before - 20);
-  });
-
   it("draws nearby people inward on the game clock and releases the world afterwards", () => {
     const simulation = createPowerSimulation();
 
@@ -133,34 +117,31 @@ describe("greater elements", () => {
     expect(simulation.isBusy).toBe(false);
   });
 
-  it("keeps gravity on the same side of a blocked cell and out of the player's hand", () => {
+  it("draws people across blocked ground and leaves a held person alone", () => {
     const simulation = createPowerSimulation();
 
     simulation.usePower("tribe", 0, 0, { people: 3 });
 
-    const [person] = simulation.society.people;
+    const [free, held] = simulation.society.people;
     const { world } = simulation;
 
-    person.mover.x = 1;
-    person.mover.z = 5;
+    free.mover.x = 1;
+    free.mover.z = 5;
     world.occupancy[world.grid.cellAt(15, 5)] = SPRING_GROUND;
-    simulation.usePower("black-hole", 48, 5, { radius: 350 });
-
-    simulation.services.blackHoles.update(0.1, simulation.services);
-
-    expect(person.mover.x).toBe(1);
-
-    simulation.grab({ id: person.id, kind: "person" });
+    simulation.grab({ id: held.id, kind: "person" });
     simulation.carry(48, 5);
 
-    const { x, z } = person.mover;
-    const { health } = person;
+    const { x, z } = held.mover;
+    const { health } = held;
 
-    simulation.services.blackHoles.update(0.1, simulation.services);
+    simulation.usePower("black-hole", 48, 5, { radius: 100 });
+    simulation.runTicks(15);
 
-    expect(person.mover.x).toBe(x);
-    expect(person.mover.z).toBe(z);
-    expect(person.health).toBe(health);
+    expect(free.causeOfDeath).toBe("gravity");
+    expect(simulation.society.people).not.toContain(free);
+    expect(held.mover.x).toBe(x);
+    expect(held.mover.z).toBe(z);
+    expect(held.health).toBe(health);
   });
 
   it("saves a paused sky and resumes each well and funnel at its original age", () => {

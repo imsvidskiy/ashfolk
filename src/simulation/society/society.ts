@@ -103,6 +103,10 @@ function deathAccountOf(person: Person, tribe: Tribe, cause: DeathCause, account
   };
 }
 
+function hasRemains(person: Person): boolean {
+  return person.isAlive || (person.causeOfDeath !== "gravity" && person.deathSeconds <= CORPSE_SECONDS);
+}
+
 function settleFall(person: Person): void {
   if (person.pose === "fall" && person.deathSeconds > FALL_SECONDS) {
     person.pose = "dead";
@@ -346,7 +350,7 @@ export class SocietySystem {
     }
   }
 
-  kill(person: Person, cause: DeathCause, account: DeathAccount | null = null): void {
+  kill(person: Person, cause: DeathCause, account: DeathAccount | "collective" | null = null): void {
     if (!person.isAlive) {
       return;
     }
@@ -366,12 +370,14 @@ export class SocietySystem {
     dropJob(tribe, person);
     tribe.deaths += 1;
     tribe.memberCount -= 1;
-    this.#dependencies.chronicle.record({
-      ...deathAccountOf(person, tribe, cause, account),
-      tribeId: tribe.id,
-      x: person.mover.x,
-      z: person.mover.z,
-    });
+    if (account !== "collective") {
+      this.#dependencies.chronicle.record({
+        ...deathAccountOf(person, tribe, cause, account),
+        tribeId: tribe.id,
+        x: person.mover.x,
+        z: person.mover.z,
+      });
+    }
 
     if (tribe.memberCount === 0) {
       this.#dissolve(tribe);
@@ -581,7 +587,7 @@ export class SocietySystem {
 
   #removeRemains(): void {
     const hasExpired = this.#people.some((person) => {
-      return !person.isAlive && person.deathSeconds > CORPSE_SECONDS;
+      return !hasRemains(person);
     });
 
     if (!hasExpired) {
@@ -591,7 +597,7 @@ export class SocietySystem {
     const remaining: Person[] = [];
 
     for (const person of this.#people) {
-      if (person.isAlive || person.deathSeconds <= CORPSE_SECONDS) {
+      if (hasRemains(person)) {
         remaining.push(person);
 
         continue;

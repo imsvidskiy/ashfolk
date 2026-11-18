@@ -1,7 +1,13 @@
 import { Texture } from "three/webgpu";
 import { describe, expect, it, vi } from "vitest";
 import { ignore } from "../../shared/ignore.ts";
-import type { ArrowEffect, EmberEffect, ExplosionEffect, LightningEffect } from "../../simulation/effects.ts";
+import type {
+  ArrowEffect,
+  EmberEffect,
+  ExplosionEffect,
+  LightningEffect,
+  NuclearFallEffect,
+} from "../../simulation/effects.ts";
 import { TerrainTextures } from "../terrain/terrain-textures.ts";
 import { createVegetatedMirror } from "../testing/vegetated-mirror.ts";
 import { CameraAxes } from "./billboards.ts";
@@ -12,6 +18,16 @@ const LIGHTNING: LightningEffect = { isNatural: true, kind: "lightning", x: 0, z
 const EXPLOSION: ExplosionEffect = { isInWater: false, kind: "explosion", power: 2, radius: 30, x: 0, z: 0 };
 const ARROW: ArrowEffect = { durationSeconds: 1, fromX: 0, fromZ: 0, isHit: true, kind: "arrow", toX: 38, toZ: 0 };
 const EMBER: EmberEffect = { durationSeconds: 3, fromX: 0, fromZ: 0, kind: "ember", toX: 40, toZ: 0 };
+
+const BOMB: NuclearFallEffect = {
+  dropId: 1,
+  durationSeconds: 2.8,
+  kind: "nuclear-fall",
+  radius: 160,
+  surfaceY: 25,
+  x: 14,
+  z: 57,
+};
 
 function createEffects() {
   const mirror = createVegetatedMirror();
@@ -24,11 +40,9 @@ function createEffects() {
   const view = new EffectView({
     axes: new CameraAxes(),
     createRing,
-    heightAt: () => {
-      return 0;
-    },
     sceneColor: new Texture(),
     shake: ignore,
+    surface: mirror,
   });
 
   return { createRing, view };
@@ -106,6 +120,90 @@ describe("effect view", () => {
     runFor(view, 5, 0);
 
     expect(view.group.children.length).toBe(meshesBefore + 1);
+  });
+
+  it("restores a descending bomb at its saved height and holds it there when paused", () => {
+    const { view } = createEffects();
+    const initialMeshes = view.group.children.length;
+
+    view.add([BOMB]);
+
+    const body = view.group.children[initialMeshes];
+    const start = body.position.clone();
+
+    view.update(0.1, 1.5);
+
+    expect(body.position.y).toBeLessThan(start.y);
+    expect(Math.abs(body.position.x - BOMB.x)).toBeLessThan(Math.abs(start.x - BOMB.x));
+
+    const inFlight = body.position.clone();
+
+    view.update(10, 0);
+    expect(body.position.equals(inFlight)).toBe(true);
+
+    const saved = createEffects();
+
+    saved.view.add([{ ...BOMB, elapsedSeconds: 1.5 }]);
+    expect(saved.view.group.children[initialMeshes].position.equals(inFlight)).toBe(true);
+
+    saved.view.update(0.1, 1.31);
+    expect(saved.view.group.children.length).toBe(initialMeshes);
+    expect(saved.view.flash).toBe(0);
+    saved.view.dispose();
+    view.dispose();
+  });
+
+  it("retires only the arriving bomb when two share an impact point", () => {
+    const { view } = createEffects();
+    const initialMeshes = view.group.children.length;
+
+    view.add([BOMB, { ...BOMB, dropId: 2 }]);
+
+    const first = view.group.children[initialMeshes];
+    const second = view.group.children[initialMeshes + 2];
+
+    view.add([{ ...BOMB, dropId: 2, isInWater: false, kind: "nuclear-cloud" }]);
+
+    expect(first.parent).toBe(view.group);
+    expect(second.parent).toBeNull();
+
+    view.add([{ ...BOMB, isInWater: false, kind: "nuclear-cloud" }]);
+    expect(first.parent).toBeNull();
+    view.dispose();
+  });
+
+  it("expands a shock front across the water and raises a cloud above the impact", () => {
+    const { createRing, view } = createEffects();
+    const initialMeshes = view.group.children.length;
+
+    view.add([{ dropId: 1, isInWater: true, kind: "nuclear-cloud", radius: 100, surfaceY: 20, x: 0, z: 0 }]);
+
+    const cloud = view.group.children[initialMeshes + 1];
+    const [result] = createRing.mock.results;
+
+    if (result.type !== "return") {
+      throw new Error("The shock front needs a ground ring");
+    }
+
+    const ring = result.value;
+    const show = vi.spyOn(ring, "show");
+
+    view.update(0.2, 0);
+    const initialHeight = cloud.position.y;
+
+    view.update(1, 0);
+
+    expect(cloud.position.y).toBeGreaterThan(initialHeight);
+    expect(show.mock.calls[1][2]).toBeGreaterThan(show.mock.calls[0][2]);
+    expect(show.mock.calls[1][5]).toBe(20);
+
+    view.update(1.1, 0);
+    expect(ring.mesh.visible).toBe(false);
+    expect(cloud.visible).toBe(true);
+
+    view.update(7, 0);
+    expect(view.group.children.length).toBe(initialMeshes);
+    view.dispose();
   });
 
   it("lands an ember on the game clock", () => {

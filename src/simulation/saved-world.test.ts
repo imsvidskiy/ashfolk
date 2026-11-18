@@ -106,7 +106,12 @@ describe("loading a world whose land grows differently now", () => {
 describe("saved worlds", () => {
   it("loads earlier version-one snapshots without active sky powers", () => {
     const state = savedState(generateSimulation());
-    const { blackHoles: _blackHoles, tornadoes: _tornadoes, ...simulation } = state.simulation;
+    const {
+      blackHoles: _blackHoles,
+      fallingBombs: _fallingBombs,
+      tornadoes: _tornadoes,
+      ...simulation
+    } = state.simulation;
     const legacy = savedWorldStateSchema.parse({ ...state, simulation });
     const loaded = generateSimulation();
 
