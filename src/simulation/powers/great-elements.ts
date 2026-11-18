@@ -1,8 +1,8 @@
 import type { PowerParameters } from "../../content/powers.ts";
 import { FULL_TURN } from "../../shared/math.ts";
 import type { Waypoint } from "../agents/navigation.ts";
-import { strikeLightning } from "./catastrophes.ts";
 import { meteorPower } from "./element-powers.ts";
+import { strikeLightning } from "./lightning.ts";
 import { APPLIED, type PowerOutcome, type PowerServices, type PowerTarget, refused } from "./power-handler.ts";
 
 const BOLT_INTERVAL = 0.42;

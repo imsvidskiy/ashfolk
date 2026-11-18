@@ -26,6 +26,7 @@ import {
 } from "./structure-parts.ts";
 
 const GLOWING_EMBERS = { part: GLOW_PART, slot: MaterialSlot.Ember } as const;
+
 const GRANARY_STILT_RING = 1.2;
 const GRANARY_STILT_HEIGHT = 0.5;
 const GRANARY_CAP_HEIGHT = 0.09;
@@ -39,16 +40,20 @@ const GRANARY_ROOF_RADIUS = 2;
 const GRANARY_BAND_BOTTOM = 1.66;
 const GRANARY_BAND_TOP = 1.8;
 const GRANARY_WALL_TAPER = 0.04;
-const FLOOR_BOTTOM = GRANARY_STILT_HEIGHT + GRANARY_CAP_HEIGHT;
-const FLOOR_TOP = FLOOR_BOTTOM + GRANARY_FLOOR_HEIGHT;
+const GRANARY_FLOOR_BOTTOM = GRANARY_STILT_HEIGHT + GRANARY_CAP_HEIGHT;
+const GRANARY_FLOOR_TOP = GRANARY_FLOOR_BOTTOM + GRANARY_FLOOR_HEIGHT;
+
 const KILN_TOP = 2.3;
+
 const SHED_HALF_WIDTH = 1.95;
 const SHED_HALF_DEPTH = 1.35;
 const SHED_BACK_HEIGHT = 2.1;
 const SHED_FRONT_HEIGHT = 2.6;
 const SHED_ROOF_THICKNESS = 0.22;
+
 const SHAFT_BASE = 0.4;
 const SHAFT_TOP = 2.1;
+
 const FORGE_HALF_WIDTH = 1.85;
 const FORGE_HALF_DEPTH = 1.45;
 const FORGE_POST_HEIGHT = 2.55;
@@ -74,7 +79,7 @@ function addDrum(
 }
 
 function granaryWallRadius(height: number): number {
-  const bottom = FLOOR_TOP - 0.01;
+  const bottom = GRANARY_FLOOR_TOP - 0.01;
 
   return GRANARY_WALL_RADIUS - (GRANARY_WALL_TAPER * (height - bottom)) / (GRANARY_WALL_TOP - bottom);
 }
@@ -122,14 +127,17 @@ function addGranaryStore(context: StructureContext): void {
       radiusBottom: GRANARY_FLOOR_RADIUS,
       radiusTop: GRANARY_FLOOR_RADIUS,
     }),
-    { style: { buildOrder: 0.2, slot: MaterialSlot.Wood }, transform: transformOf({ position: [0, FLOOR_BOTTOM, 0] }) }
+    {
+      style: { buildOrder: 0.2, slot: MaterialSlot.Wood },
+      transform: transformOf({ position: [0, GRANARY_FLOOR_BOTTOM, 0] }),
+    }
   );
 
   context.builder.add(
     loft(
       [
-        { radiusX: 0, radiusZ: 0, y: FLOOR_TOP - 0.01 },
-        { radiusX: GRANARY_WALL_RADIUS, radiusZ: GRANARY_WALL_RADIUS, y: FLOOR_TOP - 0.01 },
+        { radiusX: 0, radiusZ: 0, y: GRANARY_FLOOR_TOP - 0.01 },
+        { radiusX: GRANARY_WALL_RADIUS, radiusZ: GRANARY_WALL_RADIUS, y: GRANARY_FLOOR_TOP - 0.01 },
         {
           radiusX: GRANARY_WALL_RADIUS - GRANARY_WALL_TAPER,
           radiusZ: GRANARY_WALL_RADIUS - GRANARY_WALL_TAPER,
@@ -141,8 +149,8 @@ function addGranaryStore(context: StructureContext): void {
     ),
     {
       style: {
-        buildOrder: rising(0.28, 0.58, FLOOR_TOP, GRANARY_WALL_TOP),
-        shade: upwardShade(0.72, FLOOR_TOP, GRANARY_WALL_TOP),
+        buildOrder: rising(0.28, 0.58, GRANARY_FLOOR_TOP, GRANARY_WALL_TOP),
+        shade: upwardShade(0.72, GRANARY_FLOOR_TOP, GRANARY_WALL_TOP),
         slot: MaterialSlot.Daub,
       },
     }
@@ -161,7 +169,7 @@ function addGranaryStore(context: StructureContext): void {
     }
   );
 
-  addBlock(context, [0.62, 0.85, 0.12], [0, FLOOR_TOP + 0.43, GRANARY_WALL_RADIUS - 0.03], {
+  addBlock(context, [0.62, 0.85, 0.12], [0, GRANARY_FLOOR_TOP + 0.43, GRANARY_WALL_RADIUS - 0.03], {
     buildOrder: 0.55,
     slot: MaterialSlot.Ash,
   });
@@ -191,7 +199,7 @@ function addGranaryLadder(context: StructureContext): void {
   const top = 1.62;
 
   for (const side of [-1, 1]) {
-    addLog(context, [side * 0.24, 0, foot], [side * 0.24, FLOOR_TOP - 0.03, top], 0.035, {
+    addLog(context, [side * 0.24, 0, foot], [side * 0.24, GRANARY_FLOOR_TOP - 0.03, top], 0.035, {
       buildOrder: 0.4,
       slot: MaterialSlot.Wood,
     });
@@ -200,7 +208,7 @@ function addGranaryLadder(context: StructureContext): void {
   for (let rung = 1; rung <= 2; rung += 1) {
     const amount = rung / 3;
 
-    const y = (FLOOR_TOP - 0.03) * amount;
+    const y = (GRANARY_FLOOR_TOP - 0.03) * amount;
     const z = foot + (top - foot) * amount;
 
     addLog(context, [-0.26, y, z], [0.26, y, z], 0.025, { buildOrder: 0.42, slot: MaterialSlot.Wood });

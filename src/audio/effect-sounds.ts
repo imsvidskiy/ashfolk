@@ -1,5 +1,5 @@
 import type { SimulationEffect, TornadoEffect } from "../simulation/effects.ts";
-import { tornadoDuration, tornadoPositionAt } from "../simulation/powers/tornadoes.ts";
+import { tornadoDuration, tornadoPositionAt } from "../simulation/powers/tornado-path.ts";
 import type { HearingView } from "./hearing-view.ts";
 import { SOUNDS, type SoundDefinition } from "./sound-catalog.ts";
 import type { PlayOptions, SoundEngine, SoundLoop, SoundPoint } from "./sound-engine.ts";

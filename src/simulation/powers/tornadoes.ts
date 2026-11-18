@@ -1,13 +1,13 @@
 import { isShrubSpecies, isTreeSpecies } from "../../content/plants.ts";
-import { FULL_TURN, hashToUnit, lerp } from "../../shared/math.ts";
+import { FULL_TURN, hashToUnit } from "../../shared/math.ts";
 import type { Mover } from "../agents/movement.ts";
 import type { Waypoint } from "../agents/navigation.ts";
 import type { EffectLog } from "../effects.ts";
 import { cellsInArea } from "../world/terrain-editing.ts";
 import type { WorldState } from "../world/world-state.ts";
 import type { PowerServices } from "./power-handler.ts";
+import { TORNADO_STEP_SECONDS, tornadoDuration, tornadoPositionAt } from "./tornado-path.ts";
 
-const STEP_SECONDS = 0.5;
 const CALM_WIND = 2;
 const BASE_SPEED = 9;
 const SPEED_PER_WIND = 0.45;
@@ -42,28 +42,12 @@ export interface Tornado {
   readonly strength: number;
 }
 
-export function tornadoDuration(path: readonly number[]): number {
-  return (path.length / 2 - 1) * STEP_SECONDS;
-}
-
-export function tornadoPositionAt(path: readonly number[], age: number): Waypoint {
-  const steps = path.length / 2 - 1;
-  const progress = Math.min(age / STEP_SECONDS, steps);
-  const step = Math.min(Math.floor(progress), steps - 1);
-  const share = progress - step;
-
-  return {
-    x: lerp(path[step * 2], path[step * 2 + 2], share),
-    z: lerp(path[step * 2 + 1], path[step * 2 + 3], share),
-  };
-}
-
 function chartPath(twister: Twister, services: PowerServices): number[] {
   const { environment, random } = services;
 
-  const steps = Math.max(1, Math.round(twister.lifetime / STEP_SECONDS));
+  const steps = Math.max(1, Math.round(twister.lifetime / TORNADO_STEP_SECONDS));
   const wind = windHeading(services);
-  const stride = (BASE_SPEED + environment.windSpeed * SPEED_PER_WIND) * STEP_SECONDS;
+  const stride = (BASE_SPEED + environment.windSpeed * SPEED_PER_WIND) * TORNADO_STEP_SECONDS;
 
   const path = [twister.x, twister.z];
 

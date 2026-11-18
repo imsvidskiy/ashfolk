@@ -26,41 +26,47 @@ import { isNearLake, NO_CELL } from "./drainage.ts";
 const SHORTEST_RIVER = 220;
 const SOURCE_MARGIN = 30;
 const MOUTH_MARGIN = 60;
-const FIRST_OFFSET = 90;
+const FIRST_SITE_OFFSET = 90;
 const CANDIDATE_SPACING = 8;
 const AXIS_TURNS: readonly number[] = [0, 0.3, -0.3];
-const WINDOW = 300;
+const SITE_SEARCH_WINDOW = 300;
 const SPACING_ALONG = 500;
 const SPACING_ELSEWHERE = 300;
 const WIDENING_STEP = 10;
+
 const LINK_STEP = 40;
 const LINK_WINDOW = 200;
 const LINK_SPACING = 120;
+
 const BANK_SEARCH = 60;
 const BANK_SEARCH_STEP = 2.5;
 const ON_RIVER = 18;
 const TANGENT_REACH = 10;
 const MARCH_STEP = 0.5;
 const WIDEST_HALF_SPAN = 30;
-const LANDING = 3;
-const APPROACH = 7;
+const LANDING_LENGTH = 3;
+const APPROACH_LENGTH = 7;
+
 const WATERFALL_CLEARANCE = 120;
 const LAKE_CLEARANCE = 30;
 const COAST_CLEARANCE = 45;
+
 const LOG_LONGEST_WATER = 22;
 const LOG_PREFERRED_WATER = 16;
 const LOG_STEEPEST_PITCH = 0.25;
 const LOG_SINK = 0.25;
 const LOG_CLEARANCE = -0.45;
 const LOG_DEEP_FORD = 2.6;
+
 const FORD_DEEPEST = 4;
 const FORD_LONGEST_WATER = 42;
 const FORD_HIGHEST_BANK = 1.4;
 const FORD_LEVEL_SPREAD = 1;
+
 const SITE_SALT = 63.1;
 const SEED_SALT = 17.9;
 
-const HOMELINESS: Readonly<Record<number, number>> = {
+const CROSSING_BIOME_SCORES: Readonly<Record<number, number>> = {
   [Biome.Alpine]: 0,
   [Biome.Beach]: 0.5,
   [Biome.Desert]: 0.1,
@@ -353,7 +359,7 @@ function surveyBank(survey: CrossingSurvey, axis: Axis, side: number, edge: numb
   let approachSlope = 0;
   let support = Number.NEGATIVE_INFINITY;
 
-  for (let distance = edge; distance <= edge + LANDING + APPROACH; distance += MARCH_STEP) {
+  for (let distance = edge; distance <= edge + LANDING_LENGTH + APPROACH_LENGTH; distance += MARCH_STEP) {
     const x = center.x + directionX * distance;
     const z = center.z + directionZ * distance;
     const cell = grid.cellAt(x, z);
@@ -368,7 +374,7 @@ function surveyBank(survey: CrossingSurvey, axis: Axis, side: number, edge: numb
 
     const slope = slopeAt(terrain.height, grid, cell);
 
-    if (distance <= edge + LANDING + LOG_ROOT_BEHIND) {
+    if (distance <= edge + LANDING_LENGTH + LOG_ROOT_BEHIND) {
       landingSlope = Math.max(landingSlope, slope);
       support = Math.max(support, sampleHeight(terrain.height, grid, x, z));
     }
@@ -381,7 +387,7 @@ function surveyBank(survey: CrossingSurvey, axis: Axis, side: number, edge: numb
   }
 
   return {
-    cell: grid.cellAt(center.x + directionX * (edge + LANDING), center.z + directionZ * (edge + LANDING)),
+    cell: grid.cellAt(center.x + directionX * (edge + LANDING_LENGTH), center.z + directionZ * (edge + LANDING_LENGTH)),
     edge,
     rise: sampleHeight(terrain.height, grid, center.x + directionX * edge, center.z + directionZ * edge) - level,
     slope: approachSlope,
@@ -431,7 +437,7 @@ function waterSpanOf(site: Site): number {
 }
 
 function walkwayLength(site: Site): number {
-  return waterSpanOf(site) + 2 * LANDING;
+  return waterSpanOf(site) + 2 * LANDING_LENGTH;
 }
 
 function logPitch(site: Site): number {
@@ -442,7 +448,7 @@ function lowestLogBottomOverWater(site: Site): number {
   const startBottom = site.start.support - LOG_SINK;
   const endBottom = site.end.support - LOG_SINK;
 
-  const share = LANDING / walkwayLength(site);
+  const share = LANDING_LENGTH / walkwayLength(site);
 
   return Math.min(lerp(startBottom, endBottom, share), lerp(endBottom, startBottom, share));
 }
@@ -485,8 +491,8 @@ function siteSeed(grid: WorldGrid, center: Point): number {
 function buildCrossing(site: Site, kind: CrossingKind, id: number, seed: number): Crossing {
   const { center, directionX, directionZ } = site;
 
-  const startReach = site.start.edge + LANDING;
-  const endReach = site.end.edge + LANDING;
+  const startReach = site.start.edge + LANDING_LENGTH;
+  const endReach = site.end.edge + LANDING_LENGTH;
 
   const span = {
     endX: center.x + directionX * endReach,
@@ -510,12 +516,12 @@ function buildCrossing(site: Site, kind: CrossingKind, id: number, seed: number)
   };
 }
 
-function homeliness(survey: CrossingSurvey, cell: number): number {
+function bankTerrainScore(survey: CrossingSurvey, cell: number): number {
   const { terrain } = survey;
 
-  const swampy = terrain.ground[cell] === Ground.Swamp ? -0.4 : 0;
+  const swampPenalty = terrain.ground[cell] === Ground.Swamp ? -0.4 : 0;
 
-  return HOMELINESS[terrain.biome[cell]] + swampy;
+  return CROSSING_BIOME_SCORES[terrain.biome[cell]] + swampPenalty;
 }
 
 function siteScore(survey: CrossingSurvey, site: Site, kind: CrossingKind): number {
@@ -523,11 +529,11 @@ function siteScore(survey: CrossingSurvey, site: Site, kind: CrossingKind): numb
   const { center } = site;
 
   const flatness = -(site.start.slope + site.end.slope) * 3;
-  const home = homeliness(survey, site.start.cell) + homeliness(survey, site.end.cell);
+  const bankScore = bankTerrainScore(survey, site.start.cell) + bankTerrainScore(survey, site.end.cell);
   const fit = kind === "ford" ? -site.deepest * 0.35 : -waterSpanOf(site) * 0.04;
   const jitter = hashToUnit(grid.columnAt(center.x), grid.rowAt(center.z), SITE_SALT) * 0.5;
 
-  return flatness + home + fit + jitter;
+  return flatness + bankScore + fit + jitter;
 }
 
 function wadingAlong(survey: CrossingSurvey, crossing: Crossing): Wading | null {
@@ -645,20 +651,20 @@ class CrossingPlanner {
     let cursor =
       widening > SOURCE_MARGIN
         ? widening + SPACING_ALONG
-        : SOURCE_MARGIN + Math.min(FIRST_OFFSET, (usableEnd - SOURCE_MARGIN) * 0.3);
+        : SOURCE_MARGIN + Math.min(FIRST_SITE_OFFSET, (usableEnd - SOURCE_MARGIN) * 0.3);
     let anchorIndex = 0;
 
     while (cursor <= usableEnd) {
       const nextAnchor = anchorIndex < anchors.length ? anchors[anchorIndex] : Number.POSITIVE_INFINITY;
 
-      if (nextAnchor <= cursor + WINDOW) {
+      if (nextAnchor <= cursor + SITE_SEARCH_WINDOW) {
         cursor = Math.max(cursor, nextAnchor + SPACING_ALONG);
         anchorIndex += 1;
 
         continue;
       }
 
-      const last = Math.min(cursor + WINDOW, usableEnd, nextAnchor - SPACING_ALONG);
+      const last = Math.min(cursor + SITE_SEARCH_WINDOW, usableEnd, nextAnchor - SPACING_ALONG);
       const best = this.#bestIn(course, {
         connects: () => {
           return true;
@@ -670,7 +676,7 @@ class CrossingPlanner {
       });
 
       if (best === null) {
-        cursor += WINDOW;
+        cursor += SITE_SEARCH_WINDOW;
 
         continue;
       }

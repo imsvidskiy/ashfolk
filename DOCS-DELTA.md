@@ -2,7 +2,7 @@
 
 The architecture plan describes main after [#243](https://github.com/imsvidskiy/ashfolk/pull/243).
 The roadmap records progress through 0.10.0. Later edits corrected names and added a recording list for the
-0.12 powers. This inventory follows the shipped game through 0.12.2.
+0.12 powers. This inventory follows the shipped game through 0.12.3.
 
 ## Changes since the plan
 
@@ -14,6 +14,7 @@ The roadmap records progress through 0.10.0. Later edits corrected names and add
 | 0.12.0 | The first-island guide follows an actual tribe through feeding and reading its chronicle. Settings remembers the last section and groups world rules. Painted game icons follow the three-spruce reference. Meteor, lightning and tornado gained selectable variants. Active black holes and tornadoes became saveable. |
 | 0.12.1 | Bombs fall on the simulation clock, freeze on pause and survive saving in midair. The drop and impact share an ID. A black hole pulls inhabitants across obstacles, clears buildings and vegetation in stages and lowers the terrain once on collapse. |
 | 0.12.2 | The worker advances the clock up to each queued command before applying speed and pause changes. Stationary powers on pause need only the ordinary heartbeat. RPC failure tracking lasts for the lifetime of each request. A damaged or temporarily unreadable save enters recovery before generation or autosave can replace it. The title screen shows the island film beside its launch controls. The HUD groups world views and game controls. Settings keeps project links and the build version visible while the section scrolls. |
+| 0.12.3 | The model catalog dispatches to dedicated builders for dwellings, the storehouse and camp landmarks. Catastrophe simulation, visual effects, title-screen navigation and settings sections have separate modules. |
 
 ## Implementation details to carry forward
 
@@ -30,6 +31,14 @@ The roadmap records progress through 0.10.0. Later edits corrected names and add
   The camera, targeting cursor, water strikes and funnels use the visible surface. Mines show mineral seams at high and low detail.
   [Ground rendering](src/rendering/terrain/ground-albedo.ts) · [Effects](src/rendering/effects/effect-view.ts) ·
   [Mine models](src/models/structures/mine-model.ts)
+- **Code layout in 0.12.3.** The [building catalog](src/models/structures/building-models.ts) dispatches model
+  builders. [Lightning](src/simulation/powers/lightning.ts), [blasts](src/simulation/powers/explosions.ts) and
+  [earthquakes](src/simulation/powers/earthquakes.ts) own their simulation rules and share monument damage
+  reporting. Rendering effects use the [effect context](src/rendering/effects/effect-context.ts).
+  The [world menu](src/app/world-menu.tsx) handles island choices and the
+  [settings sections](src/features/settings/settings-sections.tsx) handle the tab list and compact selector.
+- **Deployment.** Since 0.12.2 the application uses the Cloudflare CLI and Vite plugin. The worker and client assets
+  build together under the Cloudflare output directory. [Worker configuration](cloudflare.config.ts)
 - **Browser state.** World metadata and simulation state occupy separate IndexedDB object stores. Only a confirmed
   absence in both stores is an empty slot. Explicitly starting a fresh island can bypass storage. Notices expire
   with the world session even while the interface is hidden. [Save database](src/features/saves/save-database.ts) ·

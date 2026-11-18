@@ -2,8 +2,8 @@ import type { Mesh } from "three/webgpu";
 import type { Color } from "../../content/grounds.ts";
 import { FULL_TURN, hashToUnit, lerp, smoothstep } from "../../shared/math.ts";
 import type { TornadoEffect } from "../../simulation/effects.ts";
-import { tornadoDuration, tornadoPositionAt } from "../../simulation/powers/tornadoes.ts";
-import type { ActiveEffect, EffectContext, SpriteSinks } from "./transient-effects.ts";
+import { tornadoDuration, tornadoPositionAt } from "../../simulation/powers/tornado-path.ts";
+import type { ActiveEffect, EffectSurface, SpriteSinks } from "./effect-context.ts";
 
 const GROWING_SECONDS = 1.5;
 const FADING_SECONDS = 2.5;
@@ -60,15 +60,15 @@ interface Base {
 export class TornadoFunnel implements ActiveEffect {
   readonly isOnGameClock = true;
   readonly meshes: readonly Mesh[] = [];
-  readonly #context: EffectContext;
+  readonly #surface: Pick<EffectSurface, "surfaceAt" | "isWaterAt">;
   readonly #duration: number;
   readonly #effect: TornadoEffect;
   readonly #height: number;
   #age = 0;
 
-  constructor(context: EffectContext, effect: TornadoEffect) {
+  constructor(surface: Pick<EffectSurface, "surfaceAt" | "isWaterAt">, effect: TornadoEffect) {
     this.#age = effect.elapsedSeconds === undefined ? 0 : effect.elapsedSeconds;
-    this.#context = context;
+    this.#surface = surface;
     this.#effect = effect;
     this.#duration = tornadoDuration(effect.path);
     this.#height = effect.radius * HEIGHT_PER_RADIUS;
@@ -80,8 +80,8 @@ export class TornadoFunnel implements ActiveEffect {
     const { x, z } = tornadoPositionAt(this.#effect.path, this.#age);
 
     const base = {
-      ground: this.#context.surface.surfaceAt(x, z),
-      isInWater: this.#context.surface.isWaterAt(x, z),
+      ground: this.#surface.surfaceAt(x, z),
+      isInWater: this.#surface.isWaterAt(x, z),
       presence:
         smoothstep(0, GROWING_SECONDS, this.#age) *
         (1 - smoothstep(this.#duration, this.#duration + FADING_SECONDS, this.#age)),

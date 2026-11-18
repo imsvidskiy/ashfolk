@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { TornadoEffect } from "../simulation/effects.ts";
-import { tornadoDuration } from "../simulation/powers/tornadoes.ts";
+import { tornadoDuration } from "../simulation/powers/tornado-path.ts";
 import { EffectSounds } from "./effect-sounds.ts";
 import { SOUNDS } from "./sound-catalog.ts";
 import { createTestSoundEngine, flatGroundPoint } from "./testing/test-sound-engine.ts";

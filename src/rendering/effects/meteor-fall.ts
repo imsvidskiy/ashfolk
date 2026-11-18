@@ -1,7 +1,7 @@
 import { type Mesh, Vector3 } from "three/webgpu";
 import { hashToUnit, smoothstep } from "../../shared/math.ts";
 import type { MeteorEffect } from "../../simulation/effects.ts";
-import type { ActiveEffect, EffectContext, SpriteSinks } from "./transient-effects.ts";
+import type { ActiveEffect, EffectContext, EffectSurface, SpriteSinks } from "./effect-context.ts";
 
 const ENTRY_SPEED = 0.45;
 const TRAIL_SPACING = 0.6;
@@ -12,6 +12,10 @@ const SPARKS_PER_SECOND = 70;
 const GRAVITY = 30;
 const SHEATH_LENGTH = 3.2;
 const TUMBLE = new Vector3(1.3, 0.8, 0.45);
+
+interface MeteorContext extends Pick<EffectContext, "light" | "meshes"> {
+  readonly surface: Pick<EffectSurface, "surfaceAt">;
+}
 
 interface TrailPuff {
   readonly age: number;
@@ -29,7 +33,7 @@ interface Spark {
 
 export class MeteorFall implements ActiveEffect {
   readonly meshes: readonly Mesh[];
-  readonly #context: EffectContext;
+  readonly #context: MeteorContext;
   readonly #direction: Vector3;
   readonly #effect: MeteorEffect;
   readonly #from: Vector3;
@@ -47,7 +51,7 @@ export class MeteorFall implements ActiveEffect {
   #sparkDebt = 0;
   #traveled = 0;
 
-  constructor(context: EffectContext, effect: MeteorEffect) {
+  constructor(context: MeteorContext, effect: MeteorEffect) {
     this.#context = context;
     this.#effect = effect;
     this.#from = new Vector3(effect.fromX, effect.fromY, effect.fromZ);

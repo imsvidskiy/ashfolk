@@ -9,8 +9,8 @@ import {
 } from "three/webgpu";
 import { FULL_TURN, saturate, smoothstep } from "../../shared/math.ts";
 import { type NuclearFallEffect, SKY_ENTRY_HEIGHT } from "../../simulation/effects.ts";
+import type { ActiveEffect, GroundRings, SpriteSinks } from "./effect-context.ts";
 import type { GroundRing } from "./ground-ring.ts";
-import type { ActiveEffect, EffectContext, SpriteSinks } from "./transient-effects.ts";
 
 const TRAIL_STEPS = 21;
 const TRAIL_SECONDS = 0.48;
@@ -74,19 +74,19 @@ export class NuclearFall implements ActiveEffect {
   readonly isOnGameClock = true;
   readonly meshes: readonly Mesh[];
   readonly #body: Mesh<LatheGeometry, MeshStandardNodeMaterial>;
-  readonly #context: EffectContext;
+  readonly #rings: GroundRings;
   readonly #effect: NuclearFallEffect;
   readonly #ring: GroundRing;
   readonly #size: number;
   #age: number;
 
-  constructor(context: EffectContext, effect: NuclearFallEffect) {
+  constructor(rings: GroundRings, effect: NuclearFallEffect) {
     this.dropId = effect.dropId;
-    this.#context = context;
+    this.#rings = rings;
     this.#effect = effect;
     this.#age = effect.elapsedSeconds === undefined ? 0 : effect.elapsedSeconds;
     this.#size = Math.max(7, effect.radius * 0.14);
-    this.#ring = context.takeRing();
+    this.#ring = rings.takeRing();
     this.#body = new Mesh(createBodyGeometry(), new MeshStandardNodeMaterial({ roughness: 0.67, vertexColors: true }));
     this.#body.name = "Falling bomb";
     this.#body.castShadow = true;
@@ -130,7 +130,7 @@ export class NuclearFall implements ActiveEffect {
   }
 
   finish(): void {
-    this.#context.releaseRing(this.#ring);
+    this.#rings.releaseRing(this.#ring);
     this.#body.material.dispose();
     this.#body.geometry.dispose();
   }

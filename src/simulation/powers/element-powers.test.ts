@@ -1,7 +1,10 @@
 import { describe, expect, it } from "vitest";
+import { WorldGrid } from "../../world/world-grid.ts";
 import type { LightningEffect } from "../effects.ts";
-import { brush, createPowerSimulation } from "../testing/test-powers.ts";
-import { centerCell, floodCells, livingCount } from "../testing/test-world.ts";
+import type { Simulation } from "../simulation.ts";
+import { brush, createPowerSimulation, settle } from "../testing/test-powers.ts";
+import { createValleySimulation, VALLEY_DIMENSIONS } from "../testing/test-simulation.ts";
+import { centerCell, floodCells, livingCount, monumentAround } from "../testing/test-world.ts";
 
 describe("elements", () => {
   it("rain puts out fire and soaks the ground", () => {
@@ -119,5 +122,41 @@ describe("elements", () => {
     expect(simulation.chronicle.takeEntries()).toContainEqual(
       expect.objectContaining({ text: expect.stringContaining("crushed in an earthquake") })
     );
+  });
+});
+
+describe("determinism", () => {
+  function replay(): Simulation {
+    const simulation = createValleySimulation({
+      monuments: [monumentAround(new WorldGrid(VALLEY_DIMENSIONS), 200, 150, 20)],
+    });
+
+    simulation.populate();
+    simulation.execute({
+      parameters: { craterRadius: 140, fallTime: 0.5 },
+      powerId: "meteor",
+      type: "usePower",
+      x: 0,
+      z: -200,
+    });
+    simulation.execute({ parameters: {}, powerId: "explosion", type: "usePower", x: 150, z: 150 });
+    simulation.execute({ parameters: {}, powerId: "earthquake", type: "usePower", x: -100, z: 0 });
+    settle(simulation, 8);
+
+    simulation.runTicks(1200);
+
+    return simulation;
+  }
+
+  it("replays the same catastrophes the same way", () => {
+    const first = replay();
+    const second = replay();
+
+    expect(second.world.terrain.height).toEqual(first.world.terrain.height);
+    expect(second.world.terrain.waterSurface).toEqual(first.world.terrain.waterSurface);
+    expect(second.world.fields.scorch).toEqual(first.world.fields.scorch);
+    expect(second.world.vegetation.exportBuffers()).toEqual(first.world.vegetation.exportBuffers());
+    expect(second.world.monumentConditions).toEqual(first.world.monumentConditions);
+    expect(second.advance(0).people).toEqual(first.advance(0).people);
   });
 });

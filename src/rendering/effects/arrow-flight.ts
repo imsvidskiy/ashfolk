@@ -1,7 +1,7 @@
 import { ConeGeometry, CylinderGeometry, Mesh, MeshStandardNodeMaterial, Vector3 } from "three/webgpu";
 import { saturate } from "../../shared/math.ts";
 import type { ArrowEffect } from "../../simulation/effects.ts";
-import type { ActiveEffect, EffectContext } from "./transient-effects.ts";
+import type { ActiveEffect, EffectSurface } from "./effect-context.ts";
 
 const SHAFT_LENGTH = 1.1;
 const SHAFT_RADIUS = 0.035;
@@ -44,14 +44,10 @@ export class ArrowFlight implements ActiveEffect {
   readonly #toward = new Vector3();
   #age = 0;
 
-  constructor(context: EffectContext, effect: ArrowEffect, parts: ArrowParts) {
+  constructor(surface: Pick<EffectSurface, "heightAt">, effect: ArrowEffect, parts: ArrowParts) {
     this.#effect = effect;
-    this.#from = new Vector3(
-      effect.fromX,
-      context.surface.heightAt(effect.fromX, effect.fromZ) + RELEASE_HEIGHT,
-      effect.fromZ
-    );
-    this.#to = new Vector3(effect.toX, context.surface.heightAt(effect.toX, effect.toZ) + TARGET_HEIGHT, effect.toZ);
+    this.#from = new Vector3(effect.fromX, surface.heightAt(effect.fromX, effect.fromZ) + RELEASE_HEIGHT, effect.fromZ);
+    this.#to = new Vector3(effect.toX, surface.heightAt(effect.toX, effect.toZ) + TARGET_HEIGHT, effect.toZ);
     this.#arc = this.#from.distanceTo(this.#to) * ARC_PER_METER;
 
     const shaft = new Mesh(parts.shaft, parts.shaftMaterial);

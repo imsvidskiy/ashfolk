@@ -10,11 +10,13 @@ const POND_STRETCH = 1.7;
 const POND_STRETCH_SKEW = 1.6;
 const POND_AXIS_SWING = Math.PI;
 const POND_WAIST = { deepest: 0.34, narrowest: 0.5, shift: 0.8, widest: 0.9 } as const;
+
 const POND_LOBES = 2;
 const POND_SPIT_FEATURE = POND_LOBES + 1;
 const POND_SHAPE_FEATURE = POND_LOBES + 2;
 const POND_LOBE = { least: -0.1, most: 0.32, narrowest: 0.25, widest: 0.6 } as const;
 const POND_SPIT = { chance: 0.5, deepest: 0.42, least: 0.22, narrowest: 0.16, widest: 0.28 } as const;
+
 const POND_RIPPLES = [
   { most: 0.045, order: 3 },
   { most: 0.035, order: 4 },
@@ -22,6 +24,7 @@ const POND_RIPPLES = [
   { most: 0.025, order: 6 },
   { most: 0.02, order: 7 },
 ] as const;
+
 const POND_CALM_OUTLET = { from: 0.3, to: 0.9 } as const;
 const POND_NARROWEST_SWELL = 0.4;
 const POND_EXTENT_SAMPLES = 256;
@@ -29,7 +32,9 @@ const POND_EXTENT_SLACK = 1.02;
 const POND_FEATURE_SALT = 59.3;
 const POND_DRAWS_PER_FEATURE = 7;
 const REMEMBERED_POND_SHAPES = 1024;
+
 const SHALLOWEST_WATER = 0.05;
+
 const NARROWEST_RIVER = 3.5;
 const WIDEST_RIVER = 26;
 const RIVER_WIDTH_PER_STRENGTH = 3.4;
