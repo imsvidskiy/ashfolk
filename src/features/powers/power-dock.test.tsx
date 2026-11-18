@@ -94,7 +94,7 @@ describe("power dock", () => {
       await page.viewport(320, 568);
 
       const screen = await render(
-        <div className="p-safe">
+        <div className="p-safe font-mono">
           <PowerDock />
         </div>
       );
