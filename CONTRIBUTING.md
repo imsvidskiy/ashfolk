@@ -98,20 +98,20 @@ Commits follow
   body only for what the diff can't show.
 - No trailers such as `Co-authored-by:` or `Signed-off-by:`.
 
-| Scope | Area |
-| --- | --- |
-| `generation` | Relief, erosion, hydrology, climate, and the first vegetation |
-| `simulation` | The simulation worker: nature, agents, society, powers |
-| `models` | Procedural people, animals, plants, and buildings |
-| `rendering` | The WebGPU renderer: terrain, water, sky, effects |
-| `audio` | The sound engine, ambience, cues and music |
-| `world` | The world grid, water and terrain sampling shared by the simulation and the renderer |
-| `game` | The main thread: worker connection, camera, input, tools |
-| `ui` | The HUD, its features, and the design system |
-| `app` | The app shell and engine launch |
-| `e2e` | Playwright smoke tests |
-| `release` | The version bump that prepares a release |
-| `deps` | Dependency updates, which Dependabot opens |
+| Scope        | Area                                                                                 |
+| ------------ | ------------------------------------------------------------------------------------ |
+| `generation` | Relief, erosion, hydrology, climate, and the first vegetation                        |
+| `simulation` | The simulation worker: nature, agents, society, powers                               |
+| `models`     | Procedural people, animals, plants, and buildings                                    |
+| `rendering`  | The WebGPU renderer: terrain, water, sky, effects                                    |
+| `audio`      | The sound engine, ambience, cues and music                                           |
+| `world`      | The world grid, water and terrain sampling shared by the simulation and the renderer |
+| `game`       | The main thread: worker connection, camera, input, tools                             |
+| `ui`         | The HUD, its features, and the design system                                         |
+| `app`        | The app shell and engine launch                                                      |
+| `e2e`        | Playwright smoke tests                                                               |
+| `release`    | The version bump that prepares a release                                             |
+| `deps`       | Dependency updates, which Dependabot opens                                           |
 
 ## Pull requests
 

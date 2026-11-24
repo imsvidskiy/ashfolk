@@ -1,6 +1,23 @@
+# Dependencies
+
 node_modules
-test-results
-.vitest
-.DS_Store
+
+# Build
+
 .cloudflare
+
+# Cache
+
+.vitest
+
+# Tests
+
+test-results
+
+# Agents
+
 .claude/worktrees
+
+# System
+
+.DS_Store
