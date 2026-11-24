@@ -5,10 +5,10 @@ vulnerability, and what is in scope.
 
 ## Supported versions
 
-| Version | Supported |
-| --- | --- |
-| The latest release and `main` | Yes |
-| Older releases | No, update to the latest release |
+| Version                       | Supported                        |
+| ----------------------------- | -------------------------------- |
+| The latest release and `main` | Yes                              |
+| Older releases                | No, update to the latest release |
 
 ## Reporting a vulnerability
 
