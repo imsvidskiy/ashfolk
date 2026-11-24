@@ -1,10 +1,8 @@
-import { Heart } from "lucide-react";
 import type { ReactNode } from "react";
 import { cn } from "../../design/cn.ts";
 import { FOCUS_RING } from "../../design/styles.ts";
 
 const REPOSITORY_ADDRESS = "https://github.com/imsvidskiy/ashfolk";
-const SUPPORT_ADDRESS = "https://whop.com/ashfolk/ashfolk-supporter/";
 
 const LINK_CLASS = cn(
   FOCUS_RING,
@@ -45,15 +43,6 @@ export function ProjectLinks({ className, hasPrivacy = true }: ProjectLinksProps
       <ExternalLink href={REPOSITORY_ADDRESS} label="Ashfolk on GitHub">
         <GitHubMark />
         GitHub
-      </ExternalLink>
-
-      <ExternalLink
-        className="bg-dawn/15 text-dawn-strong hover:bg-dawn/25 hover:text-dawn-strong"
-        href={SUPPORT_ADDRESS}
-        label="Sponsor Ashfolk"
-      >
-        <Heart aria-hidden="true" className="fill-dawn/25" size={16} />
-        Sponsor
       </ExternalLink>
 
       {hasPrivacy ? (

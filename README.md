@@ -23,18 +23,6 @@
     src="https://img.shields.io/badge/WebGPU-three.js-informational"
     alt="WebGPU with three.js"
   >
-  <a
-    href="https://github.com/sponsors/imsvidskiy"
-  ><img
-    src="https://img.shields.io/github/sponsors/imsvidskiy?label=Sponsor&logo=GitHub&color=ea4aaa"
-    alt="Sponsor on GitHub"
-  ></a>
-  <a
-    href="https://whop.com/ashfolk/ashfolk-supporter/"
-  ><img
-    src="https://img.shields.io/badge/Support-on%20Whop-ec6839"
-    alt="Support on Whop"
-  ></a>
 </p>
 
 <p align="center">
@@ -43,8 +31,7 @@
   <a href="#getting-started">Getting started</a> ·
   <a href="#architecture">Architecture</a> ·
   <a href="docs/roadmap.md">Roadmap</a> ·
-  <a href="CONTRIBUTING.md">Contributing</a> ·
-  <a href="#sponsor">Sponsor</a>
+  <a href="CONTRIBUTING.md">Contributing</a>
 </p>
 
 https://github.com/user-attachments/assets/bc99af11-0acd-4cca-85cc-39c3b5a4b256
@@ -109,16 +96,6 @@ scripts/       sound encoding
 
 The simulation runs in a Web Worker. The renderer and the HUD read its frames and send commands back.
 [AGENTS.md](AGENTS.md#rules-that-are-easy-to-miss) has the rules that keep these parts apart.
-
-## Sponsor
-
-Ashfolk is free and open source. If you enjoy it, you can support it in two ways:
-
-- [Supporter membership on Whop](https://whop.com/ashfolk/ashfolk-supporter/), $9 a month. It pays for development, hosting,
-  art and sound. Cancel any time.
-- [GitHub Sponsors](https://github.com/sponsors/imsvidskiy), with your GitHub account.
-
-The Sponsor button in the game opens the Whop membership.
 
 ## Star history
 
