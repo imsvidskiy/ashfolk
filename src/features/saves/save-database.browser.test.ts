@@ -6,6 +6,7 @@ import { Simulation } from "../../simulation/simulation.ts";
 import { createVegetatedWorld } from "../../simulation/testing/test-world.ts";
 import { createSimulationWorkerApi } from "../../workers/simulation-worker-api.ts";
 import { createSavedRecord, deleteAllSavedWorlds } from "../testing/save-fixtures.ts";
+import { createChronicleEntry } from "../testing/world-fixtures.ts";
 import {
   deleteSavedWorld,
   listSavedWorlds,
@@ -33,7 +34,7 @@ function savedState(): SavedWorldState {
   return state;
 }
 
-async function putRawRecord(record: object): Promise<void> {
+async function putRawRecord(store: "states" | "worlds", record: object): Promise<void> {
   const opening = indexedDB.open("ashfolk");
 
   const database = await new Promise<IDBDatabase>((resolve, reject) => {
@@ -45,9 +46,9 @@ async function putRawRecord(record: object): Promise<void> {
     });
   });
 
-  const transaction = database.transaction("worlds", "readwrite");
+  const transaction = database.transaction(store, "readwrite");
 
-  transaction.objectStore("worlds").put(record);
+  transaction.objectStore(store).put(record);
 
   await new Promise<void>((resolve, reject) => {
     transaction.addEventListener("complete", () => {
@@ -68,13 +69,15 @@ afterEach(async () => {
 describe("saved worlds", () => {
   it("saves, lists and reads back a world", async () => {
     const state = savedState();
+    const journal = [createChronicleEntry()];
 
-    expect(await writeSavedWorld(createSavedRecord("first", state), state, [])).toBe(true);
+    expect(await writeSavedWorld(createSavedRecord("first", state), state, journal)).toBe(true);
 
     expect(await listSavedWorlds()).toMatchObject([{ id: "first", isLoadable: true, name: "Old Ford" }]);
 
     const stored = await readSavedWorld("first");
 
+    expect(stored?.journal).toEqual(journal);
     expect(stored?.record.name).toBe("Old Ford");
     expect(stored?.state.simulation.tick).toBe(state.simulation.tick);
     expect(stored?.state.simulation.world.fields.snow).toBeInstanceOf(Float32Array);
@@ -112,7 +115,7 @@ describe("saved worlds", () => {
     const state = savedState();
 
     await writeSavedWorld(createSavedRecord("broken", state), state, []);
-    await putRawRecord({ ...createSavedRecord("broken", state), shape: "triangle" });
+    await putRawRecord("worlds", { ...createSavedRecord("broken", state), shape: "triangle" });
 
     expect(await listSavedWorlds()).toMatchObject([{ id: "broken", isLoadable: false, shape: "round" }]);
     await expect(readSavedWorld("broken")).rejects.toThrow("saved island");
@@ -131,13 +134,24 @@ describe("saved worlds", () => {
     expect((await readSavedWorld("retry"))?.state.simulation.tick).toBe(state.simulation.tick);
   });
 
-  it("refuses to replace an island when only its listing survives", async () => {
-    const state = savedState();
+  it.each(["states", "worlds"] as const)(
+    "retains an incomplete island when only its %s entry survives",
+    async (store) => {
+      const state = savedState();
+      const record = createSavedRecord("orphan", state);
+      const entries = { states: { id: record.id, journal: [], state }, worlds: record };
+      const missing = store === "worlds" ? "states" : "worlds";
 
-    await putRawRecord(createSavedRecord("orphan", state));
-    await expect(readSavedWorld("orphan")).rejects.toThrow("saved island");
-    expect(await listSavedWorlds()).toMatchObject([{ id: "orphan" }]);
-  });
+      expect(await readSavedWorld(record.id)).toBeNull();
+      await putRawRecord(store, entries[store]);
+
+      await expect(readSavedWorld(record.id)).rejects.toThrow("saved island");
+
+      await putRawRecord(missing, entries[missing]);
+
+      expect((await readSavedWorld(record.id))?.state.simulation.tick).toBe(state.simulation.tick);
+    }
+  );
 
   it("loads a saved world back into a simulation", async () => {
     const state = savedState();
@@ -196,7 +210,7 @@ describe("saved worlds", () => {
 
     const { size: _, ...older } = createSavedRecord("older", state, { size: "large" });
 
-    await putRawRecord(older);
+    await putRawRecord("worlds", older);
 
     expect((await readSavedWorld("older"))?.record.size).toBe("normal");
     expect(await listSavedWorlds()).toMatchObject([{ id: "older", isLoadable: true, size: "normal" }]);
@@ -213,7 +227,7 @@ describe("saved worlds", () => {
       ...older
     } = createSavedRecord("older", state, { savedAt: 1000 });
 
-    await putRawRecord(older);
+    await putRawRecord("worlds", older);
 
     expect((await readSavedWorld("older"))?.record).toMatchObject({
       generationFingerprint: null,

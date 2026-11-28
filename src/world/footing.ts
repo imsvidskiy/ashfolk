@@ -50,12 +50,18 @@ export function slopeAt(heights: Float32Array, grid: WorldGrid, cell: number): n
   return Math.hypot(gradientX(heights, grid, column, row), gradientZ(heights, grid, column, row));
 }
 
-export function isWalkableGround(terrain: FootingTerrain, grid: WorldGrid, cell: number): boolean {
+export function walkableSlopeAt(terrain: FootingTerrain, grid: WorldGrid, cell: number): number | null {
   if (!isOnIsland(terrain.coastDistance, cell) || isWaterCell(terrain, cell)) {
-    return false;
+    return null;
   }
 
-  return slopeAt(terrain.height, grid, cell) < WALKABLE_SLOPE;
+  const slope = slopeAt(terrain.height, grid, cell);
+
+  return slope < WALKABLE_SLOPE ? slope : null;
+}
+
+export function isWalkableGround(terrain: FootingTerrain, grid: WorldGrid, cell: number): boolean {
+  return walkableSlopeAt(terrain, grid, cell) !== null;
 }
 
 export function isOpenGround(terrain: FootingTerrain, grid: WorldGrid, cell: number): boolean {

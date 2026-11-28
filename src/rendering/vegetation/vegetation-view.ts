@@ -4,6 +4,7 @@ import {
   type Frustum,
   Group,
   type InstancedBufferGeometry,
+  type Material,
   type MeshStandardNodeMaterial,
   type PerspectiveCamera,
   Vector2,
@@ -310,8 +311,8 @@ export class VegetationView {
       );
     });
 
-    this.#shadowProxies = models[SHADOW_PROXY_LEVEL].map(({ buckets, mesh, species }) => {
-      return this.#createShadowProxy(geometryFromMeshData(mesh, PLANT_CHANNELS), materials[species].solid, buckets);
+    this.#shadowProxies = this.#batches[SHADOW_PROXY_LEVEL].map(({ batch, buckets }) => {
+      return this.#createShadowProxy(toInstancedGeometry(batch.mesh.geometry), batch.mesh.material, buckets);
     });
 
     this.#changedBuckets = this.#batches.map(() => {
@@ -437,11 +438,7 @@ export class VegetationView {
     return { batch, buckets, counts };
   }
 
-  #createShadowProxy(
-    geometry: InstancedBufferGeometry,
-    material: MeshStandardNodeMaterial,
-    buckets: readonly number[]
-  ): PlantBatch {
+  #createShadowProxy(geometry: InstancedBufferGeometry, material: Material, buckets: readonly number[]): PlantBatch {
     const batch = new InstanceBatch(geometry, material, PLANT_FIELDS, 64);
 
     batch.mesh.castShadow = true;

@@ -19,6 +19,7 @@ describe("sky palette", () => {
     const noon = skyPaletteAt(0.9, 0, 0);
     const midnight = skyPaletteAt(-0.6, 0, 0);
 
+    expect(brightness(noon.abyss)).toBeGreaterThan(brightness(midnight.abyss));
     expect(brightness(noon.horizon)).toBeGreaterThan(brightness(midnight.horizon));
     expect(brightness(noon.zenith)).toBeGreaterThan(brightness(midnight.zenith));
   });
@@ -42,6 +43,7 @@ describe("sky palette", () => {
     const overcast = skyPaletteAt(0.8, 1, 0);
     const rainy = skyPaletteAt(0.8, 1, 1);
 
+    expect(brightness(rainy.abyss)).toBeLessThan(brightness(overcast.abyss));
     expect(brightness(rainy.horizon)).toBeLessThan(brightness(overcast.horizon));
     expect(brightness(rainy.ambientSky)).toBeLessThan(brightness(overcast.ambientSky));
   });

@@ -41,6 +41,7 @@ tests and Playwright need Chromium. Install Playwright's headless shell with
 `bunx playwright install --only-shell chromium`, or point them at a system
 Chrome:
 `CHROMIUM_EXECUTABLE_PATH="/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"`.
+On macOS, a system Chrome selected this way renders with Metal. The bundled headless browser uses SwiftShader.
 
 ## Code
 

@@ -10,7 +10,6 @@ import {
   length,
   max,
   mix,
-  mx_fractal_noise_float,
   normalize,
   positionWorld,
   pow,
@@ -23,21 +22,11 @@ import {
   vec2,
   vec3,
 } from "three/tsl";
-import {
-  BackSide,
-  Color,
-  Mesh,
-  MeshBasicNodeMaterial,
-  type Node,
-  SphereGeometry,
-  Vector2,
-  Vector3,
-} from "three/webgpu";
+import { BackSide, Color, Mesh, MeshBasicNodeMaterial, type Node, SphereGeometry, Vector3 } from "three/webgpu";
 
 const DOME_RADIUS = 30_000;
 const STAR_CELLS_PER_FACE = 150;
 const STAR_SHARE = 0.16;
-const CLOUD_HORIZON = 0.015;
 
 function starHash(seed: Node<"vec3">, salt: number): Node<"float"> {
   const mixed = dot(seed.add(salt * 19.19), vec3(12.9898, 78.233, 37.719));
@@ -82,12 +71,8 @@ function starField(direction: Node<"vec3">) {
 
 export class SkyDome {
   readonly abyssColor = uniform(new Color(0x7f_93_ad));
-  readonly cloudCover = uniform(0.35);
-  readonly cloudLitColor = uniform(new Color(0xff_ff_ff));
-  readonly cloudOffset = uniform(new Vector2());
-  readonly cloudShadeColor = uniform(new Color(0xb4_bf_cc));
   readonly horizonColor = uniform(new Color(0xc8_dc_ec));
-  readonly mesh: Mesh;
+  readonly mesh: Mesh<SphereGeometry, MeshBasicNodeMaterial>;
   readonly moonDirection = uniform(new Vector3(0, -1, 0));
   readonly moonVisibility = uniform(0);
   readonly starVisibility = uniform(0);
@@ -107,6 +92,7 @@ export class SkyDome {
 
   dispose(): void {
     this.mesh.geometry.dispose();
+    this.mesh.material.dispose();
   }
 
   #skyColor() {
@@ -121,10 +107,6 @@ export class SkyDome {
 
       If(height.greaterThanEqual(0).and(this.starVisibility.greaterThan(0)), () => {
         color.addAssign(starField(direction).mul(this.starVisibility));
-      });
-
-      If(height.greaterThan(CLOUD_HORIZON), () => {
-        color.assign(this.#clouds(direction, color));
       });
 
       return color.add(this.#sun(direction)).add(this.#moon(direction));
@@ -147,27 +129,5 @@ export class SkyDome {
     const glow = pow(alignment, 400).mul(0.25);
 
     return vec3(0.92, 0.94, 1).mul(disc.mul(1.6).add(glow)).mul(this.moonVisibility);
-  }
-
-  #clouds(direction: Node<"vec3">, background: Node<"vec3">) {
-    const height = max(direction.y, 0);
-    const threshold = float(1).sub(this.cloudCover).mul(0.75).add(0.18);
-    const horizonFade = smoothstep(CLOUD_HORIZON, 0.2, direction.y);
-    const sunSide = dot(normalize(vec3(direction.x, 0.25, direction.z)), this.sunDirection)
-      .mul(0.5)
-      .add(0.5);
-
-    const projected = direction.xz.div(height.add(0.12)).mul(0.9).sub(this.cloudOffset);
-    const density = mx_fractal_noise_float(vec3(projected, time.mul(0.004)), 4, 2.1, 0.5)
-      .mul(0.5)
-      .add(0.5);
-    const detail = mx_fractal_noise_float(vec3(projected.mul(3.1), time.mul(0.01)), 2, 2, 0.5).mul(0.08);
-
-    const coverage = smoothstep(threshold, threshold.add(0.22), density.add(detail));
-    const shade = smoothstep(threshold, threshold.add(0.5), density);
-
-    const lit = mix(this.cloudLitColor, this.cloudShadeColor, shade.mul(0.85).add(sunSide.oneMinus().mul(0.15)));
-
-    return mix(background, lit, coverage.mul(horizonFade).mul(0.92));
   }
 }

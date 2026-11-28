@@ -3,7 +3,6 @@ import { useState } from "react";
 import { TextButton } from "../design/buttons.tsx";
 import { Island } from "../design/island.tsx";
 import type { IslandSketch } from "../generation/generation-options.ts";
-import { CloudSeaBackdrop } from "./cloud-sea-backdrop.tsx";
 import type { EngineStatus, LoadingStage } from "./engine-launcher.ts";
 import { useEngineStore } from "./engine-store.ts";
 import { IslandSketchView } from "./island-sketch-view.tsx";
@@ -25,7 +24,6 @@ const STAGE_LABELS: Readonly<Record<LoadingStage, string>> = {
 interface LoadingSceneProps {
   readonly island: IslandSketch | null;
   readonly name: string;
-  readonly seed: number;
   readonly stage: LoadingStage;
 }
 
@@ -76,15 +74,11 @@ function Caption({ name, stage }: CaptionProps) {
   );
 }
 
-function LoadingScene({ island, name, seed, stage }: LoadingSceneProps) {
+function LoadingScene({ island, name, stage }: LoadingSceneProps) {
   return (
-    <div className="absolute inset-0 overflow-hidden">
-      <div aria-hidden="true" className="animate-descend absolute inset-0">
-        <CloudSeaBackdrop seed={seed} />
-
-        <div className="absolute inset-0 grid place-items-center">
-          <IslandSketchView className="size-[min(72dvh,86vw)]" island={island} />
-        </div>
+    <div className="bg-island-sky absolute inset-0 overflow-hidden">
+      <div aria-hidden="true" className="animate-descend absolute inset-0 grid place-items-center">
+        <IslandSketchView className="size-[min(72dvh,86vw)]" island={island} />
       </div>
 
       <Caption name={name} stage={stage} />
@@ -144,8 +138,8 @@ function GraphicsLostMessage({ saved }: { readonly saved: Promise<unknown> }) {
 }
 
 function StatusMessage({ status }: { readonly status: Exclude<EngineStatus, { kind: "ready" }> }) {
-  const { name, seed } = useLaunchStore((state) => {
-    return state.launch;
+  const name = useLaunchStore((state) => {
+    return state.launch.name;
   });
 
   switch (status.kind) {
@@ -154,7 +148,7 @@ function StatusMessage({ status }: { readonly status: Exclude<EngineStatus, { ki
     case "graphicsLost":
       return <GraphicsLostMessage saved={status.saved} />;
     case "loading":
-      return <LoadingScene island={status.island} name={name} seed={seed} stage={status.stage} />;
+      return <LoadingScene island={status.island} name={name} stage={status.stage} />;
     case "stopped":
       return <RecoveryMessage message={status.message} onRetry={startAgain} title="The simulation stopped" />;
     default:

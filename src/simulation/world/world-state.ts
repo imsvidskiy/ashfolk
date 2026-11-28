@@ -9,7 +9,7 @@ import { type CellRegion, RegionChangeTracker, RowChangeTracker } from "../../wo
 import { hasRoomFromCoast, isOnIsland } from "../../world/coast.ts";
 import { type Crossing, CrossingIndex, crossingCells, LOG_ROOT_BEHIND } from "../../world/crossings.ts";
 import type { Deposit } from "../../world/deposits.ts";
-import { canGrowWild, canStandOn, isOpenGround, isWalkableGround, slopeAt } from "../../world/footing.ts";
+import { canGrowWild, canStandOn, isOpenGround, slopeAt, walkableSlopeAt } from "../../world/footing.ts";
 import type { IslandShapeKind } from "../../world/island-shape.ts";
 import { type Monument, type MonumentCondition, MonumentDamage } from "../../world/monuments.ts";
 import type { TerrainData } from "../../world/terrain-data.ts";
@@ -364,8 +364,12 @@ export class WorldState {
     return this.terrain.baseTemperature[cell] + airTemperatureOffset;
   }
 
+  walkableSlope(cell: number): number | null {
+    return this.isObstructed(cell) ? null : walkableSlopeAt(this.terrain, this.grid, cell);
+  }
+
   isWalkable(cell: number): boolean {
-    return isWalkableGround(this.terrain, this.grid, cell) && !this.isObstructed(cell);
+    return this.walkableSlope(cell) !== null;
   }
 
   isPool(cell: number): boolean {

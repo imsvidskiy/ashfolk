@@ -35,6 +35,14 @@ export const SCENES: readonly Scene[] = [
     query: "seed=7&shape=round&quality=high&paused=1&hours=11&camera=0,0,500,0.62,0.6",
     ticksAfterCast: 15,
   },
+  {
+    name: "underside-round",
+    query: "seed=252218&shape=round&quality=medium&paused=1&hours=11&camera=0,0,8800,0.09,0.6",
+  },
+  {
+    name: "underside-square",
+    query: "seed=7&shape=square&quality=high&paused=1&hours=11&camera=0,0,10000,0.09,0.7",
+  },
   { name: "far-round", query: "seed=7&shape=round&quality=high&paused=1&hours=11&camera=0,0,1800,0.8,0" },
   { name: "far-small", query: "seed=7&shape=round&size=small&quality=high&paused=1&hours=11&camera=0,0,1800,0.8,0" },
   { name: "far-large", query: "seed=7&shape=round&size=large&quality=high&paused=1&hours=11&camera=0,0,1800,0.8,0" },

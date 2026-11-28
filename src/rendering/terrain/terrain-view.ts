@@ -32,6 +32,7 @@ export class TerrainView {
   readonly #materials: readonly MeshStandardNodeMaterial[];
   readonly #mirror: WorldMirror;
   readonly #outline: IslandOutline;
+  readonly #textures: TerrainTextures;
   readonly #warp: GroundWarp;
 
   constructor(
@@ -45,6 +46,7 @@ export class TerrainView {
 
     this.#mirror = mirror;
     this.#outline = textures.outline;
+    this.#textures = textures;
     this.#warp = new GroundWarp(grid, renderer);
 
     const options = {
@@ -96,20 +98,24 @@ export class TerrainView {
   }
 
   update(camera: PerspectiveCamera, frustum: Frustum, detail: number): void {
-    this.#inland.update(camera, frustum, detail);
-    this.#levels.set(this.#inland.chosenLevels);
+    const hasInlandChanged = this.#inland.update(camera, frustum, detail);
+    const hasCoastChanged = this.#coast?.update(camera, frustum, detail);
 
-    if (this.#coast === null) {
+    if (!(hasInlandChanged || hasCoastChanged)) {
       return;
     }
 
-    this.#coast.update(camera, frustum, detail);
+    this.#levels.set(this.#inland.chosenLevels);
 
-    for (const [patch, level] of this.#coast.chosenLevels.entries()) {
-      if (level >= 0) {
-        this.#levels[patch] = level;
+    if (this.#coast !== null) {
+      for (const [patch, level] of this.#coast.chosenLevels.entries()) {
+        if (level >= 0) {
+          this.#levels[patch] = level;
+        }
       }
     }
+
+    this.#textures.followPatchLevels(this.#levels);
   }
 
   dispose(): void {

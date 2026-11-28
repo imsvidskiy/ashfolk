@@ -30,12 +30,6 @@ function QualityField() {
   return <ChoiceField label="Graphics" onChange={setQuality} options={QUALITY_OPTIONS} value={quality} />;
 }
 
-function SeasonField() {
-  const [season, setSeason] = useState("0");
-
-  return <ChoiceField label="Season" onChange={setSeason} options={SEASON_OPTIONS} value={season} />;
-}
-
 function GroundField() {
   const [ground, setGround] = useState("meadow");
 
@@ -78,34 +72,26 @@ describe("choice field with a few options", () => {
 });
 
 describe("choice field with many options", () => {
-  it("shows the current option in a drop-down list", async () => {
-    const screen = await render(<SeasonField />);
-
-    await expect.element(screen.getByRole("combobox", { name: "Season" })).toHaveTextContent("Spring");
-  });
-
-  it("lists every option when opened", async () => {
-    const screen = await render(<SeasonField />);
-
-    await screen.getByRole("combobox", { name: "Season" }).click();
-
-    await expect.element(screen.getByRole("option", { name: "Spring" })).toBeVisible();
-    await expect.element(screen.getByRole("option", { name: "Summer" })).toBeVisible();
-    await expect.element(screen.getByRole("option", { name: "Autumn" })).toBeVisible();
-    await expect.element(screen.getByRole("option", { name: "Winter" })).toBeVisible();
-  });
-
-  it("reports the chosen value to its owner", async () => {
+  it("opens the list at the current value and reports the chosen option", async () => {
     const handleChange = vi.fn();
-
     const screen = await render(
       <ChoiceField label="Season" onChange={handleChange} options={SEASON_OPTIONS} value="0" />
     );
+    const trigger = screen.getByRole("combobox", { name: "Season" });
 
-    await screen.getByRole("combobox", { name: "Season" }).click();
+    await expect.element(trigger).toHaveTextContent("Spring");
+    await trigger.click();
+
+    await Promise.all(
+      SEASON_OPTIONS.map(({ label }) => {
+        return expect.element(screen.getByRole("option", { name: label })).toBeVisible();
+      })
+    );
+
     await screen.getByRole("option", { name: "Winter" }).click();
 
     expect(handleChange).toHaveBeenCalledExactlyOnceWith("3");
+    await expect.element(trigger).toHaveAttribute("aria-expanded", "false");
   });
 });
 

@@ -1,6 +1,6 @@
 import { Biome } from "../content/biomes.ts";
 import { Ground } from "../content/grounds.ts";
-import { clamp, hashToUnit, lerp } from "../shared/math.ts";
+import { hashToUnit, lerp } from "../shared/math.ts";
 import { isBrookCell, Passage } from "../world/brooks.ts";
 import { isOnIsland } from "../world/coast.ts";
 import {
@@ -18,10 +18,11 @@ import {
 } from "../world/crossings.ts";
 import { isWalkableGround, slopeAt } from "../world/footing.ts";
 import { isWaterCell, sampleHeight } from "../world/terrain-sampling.ts";
-import type { River, WaterFeatures } from "../world/water.ts";
+import type { WaterFeatures } from "../world/water.ts";
 import type { WorldGrid } from "../world/world-grid.ts";
 import { BankRegions } from "./bank-regions.ts";
 import { isNearLake, NO_CELL } from "./drainage.ts";
+import { RiverCourse } from "./river-course.ts";
 
 const SHORTEST_RIVER = 220;
 const SOURCE_MARGIN = 30;
@@ -139,12 +140,6 @@ interface Candidate {
   readonly score: number;
 }
 
-interface RiverCourse {
-  readonly length: number;
-  readonly lengths: readonly number[];
-  readonly river: River;
-}
-
 interface Stretch {
   readonly connects: (crossing: Crossing) => boolean;
   readonly from: number;
@@ -177,44 +172,6 @@ function passageIn(survey: CrossingSurvey, cell: number): Passage {
   return isWalkableGround(terrain, grid, cell) && !isBlocked(cell) ? Passage.Ground : Passage.Blocked;
 }
 
-function segmentAt(course: RiverCourse, along: number): number {
-  const { lengths } = course;
-
-  let low = 0;
-  let high = lengths.length - 1;
-
-  while (high - low > 1) {
-    const middle = Math.floor((low + high) / 2);
-
-    if (lengths[middle] <= along) {
-      low = middle;
-    } else {
-      high = middle;
-    }
-  }
-
-  return low;
-}
-
-function interpolationAt(course: RiverCourse, along: number): { amount: number; index: number } {
-  const { lengths } = course;
-
-  const clamped = clamp(along, 0, course.length);
-  const index = segmentAt(course, clamped);
-  const span = lengths[index + 1] - lengths[index];
-
-  return { amount: span > 0 ? (clamped - lengths[index]) / span : 0, index };
-}
-
-function pointAlong(course: RiverCourse, along: number): Point {
-  const { amount, index } = interpolationAt(course, along);
-
-  const start = course.river.points[index];
-  const end = course.river.points[index + 1];
-
-  return { x: lerp(start.x, end.x, amount), z: lerp(start.z, end.z, amount) };
-}
-
 function isRiverWater(survey: CrossingSurvey, cell: number): boolean {
   const { lakeIds, terrain } = survey;
 
@@ -225,7 +182,7 @@ function wideningAlong(survey: CrossingSurvey, course: RiverCourse): number {
   const { grid, terrain } = survey;
 
   for (let along = 0; along <= course.length; along += WIDENING_STEP) {
-    const point = pointAlong(course, along);
+    const point = course.pointAt(along);
     const cell = grid.cellAt(point.x, point.z);
 
     if (isRiverWater(survey, cell) && !isBrookCell(terrain, cell)) {
@@ -260,9 +217,9 @@ function banksAcross(
   along: number,
   regions: BankRegions
 ): { end: number; start: number } | null {
-  const center = pointAlong(course, along);
-  const behind = pointAlong(course, along - TANGENT_REACH);
-  const ahead = pointAlong(course, along + TANGENT_REACH);
+  const center = course.pointAt(along);
+  const behind = course.pointAt(along - TANGENT_REACH);
+  const ahead = course.pointAt(along + TANGENT_REACH);
 
   const length = Math.max(1e-6, Math.hypot(ahead.x - behind.x, ahead.z - behind.z));
   const directionX = -(ahead.z - behind.z) / length;
@@ -276,46 +233,6 @@ function banksAcross(
   }
 
   return { end, start };
-}
-
-function riverCourse(river: River): RiverCourse {
-  const lengths = [0];
-
-  let length = 0;
-
-  for (let index = 1; index < river.points.length; index += 1) {
-    const previous = river.points[index - 1];
-    const current = river.points[index];
-
-    length += Math.hypot(current.x - previous.x, current.z - previous.z);
-    lengths.push(length);
-  }
-
-  return { length, lengths, river };
-}
-
-function nearestAlong(course: RiverCourse, point: Point): { along: number; distance: number } {
-  const { lengths, river } = course;
-
-  let best = { along: 0, distance: Number.POSITIVE_INFINITY };
-
-  for (let index = 1; index < river.points.length; index += 1) {
-    const start = river.points[index - 1];
-    const end = river.points[index];
-
-    const segmentX = end.x - start.x;
-    const segmentZ = end.z - start.z;
-    const lengthSquared = Math.max(1e-6, segmentX * segmentX + segmentZ * segmentZ);
-
-    const amount = clamp(((point.x - start.x) * segmentX + (point.z - start.z) * segmentZ) / lengthSquared, 0, 1);
-    const distance = Math.hypot(start.x + segmentX * amount - point.x, start.z + segmentZ * amount - point.z);
-
-    if (distance < best.distance) {
-      best = { along: lerp(lengths[index - 1], lengths[index], amount), distance };
-    }
-  }
-
-  return best;
 }
 
 function crossWater(survey: CrossingSurvey, center: Point, directionX: number, directionZ: number): WaterSpan | null {
@@ -545,7 +462,9 @@ function wadingAlong(survey: CrossingSurvey, crossing: Crossing): Wading | null 
   let highest = Number.NEGATIVE_INFINITY;
   let lowest = Number.POSITIVE_INFINITY;
 
-  for (let along = 0; along <= crossingLength(crossing); along += MARCH_STEP) {
+  const length = crossingLength(crossing);
+
+  for (let along = 0; along <= length; along += MARCH_STEP) {
     const point = pointOnCrossing(crossing, along, 0);
     const cell = grid.cellAt(point.x, point.z);
 
@@ -582,7 +501,9 @@ function hasSteadyBanks(survey: CrossingSurvey, crossing: Crossing): boolean {
 function logClearsWater(survey: CrossingSurvey, log: LogBridge): boolean {
   const { grid, terrain } = survey;
 
-  for (let along = 0; along <= crossingLength(log); along += MARCH_STEP) {
+  const length = crossingLength(log);
+
+  for (let along = 0; along <= length; along += MARCH_STEP) {
     const point = pointOnCrossing(log, along, 0);
     const cell = grid.cellAt(point.x, point.z);
     const bottom = logDeckAt(log, along) - 2 * logRadiusAt(log, along);
@@ -689,6 +610,14 @@ class CrossingPlanner {
   linkBanks(courses: readonly RiverCourse[]): void {
     const { grid } = this.survey;
 
+    const hasReachableBanks = courses.some((course) => {
+      return course.length >= SOURCE_MARGIN + MOUTH_MARGIN;
+    });
+
+    if (!hasReachableBanks) {
+      return;
+    }
+
     const passages = Array.from({ length: grid.cellCount }, (_, cell) => {
       return passageIn(this.survey, cell);
     });
@@ -731,7 +660,7 @@ class CrossingPlanner {
     const anchors: number[] = [];
 
     for (const crossing of this.placed) {
-      const nearest = nearestAlong(course, crossingMiddle(crossing));
+      const nearest = course.nearestTo(crossingMiddle(crossing));
 
       if (nearest.distance < ON_RIVER) {
         anchors.push(nearest.along);
@@ -747,11 +676,27 @@ class CrossingPlanner {
     let best: Candidate | null = null;
 
     for (let along = stretch.from; along <= stretch.to; along += CANDIDATE_SPACING) {
-      for (const turn of AXIS_TURNS) {
-        const candidate = this.#candidateAt(course, along, turn, stretch);
+      const center = course.pointAt(along);
 
-        if (candidate !== null && (best === null || candidate.score > best.score)) {
-          best = candidate;
+      if (!this.#canPlaceAt(center, stretch.spacing)) {
+        continue;
+      }
+
+      const behind = course.pointAt(along - TANGENT_REACH);
+      const ahead = course.pointAt(along + TANGENT_REACH);
+      const across = Math.atan2(ahead.x - behind.x, -(ahead.z - behind.z));
+
+      for (const turn of AXIS_TURNS) {
+        const candidate = this.#candidateAt(center, across + turn, stretch);
+
+        if (candidate === null) {
+          continue;
+        }
+
+        const score = candidate.score - Math.abs(turn);
+
+        if (best === null || score > best.score) {
+          best = { along, crossing: candidate.crossing, score };
         }
       }
     }
@@ -759,23 +704,15 @@ class CrossingPlanner {
     return best;
   }
 
-  #candidateAt(course: RiverCourse, along: number, turn: number, stretch: Stretch): Candidate | null {
-    const center = pointAlong(course, along);
+  #canPlaceAt(center: Point, spacing: number): boolean {
+    const cell = this.survey.grid.cellAt(center.x, center.z);
 
-    if (!(this.#isClearOfFalls(center) && this.#isSpaced(center, stretch.spacing))) {
-      return null;
-    }
+    return (
+      !isBrookCell(this.survey.terrain, cell) && this.#isSpaced(center, spacing) && this.#isClearOfLakesAndFalls(center)
+    );
+  }
 
-    const centerCell = this.survey.grid.cellAt(center.x, center.z);
-
-    if (isBrookCell(this.survey.terrain, centerCell)) {
-      return null;
-    }
-
-    const behind = pointAlong(course, along - TANGENT_REACH);
-    const ahead = pointAlong(course, along + TANGENT_REACH);
-    const across = Math.atan2(ahead.x - behind.x, -(ahead.z - behind.z)) + turn;
-
+  #candidateAt(center: Point, across: number, stretch: Stretch): Omit<Candidate, "along"> | null {
     const site = measureSite(this.survey, {
       center,
       directionX: Math.cos(across),
@@ -799,10 +736,10 @@ class CrossingPlanner {
       return null;
     }
 
-    return { along, crossing, score: siteScore(this.survey, site, kind) - Math.abs(turn) };
+    return { crossing, score: siteScore(this.survey, site, kind) };
   }
 
-  #isClearOfFalls(point: Point): boolean {
+  #isClearOfLakesAndFalls(point: Point): boolean {
     const { grid, lakeIds, water } = this.survey;
 
     const isNearFall = water.waterfalls.some((waterfall) => {
@@ -828,7 +765,7 @@ class CrossingPlanner {
 export function planCrossings(survey: CrossingSurvey, kept: readonly Crossing[] = []): Crossing[] {
   const planner = new CrossingPlanner(survey, kept);
   const courses = survey.water.rivers.map((river) => {
-    return riverCourse(river);
+    return new RiverCourse(river.points);
   });
 
   for (const limits of [STRICT_BANKS, LENIENT_BANKS]) {

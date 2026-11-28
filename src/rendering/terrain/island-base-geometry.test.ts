@@ -86,19 +86,74 @@ describe("island base geometry", () => {
     expect(new Set(rim)).toEqual(edges);
   });
 
-  it("hangs the underside tip deeper under a larger island", () => {
+  it("scales the depth of the rock beneath a larger island", () => {
     for (const [cellsPerSide, depth] of [
-      [CELLS_PER_SIDE, 1650],
-      [768, 1650 * 1.2],
+      [CELLS_PER_SIDE, 1450],
+      [768, 1450 * 1.2],
     ] as const) {
       const mirror = squareMirror(cellsPerSide);
       const outline = new IslandOutline(mirror);
       const plinth = islandPlinthHeight(mirror, outline);
+      const { underside } = buildIslandBaseGeometry(mirror, outline, plinth);
 
-      const positions = buildIslandBaseGeometry(mirror, outline, plinth).underside.getAttribute("position");
+      underside.computeBoundingBox();
 
-      expect(positions.getY(positions.count - 1)).toBeCloseTo(plinth - depth * 1.12, 2);
+      expect(underside.boundingBox?.min.y).toBeCloseTo(plinth - depth, 2);
     }
+  });
+
+  it.each([
+    { mirror: round, shape: "round" },
+    { mirror: squareMirror(), shape: "square" },
+  ])("closes the $shape cliff with a broad, rounded base", ({ mirror }) => {
+    const outline = new IslandOutline(mirror);
+    const plinth = islandPlinthHeight(mirror, outline);
+    const { cliff, underside } = buildIslandBaseGeometry(mirror, outline, plinth);
+    const walls = cliff.getAttribute("position");
+    const amounts = cliff.getAttribute("cliffAmount");
+    const rock = underside.getAttribute("position");
+
+    const gaps: number[] = [];
+    let rimVertex = 0;
+
+    for (let vertex = 0; vertex < walls.count; vertex += 1) {
+      if (amounts.getX(vertex) !== 0) {
+        continue;
+      }
+
+      if (
+        rock.getX(rimVertex) !== walls.getX(vertex) ||
+        rock.getY(rimVertex) !== walls.getY(vertex) ||
+        rock.getZ(rimVertex) !== walls.getZ(vertex)
+      ) {
+        gaps.push(rimVertex);
+      }
+
+      rimVertex += 1;
+    }
+
+    const bottom = rock.count - 1;
+    const bottomY = rock.getY(bottom);
+    const capHeight = (plinth - bottomY) * 0.03;
+    let capRadius = 0;
+    let minimumHeight = Number.POSITIVE_INFINITY;
+
+    for (let vertex = rimVertex; vertex < bottom; vertex += 1) {
+      const height = rock.getY(vertex) - bottomY;
+
+      minimumHeight = Math.min(minimumHeight, height);
+
+      if (height <= capHeight) {
+        const radius = Math.hypot(rock.getX(vertex) - rock.getX(bottom), rock.getZ(vertex) - rock.getZ(bottom));
+
+        capRadius = Math.max(capRadius, radius);
+      }
+    }
+
+    expect(gaps).toEqual([]);
+    expect(minimumHeight).toBeGreaterThan(0);
+    expect(capRadius).toBeGreaterThan(mirror.grid.halfSize * 0.11);
+    expect(underside.getAttribute("normal").getY(bottom)).toBeLessThan(-0.99);
   });
 
   it("tops the round cliff along the outline the terrain is cut by", () => {

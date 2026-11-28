@@ -139,6 +139,29 @@ describe("patch grid", () => {
     expect(Array.from(patches.chosenLevels)).toEqual([-1, SIDE_LEVEL, SIDE_LEVEL, FAR_LEVEL]);
   });
 
+  it("replaces pieces after a local edit even when the patch stays at the same level", () => {
+    let firstColumn = 0;
+
+    const patches = createPatches((region) => {
+      if (region.firstColumn !== 0 || region.firstRow !== 0) {
+        return null;
+      }
+
+      return { highest: PATCH_TOP, lowest: 0, pieces: [{ firstColumn, firstRow: 0, material: 0 }] };
+    });
+    const camera = cameraAt(NEAR_CORNER, NEAR_CORNER);
+
+    expect(patches.update(camera, everything, 1)).toBe(true);
+    expect(patches.update(camera, everything, 1)).toBe(false);
+
+    firstColumn = 16;
+    patches.remeasure({ firstColumn, firstRow: 0, lastColumn: firstColumn, lastRow: 0 });
+
+    expect(patches.update(camera, everything, 1)).toBe(true);
+    expect(firstOrigin(patches, NEAR_LEVEL)).toEqual([firstColumn, 0]);
+    expect(patches.update(camera, everything, 1)).toBe(false);
+  });
+
   it("uploads the patch origins again only once the levels or the pieces change", () => {
     const patches = createPatches();
     const camera = cameraAt(NEAR_CORNER, NEAR_CORNER);

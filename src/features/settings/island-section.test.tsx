@@ -64,36 +64,26 @@ describe("island section", () => {
     await expect.element(create).toBeEnabled();
   });
 
-  it("grows a new world with a new name, shape and size", async () => {
-    launchWith({ seed: 7 });
+  it("starts the chosen world with a fresh camera and running clock", async () => {
+    launchWith({ camera: { distance: 90 }, isPaused: true, seed: 7 });
 
     const screen = await render(<IslandSection />);
 
     await screen.getByRole("textbox", { name: "Name" }).fill("Old Ford");
+    await screen.getByRole("textbox", { name: "Seed" }).fill("42");
     await screen.getByRole("button", { name: "Square" }).click();
     await screen.getByRole("button", { name: "Small" }).click();
     await screen.getByRole("button", { name: "Create" }).click();
 
-    expect(useLaunchStore.getState().launch).toMatchObject({
+    const { launch } = useLaunchStore.getState();
+
+    expect(launch.camera).toEqual({});
+    expect(launch).toMatchObject({
+      isPaused: false,
       name: "Old Ford",
-      seed: 7,
+      seed: 42,
       shape: "square",
       size: "small",
     });
-  });
-
-  it("grows a new world from the chosen seed", async () => {
-    launchWith({ seed: 7 });
-
-    const screen = await render(<IslandSection />);
-
-    await screen.getByRole("textbox", { name: "Seed" }).fill("42");
-    await screen.getByRole("button", { name: "Create" }).click();
-
-    const { launch } = useLaunchStore.getState();
-
-    expect(launch.seed).toBe(42);
-    expect(launch.camera).toEqual({});
-    expect(launch.isPaused).toBe(false);
   });
 });

@@ -27,6 +27,23 @@ describe("bank regions", () => {
     expect(regions.wouldJoin(FORD)).toBe(true);
   });
 
+  it("keeps land touching at a single corner separate until a side opens", () => {
+    const passages = Array.from({ length: grid.cellCount }, (_, cell): Passage => {
+      const isWest = grid.columnOf(cell) < 8;
+      const isNorth = grid.rowOf(cell) < 8;
+
+      return isWest === isNorth ? Passage.Ground : Passage.Blocked;
+    });
+    const north = grid.index(7, 7);
+    const south = grid.index(8, 8);
+
+    expect(new BankRegions(grid, passages, []).separates(north, south)).toBe(true);
+
+    passages[grid.index(7, 8)] = Passage.Ground;
+
+    expect(new BankRegions(grid, passages, []).separates(north, south)).toBe(false);
+  });
+
   it("join the two banks across a crossing", () => {
     const regions = new BankRegions(grid, passagesWithRiver(Passage.Blocked), []);
 

@@ -1,9 +1,10 @@
 import { distanceSquared } from "../../shared/math.ts";
 import { MinHeap } from "../../shared/min-heap.ts";
-import { bordersBrook, hopTargets, NOT_CLEAR, Passage, traceHops } from "../../world/brooks.ts";
+import { NOT_CLEAR, Passage, traceHops } from "../../world/brooks.ts";
 import type { Crossing } from "../../world/crossings.ts";
 import { NEIGHBOR_OFFSETS } from "../../world/world-grid.ts";
 import type { WorldState } from "../world/world-state.ts";
+import { BrookHops } from "./brook-hops.ts";
 import type { Waypoint } from "./navigation.ts";
 import { nearestSpotWhere, nearestWalkableSpot } from "./walkable-ground.ts";
 
@@ -13,6 +14,7 @@ const AREA_SIZE = 40;
 const NO_AREA = -1;
 const NO_CROSSING = -1;
 const NOWHERE = -1;
+const IMPASSABLE = 0;
 const MODERATE_SLOPE = 0.55;
 const STEEP_SLOPE = 0.9;
 const STEEPNESS_COST = 6;
@@ -39,22 +41,16 @@ interface Route {
   readonly waypoints: Waypoint[];
 }
 
-function slopePenalty(slope: number): number {
+function walkingCost(slope: number | null): number {
+  if (slope === null) {
+    return IMPASSABLE;
+  }
+
   if (slope > STEEP_SLOPE) {
-    return 1;
+    return 1 + STEEPNESS_COST;
   }
 
-  return slope > MODERATE_SLOPE ? 0.4 : 0;
-}
-
-function addHop(hopsFrom: Map<number, Set<number>>, from: number, to: number): void {
-  const targets = hopsFrom.get(from);
-
-  if (targets === undefined) {
-    hopsFrom.set(from, new Set([to]));
-  } else {
-    targets.add(to);
-  }
+  return slope > MODERATE_SLOPE ? 1 + STEEPNESS_COST * 0.4 : 1;
 }
 
 export class LandAreas {
@@ -67,8 +63,7 @@ export class LandAreas {
   readonly #cellScore: Float64Array;
   readonly #cellSeen: Int32Array;
   readonly #cellsPerArea: number;
-  readonly #hopStart: Int32Array;
-  readonly #walkable: Uint8Array;
+  readonly #hops = new BrookHops();
   readonly #world: WorldState;
   #allowedStamp = 0;
   #anchorX = new Float64Array(0);
@@ -85,7 +80,6 @@ export class LandAreas {
   #edgeCrossing = new Int32Array(0);
   #edgeStart = new Int32Array(1);
   #edgeTarget = new Int32Array(0);
-  #hopTarget = new Int32Array(0);
   #regionOfArea = new Int32Array(0);
   #searchNumber = 0;
 
@@ -94,40 +88,36 @@ export class LandAreas {
 
     this.#world = world;
     this.#cellsPerArea = Math.max(1, Math.round(AREA_SIZE / cellSize));
-    this.#walkable = new Uint8Array(cellCount);
     this.#areaOfCell = new Int32Array(cellCount);
     this.#cellCost = new Float32Array(cellCount);
     this.#cellScore = new Float64Array(cellCount);
     this.#cellFrom = new Int32Array(cellCount);
     this.#cellSeen = new Int32Array(cellCount);
     this.#cellClosed = new Int32Array(cellCount);
-    this.#hopStart = new Int32Array(cellCount + 1);
   }
 
   rebuild(): void {
     const world = this.#world;
 
     for (let cell = 0; cell < world.grid.cellCount; cell += 1) {
-      const isWalkable = world.isWalkable(cell);
-
-      this.#walkable[cell] = isWalkable ? 1 : 0;
-      this.#cellCost[cell] = this.#costOf(cell, isWalkable);
+      this.#cellCost[cell] = walkingCost(world.walkableSlope(cell));
       this.#areaOfCell[cell] = NO_AREA;
     }
 
     this.#crossings = world.crossings;
-    this.#findHops();
+    this.#hops.rebuild(world.grid, (cell) => {
+      return this.#passageOf(cell);
+    });
     this.#linkAreas(this.#findAreas());
     this.#findRegions();
   }
 
-  keepsFooting(cell: number): boolean {
-    const isWalkable = this.#world.isWalkable(cell);
+  isWalkable(cell: number): boolean {
+    return cell >= 0 && this.#cellCost[cell] > IMPASSABLE;
+  }
 
-    return (
-      this.#walkable[cell] === (isWalkable ? 1 : 0) &&
-      this.#cellCost[cell] === Math.fround(this.#costOf(cell, isWalkable))
-    );
+  keepsFooting(cell: number): boolean {
+    return this.#cellCost[cell] === Math.fround(walkingCost(this.#world.walkableSlope(cell)));
   }
 
   regionNear(point: Waypoint): number {
@@ -149,7 +139,7 @@ export class LandAreas {
   nearestInRegion(point: Waypoint, region: number, fallback: Waypoint): Waypoint {
     for (const radius of REGION_SEARCH_RADII) {
       const spot = nearestSpotWhere(this.#world, point, radius, (_world, cell) => {
-        return this.#walkable[cell] === 1 && this.#regionOfArea[this.#areaOfCell[cell]] === region;
+        return this.isWalkable(cell) && this.#regionOfArea[this.#areaOfCell[cell]] === region;
       });
 
       if (spot !== null) {
@@ -221,7 +211,7 @@ export class LandAreas {
     const fromCell = this.#world.grid.cellAt(from.x, from.z);
     const crossing = this.#world.crossingAt(from.x, from.z);
 
-    if (crossing !== null && (fromCell < 0 || this.#walkable[fromCell] === 0)) {
+    if (crossing !== null && !this.isWalkable(fromCell)) {
       return this.#routeOffDeck(from, goal, crossing, tail);
     }
 
@@ -272,7 +262,7 @@ export class LandAreas {
   #onLand(point: Waypoint): Waypoint | null {
     const cell = this.#world.grid.cellAt(point.x, point.z);
 
-    if (cell >= 0 && this.#walkable[cell] === 1) {
+    if (this.isWalkable(cell)) {
       return point;
     }
 
@@ -288,7 +278,7 @@ export class LandAreas {
   #regionAtLand(point: Waypoint): number {
     const cell = this.#world.grid.cellAt(point.x, point.z);
 
-    if (cell < 0 || this.#walkable[cell] === 0) {
+    if (!this.isWalkable(cell)) {
       return NO_REGION;
     }
 
@@ -423,7 +413,7 @@ export class LandAreas {
     const nextColumn = column + columnStep;
     const nextRow = row + rowStep;
 
-    if (!grid.contains(nextColumn, nextRow) || this.#walkable[grid.index(nextColumn, nextRow)] === 0) {
+    if (!(grid.contains(nextColumn, nextRow) && this.isWalkable(grid.index(nextColumn, nextRow)))) {
       return false;
     }
 
@@ -431,63 +421,17 @@ export class LandAreas {
       return true;
     }
 
-    return this.#walkable[grid.index(nextColumn, row)] === 1 && this.#walkable[grid.index(column, nextRow)] === 1;
-  }
-
-  #costOf(cell: number, isWalkable: boolean): number {
-    if (!isWalkable) {
-      return 1;
-    }
-
-    return 1 + STEEPNESS_COST * slopePenalty(this.#world.slope(cell));
+    return this.isWalkable(grid.index(nextColumn, row)) && this.isWalkable(grid.index(column, nextRow));
   }
 
   #passageOf(cell: number): Passage {
-    if (this.#walkable[cell] === 1) {
+    if (this.isWalkable(cell)) {
       return Passage.Ground;
     }
 
     const world = this.#world;
 
     return world.isBrook(cell) && !world.isObstructed(cell) ? Passage.Brook : Passage.Blocked;
-  }
-
-  #findHops(): void {
-    const { grid } = this.#world;
-
-    const hopsFrom = new Map<number, Set<number>>();
-    const targets: number[] = [];
-
-    for (let cell = 0; cell < grid.cellCount; cell += 1) {
-      if (
-        this.#walkable[cell] === 0 ||
-        !bordersBrook(grid, cell, (neighbor) => {
-          return this.#passageOf(neighbor);
-        })
-      ) {
-        continue;
-      }
-
-      for (const target of hopTargets(grid, cell, (neighbor) => {
-        return this.#passageOf(neighbor);
-      })) {
-        addHop(hopsFrom, cell, target);
-        addHop(hopsFrom, target, cell);
-      }
-    }
-
-    for (let cell = 0; cell < grid.cellCount; cell += 1) {
-      this.#hopStart[cell] = targets.length;
-
-      const hops = hopsFrom.get(cell);
-
-      if (hops !== undefined) {
-        targets.push(...hops);
-      }
-    }
-
-    this.#hopStart[grid.cellCount] = targets.length;
-    this.#hopTarget = Int32Array.from(targets);
   }
 
   #findAreas(): number[][] {
@@ -509,7 +453,7 @@ export class LandAreas {
           ) {
             const cell = grid.index(column, row);
 
-            if (this.#walkable[cell] === 1 && this.#areaOfCell[cell] === NO_AREA) {
+            if (this.isWalkable(cell) && this.#areaOfCell[cell] === NO_AREA) {
               areas.push(this.#floodBlock(cell, areas.length, { column: firstColumn, row: firstRow }));
             }
           }
@@ -572,7 +516,7 @@ export class LandAreas {
     });
 
     for (let cell = 0; cell < grid.cellCount; cell += 1) {
-      if (this.#walkable[cell] === 0) {
+      if (!this.isWalkable(cell)) {
         continue;
       }
 
@@ -586,8 +530,8 @@ export class LandAreas {
         }
       }
 
-      for (let hop = this.#hopStart[cell]; hop < this.#hopStart[cell + 1]; hop += 1) {
-        this.#linkNeighbors(neighbors, area, this.#areaOfCell[this.#hopTarget[hop]]);
+      for (const next of this.#hops.from(cell)) {
+        this.#linkNeighbors(neighbors, area, this.#areaOfCell[next]);
       }
     }
 
@@ -603,8 +547,10 @@ export class LandAreas {
       return;
     }
 
-    neighbors[area].set(other, this.#landCost(area, other));
-    neighbors[other].set(area, this.#landCost(other, area));
+    const cost = this.#landCost(area, other);
+
+    neighbors[area].set(other, cost);
+    neighbors[other].set(area, cost);
   }
 
   #clearSearches(count: number): void {
@@ -667,7 +613,7 @@ export class LandAreas {
     const startCell = grid.cellAt(crossing.startX, crossing.startZ);
     const endCell = grid.cellAt(crossing.endX, crossing.endZ);
 
-    if (startCell < 0 || endCell < 0 || this.#walkable[startCell] === 0 || this.#walkable[endCell] === 0) {
+    if (!(this.isWalkable(startCell) && this.isWalkable(endCell))) {
       return;
     }
 
@@ -860,9 +806,7 @@ export class LandAreas {
         }
       }
 
-      for (let hop = this.#hopStart[cell]; hop < this.#hopStart[cell + 1]; hop += 1) {
-        const next = this.#hopTarget[hop];
-
+      for (const next of this.#hops.from(cell)) {
         const distance = grid.distanceBetween(cell, next);
 
         this.#reachCell(cell, next, goal, distance + HOP_COST);

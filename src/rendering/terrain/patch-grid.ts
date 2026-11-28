@@ -21,8 +21,6 @@ import {
   type PatchStep,
 } from "./terrain-patches.ts";
 
-const NO_LEVEL = -1;
-
 interface PatchGridOptions {
   readonly edges: PatchEdges;
   readonly materials: readonly Material[];
@@ -65,7 +63,7 @@ function isPatchVisible(patch: Patch, frustum: Frustum): boolean {
 }
 
 function levelFor(patch: Patch, camera: PerspectiveCamera, detail: number, sharedLevel: number): number {
-  if (sharedLevel !== NO_LEVEL) {
+  if (sharedLevel !== HIDDEN_LEVEL) {
     return sharedLevel;
   }
 
@@ -81,7 +79,6 @@ function levelFor(patch: Patch, camera: PerspectiveCamera, detail: number, share
 export class PatchGrid {
   readonly group = new Group();
   readonly #chosenLevels: Int8Array;
-  readonly #counts: number[][];
   readonly #grid: WorldGrid;
   readonly #levels: readonly (readonly PatchLevel[])[];
   readonly #measure: PatchMeasure;
@@ -100,12 +97,7 @@ export class PatchGrid {
         return this.#createLevel(step, material, patchCount * piecesPerPatch, options);
       });
     });
-    this.#counts = this.#levels.map((levels) => {
-      return levels.map(() => {
-        return 0;
-      });
-    });
-    this.#chosenLevels = new Int8Array(patchCount).fill(NO_LEVEL);
+    this.#chosenLevels = new Int8Array(patchCount).fill(HIDDEN_LEVEL);
 
     for (let row = 0; row < patchesPerSide; row += 1) {
       for (let column = 0; column < patchesPerSide; column += 1) {
@@ -128,47 +120,25 @@ export class PatchGrid {
     }
   }
 
-  update(camera: PerspectiveCamera, frustum: Frustum, detail: number, sharedLevels?: Readonly<Int8Array>): void {
+  update(camera: PerspectiveCamera, frustum: Frustum, detail: number, sharedLevels?: Readonly<Int8Array>): boolean {
     let hasNewOrigins = this.#hasNewPieces;
 
-    for (const counts of this.#counts) {
-      counts.fill(0);
-    }
-
     for (const [index, patch] of this.#patches.entries()) {
-      const shared = sharedLevels === undefined ? NO_LEVEL : sharedLevels[index];
-      const level = isPatchVisible(patch, frustum) ? levelFor(patch, camera, detail, shared) : NO_LEVEL;
+      const shared = sharedLevels === undefined ? HIDDEN_LEVEL : sharedLevels[index];
+      const level = isPatchVisible(patch, frustum) ? levelFor(patch, camera, detail, shared) : HIDDEN_LEVEL;
 
       if (level !== this.#chosenLevels[index]) {
         this.#chosenLevels[index] = level;
         hasNewOrigins = true;
       }
-
-      if (level === NO_LEVEL) {
-        continue;
-      }
-
-      for (const piece of patch.pieces) {
-        this.#place(piece, level);
-      }
     }
 
-    for (const [material, levels] of this.#levels.entries()) {
-      for (const [index, level] of levels.entries()) {
-        const count = this.#counts[material][index];
-
-        level.geometry.instanceCount = count;
-        level.mesh.visible = count > 0;
-
-        if (hasNewOrigins && count > 0) {
-          level.origins.clearUpdateRanges();
-          level.origins.addUpdateRange(0, count * level.origins.itemSize);
-          level.origins.needsUpdate = true;
-        }
-      }
+    if (hasNewOrigins) {
+      this.#refillOrigins();
+      this.#hasNewPieces = false;
     }
 
-    this.#hasNewPieces = false;
+    return hasNewOrigins;
   }
 
   dispose(): void {
@@ -179,12 +149,39 @@ export class PatchGrid {
     }
   }
 
-  #place(piece: PatchPiece, level: number): void {
-    const counts = this.#counts[piece.material];
-    const slot = counts[level];
+  #refillOrigins(): void {
+    for (const levels of this.#levels) {
+      for (const { geometry } of levels) {
+        geometry.instanceCount = 0;
+      }
+    }
 
-    this.#levels[piece.material][level].origins.setXY(slot, piece.firstColumn, piece.firstRow);
-    counts[level] = slot + 1;
+    for (const [index, patch] of this.#patches.entries()) {
+      const chosen = this.#chosenLevels[index];
+
+      if (chosen === HIDDEN_LEVEL) {
+        continue;
+      }
+
+      for (const piece of patch.pieces) {
+        const { geometry, origins } = this.#levels[piece.material][chosen];
+
+        origins.setXY(geometry.instanceCount, piece.firstColumn, piece.firstRow);
+        geometry.instanceCount += 1;
+      }
+    }
+
+    for (const levels of this.#levels) {
+      for (const { geometry, mesh, origins } of levels) {
+        mesh.visible = geometry.instanceCount > 0;
+
+        if (mesh.visible) {
+          origins.clearUpdateRanges();
+          origins.addUpdateRange(0, geometry.instanceCount * origins.itemSize);
+          origins.needsUpdate = true;
+        }
+      }
+    }
   }
 
   #createLevel(step: PatchStep, material: Material, capacity: number, options: PatchGridOptions): PatchLevel {

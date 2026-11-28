@@ -8,8 +8,6 @@ import { createCalendar, createChronicleEntry, createFrame } from "../testing/wo
 import { connectGuide } from "./connect-guide.ts";
 import { useGuideStore } from "./guide-store.ts";
 
-const CAST = { parameters: {}, powerId: "rain", x: 0, z: 0 } as const;
-
 function connectSession(seasonName = "Autumn") {
   const frames = createListeners<SimulationFrame>();
   const commands = createListeners<SimulationCommand>();
@@ -41,7 +39,7 @@ describe("connecting the guide", () => {
   it("credits the gift when a tribe receives it, including while paused", () => {
     const { receive, send } = connectSession();
 
-    send({ ...CAST, powerId: "abundance", type: "usePower" });
+    send({ parameters: {}, powerId: "abundance", type: "usePower", x: 0, z: 0 });
     receive({ effects: [{ kind: "blessing", radius: 10, style: "abundance", x: 0, z: 0 }] });
 
     expect(doneTips()).toEqual([]);
@@ -113,7 +111,7 @@ describe("connecting the guide", () => {
     const { disconnect, receive, send } = connectSession();
 
     disconnect();
-    send({ ...CAST, type: "usePower" });
+    send({ speed: 4, type: "setSpeed" });
     useInterfaceStore.getState().openJournal("chronicle");
 
     expect(doneTips()).toEqual([]);

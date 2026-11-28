@@ -1,4 +1,4 @@
-import { beforeAll, describe, expect, it } from "vitest";
+import { assert, beforeAll, describe, expect, it } from "vitest";
 import { lerp, saturate } from "../shared/math.ts";
 import { isOnIsland } from "../world/coast.ts";
 import { sampleHeight } from "../world/terrain-sampling.ts";
@@ -359,11 +359,7 @@ describe("river carving", () => {
         return Math.abs(point.z) < 5;
       });
 
-    expect(crossing).toBeDefined();
-
-    if (crossing === undefined) {
-      return;
-    }
+    assert.isDefined(crossing, "Expected a river through the ridge");
 
     const crest = grid.cellAt(crossing.x, crossing.z);
     const wall = grid.cellAt(crossing.x + 25, crossing.z);

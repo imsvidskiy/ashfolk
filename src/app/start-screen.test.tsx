@@ -54,18 +54,7 @@ describe("start screen", () => {
     await expect.element(screen.getByRole("button", { name: "Grow the island" })).toBeEnabled();
   });
 
-  it("grows the world at the chosen size", async () => {
-    const screen = await render(<StartScreen />);
-
-    await screen.getByText("Island options", { exact: true }).click();
-    await screen.getByRole("button", { name: "Large" }).click();
-    await screen.getByRole("button", { name: "Grow the island" }).click();
-
-    expect(useLaunchStore.getState().launch.size).toBe("large");
-    expect(new URLSearchParams(window.location.search).get("size")).toBe("large");
-  });
-
-  it("grows the named world in the chosen shape", async () => {
+  it("grows the named world with the chosen seed, shape and size", async () => {
     useLaunchStore.setState({ isChoosingWorld: true });
 
     const screen = await render(<StartScreen />);
@@ -73,13 +62,15 @@ describe("start screen", () => {
     await screen.getByRole("textbox", { name: "Name" }).fill("Old Ford");
     await screen.getByText("Island options", { exact: true }).click();
     await screen.getByRole("button", { name: "Square" }).click();
+    await screen.getByRole("button", { name: "Large" }).click();
     await screen.getByRole("textbox", { name: "Seed" }).fill("42");
     await screen.getByRole("button", { name: "Grow the island" }).click();
 
     const { isChoosingWorld, launch } = useLaunchStore.getState();
 
     expect(isChoosingWorld).toBe(false);
-    expect(launch).toMatchObject({ name: "Old Ford", seed: 42, shape: "square" });
+    expect(launch).toMatchObject({ name: "Old Ford", seed: 42, shape: "square", size: "large" });
+    expect(new URLSearchParams(window.location.search).get("size")).toBe("large");
   });
 
   it("offers the saved world without showing the new-world form first", async () => {

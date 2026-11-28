@@ -14,14 +14,7 @@ import { type GridDimensions, WorldGrid } from "../world/world-grid.ts";
 import { buildClimate } from "./climate.ts";
 import { planCrossings } from "./crossings.ts";
 import { exposeDeposits, planDeposits } from "./deposits.ts";
-import {
-  type ErosionPlan,
-  type ErosionScale,
-  erodeAcrossScales,
-  limitSlopes,
-  relaxSlopes,
-  smoothHeights,
-} from "./erosion.ts";
+import { type ErosionPlan, type ErosionScale, erodeAcrossScales } from "./erosion.ts";
 import {
   DEFAULT_GENERATION_OPTIONS,
   type GenerationOptions,
@@ -34,6 +27,7 @@ import { digRiverLakes, easeLakeShores, fillSinks } from "./lake-basins.ts";
 import { planMonuments } from "./monuments.ts";
 import { createRelief, islandPointAt, type Relief } from "./relief.ts";
 import { measureRockStrength } from "./rock-strength.ts";
+import { limitSlopes, relaxSlopes, smoothHeights } from "./terrain-slopes.ts";
 import { carveValleys } from "./valleys.ts";
 import { plantInitialVegetation } from "./vegetation.ts";
 import { openWoodland } from "./woodland.ts";

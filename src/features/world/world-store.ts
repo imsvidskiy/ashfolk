@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import type { WorldRules } from "../../content/world-rules.ts";
+import { DEFAULT_WORLD_RULES, type WorldRules, worldRulesSchema } from "../../content/world-rules.ts";
 import type { ChronicleCategory, ChronicleEntry } from "../../simulation/chronicle.ts";
 import type { SimulationFrame, TribeSummary, WeatherView } from "../../simulation/frame.ts";
 import type { Inspection } from "../../simulation/inspection.ts";
@@ -20,6 +20,10 @@ const ANNOUNCED_CATEGORIES: ReadonlySet<ChronicleCategory> = new Set([
   "split",
   "warning",
 ]);
+
+const RULE_GROUPS = worldRulesSchema.keyof().options.map((key) => {
+  return { fields: Object.keys(DEFAULT_WORLD_RULES[key]), key };
+});
 
 let nextNoticeId = 1;
 
@@ -62,8 +66,19 @@ export const useWorldStore = create<WorldStore>()(() => {
 });
 
 function keptRules(previous: WorldSnapshot | null, rules: WorldRules): WorldRules {
-  if (previous === null || JSON.stringify(previous.rules) !== JSON.stringify(rules)) {
+  if (previous === null || previous.rules === rules) {
     return rules;
+  }
+
+  for (const { fields, key } of RULE_GROUPS) {
+    const before: Readonly<Record<string, number>> = previous.rules[key];
+    const after: Readonly<Record<string, number>> = rules[key];
+
+    for (const field of fields) {
+      if (before[field] !== after[field]) {
+        return rules;
+      }
+    }
   }
 
   return previous.rules;
@@ -82,29 +97,31 @@ function snapshotOf(frame: SimulationFrame, previous: WorldSnapshot | null): Wor
   };
 }
 
-function createNotice(category: WorldNotice["category"], text: string): WorldNotice {
-  const notice = { category, expiresAt: performance.now() + NOTICE_MILLISECONDS, id: nextNoticeId, text };
+function createNotice(category: WorldNotice["category"], text: string, expiresAt: number): WorldNotice {
+  const notice = { category, expiresAt, id: nextNoticeId, text };
 
   nextNoticeId += 1;
 
   return notice;
 }
 
-function noticesFrom(frame: SimulationFrame): WorldNotice[] {
-  const announced = frame.chronicle
-    .filter((entry) => {
-      return ANNOUNCED_CATEGORIES.has(entry.category);
-    })
-    .map((entry) => {
-      return createNotice(entry.category, entry.text);
-    });
+function appendNotices(previous: readonly WorldNotice[], frame: SimulationFrame, now: number): readonly WorldNotice[] {
+  if (frame.notices.length === 0 && frame.chronicle.length === 0) {
+    return previous;
+  }
 
-  return [
-    ...frame.notices.map((text) => {
-      return createNotice("notice", text);
-    }),
-    ...announced,
-  ];
+  const expiresAt = now + NOTICE_MILLISECONDS;
+  const added = frame.notices.map((text) => {
+    return createNotice("notice", text, expiresAt);
+  });
+
+  for (const entry of frame.chronicle) {
+    if (ANNOUNCED_CATEGORIES.has(entry.category)) {
+      added.push(createNotice(entry.category, entry.text, expiresAt));
+    }
+  }
+
+  return added.length === 0 ? previous : [...previous, ...added].slice(-MAXIMUM_NOTICES);
 }
 
 export function connectWorldStore(feed: WorldFeed): () => void {
@@ -140,9 +157,19 @@ export function connectWorldStore(feed: WorldFeed): () => void {
     clearTimeout(trailingRefresh);
     trailingRefresh = undefined;
     lastRefresh = performance.now();
-    useWorldStore.setState((state) => {
-      return { snapshot: snapshotOf(frame, state.snapshot) };
+
+    const previous = useWorldStore.getState();
+    const notices = appendNotices(previous.notices, frame, lastRefresh);
+
+    useWorldStore.setState({
+      chronicle: frame.chronicle.length === 0 ? previous.chronicle : [...feed.chronicle],
+      notices,
+      snapshot: snapshotOf(frame, previous.snapshot),
     });
+
+    if (notices !== previous.notices) {
+      scheduleExpiry();
+    }
   }
 
   useWorldStore.setState({
@@ -154,21 +181,6 @@ export function connectWorldStore(feed: WorldFeed): () => void {
   const unsubscribe = feed.subscribe((frame) => {
     const now = performance.now();
     const hasNews = frame.chronicle.length > 0 || frame.notices.length > 0;
-
-    if (hasNews) {
-      const newNotices = noticesFrom(frame);
-
-      useWorldStore.setState((state) => {
-        return {
-          chronicle: [...feed.chronicle],
-          notices: newNotices.length > 0 ? [...state.notices, ...newNotices].slice(-MAXIMUM_NOTICES) : state.notices,
-        };
-      });
-
-      if (newNotices.length > 0) {
-        scheduleExpiry();
-      }
-    }
 
     if (now - lastRefresh < REFRESH_MILLISECONDS && !hasNews) {
       if (trailingRefresh === undefined) {

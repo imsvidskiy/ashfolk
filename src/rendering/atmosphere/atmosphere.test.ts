@@ -11,8 +11,6 @@ const CLEAR_SKY = {
   season: 1,
   snowfall: 0,
   storm: 0,
-  windX: 0,
-  windZ: 0,
 };
 
 const HOUR_STEP = 0.001;
@@ -22,17 +20,17 @@ const FAR_VIEW = 2500;
 const ISLAND_HALF_SIZE = 2560;
 
 function createAtmosphere(): Atmosphere {
-  return new Atmosphere(new Scene(), { cloudSeaAltitude: -200, islandHalfSize: ISLAND_HALF_SIZE, shadowMapSize: 1024 });
+  return new Atmosphere(new Scene(), { islandHalfSize: ISLAND_HALF_SIZE, shadowMapSize: 1024 });
 }
 
 function lightAt(atmosphere: Atmosphere, hours: number): number {
-  atmosphere.update({ ...CLEAR_SKY, hours }, new Vector3(0, 600, 500), new Vector3(), 800, 0);
+  atmosphere.update({ ...CLEAR_SKY, hours }, new Vector3(0, 600, 500), new Vector3(), 800);
 
   return atmosphere.sun.intensity;
 }
 
 function shadowReachAt(atmosphere: Atmosphere, focus: Vector3, viewDistance: number): number {
-  atmosphere.update(CLEAR_SKY, new Vector3(0, 600, 500), focus, viewDistance, 0);
+  atmosphere.update(CLEAR_SKY, new Vector3(0, 600, 500), focus, viewDistance);
 
   return atmosphere.sun.shadow.camera.right;
 }
@@ -73,7 +71,7 @@ describe("atmosphere", () => {
   it("keeps shadows attached to the feet that cast them", () => {
     const atmosphere = createAtmosphere();
 
-    atmosphere.update(CLEAR_SKY, new Vector3(0, 20, 25), new Vector3(), 30, 0);
+    atmosphere.update(CLEAR_SKY, new Vector3(0, 20, 25), new Vector3(), 30);
 
     const { bias, camera } = atmosphere.sun.shadow;
 
@@ -97,7 +95,7 @@ describe("atmosphere", () => {
     const atmosphere = createAtmosphere();
 
     atmosphere.setShadows(8192, true);
-    atmosphere.update(CLEAR_SKY, new Vector3(0, 20, 25), new Vector3(), 30, 0);
+    atmosphere.update(CLEAR_SKY, new Vector3(0, 20, 25), new Vector3(), 30);
 
     const { bias, camera, mapSize } = atmosphere.sun.shadow;
 

@@ -46,7 +46,6 @@ import { WaterView } from "./water/water-view.ts";
 import { WaterfallView } from "./water/waterfall-view.ts";
 import { WorldChangeReader, type WorldChanges } from "./world-changes.ts";
 
-const CLOUD_SEA_DEPTH = 760;
 const WATER_DRIFT = 0.08;
 const NIGHT_SPRITE_BRIGHTNESS = 0.25;
 const NIGHT_SMOKE_BRIGHTNESS = 0.3;
@@ -199,7 +198,6 @@ export class WorldRenderer {
     });
 
     this.#atmosphere = new Atmosphere(this.scene, {
-      cloudSeaAltitude: this.#plinth - CLOUD_SEA_DEPTH,
       islandHalfSize: mirror.grid.halfSize,
       shadowMapSize: quality.shadowMapSize,
     });
@@ -294,13 +292,10 @@ export class WorldRenderer {
         season: frame.calendar.season,
         snowfall: form === "snow" ? frame.weather.precipitation : 0,
         storm: frame.weather.storm,
-        windX,
-        windZ,
       },
       view.camera.position,
       view.focus,
-      view.viewDistance,
-      view.realSeconds
+      view.viewDistance
     );
 
     this.#paintWater(windX, windZ, strength, rainfall, view.realSeconds);
@@ -310,7 +305,6 @@ export class WorldRenderer {
       this.#matrix.multiplyMatrices(view.camera.projectionMatrix, view.camera.matrixWorldInverse)
     );
     this.#terrain.update(view.camera, this.#frustum, this.#quality.terrainDetail);
-    this.#textures.followPatchLevels(this.#terrain.patchLevels);
     this.#water.update(view.camera, this.#frustum, this.#quality.terrainDetail, this.#terrain.patchLevels);
     this.#hand.update(frame.held, view.realSeconds);
     this.#vegetation.hold(this.#hand);

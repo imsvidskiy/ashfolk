@@ -1,4 +1,4 @@
-import { bordersBrook, hopTargets, Passage } from "../world/brooks.ts";
+import { brookBankMask, hopTargets, Passage } from "../world/brooks.ts";
 import type { Crossing } from "../world/crossings.ts";
 import type { WorldGrid } from "../world/world-grid.ts";
 
@@ -14,6 +14,8 @@ export class BankRegions {
     function passageOf(cell: number): Passage {
       return passages[cell];
     }
+
+    const banks = brookBankMask(grid, passageOf);
 
     this.#grid = grid;
     this.#isGround = new Uint8Array(grid.cellCount);
@@ -32,7 +34,7 @@ export class BankRegions {
 
       this.#joinNeighbors(cell);
 
-      if (!bordersBrook(grid, cell, passageOf)) {
+      if (banks[cell] === 0) {
         continue;
       }
 
@@ -87,29 +89,10 @@ export class BankRegions {
       this.#union(cell, cell + 1);
     }
 
-    if (row + 1 >= grid.cellsPerSide) {
-      return;
-    }
-
     const below = cell + grid.cellsPerSide;
-    const isBelowGround = this.#isGround[below] === 1;
 
-    if (isBelowGround) {
+    if (row + 1 < grid.cellsPerSide && this.#isGround[below] === 1) {
       this.#union(cell, below);
-    }
-
-    for (const side of [-1, 1]) {
-      const sideColumn = column + side;
-
-      if (sideColumn < 0 || sideColumn >= grid.cellsPerSide) {
-        continue;
-      }
-
-      const isOpen = this.#isGround[cell + side] === 1 && isBelowGround;
-
-      if (isOpen && this.#isGround[below + side] === 1) {
-        this.#union(cell, below + side);
-      }
     }
   }
 

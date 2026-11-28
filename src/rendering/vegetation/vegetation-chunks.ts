@@ -43,9 +43,8 @@ const FIRST_BUCKETS: readonly number[] = PLANT_SPECIES.map((definition) => {
 
 export interface VegetationChunk {
   readonly bounds: Box3;
-  buckets: Float32Array[];
+  readonly buckets: Float32Array[];
   changedBuckets: number[];
-  isDirty: boolean;
   readonly plants: Set<number>;
   sparseCounts: number[];
 }
@@ -99,18 +98,11 @@ function isKeptWhenSparse(plant: number): boolean {
   return hashToUnit(plant, 1) < SPARSE_SHARE;
 }
 
-function allocateBucket(count: number): Float32Array {
-  if (count === 0) {
-    return EMPTY_BUCKET;
-  }
-
-  return new Float32Array(count * FLOATS_PER_PLANT);
-}
-
 export class VegetationChunks {
   readonly chunks: VegetationChunk[] = [];
   readonly chunksPerSide: number;
   readonly #crowns: readonly ObjectExtent[];
+  readonly #dirtyChunks = new Set<number>();
   readonly #footprints: readonly number[] = PLANT_SPECIES.map((species) => {
     return footprintRadius(species.index);
   });
@@ -131,11 +123,11 @@ export class VegetationChunks {
         bounds: new Box3(),
         buckets: [],
         changedBuckets: [],
-        isDirty: true,
         plants: new Set(),
         sparseCounts: [],
       });
       this.#touchedBuckets.push(new Set());
+      this.#dirtyChunks.add(chunk);
     }
 
     const { count } = mirror.vegetation;
@@ -197,14 +189,13 @@ export class VegetationChunks {
   }
 
   repackDirty(): number[] {
-    const repacked: number[] = [];
+    const repacked = [...this.#dirtyChunks];
 
-    for (const [index, chunk] of this.chunks.entries()) {
-      if (chunk.isDirty) {
-        this.#repack(chunk, this.#touchedBuckets[index]);
-        repacked.push(index);
-      }
+    for (const index of repacked) {
+      this.#repack(this.chunks[index], this.#touchedBuckets[index]);
     }
+
+    this.#dirtyChunks.clear();
 
     return repacked;
   }
@@ -251,13 +242,15 @@ export class VegetationChunks {
   }
 
   #touch(chunk: number, bucket: number): void {
-    this.chunks[chunk].isDirty = true;
+    this.#dirtyChunks.add(chunk);
     this.#touchedBuckets[chunk].add(bucket);
   }
 
   #touchAll(chunk: number): void {
+    this.#dirtyChunks.add(chunk);
+
     for (let bucket = 0; bucket < BUCKET_COUNT; bucket += 1) {
-      this.#touch(chunk, bucket);
+      this.#touchedBuckets[chunk].add(bucket);
     }
   }
 
@@ -283,41 +276,37 @@ export class VegetationChunks {
   #repack(chunk: VegetationChunk, touched: Set<number>): void {
     const counts = new Array<number>(BUCKET_COUNT).fill(0);
     const sparseCounts = new Array<number>(BUCKET_COUNT).fill(0);
-    const sparse: number[] = [];
-    const rest: number[] = [];
 
     for (const plant of chunk.plants) {
       const bucket = this.#bucketOfPlant[plant];
 
       counts[bucket] += 1;
+      sparseCounts[bucket] += this.#isKeptWhenSparse[plant];
+    }
 
-      if (this.#isKeptWhenSparse[plant] === 1) {
-        sparseCounts[bucket] += 1;
-        sparse.push(plant);
-      } else {
-        rest.push(plant);
+    for (const [bucket, count] of counts.entries()) {
+      const length = count * FLOATS_PER_PLANT;
+
+      if (chunk.buckets[bucket]?.length !== length) {
+        chunk.buckets[bucket] = length === 0 ? EMPTY_BUCKET : new Float32Array(length);
       }
     }
 
-    const buckets = counts.map((count) => {
-      return allocateBucket(count);
-    });
-    const filled = new Array<number>(BUCKET_COUNT).fill(0);
+    const sparsePositions = new Array<number>(BUCKET_COUNT).fill(0);
+    const otherPositions = [...sparseCounts];
 
     chunk.bounds.makeEmpty();
 
-    for (const plant of [...sparse, ...rest]) {
+    for (const plant of chunk.plants) {
       const bucket = this.#bucketOfPlant[plant];
-      const offset = filled[bucket] * FLOATS_PER_PLANT;
+      const positions = this.#isKeptWhenSparse[plant] === 1 ? sparsePositions : otherPositions;
 
-      this.#writePlant(plant, buckets[bucket], offset, chunk.bounds);
-      filled[bucket] += 1;
+      this.#writePlant(plant, chunk.buckets[bucket], positions[bucket] * FLOATS_PER_PLANT, chunk.bounds);
+      positions[bucket] += 1;
     }
 
-    chunk.buckets = buckets;
     chunk.sparseCounts = sparseCounts;
     chunk.changedBuckets = [...touched];
-    chunk.isDirty = false;
     touched.clear();
   }
 
