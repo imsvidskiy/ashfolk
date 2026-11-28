@@ -102,21 +102,27 @@ export function saveBeforeLeaving(leave: () => void): void {
   });
 }
 
-function reportOutcome(outcome: SaveOutcome): void {
-  if (outcome === "failed") {
-    useSavesStore.setState({ saveProblem: "failed" });
-  }
-}
-
 export function connectAutosave(session: GameSession, identity: SavedWorldIdentity): () => void {
+  function updateStatus(status: Partial<Pick<SavesStore, "isSaving" | "lastSavedAt" | "saveProblem">>): void {
+    if (useSavesStore.getState().saver === saver) {
+      useSavesStore.setState(status);
+    }
+  }
+
   const saver = new WorldSaver(session, identity, {
     onSaved: (savedAt) => {
-      useSavesStore.setState({ lastSavedAt: savedAt, saveProblem: null });
+      updateStatus({ lastSavedAt: savedAt, saveProblem: null });
     },
     onSaving: (isSaving) => {
-      useSavesStore.setState({ isSaving });
+      updateStatus({ isSaving });
     },
   });
+
+  function reportOutcome(outcome: SaveOutcome): void {
+    if (outcome === "failed") {
+      updateStatus({ saveProblem: "failed" });
+    }
+  }
 
   function autosave(): void {
     saver.save().then(reportOutcome, ignore);

@@ -143,6 +143,25 @@ describe("world store", () => {
     expect(useWorldStore.getState().snapshot?.speed).toBe(4);
   });
 
+  it("publishes the snapshot and its notices together and keeps an unchanged journal", () => {
+    const feed = createFeed({ chronicle: [createChronicleEntry()] });
+
+    connect(feed);
+
+    const { chronicle } = useWorldStore.getState();
+    const listener = vi.fn();
+
+    onTestFinished(useWorldStore.subscribe(listener));
+    feed.emit(createFrame({ notices: ["Rain is coming."], speed: 4 }));
+
+    expect(listener).toHaveBeenCalledOnce();
+    expect(useWorldStore.getState().chronicle).toBe(chronicle);
+    expect(useWorldStore.getState()).toMatchObject({
+      notices: [{ text: "Rain is coming." }],
+      snapshot: { speed: 4 },
+    });
+  });
+
   it("keeps the rules object while the rules stay the same", () => {
     const frame = createFrame();
     const feed = createFeed({ frame });

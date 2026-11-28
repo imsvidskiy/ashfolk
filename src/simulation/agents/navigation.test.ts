@@ -277,6 +277,25 @@ describe("crossings", () => {
     expect(isReachable(navigation, { x: -150, z: -100 }, { x: 150, z: 200 })).toBe(true);
   });
 
+  it("drops both directions of a hop when a brook becomes too wide", () => {
+    const world = createTestWorld(RIVER_WORLD);
+    const west = { x: -150, z: 0 };
+    const east = { x: 150, z: 0 };
+
+    riverStrip(world, -20, 0, BROOK_STRENGTH);
+
+    const navigation = new NavigationGrid(world);
+
+    expect(isReachable(navigation, west, east)).toBe(true);
+
+    riverStrip(world, -20, 0, BROOK_STRENGTH + 1);
+    world.markWaterChanged();
+    navigation.rebuildIfChanged();
+
+    expect(isReachable(navigation, west, east)).toBe(false);
+    expect(isReachable(navigation, east, west)).toBe(false);
+  });
+
   it("hops a brook back the way a hop from the far bank came", () => {
     const world = createTestWorld(RIVER_WORLD);
 

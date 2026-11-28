@@ -52,6 +52,13 @@ The roadmap records progress through 0.10.0. Later edits corrected names and add
   absence in both stores is an empty slot. Explicitly starting a fresh island can bypass storage. Notices expire
   with the world session even while the interface is hidden. [Save database](src/features/saves/save-database.ts) ·
   [World feed](src/features/world/world-store.ts)
+- **Runtime changes after 0.12.5.** Hydraulic erosion and slope relaxation are separate generation stages.
+  River courses provide distances and positions for crossing placement. Navigation measures the walkable slope
+  once per cell and keeps hop destinations for connected brook banks. Terrain and water reuse patch origins at a
+  stable level of detail. Trees and their shadow proxies share static mesh attributes. A HUD frame publishes its
+  news and snapshot together, and save feedback follows the session that started the write.
+  [Terrain slopes](src/generation/terrain-slopes.ts) · [Brook hops](src/simulation/agents/brook-hops.ts) ·
+  [Terrain patches](src/rendering/terrain/patch-grid.ts) · [World feed](src/features/world/world-store.ts)
 - **What is still a proposal.** The module/reaction registry, per-system saved random streams, replay format,
   localization, scenarios and cloud saves remain roadmap items. The first-island guide is available in the sandbox.
   [Architecture migration](docs/plan.md#migration) · [Roadmap](docs/roadmap.md)

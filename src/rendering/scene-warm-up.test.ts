@@ -24,12 +24,12 @@ function createScene(meshCount: number): WarmedScene {
     const mesh = new Mesh(geometry, material);
 
     mesh.visible = false;
+    group.add(mesh);
 
     return mesh;
   });
 
   group.visible = false;
-  group.add(...meshes);
   scene.add(group);
 
   return { group, meshes, scene };

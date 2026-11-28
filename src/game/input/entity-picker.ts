@@ -26,17 +26,21 @@ import { measureGrabbablePlants, plantHitDistance } from "./plant-volumes.ts";
 import { aimRay, normalizedToPixels, projectToNormalized } from "./screen-projection.ts";
 
 const PICK_RADIUS_PIXELS = 26;
+
 const BUILDING_PICK_RADIUS_PIXELS = 40;
 const BUILDING_CENTER_HEIGHT = 1.5;
 const BUILDING_PICK_PENALTY_PIXELS = 8;
+
 const SMALLEST_OCCLUSION_MARGIN = 12;
 const OCCLUSION_MARGIN_PER_METER = 0.04;
+
 const PLANT_SLACK_PIXELS = 12;
 const TALLEST_PLANT = 40;
 const WIDEST_CROWN = 16;
 const SEARCH_SPACING = 80;
 const SEARCH_STEP = SEARCH_SPACING / 2;
 const CLEARANCE_STEP = 4;
+
 const AGENT_PRIORITY_METERS = 1;
 const AGENT_FIRST_PIXELS = 12;
 const LARGEST_BODY_REACH = 6;
@@ -70,6 +74,7 @@ interface AgentTarget {
 
 interface PointerPick {
   readonly ground: Vector3 | null;
+  readonly metersPerPixel: number;
   readonly ray: Ray;
   readonly screen: ScreenPoint;
   readonly viewport: ViewportSize;
@@ -104,8 +109,9 @@ function searchAlong(ray: Ray, end: Vector3, heightAt: HeightField): RaySearch {
   const across = Math.hypot(end.x - origin.x, end.z - origin.z);
   const count = Math.ceil(across / SEARCH_STEP) + 1;
   const reachPerMeter = length / Math.max(across, 1);
-  const point = new Vector3();
 
+  const point = new Vector3();
+  const sample = new Vector3();
   const spots: GroundPoint[] = [];
 
   let farthest = 0;
@@ -117,7 +123,7 @@ function searchAlong(ray: Ray, end: Vector3, heightAt: HeightField): RaySearch {
 
     const clearance = point.y - heightAt(point.x, point.z);
 
-    if (lowestClearance(ray, reach, reachPerMeter, heightAt) <= TALLEST_PLANT + WIDEST_CROWN) {
+    if (clearance <= TALLEST_PLANT + WIDEST_CROWN || passesNearGround(ray, reach, reachPerMeter, heightAt, sample)) {
       spots.push({ x: point.x, z: point.z });
       farthest = reach;
     }
@@ -130,17 +136,26 @@ function searchAlong(ray: Ray, end: Vector3, heightAt: HeightField): RaySearch {
   return { farthest, spots };
 }
 
-function lowestClearance(ray: Ray, reach: number, reachPerMeter: number, heightAt: HeightField): number {
-  const point = new Vector3();
-
-  let lowest = Number.POSITIVE_INFINITY;
-
+function passesNearGround(
+  ray: Ray,
+  reach: number,
+  reachPerMeter: number,
+  heightAt: HeightField,
+  sample: Vector3
+): boolean {
   for (let offset = -SEARCH_STEP / 2; offset <= SEARCH_STEP / 2; offset += CLEARANCE_STEP) {
-    ray.at(Math.max(0, reach + offset * reachPerMeter), point);
-    lowest = Math.min(lowest, point.y - heightAt(point.x, point.z));
+    if (offset === 0) {
+      continue;
+    }
+
+    ray.at(Math.max(0, reach + offset * reachPerMeter), sample);
+
+    if (sample.y - heightAt(sample.x, sample.z) <= TALLEST_PLANT + WIDEST_CROWN) {
+      return true;
+    }
   }
 
-  return lowest;
+  return false;
 }
 
 function screenAxis(feet: PixelPoint | null, top: PixelPoint | null): readonly [PixelPoint, PixelPoint] | null {
@@ -174,7 +189,7 @@ export class EntityPicker {
   }
 
   pick(scene: AgentScene, screen: ScreenPoint, viewport: ViewportSize, ground: Vector3 | null): Selection | null {
-    const pointer = { ground, ray: aimRay(this.#raycaster, this.#camera, screen, viewport), screen, viewport };
+    const pointer = this.#pointer(screen, viewport, ground);
 
     const nearest = this.#nearestCandidate(ground, [
       ...this.#agents(scene, PEOPLE, pointer),
@@ -199,25 +214,24 @@ export class EntityPicker {
     viewport: ViewportSize,
     ground: Vector3 | null
   ): GrabTarget | null {
-    const pointer = { ground, ray: aimRay(this.#raycaster, this.#camera, screen, viewport), screen, viewport };
+    const pointer = this.#pointer(screen, viewport, ground);
 
     const agent = this.#nearestCandidate(ground, [
       ...this.#agents(scene, ANIMALS, pointer),
       ...this.#agents(scene, PEOPLE, pointer),
     ]);
-    const plant = this.#grabbablePlant(scene, pointer);
 
-    if (plant === null) {
-      return agent === null ? null : agent.target;
+    if (agent !== null && agent.distance <= AGENT_FIRST_PIXELS) {
+      return agent.target;
     }
 
-    const isOnAgent = agent !== null && agent.distance <= AGENT_FIRST_PIXELS;
+    const plant = this.#grabbablePlant(scene, pointer);
 
-    if (agent === null || (!isOnAgent && plant.reach < agent.reach - AGENT_PRIORITY_METERS)) {
+    if (plant !== null && (agent === null || plant.reach < agent.reach - AGENT_PRIORITY_METERS)) {
       return plant.target;
     }
 
-    return agent.target;
+    return agent === null ? null : agent.target;
   }
 
   #nearestCandidate<Target>(
@@ -300,21 +314,26 @@ export class EntityPicker {
 
     const end = pointer.ground === null ? ray.at(this.#camera.far, new Vector3()) : pointer.ground;
     const { farthest, spots } = searchAlong(ray, end, this.#heightAt);
-    const slackPerMeter = this.#metersPerPixel(pointer.viewport) * PLANT_SLACK_PIXELS;
+    const slackPerMeter = pointer.metersPerPixel * PLANT_SLACK_PIXELS;
     const groundReach = pointer.ground === null ? Number.POSITIVE_INFINITY : origin.distanceTo(pointer.ground);
 
     let nearest: Candidate<GrabTarget> | null = null;
 
     for (const plant of scene.plantsNear(spots, WIDEST_CROWN + farthest * slackPerMeter + SEARCH_SPACING / 2)) {
+      const species = vegetation.species[plant];
+
+      if (vegetation.state[plant] !== PlantState.Alive || !isGrabbablePlant(species)) {
+        continue;
+      }
+
       const x = vegetation.x[plant];
       const z = vegetation.z[plant];
-      const species = vegetation.species[plant];
       const baseY = this.#heightAt(x, z);
 
       const slack = this.#camera.position.distanceTo(this.#point.set(x, baseY, z)) * slackPerMeter;
       const isOffRay = distanceToSegment(x, z, [origin.x, origin.z], [end.x, end.z]) > WIDEST_CROWN + slack;
 
-      if (isOffRay || vegetation.state[plant] !== PlantState.Alive || !isGrabbablePlant(species)) {
+      if (isOffRay) {
         continue;
       }
 
@@ -343,13 +362,19 @@ export class EntityPicker {
   #isNearRay(x: number, y: number, z: number, pointer: PointerPick): boolean {
     const point = this.#point.set(x, y, z);
 
-    const slack = this.#camera.position.distanceTo(point) * this.#metersPerPixel(pointer.viewport) * PICK_RADIUS_PIXELS;
+    const slack = this.#camera.position.distanceTo(point) * pointer.metersPerPixel * PICK_RADIUS_PIXELS;
 
     return pointer.ray.distanceToPoint(point) <= LARGEST_BODY_REACH + slack;
   }
 
-  #metersPerPixel(viewport: ViewportSize): number {
-    return (2 * Math.tan((this.#camera.fov * Math.PI) / 360)) / viewport.height;
+  #pointer(screen: ScreenPoint, viewport: ViewportSize, ground: Vector3 | null): PointerPick {
+    return {
+      ground,
+      metersPerPixel: (2 * Math.tan((this.#camera.fov * Math.PI) / 360)) / viewport.height,
+      ray: aimRay(this.#raycaster, this.#camera, screen, viewport),
+      screen,
+      viewport,
+    };
   }
 
   #bodyHit(body: StandingBody, pointer: PointerPick): ScreenHit {

@@ -1,5 +1,5 @@
 import { PerspectiveCamera, Vector3 } from "three/webgpu";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { ANIMAL_KINDS } from "../../content/animals.ts";
 import { PlantSpecies } from "../../content/plants.ts";
 import { FIGURE_SCALE } from "../../models/people/human-proportions.ts";
@@ -294,8 +294,17 @@ describe("entity picker", () => {
     expect(grabAt(plantAt(PlantSpecies.Oak, 0, -4))).toEqual({ id: 0, kind: "plant" });
   });
 
-  it("grabs a person before the tree behind them", () => {
-    expect(grabAt(plantAt(PlantSpecies.Oak, 0, -4), [0, 0])).toEqual({ id: 1, kind: "person" });
+  it("grabs a person under the pointer without searching the trees behind them", () => {
+    const plantsNear = vi.fn(theOnePlant);
+    const scene = {
+      frame: frameWithPeople([0, 0]),
+      plantsNear,
+      secondsSinceTick: 0,
+      vegetation: plantAt(PlantSpecies.Oak, 0, -4),
+    };
+
+    expect(grabBetweenTicks(cameraLookingAt(0, 0), scene, CENTER)).toEqual({ id: 1, kind: "person" });
+    expect(plantsNear).not.toHaveBeenCalled();
   });
 
   it("grabs a crown in front of a person beside the pointer", () => {

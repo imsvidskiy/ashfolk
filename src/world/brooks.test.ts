@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   BROOK_STRENGTH,
+  brookBankMask,
   HOP_REACH,
   HOP_WIDTH,
   hopTargets,
@@ -86,6 +87,25 @@ describe("brooks", () => {
     expect(isBrookCell(terrain, grid.cellAt(55, 0))).toBe(false);
     expect(isBrookCell(terrain, grid.cellAt(105, 0))).toBe(false);
     expect(isBrookCell(terrain, grid.cellAt(-25, 0))).toBe(false);
+  });
+
+  it("marks only ground beside a brook, including diagonal banks at the edge", () => {
+    const bankGrid = new WorldGrid({ cellSize: 10, cellsPerSide: 4 });
+    const passages = new Array<Passage>(bankGrid.cellCount).fill(Passage.Ground);
+
+    passages[bankGrid.index(3, 0)] = Passage.Brook;
+    passages[bankGrid.index(2, 0)] = Passage.Blocked;
+
+    const banks = brookBankMask(bankGrid, (cell) => {
+      return passages[cell];
+    });
+
+    const expected = new Uint8Array(bankGrid.cellCount);
+
+    expected[bankGrid.index(2, 1)] = 1;
+    expected[bankGrid.index(3, 1)] = 1;
+
+    expect(banks).toEqual(expected);
   });
 
   it("are hopped once on a line straight across and not at all on dry ground", () => {

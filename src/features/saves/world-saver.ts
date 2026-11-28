@@ -42,12 +42,19 @@ export class WorldSaver {
       return this.#pending;
     }
 
-    const pending = this.#write().finally(() => {
+    const { changes } = this.#session;
+
+    if (changes === this.#savedChanges) {
+      return Promise.resolve("unchanged");
+    }
+
+    const pending = this.#write(changes).finally(() => {
       this.#pending = null;
       this.#listener.onSaving(false);
     });
 
     this.#pending = pending;
+    this.#listener.onSaving(true);
 
     return pending;
   }
@@ -68,16 +75,8 @@ export class WorldSaver {
     return this.saveSoon(retries - 1);
   }
 
-  async #write(): Promise<SaveOutcome> {
+  async #write(changes: number): Promise<SaveOutcome> {
     const session = this.#session;
-
-    const { changes } = session;
-
-    if (changes === this.#savedChanges) {
-      return "unchanged";
-    }
-
-    this.#listener.onSaving(true);
 
     const state = await session.saveWorld().catch((error: unknown) => {
       console.warn("The world could not be saved", error);

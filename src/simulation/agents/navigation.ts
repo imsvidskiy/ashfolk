@@ -162,7 +162,7 @@ export class NavigationGrid {
     }
 
     this.#spreadFromShore((cell) => {
-      return world.isWalkable(cell);
+      return this.#areas.isWalkable(cell);
     }, 0);
     this.#spreadFromShore((cell) => {
       return isDryLand(world, cell);

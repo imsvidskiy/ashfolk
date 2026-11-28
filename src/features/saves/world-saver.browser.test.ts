@@ -32,11 +32,12 @@ describe("world saver", () => {
   });
 
   it("skips a save while nothing has changed since the last one", async () => {
-    const { onSaved, saver, session } = await createSaver();
+    const { onSaved, onSaving, saver, session } = await createSaver();
 
     await saver.save();
 
     expect(await saver.save()).toBe("unchanged");
+    expect(onSaving.mock.calls).toEqual([[true], [false]]);
 
     session.send({ isPaused: true, type: "setPaused" });
 

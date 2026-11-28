@@ -1,6 +1,6 @@
 import { isWaterCell, type SampledTerrain } from "./terrain-sampling.ts";
 import { riverCodeOfWidth } from "./water.ts";
-import type { WorldGrid } from "./world-grid.ts";
+import { NEIGHBOR_OFFSETS, type WorldGrid } from "./world-grid.ts";
 
 export const HOP_WIDTH = 4;
 export const HOP_REACH = 22;
@@ -124,23 +124,25 @@ export function hopTargets(grid: WorldGrid, cell: number, passageOf: (cell: numb
   return targets;
 }
 
-export function bordersBrook(grid: WorldGrid, cell: number, passageOf: (cell: number) => Passage): boolean {
-  const column = grid.columnOf(cell);
-  const row = grid.rowOf(cell);
+export function brookBankMask(grid: WorldGrid, passageOf: (cell: number) => Passage): Uint8Array {
+  const banks = new Uint8Array(grid.cellCount);
 
-  for (let rowOffset = -1; rowOffset <= 1; rowOffset += 1) {
-    for (let columnOffset = -1; columnOffset <= 1; columnOffset += 1) {
-      const neighborColumn = column + columnOffset;
-      const neighborRow = row + rowOffset;
+  for (let cell = 0; cell < grid.cellCount; cell += 1) {
+    if (passageOf(cell) !== Passage.Brook) {
+      continue;
+    }
 
-      if (
-        grid.contains(neighborColumn, neighborRow) &&
-        passageOf(grid.index(neighborColumn, neighborRow)) === Passage.Brook
-      ) {
-        return true;
+    const column = grid.columnOf(cell);
+    const row = grid.rowOf(cell);
+
+    for (const offset of NEIGHBOR_OFFSETS) {
+      const neighbor = grid.neighborIndex(column, row, offset);
+
+      if (neighbor >= 0 && passageOf(neighbor) === Passage.Ground) {
+        banks[neighbor] = 1;
       }
     }
   }
 
-  return false;
+  return banks;
 }

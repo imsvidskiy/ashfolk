@@ -1,14 +1,13 @@
 import {
+  BufferAttribute,
   type BufferGeometry,
   DynamicDrawUsage,
-  Float32BufferAttribute,
   InstancedBufferGeometry,
   InstancedInterleavedBuffer,
   InterleavedBufferAttribute,
   type Material,
   Mesh,
   Sphere,
-  Uint32BufferAttribute,
   Vector3,
 } from "three/webgpu";
 import type { MeshData, VertexChannel } from "../models/mesh/mesh-data.ts";
@@ -27,6 +26,7 @@ export function toInstancedGeometry(source: BufferGeometry): InstancedBufferGeom
   }
 
   geometry.setIndex(source.getIndex());
+  geometry.boundingSphere = source.boundingSphere === null ? null : source.boundingSphere.clone();
 
   return geometry;
 }
@@ -34,14 +34,14 @@ export function toInstancedGeometry(source: BufferGeometry): InstancedBufferGeom
 export function geometryFromMeshData(mesh: MeshData, channels: readonly VertexChannel[]): InstancedBufferGeometry {
   const geometry = new InstancedBufferGeometry();
 
-  geometry.setAttribute("position", new Float32BufferAttribute(mesh.positions, 3));
-  geometry.setAttribute("normal", new Float32BufferAttribute(mesh.normals, 3));
+  geometry.setAttribute("position", new BufferAttribute(mesh.positions, 3));
+  geometry.setAttribute("normal", new BufferAttribute(mesh.normals, 3));
 
   for (const channel of channels) {
-    geometry.setAttribute(channel, new Float32BufferAttribute(mesh.channels[channel], 1));
+    geometry.setAttribute(channel, new BufferAttribute(mesh.channels[channel], 1));
   }
 
-  geometry.setIndex(new Uint32BufferAttribute(mesh.indices, 1));
+  geometry.setIndex(new BufferAttribute(mesh.indices, 1));
 
   const [minimumX, minimumY, minimumZ] = mesh.bounds.minimum;
   const [maximumX, maximumY, maximumZ] = mesh.bounds.maximum;

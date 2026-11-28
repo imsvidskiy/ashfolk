@@ -93,6 +93,40 @@ describe("autosave", () => {
     expect(useSavesStore.getState().saver).toBeNull();
   });
 
+  it.each(["saved", "failed"])("keeps a late %s outcome with the world that started it", async (outcome) => {
+    const first = await connectWorld();
+    const state = await first.session.saveWorld();
+    let release = ignore;
+    const ready = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+
+    vi.spyOn(console, "warn").mockImplementation(ignore);
+    vi.spyOn(first.session, "saveWorld").mockImplementation(async () => {
+      await ready;
+
+      if (outcome === "failed") {
+        throw new Error("Storage failed");
+      }
+
+      return state;
+    });
+
+    window.dispatchEvent(new PageTransitionEvent("pagehide"));
+
+    const pending = useSavesStore.getState().saver?.save();
+
+    first.disconnect();
+    await connectWorld();
+
+    const nextWorld = useSavesStore.getState();
+
+    release();
+
+    expect(await pending).toBe(outcome);
+    expect(useSavesStore.getState()).toBe(nextWorld);
+  });
+
   it("stops saving after disconnecting", async () => {
     vi.useFakeTimers({ toFake: ["setInterval", "clearInterval"] });
 

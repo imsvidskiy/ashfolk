@@ -310,7 +310,6 @@ export class WorldRenderer {
       this.#matrix.multiplyMatrices(view.camera.projectionMatrix, view.camera.matrixWorldInverse)
     );
     this.#terrain.update(view.camera, this.#frustum, this.#quality.terrainDetail);
-    this.#textures.followPatchLevels(this.#terrain.patchLevels);
     this.#water.update(view.camera, this.#frustum, this.#quality.terrainDetail, this.#terrain.patchLevels);
     this.#hand.update(frame.held, view.realSeconds);
     this.#vegetation.hold(this.#hand);
