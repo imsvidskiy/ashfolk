@@ -6,32 +6,32 @@ labels: [ bug ]
 
 body:
   - type: textarea
-    id: what-happened
     attributes:
       label: What happened
       description: What you did, what you saw, and what you expected.
       placeholder: A river broke into separate pools when I zoomed out.
+    id: what-happened
     validations:
       required: true
 
   - type: textarea
-    id: steps
     attributes:
       label: Steps to reproduce
       description: The page address helps, it holds the seed.
       placeholder: |
         1. Open https://ashfolk.com/?seed=7
         2. Zoom out far
+    id: steps
 
   - type: input
-    id: device
     attributes:
       label: Browser and device
       placeholder: Chrome on a MacBook Air M3
+    id: device
     validations:
       required: true
 
   - type: textarea
-    id: screenshot
     attributes:
       label: Screenshot
+    id: screenshot

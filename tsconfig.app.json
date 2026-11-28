@@ -1,9 +1,9 @@
 {
   "$schema": "https://www.schemastore.org/tsconfig",
-  "extends": ["@tsconfig/bases/strictest", "@tsconfig/bases/vite-react"],
   "compilerOptions": {
     "tsBuildInfoFile": "./node_modules/.tmp/app.tsbuildinfo"
   },
+  "extends": ["@tsconfig/bases/strictest", "@tsconfig/bases/vite-react"],
   "include": ["src/app", "src/design", "src/features", "src/main.tsx", "src/privacy.tsx"],
   "references": [{ "path": "./tsconfig.engine.json" }]
 }

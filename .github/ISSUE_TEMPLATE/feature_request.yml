@@ -6,16 +6,16 @@ labels: [ enhancement ]
 
 body:
   - type: textarea
-    id: idea
     attributes:
       label: Idea
       description: What you'd like to see in the game.
       placeholder: Show where a tribe is heading when it migrates.
+    id: idea
     validations:
       required: true
 
   - type: textarea
-    id: why
     attributes:
       label: Why
       description: What it would let you do, or what bothers you today.
+    id: why
