@@ -1,7 +1,6 @@
 import { expect, test as it, test } from "@playwright/test";
-import { WORLD_RISING_TIMEOUT } from "./launch.ts";
+import { expectIslandReady } from "./launch.ts";
 
-const SQUARE_WORLD_ADDRESS = /name=Old\+Ford.*shape=square/u;
 const FILM_FILE = /\.mp4(?:\?|$)/u;
 const POSTER_FILE = /\.webp$/u;
 
@@ -32,6 +31,12 @@ test.describe("the start screen", () => {
     await expect(film).toHaveJSProperty("controls", false);
     await expect(film).toHaveAttribute("poster", POSTER_FILE);
 
+    await expect
+      .poll(() => {
+        return videoRequests;
+      })
+      .toBeGreaterThan(0);
+
     const poster = await film.getAttribute("poster");
 
     await page.emulateMedia({ reducedMotion: "reduce" });
@@ -49,10 +54,11 @@ test.describe("the start screen", () => {
     await page.getByRole("button", { exact: true, name: "Square" }).click();
     await page.getByRole("button", { name: "Grow the island" }).click();
 
-    await expect(page).toHaveURL(SQUARE_WORLD_ADDRESS);
+    await expect(page).toHaveURL((address) => {
+      return address.searchParams.get("name") === "Old Ford" && address.searchParams.get("shape") === "square";
+    });
     await expect(page).toHaveTitle("Old Ford · Ashfolk");
-    await expect(page.getByRole("status")).toBeHidden({ timeout: WORLD_RISING_TIMEOUT });
-    await expect(page.getByRole("toolbar", { name: "Powers" })).toBeVisible();
+    await expectIslandReady(page);
   });
 
   it("says the island could not rise when the interface fails to load", async ({ page }) => {

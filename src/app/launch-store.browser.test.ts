@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { SavedWorldListing } from "../features/saves/save-database.ts";
+import { createSavedListing } from "../features/testing/save-fixtures.ts";
 import { useLaunchStore } from "./launch-store.ts";
 
 describe("launch store", () => {
@@ -63,19 +63,9 @@ describe("launch store", () => {
       },
     });
 
-    const listing: SavedWorldListing = {
-      hasLandChanged: false,
-      id: "old-ford",
-      isLoadable: true,
-      name: "Old Ford",
-      savedAt: 1000,
-      seed: 42,
-      shape: "square",
-      size: "small",
-      summary: null,
-    };
+    const listing = createSavedListing();
 
-    useLaunchStore.getState().continueWorld("old-ford", listing);
+    useLaunchStore.getState().continueWorld(listing.id, listing);
 
     const { launch, worldId } = useLaunchStore.getState();
 

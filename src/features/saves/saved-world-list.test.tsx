@@ -1,35 +1,10 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { render } from "vitest-browser-react";
 import { useLaunchStore } from "../../app/launch-store.ts";
-import { blockSavedWorlds, deleteAllSavedWorlds, saveWorld } from "../testing/save-fixtures.ts";
-import { listSavedWorlds, type SavedWorldListing } from "./save-database.ts";
+import { blockSavedWorlds, createSavedListing, deleteAllSavedWorlds, saveWorld } from "../testing/save-fixtures.ts";
+import { listSavedWorlds } from "./save-database.ts";
 import { SavedWorldList } from "./saved-world-list.tsx";
 import { useSavesStore } from "./saves-store.ts";
-
-const SUMMARY = {
-  day: 3,
-  eraIndex: 0,
-  eraName: "Stone Age",
-  population: 12,
-  seasonName: "Spring",
-  tribeCount: 1,
-  year: 1,
-};
-
-function listing(changes: Partial<SavedWorldListing>): SavedWorldListing {
-  return {
-    hasLandChanged: false,
-    id: "old-ford",
-    isLoadable: true,
-    name: "Old Ford",
-    savedAt: Date.now(),
-    seed: 42,
-    shape: "square",
-    size: "small",
-    summary: SUMMARY,
-    ...changes,
-  };
-}
 
 afterEach(async () => {
   vi.restoreAllMocks();
@@ -41,9 +16,9 @@ describe("saved world list", () => {
   it("lists each world with its people and when it was saved", async () => {
     useSavesStore.setState({
       worlds: [
-        listing({}),
-        listing({ hasLandChanged: true, id: "ashvale", name: "Ashvale" }),
-        listing({ id: "mossholm", isLoadable: false, name: "Mossholm", summary: null }),
+        createSavedListing(),
+        createSavedListing({ hasLandChanged: true, id: "ashvale", name: "Ashvale" }),
+        createSavedListing({ id: "mossholm", isLoadable: false, name: "Mossholm", summary: null }),
       ],
     });
 
@@ -57,7 +32,7 @@ describe("saved world list", () => {
   });
 
   it("opens a world with its name, seed, shape and size", async () => {
-    useSavesStore.setState({ worlds: [listing({})] });
+    useSavesStore.setState({ worlds: [createSavedListing()] });
 
     const screen = await render(<SavedWorldList />);
 

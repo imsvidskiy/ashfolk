@@ -1,11 +1,26 @@
 import { vi } from "vitest";
 import { ignore } from "../../shared/ignore.ts";
 import { SAVE_VERSION, type SavedWorldState } from "../../simulation/saved-world.ts";
-import { deleteSavedWorld, listSavedWorlds, type SavedWorldRecord } from "../saves/save-database.ts";
+import {
+  deleteSavedWorld,
+  listSavedWorlds,
+  type SavedWorldListing,
+  type SavedWorldRecord,
+} from "../saves/save-database.ts";
 import { WorldSaver } from "../saves/world-saver.ts";
 import { createTestSession } from "./engine-fixtures.ts";
 
 const DATABASE_NAME = "ashfolk";
+
+const SUMMARY = {
+  day: 3,
+  eraIndex: 0,
+  eraName: "Stone Age",
+  population: 12,
+  seasonName: "Spring",
+  tribeCount: 1,
+  year: 1,
+};
 
 function deleteDatabase(): Promise<void> {
   const request = indexedDB.deleteDatabase(DATABASE_NAME);
@@ -18,6 +33,21 @@ function deleteDatabase(): Promise<void> {
       reject(request.error);
     });
   });
+}
+
+export function createSavedListing(changes: Partial<SavedWorldListing> = {}): SavedWorldListing {
+  return {
+    hasLandChanged: false,
+    id: "old-ford",
+    isLoadable: true,
+    name: "Old Ford",
+    savedAt: Date.now(),
+    seed: 42,
+    shape: "square",
+    size: "small",
+    summary: SUMMARY,
+    ...changes,
+  };
 }
 
 export function createSavedRecord(

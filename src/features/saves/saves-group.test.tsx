@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from "vitest";
+import { describe, expect, it, onTestFinished } from "vitest";
 import { render } from "vitest-browser-react";
 import { useLaunchStore } from "../../app/launch-store.ts";
 import { useInterfaceStore } from "../interface/interface-store.ts";
@@ -7,24 +7,18 @@ import { deleteSavedWorld, listSavedWorlds } from "./save-database.ts";
 import { SavesGroup } from "./saves-group.tsx";
 import { connectAutosave } from "./saves-store.ts";
 
-const disconnects: (() => void)[] = [];
-
-async function connectWorld() {
+async function connectWorld(): Promise<string> {
   const session = await createTestSession();
   const { launch, worldId } = useLaunchStore.getState();
+  const disconnect = connectAutosave(session, { id: worldId, name: launch.name });
 
-  disconnects.push(connectAutosave(session, { id: worldId, name: launch.name }));
-
-  return { session, worldId };
-}
-
-afterEach(async () => {
-  for (const disconnect of disconnects.splice(0)) {
+  onTestFinished(async () => {
     disconnect();
-  }
+    await deleteSavedWorld(worldId);
+  });
 
-  await deleteSavedWorld(useLaunchStore.getState().worldId);
-});
+  return worldId;
+}
 
 describe("saves group", () => {
   it("says the world is not saved yet", async () => {
@@ -34,7 +28,7 @@ describe("saves group", () => {
   });
 
   it("saves the world now and says when", async () => {
-    const { worldId } = await connectWorld();
+    const worldId = await connectWorld();
     const screen = await render(<SavesGroup />);
 
     await screen.getByRole("button", { name: "Save now" }).click();
@@ -44,7 +38,7 @@ describe("saves group", () => {
   });
 
   it("saves the world and closes the settings before showing all worlds", async () => {
-    const { worldId } = await connectWorld();
+    const worldId = await connectWorld();
 
     useLaunchStore.setState({ isChoosingWorld: false });
     useInterfaceStore.setState({ isSettingsOpen: true });
