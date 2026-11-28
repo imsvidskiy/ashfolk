@@ -3,7 +3,6 @@ import { Color, DirectionalLight, Group, HemisphereLight, type Scene, Vector3 } 
 import { type Direction, moonDirection, sunDirection } from "../../shared/astronomy.ts";
 import { clamp, lerp, saturate, smoothstep } from "../../shared/math.ts";
 import { SHADOW_ONLY_LAYER } from "../shadow-only-layer.ts";
-import { CloudSea } from "./cloud-sea.ts";
 import { fogShapeFor, HeightFog } from "./height-fog.ts";
 import { SkyDome } from "./sky-dome.ts";
 import { type SkyPalette, skyPaletteAt } from "./sky-palette.ts";
@@ -18,10 +17,6 @@ const FARTHEST_FILMED_SHADOW_REACH = 8000;
 const SHADOW_REACH_SHARE_OF_DISTANCE = 0.9;
 const FILMED_DEPTH_SHARE_OF_REACH = 1.5;
 const WORLD_UP = new Vector3(0, 1, 0);
-const SKY_CLOUD_DRIFT = 0.0012;
-const SEA_CLOUD_DRIFT = 0.000_24;
-const SEA_BREEZE_X = 1;
-const SEA_BREEZE_Z = 0.4;
 const LEAST_NORMAL_BIAS = 0.4;
 const TEXELS_OF_NORMAL_BIAS = 1.2;
 
@@ -34,12 +29,9 @@ interface AtmosphereState {
   readonly season: number;
   readonly snowfall: number;
   readonly storm: number;
-  readonly windX: number;
-  readonly windZ: number;
 }
 
 interface AtmosphereOptions {
-  readonly cloudSeaAltitude: number;
   readonly islandHalfSize: number;
   readonly shadowMapSize: number;
 }
@@ -58,7 +50,6 @@ function quantizedReach(reach: number): number {
 
 export class Atmosphere {
   readonly sun: DirectionalLight;
-  readonly #cloudSea: CloudSea;
   readonly #fogColor = uniform(new Color(0xcf_e2_f0));
   readonly #group = new Group();
   readonly #heightFog = new HeightFog();
@@ -74,7 +65,6 @@ export class Atmosphere {
   #palette: SkyPalette = skyPaletteAt(1, 0, 0);
 
   constructor(scene: Scene, options: AtmosphereOptions) {
-    this.#cloudSea = new CloudSea(options.cloudSeaAltitude);
     this.#islandReach = options.islandHalfSize * Math.SQRT2;
     this.#hasFarShadows = false;
 
@@ -85,7 +75,7 @@ export class Atmosphere {
 
     this.#hemisphere = new HemisphereLight(0xb6_d2_ee, 0x7a_72_5a, 1.2);
 
-    this.#group.add(this.#sky.mesh, this.#cloudSea.mesh, this.sun, this.sun.target, this.#hemisphere);
+    this.#group.add(this.#sky.mesh, this.sun, this.sun.target, this.#hemisphere);
     scene.add(this.#group);
     scene.fogNode = fog(this.#fogColor, this.#heightFog.factor);
   }
@@ -103,7 +93,7 @@ export class Atmosphere {
     this.#hasFarShadows = hasFarShadows;
   }
 
-  update(state: AtmosphereState, eye: Vector3, focus: Vector3, viewDistance: number, realSeconds: number): void {
+  update(state: AtmosphereState, eye: Vector3, focus: Vector3, viewDistance: number): void {
     const sun = sunDirection(state.hours, state.season);
     const moon = moonDirection(state.hours);
     const overcast = saturate(state.cloudCover * 0.75 + state.storm * 0.5);
@@ -112,54 +102,32 @@ export class Atmosphere {
 
     this.#daylight = smoothstep(-0.1, 0.16, sun.y);
     this.#palette = palette;
-    this.#paintSky(palette, sun, moon, state, overcast);
-    this.#driftClouds(state, realSeconds);
+    this.#paintSky(palette, sun, moon, overcast);
     this.#light(palette, sun, moon, overcast, gloom);
     this.#hemisphere.intensity += state.flash * 4;
     this.#placeSun(focus, viewDistance);
     this.#applyFog(palette, state, sun.y);
     this.#sky.mesh.position.copy(eye);
-    this.#cloudSea.update(focus);
   }
 
   dispose(): void {
     this.#sky.dispose();
-    this.#cloudSea.dispose();
     this.sun.shadow.dispose();
   }
 
-  #paintSky(palette: SkyPalette, sun: Direction, moon: Direction, state: AtmosphereState, overcast: number): void {
+  #paintSky(palette: SkyPalette, sun: Direction, moon: Direction, overcast: number): void {
     const sky = this.#sky;
     const clearness = 1 - overcast * 0.9;
 
     sky.zenithColor.value.setHex(palette.zenith);
     sky.horizonColor.value.setHex(palette.horizon);
     sky.abyssColor.value.setHex(palette.abyss);
-    sky.cloudLitColor.value.setHex(palette.cloudLit);
-    sky.cloudShadeColor.value.setHex(palette.cloudShade);
     sky.sunColor.value.setHex(palette.sunlight);
     sky.sunDirection.value.set(sun.x, sun.y, sun.z);
     sky.moonDirection.value.set(moon.x, moon.y, moon.z);
     sky.sunVisibility.value = smoothstep(-0.06, 0.02, sun.y) * clearness;
     sky.moonVisibility.value = (1 - this.#daylight) * smoothstep(-0.05, 0.05, moon.y) * clearness;
     sky.starVisibility.value = (1 - smoothstep(-0.16, 0.02, sun.y)) * clearness;
-    sky.cloudCover.value = saturate(0.2 + state.cloudCover * 0.8);
-
-    const sea = this.#cloudSea;
-
-    sea.litColor.value.setHex(palette.cloudLit);
-    sea.shadeColor.value.setHex(palette.cloudShade);
-    sea.sunDirection.value.set(sun.x, Math.max(sun.y, 0.05), sun.z).normalize();
-  }
-
-  #driftClouds(state: AtmosphereState, realSeconds: number): void {
-    const skyDrift = SKY_CLOUD_DRIFT * realSeconds;
-    const seaDrift = SEA_CLOUD_DRIFT * realSeconds;
-
-    this.#sky.cloudOffset.value.x += state.windX * skyDrift;
-    this.#sky.cloudOffset.value.y += state.windZ * skyDrift;
-    this.#cloudSea.drift.value.x += (state.windX + SEA_BREEZE_X) * seaDrift;
-    this.#cloudSea.drift.value.y += (state.windZ + SEA_BREEZE_Z) * seaDrift;
   }
 
   #light(palette: SkyPalette, sun: Direction, moon: Direction, overcast: number, gloom: number): void {

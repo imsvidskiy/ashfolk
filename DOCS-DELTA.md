@@ -59,6 +59,10 @@ The roadmap records progress through 0.10.0. Later edits corrected names and add
   news and snapshot together, and save feedback follows the session that started the write.
   [Terrain slopes](src/generation/terrain-slopes.ts) · [Brook hops](src/simulation/agents/brook-hops.ts) ·
   [Terrain patches](src/rendering/terrain/patch-grid.ts) · [World feed](src/features/world/world-store.ts)
+- **Island presentation in 0.12.6.** The island has a rounded rock underside. The sky around it uses the time and
+  weather palette, and world generation shows the island sketch against a solid pale blue-gray background.
+  [Island base](src/rendering/terrain/island-base.ts) · [Sky](src/rendering/atmosphere/sky-dome.ts) ·
+  [Loading screen](src/app/loading-screen.tsx)
 - **What is still a proposal.** The module/reaction registry, per-system saved random streams, replay format,
   localization, scenarios and cloud saves remain roadmap items. The first-island guide is available in the sandbox.
   [Architecture migration](docs/plan.md#migration) · [Roadmap](docs/roadmap.md)

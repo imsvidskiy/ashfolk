@@ -250,13 +250,17 @@ describe("world mirror", () => {
     simulation.execute({ type: "endStroke" });
     advanceTogether(simulation, mirror, 1.5);
 
-    const [peak] = mirror.landmarks;
+    const settledLandmarks = mirror.landmarks;
+    const [peak] = settledLandmarks;
 
     expect(peak).toMatchObject({ id: "peak", name: landmarks[0].name });
     expect(Math.hypot(peak.x, peak.z)).toBeLessThan(20);
     expect(peak.detail).toBe(`${Math.round(mirror.heightAt(peak.x, peak.z))} m`);
     expect(peak.detail).not.toBe(landmarks[0].detail);
-    expect(mirror.landmarks).toBe(mirror.landmarks);
+
+    mirror.apply(simulation.advance(STEP_SECONDS), 0);
+
+    expect(mirror.landmarks).toBe(settledLandmarks);
   });
 
   it("names a crater lake once it has filled", () => {
