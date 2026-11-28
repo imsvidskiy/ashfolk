@@ -1,8 +1,8 @@
-import { beforeEach, describe, expect, it } from "vitest";
+import { assert, beforeEach, describe, expect, it } from "vitest";
 import { PlantSpecies } from "../../content/plants.ts";
-import { DEFAULT_GENERATION_OPTIONS, type GenerationOptions } from "../../generation/generation-options.ts";
-import { type GeneratedWorld, generateWorld } from "../../generation/world-generator.ts";
-import { type Crossing, crossingLength } from "../../world/crossings.ts";
+import type { GenerationOptions } from "../../generation/generation-options.ts";
+import { generateWorld } from "../../generation/world-generator.ts";
+import { crossingLength, crossingMiddle } from "../../world/crossings.ts";
 import { PlantState } from "../../world/vegetation-store.ts";
 import { createTestWorld } from "../testing/test-world.ts";
 import { flattenTerrain, raiseTerrain } from "./terrain-editing.ts";
@@ -222,65 +222,31 @@ describe("water recomputation over leveled land", () => {
 });
 
 describe("crossings after the water is worked out again", () => {
-  let generated: GeneratedWorld;
-
-  function freshWorld(): WorldState {
-    if (generated === undefined) {
-      generated = generateWorld(7, DEFAULT_GENERATION_OPTIONS);
-    }
-
-    return new WorldState({
-      ...generated,
-      terrain: {
-        ...generated.terrain,
-        carving: Float32Array.from(generated.terrain.carving),
-        height: Float32Array.from(generated.terrain.height),
-        riverStrength: Uint8Array.from(generated.terrain.riverStrength),
-        waterSurface: Float32Array.from(generated.terrain.waterSurface),
-      },
-    });
-  }
-
-  function idsOf(crossings: readonly Crossing[]): number[] {
-    return crossings
-      .map((crossing) => {
-        return crossing.id;
-      })
-      .sort((first, second) => {
-        return first - second;
-      });
-  }
-
-  it("keeps every crossing where the land stayed the same", { timeout: 60_000 }, () => {
-    const state = freshWorld();
-
+  it("keeps the original crossings until a terrain edit buries one", { timeout: 60_000 }, () => {
+    const state = new WorldState(generateWorld(7));
+    const water = new WaterRecomputation(state);
     const before = state.crossings;
 
-    new WaterRecomputation(state).recompute();
+    water.recompute();
 
-    expect(idsOf(state.crossings)).toEqual(idsOf(before));
-    expect(
-      state.crossings.map((crossing) => {
-        return crossingLength(crossing);
-      })
-    ).toEqual(
-      before.map((crossing) => {
-        return expect.closeTo(crossingLength(crossing), 6);
-      })
-    );
-  });
+    expect(state.crossings).toHaveLength(before.length);
 
-  it("drops a crossing whose river was buried and keeps the others", { timeout: 60_000 }, () => {
-    const state = freshWorld();
+    for (const original of before) {
+      const kept = state.crossings.find((crossing) => {
+        return crossing.id === original.id;
+      });
+
+      assert.isDefined(kept, `Expected crossing ${original.id} to survive`);
+      expect(kept.kind).toBe(original.kind);
+      expect(kept.seed).toBe(original.seed);
+      expect(crossingLength(kept)).toBeCloseTo(crossingLength(original), 6);
+    }
 
     const [buried, ...others] = state.crossings;
 
-    if (buried === undefined) {
-      throw new Error("Expected the island to have crossings");
-    }
-
-    raiseTerrain(state, { radius: 90, x: (buried.startX + buried.endX) / 2, z: (buried.startZ + buried.endZ) / 2 }, 40);
-    new WaterRecomputation(state).recompute();
+    assert.isDefined(buried, "Expected the island to have crossings");
+    raiseTerrain(state, { ...crossingMiddle(buried), radius: 90 }, 40);
+    water.recompute();
 
     const remaining = new Set(
       state.crossings.map((crossing) => {
