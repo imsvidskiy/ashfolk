@@ -11,10 +11,11 @@ import type { CoastPoint, IslandOutline } from "./island-outline.ts";
 const CLIFF_DROP = 60;
 const SQUARE_CLIFF_BANDS = 6;
 const COAST_CLIFF_BANDS = 1;
-const NORMAL_UNDERSIDE_DEPTH = 1650;
-const UNDERSIDE_RINGS = 14;
-const UNDERSIDE_COLUMNS = 512;
-const NARROWEST_UNDERSIDE_STRIDE = 4;
+
+const NORMAL_UNDERSIDE_DEPTH = 1450;
+const UNDERSIDE_RINGS = 30;
+const MAXIMUM_RING_COLUMNS = 320;
+const MINIMUM_RING_COLUMNS = 12;
 const CLIFF_BULGE = 9;
 const SQUARE_RIM_OFFSET = 0.4;
 const COAST_RIM_OFFSET = -0.4;
@@ -28,9 +29,9 @@ interface PerimeterPoint {
   readonly z: number;
 }
 
-interface RingVertex {
-  readonly cliffAmount: number;
-  readonly depth: number;
+interface Ring {
+  readonly count: number;
+  readonly start: number;
 }
 
 interface BaseOutline {
@@ -93,26 +94,6 @@ function islandPerimeter(mirror: WorldMirror, outline: IslandOutline): Perimeter
   return coastPerimeter(outline.coast);
 }
 
-function cliffRings(bands: number): RingVertex[] {
-  const rings: RingVertex[] = [];
-
-  for (let ring = 0; ring <= bands; ring += 1) {
-    rings.push({ cliffAmount: 1 - ring / bands, depth: 0 });
-  }
-
-  return rings;
-}
-
-function undersideRings(): RingVertex[] {
-  const rings: RingVertex[] = [];
-
-  for (let ring = 1; ring <= UNDERSIDE_RINGS; ring += 1) {
-    rings.push({ cliffAmount: 0, depth: ring / UNDERSIDE_RINGS });
-  }
-
-  return rings;
-}
-
 export function islandPlinthHeight(mirror: WorldMirror, outline: IslandOutline): number {
   let lowest = Number.POSITIVE_INFINITY;
 
@@ -123,39 +104,12 @@ export function islandPlinthHeight(mirror: WorldMirror, outline: IslandOutline):
   return lowest - CLIFF_DROP;
 }
 
-function undersideReach(depth: number): number {
-  return 1 - 0.97 * depth ** 0.62;
-}
+function cliffBulge(outline: BaseOutline, point: PerimeterPoint): number {
+  const angle = Math.atan2(point.z, point.x);
+  const ridges = outline.noise.fractal(Math.cos(angle) * 9, 0, Math.sin(angle) * 9, { octaves: 3 });
+  const lumps = outline.noise.fractal(point.x * 0.0021, 7, point.z * 0.0021, { octaves: 3 });
 
-function roundedRadius(outline: BaseOutline, x: number, z: number, depth: number): number {
-  const rimRadius = Math.hypot(x, z);
-  const circleRadius = outline.grid.halfSize * outline.undersideRadius;
-
-  return rimRadius + (circleRadius - rimRadius) * smoothstep(0, 0.45, depth);
-}
-
-function placeVertex(outline: BaseOutline, point: PerimeterPoint, ring: RingVertex): readonly [number, number, number] {
-  const { noise, plinth } = outline;
-  const { x, z } = point;
-
-  const angle = Math.atan2(z, x);
-  const ridges = noise.fractal(Math.cos(angle) * 9, ring.depth * 2.4, Math.sin(angle) * 9, { octaves: 3 });
-  const lumps = noise.fractal(x * 0.0021, ring.depth * 3.1 + 7, z * 0.0021, { octaves: 3 });
-
-  if (ring.depth === 0) {
-    const bulge = outline.rimOffset + CLIFF_BULGE * (1 - ring.cliffAmount) * (0.6 + 0.4 * Math.abs(lumps + ridges));
-
-    return [x + point.outwardX * bulge, plinth, z + point.outwardZ * bulge];
-  }
-
-  const radius =
-    roundedRadius(outline, x, z, ring.depth) * undersideReach(ring.depth) * (1 + ridges * 0.09 + lumps * 0.12);
-  const spikes =
-    Math.max(0, noise.fractal(Math.cos(angle) * 23, 4.2, Math.sin(angle) * 23, { octaves: 2 })) * ring.depth ** 2;
-
-  const drop = ring.depth ** 1.1 * outline.undersideDepth * (1 + spikes * 0.45) + lumps * 60 * ring.depth;
-
-  return [Math.cos(angle) * radius, plinth - drop, Math.sin(angle) * radius];
+  return CLIFF_BULGE * (0.6 + 0.4 * Math.abs(lumps + ridges));
 }
 
 function finishGeometry(positions: readonly number[], indices: readonly number[]): BufferGeometry {
@@ -167,13 +121,13 @@ function finishGeometry(positions: readonly number[], indices: readonly number[]
   return geometry;
 }
 
-function pushStrips(indices: number[], pointCount: number, ringCount: number, firstVertex: number): void {
+function pushStrips(indices: number[], pointCount: number, ringCount: number): void {
   for (let point = 0; point < pointCount; point += 1) {
     const next = (point + 1) % pointCount;
 
     for (let ring = 0; ring < ringCount - 1; ring += 1) {
-      const current = firstVertex + point * ringCount + ring;
-      const following = firstVertex + next * ringCount + ring;
+      const current = point * ringCount + ring;
+      const following = next * ringCount + ring;
 
       indices.push(current, following, current + 1, following, following + 1, current + 1);
     }
@@ -181,7 +135,6 @@ function pushStrips(indices: number[], pointCount: number, ringCount: number, fi
 }
 
 function buildCliff(outline: BaseOutline): BufferGeometry {
-  const rings = cliffRings(outline.cliffBands);
   const positions: number[] = [];
   const topPoints: number[] = [];
   const cliffAmounts: number[] = [];
@@ -189,15 +142,20 @@ function buildCliff(outline: BaseOutline): BufferGeometry {
   const indices: number[] = [];
 
   for (const point of outline.points) {
-    for (const ring of rings) {
-      positions.push(...placeVertex(outline, point, ring));
+    const bulge = cliffBulge(outline, point);
+
+    for (let band = 0; band <= outline.cliffBands; band += 1) {
+      const share = band / outline.cliffBands;
+      const offset = outline.rimOffset + bulge * share;
+
+      positions.push(point.x + point.outwardX * offset, outline.plinth, point.z + point.outwardZ * offset);
       topPoints.push(point.x, point.z);
-      cliffAmounts.push(ring.cliffAmount);
+      cliffAmounts.push(1 - share);
       outwards.push(point.outwardX, point.outwardZ);
     }
   }
 
-  pushStrips(indices, outline.points.length, rings.length, 0);
+  pushStrips(indices, outline.points.length, outline.cliffBands + 1);
 
   const geometry = finishGeometry(positions, indices);
 
@@ -209,55 +167,76 @@ function buildCliff(outline: BaseOutline): BufferGeometry {
   return geometry;
 }
 
-function pushStitch(indices: number[], rimCount: number, stride: number, ringCount: number): void {
-  const coarseCount = Math.ceil(rimCount / stride);
+function joinRings(indices: number[], upper: Ring, lower: Ring): void {
+  let top = 0;
+  let bottom = 0;
 
-  for (let coarse = 0; coarse < coarseCount; coarse += 1) {
-    const below = rimCount + coarse * ringCount;
-    const nextBelow = rimCount + ((coarse + 1) % coarseCount) * ringCount;
-    const firstRim = coarse * stride;
-    const lastRim = Math.min(firstRim + stride, rimCount);
+  while (top < upper.count || bottom < lower.count) {
+    const upperVertex = upper.start + (top % upper.count);
+    const lowerVertex = lower.start + (bottom % lower.count);
 
-    for (let rim = firstRim; rim < lastRim; rim += 1) {
-      indices.push(rim, (rim + 1) % rimCount, below);
+    if ((top + 1) * lower.count <= (bottom + 1) * upper.count) {
+      top += 1;
+      indices.push(upperVertex, upper.start + (top % upper.count), lowerVertex);
+    } else {
+      bottom += 1;
+      indices.push(upperVertex, lower.start + (bottom % lower.count), lowerVertex);
     }
-
-    indices.push(lastRim % rimCount, nextBelow, below);
   }
 }
 
 function buildUnderside(outline: BaseOutline): BufferGeometry {
-  const rimRing: RingVertex = { cliffAmount: 0, depth: 0 };
-  const rings = undersideRings();
-  const stride = Math.max(NARROWEST_UNDERSIDE_STRIDE, Math.round(outline.points.length / UNDERSIDE_COLUMNS));
-  const coarsePoints = outline.points.filter((_, index) => {
-    return index % stride === 0;
-  });
-
+  const { grid, noise, plinth, points, undersideDepth } = outline;
   const positions: number[] = [];
   const indices: number[] = [];
 
-  for (const point of outline.points) {
-    positions.push(...placeVertex(outline, point, rimRing));
+  for (const point of points) {
+    const offset = outline.rimOffset + cliffBulge(outline, point);
+
+    positions.push(point.x + point.outwardX * offset, plinth, point.z + point.outwardZ * offset);
   }
 
-  for (const point of coarsePoints) {
-    for (const ring of rings) {
-      positions.push(...placeVertex(outline, point, ring));
+  const widest = Math.min(MAXIMUM_RING_COLUMNS, points.length);
+  const innerRadius = grid.halfSize * outline.undersideRadius;
+  const bottomX = grid.halfSize * 0.095 * noise.sample(2, 9, 3);
+  const bottomZ = grid.halfSize * 0.095 * noise.sample(3, 9, 2);
+  let upper: Ring = { count: points.length, start: 0 };
+
+  for (let ring = 1; ring < UNDERSIDE_RINGS; ring += 1) {
+    const angle = (ring / UNDERSIDE_RINGS) * (Math.PI / 2);
+    const depth = Math.sin(angle);
+    const reach = Math.cos(angle) * (1 - 0.34 * depth);
+    const rounding = smoothstep(0, 0.85, depth);
+    const relief = depth * (1 - depth);
+    const count = Math.max(MINIMUM_RING_COLUMNS, 4 * Math.round((widest * reach) / 4));
+    const lower: Ring = { count, start: positions.length / 3 };
+
+    for (let column = 0; column < count; column += 1) {
+      const point = points[Math.floor((column * points.length) / count)];
+      const rimRadius = Math.hypot(point.x, point.z);
+      const outwardX = point.x / rimRadius;
+      const outwardZ = point.z / rimRadius;
+      const radius = reach * (rimRadius + (innerRadius - rimRadius) * rounding);
+      const folds = noise.fractal(outwardX * reach * 3.5, depth * 1.7 + 6, outwardZ * reach * 3.5, { octaves: 2 });
+      const erodedRadius = radius * (1 + folds * relief * 0.6);
+
+      positions.push(
+        outwardX * erodedRadius + bottomX * depth ** 2,
+        plinth - undersideDepth * (depth + folds * relief * 0.14),
+        outwardZ * erodedRadius + bottomZ * depth ** 2
+      );
     }
+
+    joinRings(indices, upper, lower);
+    upper = lower;
   }
 
-  const tip = positions.length / 3;
-  const lowest = outline.points.length + rings.length - 1;
+  const bottom = positions.length / 3;
 
-  positions.push(0, outline.plinth - outline.undersideDepth * 1.12, 0);
-  pushStitch(indices, outline.points.length, stride, rings.length);
-  pushStrips(indices, coarsePoints.length, rings.length, outline.points.length);
+  positions.push(bottomX, plinth - undersideDepth, bottomZ);
 
-  for (let point = 0; point < coarsePoints.length; point += 1) {
-    const next = (point + 1) % coarsePoints.length;
-
-    indices.push(lowest + point * rings.length, lowest + next * rings.length, tip);
+  for (let column = 0; column < upper.count; column += 1) {
+    indices.push(upper.start + column, upper.start + ((column + 1) % upper.count), bottom);
   }
 
   const geometry = finishGeometry(positions, indices);
