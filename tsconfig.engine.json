@@ -1,14 +1,14 @@
 {
   "$schema": "https://www.schemastore.org/tsconfig",
-  "extends": ["@tsconfig/bases/strictest", "@tsconfig/bases/vite-react"],
   "compilerOptions": {
     "composite": true,
     "declarationDir": "./node_modules/.tmp/types/engine",
     "emitDeclarationOnly": true,
+    "tsBuildInfoFile": "./node_modules/.tmp/engine.tsbuildinfo",
     "noEmit": false,
-    "noUncheckedIndexedAccess": false,
-    "tsBuildInfoFile": "./node_modules/.tmp/engine.tsbuildinfo"
+    "noUncheckedIndexedAccess": false
   },
+  "extends": ["@tsconfig/bases/strictest", "@tsconfig/bases/vite-react"],
   "include": [
     "src/audio",
     "src/content",

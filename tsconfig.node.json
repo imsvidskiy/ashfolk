@@ -1,9 +1,9 @@
 {
   "$schema": "https://www.schemastore.org/tsconfig",
-  "extends": ["@tsconfig/bases/strictest", "@tsconfig/bases/vite-react"],
   "compilerOptions": {
     "tsBuildInfoFile": "./node_modules/.tmp/node.tsbuildinfo",
     "types": ["node"]
   },
+  "extends": ["@tsconfig/bases/strictest", "@tsconfig/bases/vite-react"],
   "include": ["cloudflare.config.ts", "playwright.config.ts", "scripts", "tests", "vite.config.ts", "worker"]
 }
