@@ -98,6 +98,18 @@ describe("navigation grid", () => {
     expect(navigation.findPath({ x: -200, z: 0 }, { x: 200, z: 40 })).toEqual([{ x: 200, z: 40 }]);
   });
 
+  it("reports no route to or from a point beyond reach of the island", () => {
+    const world = createTestWorld();
+    const navigation = new NavigationGrid(world);
+    const inland = { x: 0, z: 0 };
+    const outside = { x: world.grid.worldSize, z: 0 };
+
+    expect(navigation.findPath(inland, outside)).toBeNull();
+    expect(navigation.findPath(outside, inland)).toBeNull();
+    expect(navigation.walkLength(inland, outside)).toBe(Number.POSITIVE_INFINITY);
+    expect(navigation.walkLength(outside, inland)).toBe(Number.POSITIVE_INFINITY);
+  });
+
   it("goes around a river through the ford", () => {
     const world = worldWithRiver(250);
     const from = { x: -150, z: -100 };

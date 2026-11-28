@@ -1,15 +1,15 @@
 import { beforeAll, describe, expect, it, it as test } from "vitest";
 import { HOP_WIDTH, isBrookCell } from "../world/brooks.ts";
 import { type Crossing, crossingLength, crossingMiddle, crossingPointOf, isOnCrossing } from "../world/crossings.ts";
-import type { IslandShapeKind } from "../world/island-shape.ts";
 import { isWaterCell } from "../world/terrain-sampling.ts";
 import { createTerrainData } from "../world/testing/terrain-fixtures.ts";
 import { NO_WATER, type River } from "../world/water.ts";
 import { WorldGrid } from "../world/world-grid.ts";
 import { planCrossings, refreshCrossings } from "./crossings.ts";
-import { DEFAULT_GENERATION_OPTIONS } from "./generation-options.ts";
+import { RESHAPED_LAND_HYDROLOGY } from "./drainage.ts";
 import { computeHydrology } from "./hydrology.ts";
-import { type GeneratedWorld, generateWorld } from "./world-generator.ts";
+import { FULL_SIZE_TIMEOUT, fullSizeWorld } from "./testing/generated-worlds.ts";
+import type { GeneratedWorld } from "./world-generator.ts";
 
 const LONG_WIDE_STRETCH = 1000;
 const WATERFALL_CLEARANCE = 100;
@@ -19,18 +19,6 @@ const ON_RIVER = 18;
 const SPACING_ALONG = 500;
 const WIDEST_GAP = 900;
 const WIDTH_MARGIN = 0.4;
-
-const worlds = new Map<IslandShapeKind, GeneratedWorld>();
-
-function worldOf(shape: IslandShapeKind): GeneratedWorld {
-  const generated = worlds.get(shape);
-
-  if (generated === undefined) {
-    throw new Error(`No ${shape} world was generated`);
-  }
-
-  return generated;
-}
 
 function wideStretch(river: River): number {
   return river.points.slice(1).reduce((sum, point, index) => {
@@ -84,14 +72,18 @@ function samplesAlong(crossing: Crossing): { x: number; z: number }[] {
   });
 }
 
-beforeAll(() => {
-  worlds.set("round", generateWorld(7));
-  worlds.set("square", generateWorld(4, { ...DEFAULT_GENERATION_OPTIONS, shape: "square" }));
-}, 120_000);
+describe.each([
+  { seed: 7, shape: "round" },
+  { seed: 4, shape: "square" },
+] as const)("crossings on a $shape island", ({ seed, shape }) => {
+  let generated: GeneratedWorld;
 
-describe.each(["round", "square"] as const)("crossings on a %s island", (shape) => {
+  beforeAll(() => {
+    generated = fullSizeWorld(seed, shape);
+  }, FULL_SIZE_TIMEOUT);
+
   test("give most rivers that run too wide to hop for a long way a ford or a fallen log", () => {
-    const { crossings, water } = worldOf(shape);
+    const { crossings, water } = generated;
 
     const longRivers = water.rivers.filter((river) => {
       return wideStretch(river) > LONG_WIDE_STRETCH;
@@ -115,7 +107,7 @@ describe.each(["round", "square"] as const)("crossings on a %s island", (shape) 
   });
 
   test("leave brooks to be hopped and treat only rivers no wider than a hop as brooks", () => {
-    const { crossings, dimensions, terrain, water } = worldOf(shape);
+    const { crossings, dimensions, terrain, water } = generated;
     const grid = new WorldGrid(dimensions);
 
     function cellOf(point: { x: number; z: number }): number {
@@ -159,8 +151,8 @@ describe.each(["round", "square"] as const)("crossings on a %s island", (shape) 
     ).toBe(false);
   });
 
-  test("space them five to eight hundred meters apart along a river", () => {
-    const { crossings, water } = worldOf(shape);
+  test("space crossings along a river", () => {
+    const { crossings, water } = generated;
 
     const gaps = water.rivers.flatMap((river) => {
       const positions = positionsAlong(river, crossings);
@@ -180,7 +172,7 @@ describe.each(["round", "square"] as const)("crossings on a %s island", (shape) 
   });
 
   test("span river water between two dry, gentle banks", () => {
-    const { crossings, dimensions, terrain } = worldOf(shape);
+    const { crossings, dimensions, terrain } = generated;
     const grid = new WorldGrid(dimensions);
 
     for (const crossing of crossings) {
@@ -210,7 +202,7 @@ describe.each(["round", "square"] as const)("crossings on a %s island", (shape) 
   });
 
   test("keep away from waterfalls, lakes and the coast", () => {
-    const { crossings, dimensions, terrain, water } = worldOf(shape);
+    const { crossings, dimensions, terrain, water } = generated;
     const grid = new WorldGrid(dimensions);
 
     function isStillWater(cell: number): boolean {
@@ -235,7 +227,7 @@ describe.each(["round", "square"] as const)("crossings on a %s island", (shape) 
   });
 
   test("lay fallen logs over narrow water and stepping stones over wider, shallow water", () => {
-    const { crossings, dimensions, terrain } = worldOf(shape);
+    const { crossings, dimensions, terrain } = generated;
     const grid = new WorldGrid(dimensions);
 
     function wetPointsOf(crossing: Crossing): { x: number; z: number }[] {
@@ -271,7 +263,7 @@ describe.each(["round", "square"] as const)("crossings on a %s island", (shape) 
   });
 
   test("can be walked along from end to end", () => {
-    for (const crossing of worldOf(shape).crossings) {
+    for (const crossing of generated.crossings) {
       expect(
         samplesAlong(crossing).every((point) => {
           return isOnCrossing(crossing, point.x, point.z);
@@ -280,12 +272,14 @@ describe.each(["round", "square"] as const)("crossings on a %s island", (shape) 
     }
   });
 
-  test("keep every crossing that still spans its river when the water is worked out again", { timeout: 60_000 }, () => {
-    const generated = worldOf(shape);
+  test("retain most existing crossings when the water is recomputed", { timeout: 60_000 }, () => {
     const grid = new WorldGrid(generated.dimensions);
-    const terrain = { ...generated.terrain, height: Float32Array.from(generated.terrain.height) };
+    const { terrain } = generated;
 
-    const hydrology = computeHydrology(Float32Array.from(terrain.height), grid, terrain.dryness, terrain.coastDistance);
+    const heights = terrain.height.map((height, cell) => {
+      return height + terrain.carving[cell];
+    });
+    const hydrology = computeHydrology(heights, grid, terrain.dryness, terrain.coastDistance, RESHAPED_LAND_HYDROLOGY);
 
     const refreshed = refreshCrossings(
       {
@@ -294,15 +288,20 @@ describe.each(["round", "square"] as const)("crossings on a %s island", (shape) 
           return false;
         },
         lakeIds: hydrology.lakeIds,
-        terrain,
-        water: generated.water,
+        terrain: {
+          ...terrain,
+          height: heights,
+          riverStrength: hydrology.riverStrength,
+          waterSurface: hydrology.waterSurface,
+        },
+        water: hydrology.features,
       },
       generated.crossings
     );
 
     const kept = refreshed.filter((crossing) => {
       return generated.crossings.some((original) => {
-        return original.id === crossing.id;
+        return original.id === crossing.id && original.kind === crossing.kind && original.seed === crossing.seed;
       });
     });
 

@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { assert, describe, expect, it } from "vitest";
 import { Ground } from "../../content/grounds.ts";
 import { PlantSpecies } from "../../content/plants.ts";
 import type { LavaView } from "../frame.ts";
@@ -14,7 +14,12 @@ const FALL_PER_METER = 0.08;
 const RIVER_START = 260;
 
 interface VolcanoWorld {
-  hasRiver: boolean;
+  hasRiver?: boolean;
+}
+
+interface LavaWarnings {
+  farHotCells: number;
+  unwarnedHotCells: number;
 }
 
 function floodRiver(simulation: Simulation): void {
@@ -29,7 +34,7 @@ function floodRiver(simulation: Simulation): void {
   );
 }
 
-function createSimulation({ hasRiver }: VolcanoWorld): Simulation {
+function createSimulation({ hasRiver = false }: VolcanoWorld = {}): Simulation {
   const simulation = new Simulation(
     createVegetatedWorld({
       dimensions: { cellSize: 10, cellsPerSide: 96 },
@@ -78,11 +83,6 @@ function onlyVolcano(simulation: Simulation): Volcano {
   return volcano;
 }
 
-interface LavaWarnings {
-  farHotCells: number;
-  unwarnedHotCells: number;
-}
-
 function warnOfLava(simulation: Simulation): LavaWarnings {
   simulation.volcanoes.update(TICK_SECONDS, simulation.services);
 
@@ -113,8 +113,9 @@ function warnOfLava(simulation: Simulation): LavaWarnings {
   };
 }
 
-function erupt(world: VolcanoWorld, strength = 60): Simulation {
-  const simulation = createSimulation(world);
+function erupt(options: VolcanoWorld & { strength?: number } = {}): Simulation {
+  const { strength = 60 } = options;
+  const simulation = createSimulation(options);
 
   simulation.execute({ parameters: { radius: RADIUS, strength }, powerId: "volcano", type: "usePower", x: 0, z: 0 });
 
@@ -123,7 +124,7 @@ function erupt(world: VolcanoWorld, strength = 60): Simulation {
 
 describe("volcanoes", () => {
   it("swells the ground into a cone with a crater on top", () => {
-    const simulation = erupt({ hasRiver: false });
+    const simulation = erupt();
     const { world } = simulation;
 
     runFor(simulation, SWELL_SECONDS + 0.5);
@@ -141,8 +142,8 @@ describe("volcanoes", () => {
   });
 
   it("sends lava downhill along the same cells every time", () => {
-    const first = erupt({ hasRiver: false });
-    const second = erupt({ hasRiver: false });
+    const first = erupt();
+    const second = erupt();
 
     runFor(first, SWELL_SECONDS + 20);
     runFor(second, SWELL_SECONDS + 20);
@@ -163,13 +164,13 @@ describe("volcanoes", () => {
       const [start] = tongue.cells;
       const end = tongue.cells.at(-1);
 
-      expect(end).toBeDefined();
-      expect(terrain.height[end === undefined ? start : end]).toBeLessThan(terrain.height[start] - 10);
+      assert.isDefined(end);
+      expect(terrain.height[end]).toBeLessThan(terrain.height[start] - 10);
     }
   });
 
   it("sets what it touches on fire and turns its path to lava rock", () => {
-    const simulation = erupt({ hasRiver: false });
+    const simulation = erupt();
 
     runFor(simulation, SWELL_SECONDS + 10);
 
@@ -191,7 +192,7 @@ describe("volcanoes", () => {
   });
 
   it("hisses to steam and stops where it meets water", () => {
-    const simulation = erupt({ hasRiver: false }, 100);
+    const simulation = erupt({ strength: 100 });
     const { world } = simulation;
 
     runFor(simulation, SWELL_SECONDS);
@@ -219,7 +220,7 @@ describe("volcanoes", () => {
   });
 
   it("cools into rock and leaves fertile ash that regrows sooner", () => {
-    const simulation = erupt({ hasRiver: false }, 5);
+    const simulation = erupt({ strength: 5 });
     const { world } = simulation;
 
     runFor(simulation, SWELL_SECONDS + 5);
@@ -253,7 +254,7 @@ describe("volcanoes", () => {
   });
 
   it("kills people and animals that stand in hot lava", () => {
-    const simulation = erupt({ hasRiver: false });
+    const simulation = erupt();
 
     simulation.execute({ parameters: { herdSize: 3 }, powerId: "deer", type: "usePower", x: -300, z: -300 });
     simulation.execute({ parameters: { people: 3 }, powerId: "tribe", type: "usePower", x: -300, z: 300 });
@@ -281,7 +282,7 @@ describe("volcanoes", () => {
   });
 
   it("spares a person the hand carries over hot lava", () => {
-    const simulation = erupt({ hasRiver: false });
+    const simulation = erupt();
 
     simulation.execute({ parameters: { people: 3 }, powerId: "tribe", type: "usePower", x: -300, z: 300 });
     runFor(simulation, SWELL_SECONDS + 5);
@@ -295,43 +296,51 @@ describe("volcanoes", () => {
 
     simulation.grab({ id: person.id, kind: "person" });
     simulation.carry(grid.cellCenterX(lavaCell), grid.cellCenterZ(lavaCell));
+
+    expect(grid.cellAt(person.mover.x, person.mover.z)).toBe(lavaCell);
+
     simulation.step();
 
     expect(person.isAlive).toBe(true);
   });
 
   it("burns plants set down on hot lava", () => {
-    const simulation = erupt({ hasRiver: false });
+    const simulation = erupt();
 
     runFor(simulation, SWELL_SECONDS + 5);
 
     const [lavaCell] = onlyVolcano(simulation).lava.keys();
 
-    plantInCell(simulation.world, lavaCell, PlantSpecies.Oak);
+    const oak = plantInCell(simulation.world, lavaCell, PlantSpecies.Oak);
+
+    expect(simulation.world.vegetation.isAlive(oak)).toBe(true);
+
     simulation.step();
 
     expect(simulation.world.vegetation.hasPlantsInCell(lavaCell)).toBe(false);
   });
 
   it("goes out where water floods its lava", () => {
-    const simulation = erupt({ hasRiver: false });
+    const simulation = erupt();
 
     runFor(simulation, SWELL_SECONDS + 5);
 
     const flooded = [...onlyVolcano(simulation).lava.keys()].slice(0, 5);
 
+    expect(flooded).toHaveLength(5);
+
     floodCells(simulation.world, flooded, 2);
     simulation.step();
 
-    expect(
-      flooded.filter((cell) => {
-        return onlyVolcano(simulation).lava.has(cell);
-      })
-    ).toEqual([]);
+    const { lava } = onlyVolcano(simulation);
+
+    for (const cell of flooded) {
+      expect(lava.has(cell)).toBe(false);
+    }
   });
 
   it("keeps its lava and ash on the island", () => {
-    const simulation = createSimulation({ hasRiver: false });
+    const simulation = createSimulation();
     const { grid, terrain } = simulation.world;
 
     for (let cell = 0; cell < grid.cellCount; cell += 1) {
@@ -356,7 +365,7 @@ describe("volcanoes", () => {
   });
 
   it("warns people off all of the hot lava until it cools", () => {
-    const simulation = erupt({ hasRiver: false }, 100);
+    const simulation = erupt({ strength: 100 });
 
     runFor(simulation, SWELL_SECONDS + 30);
 
@@ -387,7 +396,7 @@ describe("volcanoes", () => {
   });
 
   it("refuses to rise past the coast or off the map", () => {
-    const simulation = createSimulation({ hasRiver: false });
+    const simulation = createSimulation();
     const { grid, terrain } = simulation.world;
 
     terrain.coastDistance[grid.cellAt(-300, 0)] = -5;
@@ -401,7 +410,7 @@ describe("volcanoes", () => {
   });
 
   it("refuses to rise where its cone would touch another volcano's", () => {
-    const simulation = erupt({ hasRiver: false });
+    const simulation = erupt();
 
     simulation.execute({ parameters: { radius: RADIUS }, powerId: "volcano", type: "usePower", x: RADIUS * 1.5, z: 0 });
     simulation.execute({
@@ -437,7 +446,7 @@ describe("volcanoes", () => {
   });
 
   it("loads saves made before volcanoes existed", () => {
-    const simulation = erupt({ hasRiver: false });
+    const simulation = erupt();
 
     runFor(simulation, SWELL_SECONDS + 2);
     settle(simulation);

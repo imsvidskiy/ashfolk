@@ -3,7 +3,7 @@ import { createRandom } from "../shared/random.ts";
 import { slopeAt } from "../world/footing.ts";
 import type { TerrainData } from "../world/terrain-data.ts";
 import { WorldGrid } from "../world/world-grid.ts";
-import { limitSlopes, relaxSlopes } from "./terrain-slopes.ts";
+import { limitSlopes, relaxSlopes, smoothHeights } from "./terrain-slopes.ts";
 import { COARSE_DIMENSIONS, coarseWorld, FULL_SIZE_TIMEOUT, fullSizeWorld } from "./testing/generated-worlds.ts";
 import { meanOf, shareAbove } from "./testing/statistics.ts";
 import type { GeneratedWorld } from "./world-generator.ts";
@@ -23,10 +23,17 @@ const NEIGHBORS: readonly (readonly [number, number])[] = [
 function steepestSlope(heights: Float32Array, size: number): number {
   let steepest = 0;
 
-  for (let row = 1; row < size - 1; row += 1) {
-    for (let column = 1; column < size - 1; column += 1) {
+  for (let row = 0; row < size; row += 1) {
+    for (let column = 0; column < size; column += 1) {
       for (const [columnStep, rowStep] of NEIGHBORS) {
-        const drop = Math.abs(heights[row * size + column] - heights[(row + rowStep) * size + column + columnStep]);
+        const nextColumn = column + columnStep;
+        const nextRow = row + rowStep;
+
+        if (nextColumn >= size || nextRow < 0 || nextRow >= size) {
+          continue;
+        }
+
+        const drop = Math.abs(heights[row * size + column] - heights[nextRow * size + nextColumn]);
 
         steepest = Math.max(steepest, drop / (Math.hypot(columnStep, rowStep) * CELL_SIZE));
       }
@@ -165,6 +172,19 @@ describe("thermal relaxation", () => {
 });
 
 describe("slope limit", () => {
+  it("preserves the valley floor and lowers its neighbors only as far as needed", () => {
+    const heights = new Float32Array(9).fill(100);
+
+    heights[8] = 20;
+    limitSlopes(heights, 3, CELL_SIZE, 1);
+
+    expect(heights[8]).toBe(20);
+    expect(heights[7]).toBe(30);
+    expect(heights[2]).toBe(40);
+    expect(heights[4]).toBeCloseTo(20 + CELL_SIZE * Math.SQRT2, 4);
+    expect(heights[0]).toBeCloseTo(20 + 2 * CELL_SIZE * Math.SQRT2, 4);
+  });
+
   it("keeps every neighbor drop under the limit and never raises the land", () => {
     const size = 40;
     const random = createRandom(4);
@@ -182,6 +202,16 @@ describe("slope limit", () => {
         return height <= original[cell];
       })
     ).toBe(true);
+  });
+});
+
+describe("height smoothing", () => {
+  it("spreads a corner into its two neighbors in one simultaneous pass", () => {
+    const heights = Float32Array.of(100, 0, 0, 0, 0, 0, 0, 0, 0);
+
+    smoothHeights(heights, 3);
+
+    expect(heights).toEqual(Float32Array.of(90, 5, 0, 5, 0, 0, 0, 0, 0));
   });
 });
 

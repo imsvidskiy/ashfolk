@@ -1,4 +1,4 @@
-import { beforeAll, describe, expect, it } from "vitest";
+import { assert, beforeAll, describe, expect, it } from "vitest";
 import { saturate } from "../shared/math.ts";
 import { createRandom } from "../shared/random.ts";
 import { type IslandSizeKind, islandDimensions } from "../world/island-size.ts";
@@ -251,11 +251,7 @@ describe("lake shore easing", () => {
     });
 
     expect(basins.lakes).toHaveLength(2);
-    expect(rim).toBeDefined();
-
-    if (rim === undefined) {
-      return;
-    }
+    assert.isDefined(rim, "Expected the upper lake to reach the sampled shore");
 
     const shore = Array.from({ length: GENTLE_SHORE_WIDTH / grid.cellSize + 1 }, (_, step) => {
       return grid.index(column, grid.rowOf(rim) - 1 - step);

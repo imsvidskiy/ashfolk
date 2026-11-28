@@ -10,6 +10,7 @@ import {
   isOpenGround,
   isWalkableGround,
   slopeAt,
+  walkableSlopeAt,
 } from "./footing.ts";
 import { landEverywhere } from "./testing/terrain-fixtures.ts";
 import { NO_WATER } from "./water.ts";
@@ -140,6 +141,23 @@ describe("walkable ground", () => {
     expect(isWalkableGround(terrain, grid, grid.index(3, 3))).toBe(true);
     expect(isWalkableGround(terrain, grid, pond)).toBe(false);
     expect(isWalkableGround(terrain, grid, cliff)).toBe(false);
+  });
+
+  it("distinguishes level ground from the exact walking slope limit", () => {
+    const terrain = terrainOf(() => {
+      return 100;
+    });
+    const cell = grid.index(3, 3);
+
+    expect(walkableSlopeAt(terrain, grid, cell)).toBe(0);
+
+    terrain.height[cell + 1] = 122;
+
+    expect(walkableSlopeAt(terrain, grid, cell)).toBe(1.1);
+
+    terrain.height[cell + 1] = 123;
+
+    expect(walkableSlopeAt(terrain, grid, cell)).toBeNull();
   });
 });
 
