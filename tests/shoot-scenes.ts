@@ -1,11 +1,11 @@
 import { mkdir } from "node:fs/promises";
 import { join } from "node:path";
 import { type Browser, type BrowserContextOptions, chromium, expect, type Page } from "@playwright/test";
+import { createChromiumLaunchOptions } from "./chromium.ts";
 import { WORLD_RISING_TIMEOUT } from "./launch.ts";
 import { type PowerCast, SCENES, type Scene } from "./scenes.ts";
 
 const SYSTEM_CHROME = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome";
-const GPU_ARGUMENTS = ["--use-angle=metal", "--enable-gpu"];
 const SETTLE_FRAMES = 60;
 const SCENE_NAME = /^[a-z0-9-]+$/u;
 
@@ -161,9 +161,8 @@ async function shoot(browser: Browser, address: string, scene: Scene, device: De
 }
 
 async function shootScenes(baseUrl: string, folder: string, scenes: readonly Scene[]): Promise<void> {
-  const { CHROMIUM_EXECUTABLE_PATH: executablePath = SYSTEM_CHROME } = process.env;
-
-  const browser = await chromium.launch({ args: GPU_ARGUMENTS, executablePath });
+  const defaultPath = process.platform === "darwin" ? SYSTEM_CHROME : undefined;
+  const browser = await chromium.launch(createChromiumLaunchOptions(defaultPath));
 
   try {
     await mkdir(folder, { recursive: true });
